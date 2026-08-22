@@ -586,11 +586,23 @@ export const BSTPage: React.FC = () => {
         {/* Right Column: Multi-Language Debugger & Explanation */}
         <div className="explanation-section">
           <MultiLanguageCodePanel
-            algorithmKey="bubble"
+            algorithmKey={treeCategory}
             activeLine={bstStep?.codeLine}
             breakpoints={breakpoints}
             onToggleBreakpoint={handleToggleBreakpoint}
             variables={bstStep?.variables}
+            onCustomCodeRun={(arraySteps) => {
+              const bstSteps: BSTStep[] = arraySteps.map((step) => ({
+                nodes: [],
+                edges: [],
+                description: step.description,
+                codeLine: step.codeLine,
+                variables: step.variables || {},
+              }));
+              setActiveOperationSteps(bstSteps);
+              reset();
+            }}
+            currentArray={[10, 20, 30, 40, 50]}
           />
 
           <ExplanationPanel
