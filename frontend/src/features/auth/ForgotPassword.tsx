@@ -1,15 +1,34 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, Send } from 'lucide-react';
+import { Mail, ArrowLeft, Send, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { useAuth, ApiError } from '../../contexts/AuthContext';
 import './Auth.css';
 
 export const ForgotPassword: React.FC = () => {
+  const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { forgotPassword } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // API Call will go here
-    setIsSubmitted(true);
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await forgotPassword(email);
+      setIsSubmitted(true);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -18,11 +37,25 @@ export const ForgotPassword: React.FC = () => {
         <div className="auth-header">
           <h1 className="auth-title">Reset Password</h1>
           <p className="auth-subtitle">
-            {isSubmitted 
-              ? "Check your email for reset instructions." 
+            {isSubmitted
+              ? "Check your email for reset instructions."
               : "Enter your email and we'll send you a recovery link."}
           </p>
         </div>
+
+        {error && (
+          <div className="auth-error animate-fade-in">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {isSubmitted && (
+          <div className="auth-success animate-fade-in">
+            <CheckCircle size={16} />
+            <span>If the email exists, a reset link has been sent.</span>
+          </div>
+        )}
 
         {!isSubmitted ? (
           <form className="auth-form" onSubmit={handleSubmit}>
@@ -35,14 +68,17 @@ export const ForgotPassword: React.FC = () => {
                   id="email"
                   className="auth-input"
                   placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
 
-            <button type="submit" className="auth-button">
-              <Send size={18} />
-              Send Recovery Link
+            <button type="submit" className="auth-button" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 size={18} className="spinner" /> : <Send size={18} />}
+              {isSubmitting ? 'Sending...' : 'Send Recovery Link'}
             </button>
           </form>
         ) : (

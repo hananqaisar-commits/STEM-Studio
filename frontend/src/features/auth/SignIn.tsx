@@ -1,14 +1,36 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuth, ApiError } from '../../contexts/AuthContext';
 import './Auth.css';
 
 export const SignIn: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // API Call will go here
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await login(email, password);
+      navigate('/dashboard');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -20,6 +42,13 @@ export const SignIn: React.FC = () => {
           <p className="auth-subtitle">Sign in to your STEM Studio account</p>
         </div>
 
+        {error && (
+          <div className="auth-error animate-fade-in">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="email">Email Address</label>
@@ -30,7 +59,10 @@ export const SignIn: React.FC = () => {
                 id="email"
                 className="auth-input"
                 placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -44,7 +76,10 @@ export const SignIn: React.FC = () => {
                 id="password"
                 className="auth-input"
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isSubmitting}
               />
               <button
                 type="button"
@@ -55,7 +90,7 @@ export const SignIn: React.FC = () => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            
+
             <div className="auth-options">
               <label className="remember-me">
                 <input type="checkbox" />
@@ -65,9 +100,9 @@ export const SignIn: React.FC = () => {
             </div>
           </div>
 
-          <button type="submit" className="auth-button">
-            <LogIn size={18} />
-            Sign In
+          <button type="submit" className="auth-button" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 size={18} className="spinner" /> : <LogIn size={18} />}
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
