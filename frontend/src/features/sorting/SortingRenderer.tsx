@@ -34,7 +34,16 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
   if (!currentStep) {
     return (
       <div className="sorting-canvas-empty">
-        <span>No array data available</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style={{ opacity: 0.35, marginBottom: '0.5rem' }}>
+            <rect x="4" y="24" width="7" height="16" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+            <rect x="14" y="14" width="7" height="26" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+            <rect x="24" y="8" width="7" height="32" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+            <rect x="34" y="18" width="7" height="22" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+          </svg>
+          <span style={{ fontWeight: 600, opacity: 0.7 }}>No array data available</span>
+          <span style={{ fontSize: '0.78rem', opacity: 0.5 }}>Generate an array to begin visualization</span>
+        </div>
       </div>
     );
   }
@@ -82,10 +91,15 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
     });
   };
 
+  const sortedCount = sortedIndices.length;
+
   return (
     <div className="sorting-canvas-container animate-fade-in">
-      <div className="sorting-canvas-header flex justify-between items-center mb-2 pb-1 border-b border-gray-800">
-        <span className="text-xs font-mono text-gray-400">MEMORY ARRAY CANVAS ({array.length} ELEMENTS)</span>
+      <div className="sorting-canvas-header">
+        <div className="canvas-header-left">
+          <span className="bst-title">MEMORY ARRAY CANVAS</span>
+          <span className="bst-subtitle">{array.length} elements · {sortedCount} sorted</span>
+        </div>
 
         {onToggleFullscreen && (
           <button
@@ -93,7 +107,7 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
             onClick={onToggleFullscreen}
             title="Enter Full Screen Interactive Mode"
           >
-            <Maximize2 size={15} />
+            <Maximize2 size={14} />
             <span>Fullscreen</span>
           </button>
         )}
