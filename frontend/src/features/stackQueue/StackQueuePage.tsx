@@ -286,17 +286,18 @@ export const StackQueuePage: React.FC = () => {
         </button>
       </header>
 
-      {/* Control Toolbar with Vector Icons & Search Box */}
-      <div className="bst-toolbar">
-        <div className="bst-toolbar-left flex flex-wrap gap-2 items-center">
-          {/* Rounded Vector Search Input */}
-          <div className="relative">
-            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 focus-within:border-amber-400/80 rounded-full px-3.5 py-1.5 shadow-inner transition-all w-72">
+      {/* Control Toolbar with Vector Icons & Spotlight Search Box */}
+      <div className="bst-toolbar flex flex-wrap justify-between items-center gap-4">
+        {/* Left Section: Spotlight Search & Category Selector */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Spotlight Style Search Input */}
+          <div className="spotlight-search-container">
+            <div className="spotlight-search-box">
               <Search size={14} className="text-amber-400 shrink-0" />
               <input
                 type="text"
-                className="bg-transparent text-xs text-slate-100 placeholder-slate-400 focus:outline-none w-full font-medium"
-                placeholder="Search 20 DSA Problems (e.g. #739, Water, Min)..."
+                className="spotlight-search-input font-medium"
+                placeholder="Search 20 DSA Problems (#739, Water, Min)..."
                 value={searchQuery}
                 onFocus={() => setIsSearchOpen(true)}
                 onChange={(e) => {
@@ -304,6 +305,7 @@ export const StackQueuePage: React.FC = () => {
                   setIsSearchOpen(true);
                 }}
               />
+              <span className="search-shortcut-badge">⌘K</span>
               {searchQuery && (
                 <button
                   className="text-slate-400 hover:text-slate-200 text-xs font-bold px-1"
@@ -314,20 +316,20 @@ export const StackQueuePage: React.FC = () => {
               )}
             </div>
 
-            {/* Instant Search Autocomplete Dropdown */}
+            {/* Instant Search Autocomplete Command Palette Dropdown */}
             {isSearchOpen && searchQuery.trim().length > 0 && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl backdrop-blur-md z-50 max-h-72 overflow-y-auto p-1.5">
-                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1.5 border-b border-slate-800">
+              <div className="absolute top-full left-0 mt-2 w-80 bg-slate-900/95 border border-slate-700/90 rounded-2xl shadow-2xl backdrop-blur-xl z-50 max-h-72 overflow-y-auto p-2">
+                <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1.5 border-b border-slate-800 mb-1">
                   <Filter size={12} className="text-amber-400" />
-                  <span>Search Results ({filteredProblems.length})</span>
+                  <span>Matching DSA Problems ({filteredProblems.length})</span>
                 </div>
                 {filteredProblems.length === 0 ? (
-                  <div className="px-3 py-3 text-xs text-slate-400 text-center">No matching DSA problems found</div>
+                  <div className="px-3 py-4 text-xs text-slate-400 text-center">No matching DSA problems found</div>
                 ) : (
                   filteredProblems.map((prob) => (
                     <button
                       key={prob.id}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all flex items-center justify-between hover:bg-slate-800/80 ${category === prob.id ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30' : 'text-slate-200'}`}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between hover:bg-slate-800/80 mb-0.5 ${category === prob.id ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30' : 'text-slate-200'}`}
                       onClick={() => {
                         setCategory(prob.id);
                         setIsSearchOpen(false);
@@ -339,7 +341,7 @@ export const StackQueuePage: React.FC = () => {
                         <div className="flex items-center gap-1.5 font-bold">
                           <span>{prob.name}</span>
                           {prob.leetcodeId && (
-                            <span className="bg-slate-800 text-amber-400 px-1.5 py-0.5 rounded text-[10px] font-mono">{prob.leetcodeId}</span>
+                            <span className="bg-slate-800 text-amber-400 px-1.5 py-0.5 rounded-md text-[10px] font-mono">{prob.leetcodeId}</span>
                           )}
                         </div>
                         <div className="text-[11px] text-slate-400 font-normal line-clamp-1">{prob.description}</div>
@@ -354,9 +356,9 @@ export const StackQueuePage: React.FC = () => {
             )}
           </div>
 
-          {/* Clean Category Selector Dropdown with Vector Section Headers */}
+          {/* Clean Category Selector Dropdown */}
           <select
-            className="bst-select font-bold text-xs rounded-xl px-3 py-1.5"
+            className="bst-select font-bold text-xs"
             value={category}
             onChange={(e) => {
               setCategory(e.target.value as StackQueueCategory);
@@ -393,11 +395,14 @@ export const StackQueuePage: React.FC = () => {
               <option value="dota2Senate">10. Dota2 Senate Round-Robin (#649)</option>
             </optgroup>
           </select>
+        </div>
 
+        {/* Right Section: Inputs & Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* Action Input */}
           <input
             type="text"
-            className="bst-input w-40"
+            className="bst-input w-36"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Val / Expr / Array"
@@ -498,7 +503,7 @@ export const StackQueuePage: React.FC = () => {
 
           <button className="bst-btn btn-mode" onClick={handleClearAll}>
             <Trash2 size={14} className="text-rose-400" />
-            <span>Clear All</span>
+            <span>Clear</span>
           </button>
         </div>
       </div>
