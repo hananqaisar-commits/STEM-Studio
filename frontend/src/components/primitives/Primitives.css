@@ -196,7 +196,7 @@
 /* ─── 3. SVG LINE / EDGE PRIMITIVE ──────────────────────────────── */
 
 .primitive-line {
-  stroke: rgba(148, 163, 184, 0.4);
+  stroke: #64748b;
   stroke-linecap: round;
   transition: stroke 0.3s ease, stroke-width 0.3s ease;
 }
@@ -209,31 +209,32 @@
 }
 
 .arrow-head-fill {
-  fill: rgba(148, 163, 184, 0.4);
+  fill: #64748b;
   transition: fill 0.3s ease;
 }
 
 /* Edge State — Comparing */
 .line-state-comparing {
-  stroke: #f59e0b;
-  stroke-width: 2.5;
+  stroke: #f59e0b !important;
+  stroke-width: 3.5px !important;
 }
 
 /* Edge State — Swapping */
 .line-state-swapping {
-  stroke: #ef4444;
-  stroke-width: 2.5;
+  stroke: #ef4444 !important;
+  stroke-width: 3.5px !important;
 }
 
 /* Edge State — Sorted */
 .line-state-sorted {
-  stroke: #10b981;
-  stroke-width: 2.5;
+  stroke: #10b981 !important;
+  stroke-width: 3.5px !important;
 }
 
 /* Edge State — Default Idle */
 .line-state-default {
-  stroke: rgba(148, 163, 184, 0.3);
+  stroke: #64748b;
+  stroke-width: 2.5px;
 }
 
 
@@ -273,11 +274,12 @@
 }
 
 .theme-light .primitive-line {
-  stroke: rgba(100, 116, 139, 0.4);
+  stroke: #475569 !important;
 }
 
 .theme-light .line-state-default {
-  stroke: rgba(100, 116, 139, 0.3);
+  stroke: #475569 !important;
+  stroke-width: 2.5px !important;
 }
 
 .theme-light .node-label {
