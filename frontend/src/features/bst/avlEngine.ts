@@ -87,7 +87,8 @@ function createAVLStep(
   comparingIds: string[] = [],
   description = '',
   codeLine = 1,
-  variables: Record<string, string | number | boolean | null> = {}
+  variables: Record<string, string | number | boolean | null> = {},
+  prediction?: any
 ): BSTStep {
   const { nodes, edges } = computeAVLPositions(root);
 
@@ -104,6 +105,7 @@ function createAVLStep(
     description,
     codeLine,
     variables,
+    predictionPoint: prediction,
   };
 }
 
@@ -155,10 +157,26 @@ export function generateAVLInsertSteps(initialTree: AVLNodeStructure | undefined
     }
 
     if (val < node.value) {
-      steps.push(createAVLStep(tree, node.id, [node.id], `Value ${val} < ${node.value}, traversing to LEFT subtree.`, 4, { val, nodeVal: node.value }));
+      const direction = 'left';
+      const explanation = `Value ${val} is LESS than AVL Node ${node.value}, so it must enter the LEFT subtree.`;
+      steps.push(createAVLStep(tree, node.id, [node.id], `Value ${val} < ${node.value}, traversing to LEFT subtree.`, 4, { val, nodeVal: node.value }, {
+        questionNodeId: node.id,
+        currentNodeValue: node.value,
+        targetValue: val,
+        correctDirection: direction,
+        explanation,
+      }));
       node.left = insertNode(node.left, val);
     } else if (val > node.value) {
-      steps.push(createAVLStep(tree, node.id, [node.id], `Value ${val} > ${node.value}, traversing to RIGHT subtree.`, 6, { val, nodeVal: node.value }));
+      const direction = 'right';
+      const explanation = `Value ${val} is GREATER than AVL Node ${node.value}, so it must enter the RIGHT subtree.`;
+      steps.push(createAVLStep(tree, node.id, [node.id], `Value ${val} > ${node.value}, traversing to RIGHT subtree.`, 6, { val, nodeVal: node.value }, {
+        questionNodeId: node.id,
+        currentNodeValue: node.value,
+        targetValue: val,
+        correctDirection: direction,
+        explanation,
+      }));
       node.right = insertNode(node.right, val);
     } else {
       steps.push(createAVLStep(tree, node.id, [node.id], `Value ${val} already exists in AVL Tree.`, 8, { val }));

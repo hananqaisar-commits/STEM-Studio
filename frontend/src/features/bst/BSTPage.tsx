@@ -98,7 +98,7 @@ export const BSTPage: React.FC = () => {
   } = useStepPlayer({ steps: activeOperationSteps });
 
   const bstStep = currentStep as BSTStep | null;
-  const activePrediction = treeCategory === 'bst' && isPredictMode && bstStep?.predictionPoint ? bstStep.predictionPoint : null;
+  const activePrediction = isPredictMode && bstStep?.predictionPoint ? bstStep.predictionPoint : null;
 
   useEffect(() => {
     if (activePrediction && isPlaying) pause();
@@ -326,21 +326,19 @@ export const BSTPage: React.FC = () => {
           )}
         </div>
 
-        {treeCategory === 'bst' && (
-          <div className="bst-toolbar-right">
-            <div className="predict-mode-group">
-              <label className="predict-toggle-label">
-                <HelpCircle size={16} />
-                <span>Predict & Learn Mode</span>
-                <input
-                  type="checkbox"
-                  checked={isPredictMode}
-                  onChange={(e) => setIsPredictMode(e.target.checked)}
-                />
-              </label>
-            </div>
+        <div className="bst-toolbar-right">
+          <div className="predict-mode-group">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Predict & Learn Mode</span>
+              <input
+                type="checkbox"
+                checked={isPredictMode}
+                onChange={(e) => setIsPredictMode(e.target.checked)}
+              />
+            </label>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Main Learning Workspace */}
