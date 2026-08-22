@@ -131,7 +131,7 @@ export const TreeRenderer: React.FC<TreeRendererProps> = ({
 
       <div className="tree-canvas-workspace">
         {/* SVG Edges Layer — Dynamic Height to prevent clipping */}
-        <svg className="tree-svg-layer" width="100%" height={`${maxY}px`}>
+        <svg className="tree-svg-layer" width="100%" height={`${maxY}px`} style={{ height: `${maxY}px` }}>
           {edges.map((edge, idx) => (
             <Line
               key={idx}

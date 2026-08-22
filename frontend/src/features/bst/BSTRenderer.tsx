@@ -82,7 +82,7 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
         </svg>
 
         {/* SVG Edges Layer — Dynamic Height to prevent line clipping on large trees */}
-        <svg className="bst-svg-layer" width="100%" height={`${maxY}px`}>
+        <svg className="bst-svg-layer" width="100%" height={`${maxY}px`} style={{ height: `${maxY}px` }}>
           <defs>
             <filter id="edgeShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
