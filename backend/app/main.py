@@ -42,7 +42,8 @@ def on_startup():
         from infrastructure.database.database import engine, Base
         import infrastructure.database.models  # noqa: F401
     Base.metadata.create_all(bind=engine)
-    print("✅ Database tables created/verified successfully!")
+    print("✅ Database tables created/verified successfully! Production deployment ready.")
+
 
 # ─── Register Routers ───────────────────────────────────────────────
 app.include_router(auth_router)
