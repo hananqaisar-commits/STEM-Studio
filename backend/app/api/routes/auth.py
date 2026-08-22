@@ -260,8 +260,12 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     db.add(reset)
     db.commit()
 
-    # In production, send raw_token via email
-    # For development, return it in the response
+    reset_url = f"http://localhost:5173/reset-password?token={raw_token}"
+    print("\n" + "=" * 60)
+    print(f"🔑 PASSWORD RESET LINK GENERATED FOR [{payload.email}]:")
+    print(f"👉 {reset_url}")
+    print("=" * 60 + "\n")
+
     return MessageResponse(
         message="If the email exists, a reset link has been sent",
     )

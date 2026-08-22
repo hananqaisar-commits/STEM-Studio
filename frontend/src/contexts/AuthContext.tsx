@@ -19,6 +19,7 @@ interface AuthContextType {
   signup: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
+  resetPassword: (token: string, newPassword: string) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,6 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data.message;
   };
 
+  const resetPassword = async (token: string, newPassword: string): Promise<string> => {
+    const data = await apiClient<{ message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: { token, new_password: newPassword },
+    });
+    return data.message;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -112,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         logout,
         forgotPassword,
+        resetPassword,
       }}
     >
       {children}
