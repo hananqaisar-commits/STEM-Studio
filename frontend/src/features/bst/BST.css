@@ -10,6 +10,46 @@
   min-height: calc(100vh - 70px);
 }
 
+/* Tree Category Tab Bar */
+.tree-category-toolbar {
+  display: flex;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem;
+  border-radius: 12px;
+}
+
+.tree-category-tabs {
+  display: flex;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.category-tab {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.category-tab:hover {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.category-tab.active {
+  background-color: var(--accent-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
 .bst-toolbar {
   display: flex;
   justify-content: space-between;
@@ -261,13 +301,39 @@
   z-index: 2;
 }
 
-.bst-node-wrapper {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: pointer;
+/* AVL Balance Factor & Trie Badges */
+.bf-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  font-family: 'Fira Code', monospace;
+}
+
+.bf-balanced {
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #10b981;
+}
+
+.bf-unbalanced {
+  background-color: rgba(244, 63, 94, 0.2);
+  border: 1px solid #f43f5e;
+  color: #f43f5e;
+  animation: pulse 1s infinite;
+}
+
+.eow-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background-color: rgba(245, 158, 11, 0.18);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  margin-bottom: 0.15rem;
 }
 
 /* Prediction Quiz Card - Glassmorphic IDE UI */
