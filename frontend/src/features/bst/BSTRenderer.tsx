@@ -1,6 +1,7 @@
 import React from 'react';
 import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import type { BSTStep, BSTNodeData } from './bstEngine';
 import './BST.css';
 
@@ -14,11 +15,15 @@ interface ExtendedBSTNodeData extends BSTNodeData {
 interface BSTRendererProps {
   currentStep: BSTStep | null;
   onNodeClick?: (value: number | string) => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const BSTRenderer: React.FC<BSTRendererProps> = ({
   currentStep,
   onNodeClick,
+  isFullscreen = false,
+  onToggleFullscreen,
 }) => {
   if (!currentStep || currentStep.nodes.length === 0) {
     return (
@@ -35,10 +40,23 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
   return (
-    <div className="bst-canvas-container animate-fade-in">
+    <div className={`bst-canvas-container animate-fade-in ${isFullscreen ? 'canvas-fullscreen-mode' : ''}`}>
       <div className="bst-canvas-header">
-        <span className="bst-title">DYNAMIC TREE STRUCTURE CANVAS</span>
-        <span className="bst-subtitle">Interactive DSA Memory Inspector</span>
+        <div className="canvas-header-left">
+          <span className="bst-title">DYNAMIC TREE STRUCTURE CANVAS</span>
+          <span className="bst-subtitle">Interactive DSA Memory Inspector</span>
+        </div>
+
+        {onToggleFullscreen && (
+          <button
+            className="fullscreen-toggle-btn"
+            onClick={onToggleFullscreen}
+            title={isFullscreen ? 'Exit Full Screen Mode' : 'Enter Full Screen Interactive Mode'}
+          >
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+          </button>
+        )}
       </div>
 
       <div className="bst-canvas-workspace">
