@@ -159,6 +159,10 @@ export const SortingPage: React.FC = () => {
         </div>
 
         <div className="toolbar-right">
+          <button className="toolbar-btn" onClick={() => handleApplyCustomArray([45, 12, 89, 34, 67, 23])} title="Load 6-item sample preset">
+            <span>Sample (6)</span>
+          </button>
+
           <button className="toolbar-btn" onClick={() => setShowCustomEditor(true)}>
             <Edit3 size={16} />
             <span>Custom Values</span>

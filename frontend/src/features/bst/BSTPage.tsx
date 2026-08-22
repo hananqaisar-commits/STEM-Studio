@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, RefreshCw, HelpCircle, ListOrdered, GitCommit, CornerDownRight } from 'lucide-react';
+import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2 } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
 import { PredictionQuiz } from './PredictionQuiz';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
@@ -15,6 +15,7 @@ import {
   generateBSTInorderSteps,
   generateBSTPreorderSteps,
   generateBSTPostorderSteps,
+  generateRandomBST,
 } from './bstEngine';
 import type { BSTTreeStructure, BSTStep } from './bstEngine';
 
@@ -118,9 +119,23 @@ export const BSTPage: React.FC = () => {
     play();
   };
 
-  const handleResetTree = () => {
+  const handleStartEmptyTree = () => {
+    setTree(undefined);
+    setActiveOperationSteps([]);
+    reset();
+  };
+
+  const handleLoadSamplePreset = () => {
     setTree(DEFAULT_TREE);
     const { steps } = generateBSTInsertSteps(DEFAULT_TREE, 45);
+    setActiveOperationSteps(steps);
+    reset();
+  };
+
+  const handleGenerateRandomTree = () => {
+    const randomTree = generateRandomBST(6);
+    setTree(randomTree);
+    const { steps } = generateBSTInsertSteps(randomTree, 50);
     setActiveOperationSteps(steps);
     reset();
   };
@@ -175,10 +190,23 @@ export const BSTPage: React.FC = () => {
             </button>
           </div>
 
-          <button className="bst-btn" onClick={handleResetTree}>
-            <RefreshCw size={16} />
-            <span>Reset Tree</span>
-          </button>
+          {/* Dataset Initialization Selector Group */}
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={handleStartEmptyTree} title="Start from scratch with an empty canvas">
+              <Trash2 size={14} className="text-rose-400" />
+              <span>Empty Tree</span>
+            </button>
+
+            <button className="bst-btn btn-mode" onClick={handleLoadSamplePreset} title="Load pre-built 7-node sample tree">
+              <Layers size={14} className="text-amber-400" />
+              <span>Sample Tree</span>
+            </button>
+
+            <button className="bst-btn btn-mode" onClick={handleGenerateRandomTree} title="Generate a random 6-node tree">
+              <Sparkles size={14} className="text-emerald-400" />
+              <span>Random Tree</span>
+            </button>
+          </div>
         </div>
 
         <div className="bst-toolbar-right">

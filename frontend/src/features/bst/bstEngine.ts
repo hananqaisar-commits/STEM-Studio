@@ -303,3 +303,21 @@ export function generateBSTPostorderSteps(tree: BSTTreeStructure | undefined): B
   steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Postorder Traversal Complete: [${log.join(', ')}]`, 10, { result: log.join(', ') }, undefined, [...log]));
   return steps;
 }
+
+// Generate Random BST with N unique values
+export function generateRandomBST(count = 6): BSTTreeStructure | undefined {
+  const values = new Set<number>();
+  while (values.size < count) {
+    values.add(Math.floor(Math.random() * 89) + 10);
+  }
+
+  const valArray = Array.from(values);
+  let tree: BSTTreeStructure | undefined = undefined;
+
+  for (const val of valArray) {
+    const { newTree } = generateBSTInsertSteps(tree, val);
+    tree = newTree;
+  }
+
+  return tree;
+}
