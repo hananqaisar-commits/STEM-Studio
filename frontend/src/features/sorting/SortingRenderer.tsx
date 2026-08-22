@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bar } from '../../components/primitives/Bar';
 import { TreeRenderer } from './TreeRenderer';
+import { Maximize2 } from 'lucide-react';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import './Sorting.css';
 
@@ -10,6 +11,7 @@ interface SortingRendererProps {
   viewMode?: 'bars' | 'tree';
   maxValue?: number;
   onElementClick?: (index: number, currentValue: number) => void;
+  onToggleFullscreen?: () => void;
 }
 
 export const SortingRenderer: React.FC<SortingRendererProps> = ({
@@ -18,6 +20,7 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
   viewMode = 'bars',
   maxValue = 100,
   onElementClick,
+  onToggleFullscreen,
 }) => {
   const [hoveredInfo, setHoveredInfo] = useState<{
     index: number;
@@ -81,6 +84,21 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
 
   return (
     <div className="sorting-canvas-container animate-fade-in">
+      <div className="sorting-canvas-header flex justify-between items-center mb-2 pb-1 border-b border-gray-800">
+        <span className="text-xs font-mono text-gray-400">MEMORY ARRAY CANVAS ({array.length} ELEMENTS)</span>
+
+        {onToggleFullscreen && (
+          <button
+            className="fullscreen-toggle-btn"
+            onClick={onToggleFullscreen}
+            title="Enter Full Screen Interactive Mode"
+          >
+            <Maximize2 size={15} />
+            <span>Fullscreen</span>
+          </button>
+        )}
+      </div>
+
       <div className="bars-canvas">
         {array.map((value, index) => {
           const heightPercent = (value / max) * 100;

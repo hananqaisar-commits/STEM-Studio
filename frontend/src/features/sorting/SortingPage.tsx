@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Shuffle, ArrowUpDown, Edit3 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Shuffle, Edit3 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
+import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -60,8 +61,9 @@ export const SortingPage: React.FC = () => {
   const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
 
-  // Debugger state
+  // Debugger & Modal state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
   // Generate algorithm steps
@@ -100,12 +102,29 @@ export const SortingPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer({ steps: executionData.steps });
 
-  // Breakpoints Auto-Pause Listener
-  useEffect(() => {
-    if (isPlaying && currentStep?.codeLine && breakpoints.includes(currentStep.codeLine)) {
-      pause();
+  const handleRandomize = () => {
+    reset();
+    setInitialArray(generateArray(arraySize, arrayPattern));
+  };
+
+  const handleApplyCustomArray = (newArr: number[]) => {
+    reset();
+    setArraySize(newArr.length);
+    setInitialArray(newArr);
+    setShowCustomEditor(false);
+  };
+
+  const handleBarElementClick = (index: number, currentValue: number) => {
+    const valStr = prompt(`Edit value at index [${index}]:`, currentValue.toString());
+    if (valStr !== null) {
+      const num = parseInt(valStr, 10);
+      if (!isNaN(num) && num > 0) {
+        const updated = [...initialArray];
+        updated[index] = num;
+        handleApplyCustomArray(updated);
+      }
     }
-  }, [isPlaying, currentStep, breakpoints, pause]);
+  };
 
   const handleToggleBreakpoint = (lineNumber: number) => {
     setBreakpoints((prev) =>
@@ -113,90 +132,105 @@ export const SortingPage: React.FC = () => {
     );
   };
 
-  const handleGenerateNewArray = () => {
-    reset();
-    setInitialArray(generateArray(arraySize, arrayPattern));
-  };
+  const renderPlayerControls = () => (
+    <div className="player-bar" style={{ margin: 0 }}>
+      <div className="player-left">
+        <PlayPauseButton
+          isPlaying={isPlaying}
+          onToggle={isPlaying ? pause : play}
+        />
+        <StepControls
+          onStepBack={stepBack}
+          onStepForward={stepForward}
+          onReset={reset}
+          canStepBack={currentStepIndex > 0}
+          canStepForward={currentStepIndex < totalSteps - 1}
+        />
+      </div>
 
-  const handleApplyCustomArray = (newArray: number[]) => {
-    setArraySize(newArray.length);
-    reset();
-    setInitialArray(newArray);
-  };
+      <div className="player-center">
+        <div className="step-progress-bar">
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+        </div>
+        <span className="step-counter">
+          Step {currentStepIndex + 1} / {totalSteps}
+        </span>
+      </div>
 
-  const handleBarElementClick = (index: number, val: number) => {
-    const newValueStr = prompt(`Edit value for array element at index [${index}]:`, String(val));
-    if (newValueStr !== null) {
-      const num = Number(newValueStr);
-      if (!isNaN(num) && num > 0) {
-        const updated = [...initialArray];
-        updated[index] = Math.min(100, Math.max(5, num));
-        reset();
-        setInitialArray(updated);
-      }
-    }
-  };
+      <div className="player-right">
+        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+      </div>
+    </div>
+  );
 
   return (
     <div className="sorting-page-container">
-      {/* Top Header & Algorithm Selector Toolbar */}
+      {/* Algorithm Selector Bar */}
+      <div className="algorithm-tabs-bar animate-fade-in">
+        <div className="algorithm-tabs">
+          {ALGORITHMS.map((alg) => (
+            <button
+              key={alg.key}
+              className={`alg-tab ${selectedAlg === alg.key ? 'active' : ''}`}
+              onClick={() => {
+                setSelectedAlg(alg.key);
+                reset();
+              }}
+            >
+              {alg.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Dataset & Parameter Toolbar */}
       <div className="sorting-toolbar animate-fade-in">
         <div className="toolbar-left">
-          <div className="algorithm-tabs">
-            {ALGORITHMS.map((alg) => (
-              <button
-                key={alg.key}
-                className={`alg-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedAlg(alg.key);
-                  reset();
-                }}
-              >
-                {alg.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="toolbar-right">
-          <button className="toolbar-btn" onClick={() => handleApplyCustomArray([45, 12, 89, 34, 67, 23])} title="Load 6-item sample preset">
-            <span>Sample (6)</span>
+          <button className="toolbar-btn primary" onClick={handleRandomize}>
+            <Shuffle size={16} />
+            <span>Generate New Array</span>
           </button>
 
-          <button className="toolbar-btn" onClick={() => setShowCustomEditor(true)}>
+          <button className="toolbar-btn secondary" onClick={() => setShowCustomEditor(true)}>
             <Edit3 size={16} />
             <span>Custom Values</span>
           </button>
 
-          <button className="toolbar-btn" onClick={handleGenerateNewArray} title="Generate Random Array">
-            <Shuffle size={16} />
-            <span>Randomize</span>
-          </button>
+          <div className="toolbar-divider" />
 
+          {/* Sample Presets Dropdown */}
           <div className="toolbar-select-group">
-            <ArrowUpDown size={14} />
+            <span className="toolbar-label">Pattern:</span>
             <select
               value={arrayPattern}
               onChange={(e) => {
-                const pat = e.target.value as ArrayPattern;
-                setArrayPattern(pat);
+                const pattern = e.target.value as ArrayPattern;
+                setArrayPattern(pattern);
                 reset();
-                setInitialArray(generateArray(arraySize, pat));
+                setInitialArray(generateArray(arraySize, pattern));
               }}
               className="toolbar-select"
             >
-              <option value="random">Random</option>
-              <option value="nearlySorted">Nearly Sorted</option>
-              <option value="reversed">Reversed</option>
+              <option value="random">🎲 Random Unsorted</option>
+              <option value="reversed">⬇️ Worst Case (Reversed)</option>
+              <option value="nearlySorted">⚡ Best Case (Nearly Sorted)</option>
             </select>
           </div>
+        </div>
 
+        <div className="toolbar-right">
           <div className="toolbar-slider-group">
-            <span>Size: {arraySize}</span>
+            <div className="slider-label-row">
+              <span className="toolbar-label">Array Size:</span>
+              <span className="slider-value">{arraySize} elements</span>
+            </div>
             <input
               type="range"
-              min="6"
-              max="35"
+              min={5}
+              max={30}
               value={arraySize}
               onChange={(e) => {
                 const size = parseInt(e.target.value);
@@ -217,45 +251,14 @@ export const SortingPage: React.FC = () => {
           <SortingRenderer
             currentStep={currentStep}
             onElementClick={handleBarElementClick}
+            onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
 
-          {/* Interactive Player Controls */}
-          <div className="player-bar">
-            <div className="player-left">
-              <PlayPauseButton
-                isPlaying={isPlaying}
-                onToggle={isPlaying ? pause : play}
-              />
-              <StepControls
-                onStepBack={stepBack}
-                onStepForward={stepForward}
-                onReset={reset}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < totalSteps - 1}
-              />
-            </div>
-
-            <div className="player-center">
-              <div className="step-progress-bar">
-                <div
-                  className="step-progress-fill"
-                  style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
-                />
-              </div>
-              <span className="step-counter">
-                Step {currentStepIndex + 1} / {totalSteps}
-              </span>
-            </div>
-
-            <div className="player-right">
-              <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-            </div>
-          </div>
+          {renderPlayerControls()}
         </div>
 
         {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
         <div className="explanation-section">
-          {/* Multi-Language Code Debugger */}
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             activeLine={currentStep?.codeLine}
@@ -265,7 +268,6 @@ export const SortingPage: React.FC = () => {
             callStack={currentStep?.callStack}
           />
 
-          {/* Real-time Complexity & Description Panel */}
           <ExplanationPanel
             description={currentStep?.description || 'Click Play to observe step-by-step execution details.'}
             timeComplexity={executionData.timeComplexity}
@@ -273,6 +275,20 @@ export const SortingPage: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Reusable Native FullScreen Canvas Modal */}
+      <FullScreenCanvasModal
+        isOpen={isFullScreenOpen}
+        onClose={() => setIsFullScreenOpen(false)}
+        title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
+        subtitle="Memory Array Inspector"
+        playbackControls={renderPlayerControls()}
+      >
+        <SortingRenderer
+          currentStep={currentStep}
+          onElementClick={handleBarElementClick}
+        />
+      </FullScreenCanvasModal>
 
       {/* Custom Values Input Modal */}
       {showCustomEditor && (

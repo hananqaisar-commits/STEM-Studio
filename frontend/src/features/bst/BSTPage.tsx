@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary, Minimize2 } from 'lucide-react';
+import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
 import { PredictionQuiz } from './PredictionQuiz';
+import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -52,7 +53,7 @@ export const BSTPage: React.FC = () => {
   const [inputValue, setInputValue] = useState<string>('45');
   const [wordValue, setWordValue] = useState<string>('cat');
   const [isPredictMode, setIsPredictMode] = useState<boolean>(true);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
   const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
@@ -170,270 +171,284 @@ export const BSTPage: React.FC = () => {
     );
   };
 
-  return (
-    <div className={`bst-page-container ${isFullscreen ? 'fullscreen-active-container' : ''}`}>
-      {/* Category Tabs with Pure Vector Icons */}
-      {!isFullscreen && (
-        <div className="tree-category-toolbar animate-fade-in">
-          <div className="tree-category-tabs">
-            <button
-              className={`category-tab ${treeCategory === 'bst' ? 'active' : ''}`}
-              onClick={() => setTreeCategory('bst')}
-            >
-              <Network size={16} />
-              <span>Binary Search Tree (BST)</span>
-            </button>
-
-            <button
-              className={`category-tab ${treeCategory === 'avl' ? 'active' : ''}`}
-              onClick={() => setTreeCategory('avl')}
-            >
-              <Scale size={16} />
-              <span>AVL Tree (Self-Balancing)</span>
-            </button>
-
-            <button
-              className={`category-tab ${treeCategory === 'heap' ? 'active' : ''}`}
-              onClick={() => setTreeCategory('heap')}
-            >
-              <Layers size={16} />
-              <span>Binary Heap (Priority Queue)</span>
-            </button>
-
-            <button
-              className={`category-tab ${treeCategory === 'trie' ? 'active' : ''}`}
-              onClick={() => setTreeCategory('trie')}
-            >
-              <Binary size={16} />
-              <span>Trie (Prefix Tree)</span>
-            </button>
-          </div>
-        </div>
+  // Shared Floating Header Controls for FullScreen Modal
+  const renderFloatingControls = () => (
+    <div className="flex items-center gap-2">
+      {treeCategory !== 'trie' ? (
+        <input
+          type="number"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          className="bst-input"
+          style={{ width: '80px' }}
+          placeholder="Val"
+        />
+      ) : (
+        <input
+          type="text"
+          value={wordValue}
+          onChange={(e) => setWordValue(e.target.value)}
+          className="bst-input"
+          style={{ width: '90px' }}
+          placeholder="Word"
+        />
       )}
+
+      {treeCategory === 'bst' && (
+        <>
+          <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
+            <Plus size={14} />
+            <span>Insert</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={() => {
+            const steps = generateBSTSearchSteps(bstTree, Number(inputValue));
+            setActiveOperationSteps(steps);
+            reset();
+            if (!isPredictMode) play();
+          }}>
+            <Search size={14} />
+            <span>Search</span>
+          </button>
+        </>
+      )}
+
+      {treeCategory === 'avl' && (
+        <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
+          <Plus size={14} />
+          <span>Insert AVL</span>
+        </button>
+      )}
+
+      {treeCategory === 'heap' && (
+        <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
+          <Plus size={14} />
+          <span>Push Heap</span>
+        </button>
+      )}
+
+      {treeCategory === 'trie' && (
+        <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
+          <Plus size={14} />
+          <span>Insert Word</span>
+        </button>
+      )}
+
+      <label className="predict-toggle-label ml-2">
+        <HelpCircle size={14} />
+        <span>Predict Mode</span>
+        <input
+          type="checkbox"
+          checked={isPredictMode}
+          onChange={(e) => setIsPredictMode(e.target.checked)}
+        />
+      </label>
+    </div>
+  );
+
+  // Shared Player Controls
+  const renderPlayerControls = () => (
+    <div className="player-bar" style={{ margin: 0 }}>
+      <div className="player-left">
+        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
+        <StepControls
+          onStepBack={stepBack}
+          onStepForward={stepForward}
+          onReset={reset}
+          canStepBack={currentStepIndex > 0}
+          canStepForward={currentStepIndex < totalSteps - 1}
+        />
+      </div>
+      <div className="player-center">
+        <div className="step-progress-bar">
+          <div className="step-progress-fill" style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
+        </div>
+        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
+      </div>
+      <div className="player-right">
+        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bst-page-container">
+      {/* Category Tabs with Pure Vector Icons */}
+      <div className="tree-category-toolbar animate-fade-in">
+        <div className="tree-category-tabs">
+          <button
+            className={`category-tab ${treeCategory === 'bst' ? 'active' : ''}`}
+            onClick={() => setTreeCategory('bst')}
+          >
+            <Network size={16} />
+            <span>Binary Search Tree (BST)</span>
+          </button>
+
+          <button
+            className={`category-tab ${treeCategory === 'avl' ? 'active' : ''}`}
+            onClick={() => setTreeCategory('avl')}
+          >
+            <Scale size={16} />
+            <span>AVL Tree (Self-Balancing)</span>
+          </button>
+
+          <button
+            className={`category-tab ${treeCategory === 'heap' ? 'active' : ''}`}
+            onClick={() => setTreeCategory('heap')}
+          >
+            <Layers size={16} />
+            <span>Binary Heap (Priority Queue)</span>
+          </button>
+
+          <button
+            className={`category-tab ${treeCategory === 'trie' ? 'active' : ''}`}
+            onClick={() => setTreeCategory('trie')}
+          >
+            <Binary size={16} />
+            <span>Trie (Prefix Tree)</span>
+          </button>
+        </div>
+      </div>
 
       {/* Operations Toolbar */}
-      {!isFullscreen && (
-        <div className="bst-toolbar animate-fade-in">
-          <div className="bst-toolbar-left">
-            {treeCategory !== 'trie' ? (
-              <div className="bst-input-group">
-                <span>Value:</span>
-                <input
-                  type="number"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  className="bst-input"
-                  placeholder="e.g. 45"
-                />
-              </div>
-            ) : (
-              <div className="bst-input-group">
-                <span>Word:</span>
-                <input
-                  type="text"
-                  value={wordValue}
-                  onChange={(e) => setWordValue(e.target.value)}
-                  className="bst-input"
-                  placeholder="e.g. cat"
-                  style={{ width: '110px' }}
-                />
-              </div>
-            )}
-
-            {treeCategory === 'bst' && (
-              <>
-                <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
-                  <Plus size={16} />
-                  <span>Insert</span>
-                </button>
-                <button className="bst-btn btn-search" onClick={() => {
-                  const steps = generateBSTSearchSteps(bstTree, Number(inputValue));
-                  setActiveOperationSteps(steps);
-                  reset();
-                  if (!isPredictMode) play();
-                }}>
-                  <Search size={16} />
-                  <span>Search</span>
-                </button>
-                <div className="traversal-btn-group">
-                  <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); play(); }}>
-                    <ListOrdered size={14} />
-                    <span>Inorder</span>
-                  </button>
-                  <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); play(); }}>
-                    <GitCommit size={14} />
-                    <span>Preorder</span>
-                  </button>
-                  <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); play(); }}>
-                    <CornerDownRight size={14} />
-                    <span>Postorder</span>
-                  </button>
-                </div>
-              </>
-            )}
-
-            {treeCategory === 'avl' && (
-              <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
-                <Plus size={16} />
-                <span>Insert & Balance</span>
-              </button>
-            )}
-
-            {treeCategory === 'heap' && (
-              <>
-                <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
-                  <Plus size={16} />
-                  <span>Push Heap</span>
-                </button>
-                <button className="bst-btn btn-search" onClick={handleHeapExtract}>
-                  <ArrowDown size={16} />
-                  <span>Extract Root</span>
-                </button>
-                <div className="traversal-btn-group">
-                  <button className={`bst-btn btn-traversal ${heapType === 'max' ? 'active' : ''}`} onClick={() => setHeapType('max')}>
-                    <ArrowUp size={12} />
-                    <span>Max Heap</span>
-                  </button>
-                  <button className={`bst-btn btn-traversal ${heapType === 'min' ? 'active' : ''}`} onClick={() => setHeapType('min')}>
-                    <ArrowDown size={12} />
-                    <span>Min Heap</span>
-                  </button>
-                </div>
-              </>
-            )}
-
-            {treeCategory === 'trie' && (
-              <>
-                <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
-                  <Plus size={16} />
-                  <span>Insert Word</span>
-                </button>
-                <button className="bst-btn btn-search" onClick={handleTrieSearch}>
-                  <Search size={16} />
-                  <span>Search Prefix</span>
-                </button>
-              </>
-            )}
-
-            {/* Dataset Initialization Selector Group for BST */}
-            {treeCategory === 'bst' && (
-              <div className="dataset-mode-selector">
-                <button className="bst-btn btn-mode" onClick={() => { setBstTree(undefined); setActiveOperationSteps([]); reset(); }}>
-                  <Trash2 size={14} className="text-rose-400" />
-                  <span>Empty Tree</span>
-                </button>
-                <button className="bst-btn btn-mode" onClick={() => { setBstTree(DEFAULT_BST_TREE); setActiveOperationSteps(generateBSTInsertSteps(DEFAULT_BST_TREE, 45).steps); reset(); }}>
-                  <Layers size={14} className="text-amber-400" />
-                  <span>Sample Tree</span>
-                </button>
-                <button className="bst-btn btn-mode" onClick={() => { const rnd = generateRandomBST(6); setBstTree(rnd); setActiveOperationSteps(generateBSTInsertSteps(rnd, 50).steps); reset(); }}>
-                  <Sparkles size={14} className="text-emerald-400" />
-                  <span>Random Tree</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="bst-toolbar-right">
-            <div className="predict-mode-group">
-              <label className="predict-toggle-label">
-                <HelpCircle size={16} />
-                <span>Predict & Learn Mode</span>
-                <input
-                  type="checkbox"
-                  checked={isPredictMode}
-                  onChange={(e) => setIsPredictMode(e.target.checked)}
-                />
-              </label>
+      <div className="bst-toolbar animate-fade-in">
+        <div className="bst-toolbar-left">
+          {treeCategory !== 'trie' ? (
+            <div className="bst-input-group">
+              <span>Value:</span>
+              <input
+                type="number"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="bst-input"
+                placeholder="e.g. 45"
+              />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Learning Workspace or Full-Screen View */}
-      <div className={`sorting-workspace ${isFullscreen ? 'fullscreen-active-workspace' : ''}`}>
-        <div className="renderer-section">
-          {/* Integrated Top Floating Header Toolbar when in Full Screen Mode */}
-          {isFullscreen && (
-            <div className="fullscreen-top-header animate-fade-in">
-              <div className="fs-header-left">
-                {treeCategory !== 'trie' ? (
-                  <input
-                    type="number"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    className="bst-input fs-input"
-                    placeholder="Val"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    value={wordValue}
-                    onChange={(e) => setWordValue(e.target.value)}
-                    className="bst-input fs-input"
-                    placeholder="Word"
-                  />
-                )}
-
-                {treeCategory === 'bst' && (
-                  <>
-                    <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
-                      <Plus size={14} />
-                      <span>Insert</span>
-                    </button>
-                    <button className="bst-btn btn-search" onClick={() => {
-                      const steps = generateBSTSearchSteps(bstTree, Number(inputValue));
-                      setActiveOperationSteps(steps);
-                      reset();
-                      if (!isPredictMode) play();
-                    }}>
-                      <Search size={14} />
-                      <span>Search</span>
-                    </button>
-                  </>
-                )}
-
-                {treeCategory === 'avl' && (
-                  <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
-                    <Plus size={14} />
-                    <span>Insert AVL</span>
-                  </button>
-                )}
-
-                {treeCategory === 'heap' && (
-                  <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
-                    <Plus size={14} />
-                    <span>Push Heap</span>
-                  </button>
-                )}
-
-                {treeCategory === 'trie' && (
-                  <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
-                    <Plus size={14} />
-                    <span>Insert Word</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="fs-header-right">
-                <label className="predict-toggle-label fs-toggle">
-                  <HelpCircle size={14} />
-                  <span>Predict Mode</span>
-                  <input
-                    type="checkbox"
-                    checked={isPredictMode}
-                    onChange={(e) => setIsPredictMode(e.target.checked)}
-                  />
-                </label>
-
-                <button className="fullscreen-close-btn" onClick={() => setIsFullscreen(false)}>
-                  <Minimize2 size={16} />
-                  <span>Exit Fullscreen</span>
-                </button>
-              </div>
+          ) : (
+            <div className="bst-input-group">
+              <span>Word:</span>
+              <input
+                type="text"
+                value={wordValue}
+                onChange={(e) => setWordValue(e.target.value)}
+                className="bst-input"
+                placeholder="e.g. cat"
+                style={{ width: '110px' }}
+              />
             </div>
           )}
 
+          {treeCategory === 'bst' && (
+            <>
+              <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
+                <Plus size={16} />
+                <span>Insert</span>
+              </button>
+              <button className="bst-btn btn-search" onClick={() => {
+                const steps = generateBSTSearchSteps(bstTree, Number(inputValue));
+                setActiveOperationSteps(steps);
+                reset();
+                if (!isPredictMode) play();
+              }}>
+                <Search size={16} />
+                <span>Search</span>
+              </button>
+              <div className="traversal-btn-group">
+                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); play(); }}>
+                  <ListOrdered size={14} />
+                  <span>Inorder</span>
+                </button>
+                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); play(); }}>
+                  <GitCommit size={14} />
+                  <span>Preorder</span>
+                </button>
+                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); play(); }}>
+                  <CornerDownRight size={14} />
+                  <span>Postorder</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {treeCategory === 'avl' && (
+            <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
+              <Plus size={16} />
+              <span>Insert & Balance</span>
+            </button>
+          )}
+
+          {treeCategory === 'heap' && (
+            <>
+              <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
+                <Plus size={16} />
+                <span>Push Heap</span>
+              </button>
+              <button className="bst-btn btn-search" onClick={handleHeapExtract}>
+                <ArrowDown size={16} />
+                <span>Extract Root</span>
+              </button>
+              <div className="traversal-btn-group">
+                <button className={`bst-btn btn-traversal ${heapType === 'max' ? 'active' : ''}`} onClick={() => setHeapType('max')}>
+                  <ArrowUp size={12} />
+                  <span>Max Heap</span>
+                </button>
+                <button className={`bst-btn btn-traversal ${heapType === 'min' ? 'active' : ''}`} onClick={() => setHeapType('min')}>
+                  <ArrowDown size={12} />
+                  <span>Min Heap</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {treeCategory === 'trie' && (
+            <>
+              <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
+                <Plus size={16} />
+                <span>Insert Word</span>
+              </button>
+              <button className="bst-btn btn-search" onClick={handleTrieSearch}>
+                <Search size={16} />
+                <span>Search Prefix</span>
+              </button>
+            </>
+          )}
+
+          {/* Dataset Initialization Selector Group for BST */}
+          {treeCategory === 'bst' && (
+            <div className="dataset-mode-selector">
+              <button className="bst-btn btn-mode" onClick={() => { setBstTree(undefined); setActiveOperationSteps([]); reset(); }}>
+                <Trash2 size={14} className="text-rose-400" />
+                <span>Empty Tree</span>
+              </button>
+              <button className="bst-btn btn-mode" onClick={() => { setBstTree(DEFAULT_BST_TREE); setActiveOperationSteps(generateBSTInsertSteps(DEFAULT_BST_TREE, 45).steps); reset(); }}>
+                <Layers size={14} className="text-amber-400" />
+                <span>Sample Tree</span>
+              </button>
+              <button className="bst-btn btn-mode" onClick={() => { const rnd = generateRandomBST(6); setBstTree(rnd); setActiveOperationSteps(generateBSTInsertSteps(rnd, 50).steps); reset(); }}>
+                <Sparkles size={14} className="text-emerald-400" />
+                <span>Random Tree</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="bst-toolbar-right">
+          <div className="predict-mode-group">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Predict & Learn Mode</span>
+              <input
+                type="checkbox"
+                checked={isPredictMode}
+                onChange={(e) => setIsPredictMode(e.target.checked)}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Learning Workspace */}
+      <div className="sorting-workspace">
+        <div className="renderer-section">
           {activePrediction && (
             <PredictionQuiz
               predictionPoint={activePrediction}
@@ -443,8 +458,7 @@ export const BSTPage: React.FC = () => {
 
           <BSTRenderer
             currentStep={bstStep}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+            onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
 
           {/* Traversal Log Banner */}
@@ -459,49 +473,44 @@ export const BSTPage: React.FC = () => {
             </div>
           )}
 
-          {/* Player Bar */}
-          <div className="player-bar">
-            <div className="player-left">
-              <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-              <StepControls
-                onStepBack={stepBack}
-                onStepForward={stepForward}
-                onReset={reset}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < totalSteps - 1}
-              />
-            </div>
-            <div className="player-center">
-              <div className="step-progress-bar">
-                <div className="step-progress-fill" style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
-              </div>
-              <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
-            </div>
-            <div className="player-right">
-              <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-            </div>
-          </div>
+          {renderPlayerControls()}
         </div>
 
-        {/* Right Column: Multi-Language Debugger & Explanation (Hidden in Fullscreen) */}
-        {!isFullscreen && (
-          <div className="explanation-section">
-            <MultiLanguageCodePanel
-              algorithmKey="bubble"
-              activeLine={bstStep?.codeLine}
-              breakpoints={breakpoints}
-              onToggleBreakpoint={handleToggleBreakpoint}
-              variables={bstStep?.variables}
-            />
+        {/* Right Column: Multi-Language Debugger & Explanation */}
+        <div className="explanation-section">
+          <MultiLanguageCodePanel
+            algorithmKey="bubble"
+            activeLine={bstStep?.codeLine}
+            breakpoints={breakpoints}
+            onToggleBreakpoint={handleToggleBreakpoint}
+            variables={bstStep?.variables}
+          />
 
-            <ExplanationPanel
-              description={bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.'}
-              timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
-              spaceComplexity="O(H)"
-            />
-          </div>
-        )}
+          <ExplanationPanel
+            description={bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.'}
+            timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
+            spaceComplexity="O(H)"
+          />
+        </div>
       </div>
+
+      {/* Reusable Native FullScreen Canvas Modal */}
+      <FullScreenCanvasModal
+        isOpen={isFullScreenOpen}
+        onClose={() => setIsFullScreenOpen(false)}
+        title={`Tree Studio | ${treeCategory.toUpperCase()}`}
+        subtitle="Interactive Dynamic Tree Inspector"
+        toolbarControls={renderFloatingControls()}
+        playbackControls={renderPlayerControls()}
+      >
+        {activePrediction && (
+          <PredictionQuiz
+            predictionPoint={activePrediction}
+            onCorrectAnswer={() => stepForward()}
+          />
+        )}
+        <BSTRenderer currentStep={bstStep} />
+      </FullScreenCanvasModal>
     </div>
   );
 };

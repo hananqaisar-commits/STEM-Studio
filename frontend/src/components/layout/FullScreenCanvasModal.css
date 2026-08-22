@@ -1,0 +1,191 @@
+.fs-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: inherit;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme Dark */
+.theme-dark {
+  background-color: #090d16;
+  color: #f8fafc;
+}
+
+.theme-dark .fs-modal-header {
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .fs-modal-footer {
+  background: rgba(15, 23, 42, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .fs-modal-body {
+  background-color: rgba(15, 23, 42, 0.4);
+}
+
+/* Theme Light */
+.theme-light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.theme-light .fs-modal-header {
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .fs-modal-footer {
+  background: rgba(255, 255, 255, 0.9);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .fs-modal-body {
+  background-color: #ffffff;
+}
+
+.theme-light .bst-canvas-container,
+.theme-light .bst-canvas-workspace {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light .bst-title {
+  color: #2563eb !important;
+}
+
+.theme-light .bst-subtitle {
+  color: #64748b !important;
+}
+
+/* Header Elements */
+.fs-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  backdrop-filter: blur(12px);
+  gap: 1rem;
+  z-index: 10;
+}
+
+.fs-header-branding {
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-modal-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.fs-modal-subtitle {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  font-family: 'Fira Code', monospace;
+}
+
+.fs-modal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.fs-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.fs-icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.theme-dark .fs-icon-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.theme-dark .fs-icon-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.theme-light .fs-icon-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+}
+
+.theme-light .fs-icon-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+/* Body Workspace with Auto-Scroll & Sliders */
+.fs-modal-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-workspace-scrollable {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* Auto scrollbars/sliders when tree/graph expands */
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Sleek Glassmorphic Scrollbars */
+.fs-workspace-scrollable::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.fs-workspace-scrollable::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.fs-workspace-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.4);
+  border-radius: 6px;
+}
+
+.fs-workspace-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+/* Footer Player Bar */
+.fs-modal-footer {
+  padding: 0.75rem 1.5rem;
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
