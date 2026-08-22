@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════
-   STEM Studio — Premium Visual Primitives
-   Google-Grade Design System for DSA Visualization
+   STEM Studio — Visual Primitives
+   Clean, Professional Design for DSA Visualization
+   Clearly visible in both Light & Dark mode
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ─── 1. BAR PRIMITIVE ─────────────────────────────────────────── */
@@ -20,16 +21,16 @@
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 0.3rem;
-  opacity: 0.85;
+  opacity: 0.9;
   letter-spacing: 0.3px;
 }
 
 .primitive-bar-fill {
   width: 100%;
-  border-radius: 6px 6px 2px 2px;
+  border-radius: 5px 5px 2px 2px;
   position: relative;
   overflow: hidden;
-  transition: height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.3s ease,
               box-shadow 0.3s ease;
 }
@@ -37,63 +38,54 @@
 .bar-glow {
   position: absolute;
   top: 0;
-  left: 10%;
-  right: 10%;
-  height: 40%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%);
-  border-radius: 4px 4px 50% 50%;
+  left: 15%;
+  right: 15%;
+  height: 35%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+  border-radius: 3px 3px 50% 50%;
   pointer-events: none;
 }
 
 /* Bar State — Default */
 .state-default .primitive-bar-fill {
-  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 35%, #2563eb 100%);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.15);
+  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.2);
 }
 
 /* Bar State — Comparing */
 .state-comparing .primitive-bar-fill {
-  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 35%, #d97706 100%);
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.5),
-              0 4px 12px rgba(245, 158, 11, 0.3),
-              inset 0 1px 0 rgba(255,255,255,0.2);
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
 }
 
 /* Bar State — Swapping */
 .state-swapping .primitive-bar-fill {
-  background: linear-gradient(180deg, #f87171 0%, #ef4444 35%, #dc2626 100%);
-  box-shadow: 0 0 24px rgba(239, 68, 68, 0.55),
-              0 4px 14px rgba(239, 68, 68, 0.35),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: bar-swap-pulse 0.4s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+  background: linear-gradient(180deg, #f87171 0%, #ef4444 50%, #dc2626 100%);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+  animation: bar-swap-pulse 0.4s ease infinite alternate;
 }
 
 /* Bar State — Sorted */
 .state-sorted .primitive-bar-fill {
-  background: linear-gradient(180deg, #34d399 0%, #10b981 35%, #059669 100%);
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35),
-              inset 0 1px 0 rgba(255,255,255,0.15);
+  background: linear-gradient(180deg, #34d399 0%, #10b981 50%, #059669 100%);
+  box-shadow: 0 1px 6px rgba(16, 185, 129, 0.25);
 }
 
 /* Bar State — Pivot */
 .state-pivot .primitive-bar-fill {
-  background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 35%, #7c3aed 100%);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5),
-              0 4px 12px rgba(139, 92, 246, 0.3),
-              inset 0 1px 0 rgba(255,255,255,0.2);
+  background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.35);
 }
 
 /* Bar State — Selected */
 .state-selected .primitive-bar-fill {
-  background: linear-gradient(180deg, #f472b6 0%, #ec4899 35%, #db2777 100%);
-  box-shadow: 0 0 16px rgba(236, 72, 153, 0.45),
-              inset 0 1px 0 rgba(255,255,255,0.15);
+  background: linear-gradient(180deg, #f472b6 0%, #ec4899 50%, #db2777 100%);
+  box-shadow: 0 0 8px rgba(236, 72, 153, 0.3);
 }
 
 @keyframes bar-swap-pulse {
   0% { transform: scaleX(1); }
-  100% { transform: scaleX(1.06); }
+  100% { transform: scaleX(1.04); }
 }
 
 
@@ -115,89 +107,80 @@
   font-weight: 800;
   color: #ffffff;
   position: relative;
-  background: linear-gradient(145deg, #4f8ff7 0%, #3b82f6 40%, #2563eb 100%);
-  border: 2.5px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(145deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+  border: 2px solid rgba(255, 255, 255, 0.18);
   box-shadow:
-    0 4px 14px rgba(59, 130, 246, 0.35),
-    0 1px 3px rgba(0, 0, 0, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.25),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    0 3px 10px rgba(59, 130, 246, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
   letter-spacing: 0.5px;
 }
 
 .primitive-circle-node:hover {
-  transform: scale(1.08);
+  transform: scale(1.06);
   box-shadow:
-    0 6px 20px rgba(59, 130, 246, 0.45),
-    0 2px 6px rgba(0, 0, 0, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    0 5px 16px rgba(59, 130, 246, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
 }
 
 /* Node State — Comparing */
 .primitive-circle-node.state-comparing {
-  background: linear-gradient(145deg, #fcd34d 0%, #f59e0b 40%, #d97706 100%);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(145deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%);
+  border-color: rgba(255, 255, 255, 0.25);
   box-shadow:
-    0 0 28px rgba(245, 158, 11, 0.55),
-    0 4px 16px rgba(245, 158, 11, 0.35),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
-  animation: node-glow-amber 1.2s ease-in-out infinite alternate;
+    0 0 16px rgba(245, 158, 11, 0.4),
+    0 3px 10px rgba(245, 158, 11, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  animation: node-pulse 1s ease-in-out infinite alternate;
 }
 
 /* Node State — Swapping / Active */
 .primitive-circle-node.state-swapping {
-  background: linear-gradient(145deg, #fca5a5 0%, #ef4444 40%, #dc2626 100%);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: linear-gradient(145deg, #fca5a5 0%, #ef4444 50%, #dc2626 100%);
+  border-color: rgba(255, 255, 255, 0.3);
   box-shadow:
-    0 0 32px rgba(239, 68, 68, 0.6),
-    0 4px 18px rgba(239, 68, 68, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
-  animation: node-glow-red 0.6s ease-in-out infinite alternate;
+    0 0 18px rgba(239, 68, 68, 0.45),
+    0 3px 12px rgba(239, 68, 68, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  animation: node-pulse 0.6s ease-in-out infinite alternate;
 }
 
 /* Node State — Sorted / Found */
 .primitive-circle-node.state-sorted {
-  background: linear-gradient(145deg, #6ee7b7 0%, #10b981 40%, #059669 100%);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(145deg, #6ee7b7 0%, #10b981 50%, #059669 100%);
+  border-color: rgba(255, 255, 255, 0.2);
   box-shadow:
-    0 0 24px rgba(16, 185, 129, 0.5),
-    0 4px 14px rgba(16, 185, 129, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.25),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+    0 0 12px rgba(16, 185, 129, 0.35),
+    0 3px 10px rgba(16, 185, 129, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
 /* Node State — Pivot */
 .primitive-circle-node.state-pivot {
-  background: linear-gradient(145deg, #c4b5fd 0%, #8b5cf6 40%, #7c3aed 100%);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(145deg, #c4b5fd 0%, #8b5cf6 50%, #7c3aed 100%);
+  border-color: rgba(255, 255, 255, 0.25);
   box-shadow:
-    0 0 28px rgba(139, 92, 246, 0.55),
-    0 4px 16px rgba(139, 92, 246, 0.35),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    0 0 16px rgba(139, 92, 246, 0.4),
+    0 3px 10px rgba(139, 92, 246, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
 /* Node State — Selected */
 .primitive-circle-node.state-selected {
-  background: linear-gradient(145deg, #fbcfe8 0%, #ec4899 40%, #db2777 100%);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(145deg, #fbcfe8 0%, #ec4899 50%, #db2777 100%);
+  border-color: rgba(255, 255, 255, 0.25);
   box-shadow:
-    0 0 24px rgba(236, 72, 153, 0.5),
-    0 4px 14px rgba(236, 72, 153, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.25);
+    0 0 14px rgba(236, 72, 153, 0.35),
+    0 3px 10px rgba(236, 72, 153, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
-@keyframes node-glow-amber {
-  0% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), 0 4px 14px rgba(245, 158, 11, 0.25), inset 0 1px 2px rgba(255,255,255,0.3); }
-  100% { box-shadow: 0 0 36px rgba(245, 158, 11, 0.7), 0 4px 20px rgba(245, 158, 11, 0.4), inset 0 1px 2px rgba(255,255,255,0.3); }
-}
-
-@keyframes node-glow-red {
-  0% { box-shadow: 0 0 24px rgba(239, 68, 68, 0.5), 0 4px 16px rgba(239, 68, 68, 0.3), inset 0 1px 2px rgba(255,255,255,0.3); }
-  100% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.75), 0 4px 22px rgba(239, 68, 68, 0.45), inset 0 1px 2px rgba(255,255,255,0.3); }
+@keyframes node-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.04); }
 }
 
 .node-label {
@@ -213,9 +196,9 @@
 /* ─── 3. SVG LINE / EDGE PRIMITIVE ──────────────────────────────── */
 
 .primitive-line {
-  stroke: rgba(148, 163, 184, 0.45);
+  stroke: rgba(148, 163, 184, 0.4);
   stroke-linecap: round;
-  transition: stroke 0.35s ease, stroke-width 0.35s ease, opacity 0.35s ease;
+  transition: stroke 0.3s ease, stroke-width 0.3s ease;
 }
 
 .line-label {
@@ -226,32 +209,93 @@
 }
 
 .arrow-head-fill {
-  fill: rgba(148, 163, 184, 0.45);
-  transition: fill 0.35s ease;
+  fill: rgba(148, 163, 184, 0.4);
+  transition: fill 0.3s ease;
 }
 
 /* Edge State — Comparing */
 .line-state-comparing {
   stroke: #f59e0b;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5));
+  stroke-width: 2.5;
 }
 
 /* Edge State — Swapping */
 .line-state-swapping {
   stroke: #ef4444;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  stroke-width: 2.5;
 }
 
 /* Edge State — Sorted */
 .line-state-sorted {
   stroke: #10b981;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.4));
+  stroke-width: 2.5;
 }
 
 /* Edge State — Default Idle */
 .line-state-default {
-  stroke: rgba(148, 163, 184, 0.35);
+  stroke: rgba(148, 163, 184, 0.3);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT MODE OVERRIDES
+   Ensures bars, nodes, and edges are clearly visible on white/light bg
+   ═══════════════════════════════════════════════════════════════════ */
+
+.theme-light .bar-value {
+  color: #1e293b;
+  opacity: 1;
+}
+
+.theme-light .primitive-circle-node {
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 3px 10px rgba(59, 130, 246, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .primitive-circle-node:hover {
+  box-shadow:
+    0 5px 16px rgba(59, 130, 246, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .primitive-circle-node.state-comparing {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3), 0 3px 8px rgba(245, 158, 11, 0.2);
+}
+
+.theme-light .primitive-circle-node.state-swapping {
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.3), 0 3px 8px rgba(239, 68, 68, 0.2);
+}
+
+.theme-light .primitive-circle-node.state-sorted {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25), 0 3px 8px rgba(16, 185, 129, 0.15);
+}
+
+.theme-light .primitive-line {
+  stroke: rgba(100, 116, 139, 0.4);
+}
+
+.theme-light .line-state-default {
+  stroke: rgba(100, 116, 139, 0.3);
+}
+
+.theme-light .node-label {
+  color: #475569;
+}
+
+.theme-light .state-default .primitive-bar-fill {
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.15);
+}
+
+.theme-light .state-comparing .primitive-bar-fill {
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+.theme-light .state-swapping .primitive-bar-fill {
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
+}
+
+.theme-light .state-sorted .primitive-bar-fill {
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
 }

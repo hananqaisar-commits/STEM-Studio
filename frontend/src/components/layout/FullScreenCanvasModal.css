@@ -45,31 +45,135 @@
 
 .theme-light .fs-modal-header {
   background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .theme-light .fs-modal-footer {
   background: rgba(255, 255, 255, 0.95);
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .theme-light .fs-modal-body {
-  background-color: #ffffff;
+  background-color: #f1f5f9;
 }
 
+/* Canvas Containers in Light Mode */
 .theme-light .bst-canvas-container,
-.theme-light .bst-canvas-workspace,
 .theme-light .sorting-canvas-container {
-  background-color: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+
+.theme-light .bst-canvas-workspace {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .bst-canvas-empty,
+.theme-light .sorting-canvas-empty {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
 }
 
 .theme-light .bst-title {
-  color: #2563eb !important;
+  color: #1e40af !important;
 }
 
 .theme-light .bst-subtitle {
   color: #64748b !important;
+}
+
+/* Badges in Light Mode */
+.theme-light .bf-badge {
+  color: #0f172a !important;
+}
+
+.theme-light .bf-balanced {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-color: #10b981 !important;
+  color: #047857 !important;
+}
+
+.theme-light .bf-unbalanced {
+  background-color: rgba(244, 63, 94, 0.1) !important;
+  border-color: #f43f5e !important;
+  color: #be123c !important;
+}
+
+.theme-light .eow-badge {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  border-color: #f59e0b !important;
+  color: #b45309 !important;
+}
+
+/* Canvas Header in Light Mode */
+.theme-light .bst-canvas-header,
+.theme-light .sorting-canvas-header {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+/* Canvas Grid Pattern in Light Mode */
+.theme-light .canvas-grid-pattern circle {
+  fill: rgba(100, 116, 139, 0.12) !important;
+}
+
+/* Pointer Badges in Light Mode */
+.theme-light .canvas-pointer-badge {
+  color: #0369a1 !important;
+  background-color: rgba(14, 165, 233, 0.08) !important;
+  border-color: rgba(14, 165, 233, 0.3) !important;
+}
+
+/* Input Fields in Light Mode */
+.theme-light .bst-input {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Buttons in Light Mode */
+.theme-light .bst-btn {
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+  background-color: #ffffff !important;
+}
+
+.theme-light .bst-btn:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Player Bar in Light Mode */
+.theme-light .player-bar {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .step-counter {
+  color: #475569 !important;
+}
+
+.theme-light .step-progress-bar {
+  background-color: #e2e8f0 !important;
+}
+
+/* Traversal Log in Light Mode */
+.theme-light .traversal-log-banner {
+  background-color: rgba(59, 130, 246, 0.06) !important;
+  border-color: #bfdbfe !important;
+}
+
+.theme-light .log-pill {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #93c5fd !important;
+}
+
+/* Predict toggle in Light Mode */
+.theme-light .predict-toggle-label {
+  color: #b45309 !important;
 }
 
 /* Header Elements - Professional Typography & Zero Overlap */
