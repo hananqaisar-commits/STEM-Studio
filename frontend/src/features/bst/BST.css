@@ -439,45 +439,48 @@
 /* AVL Balance Factor & Trie Badges — Premium Micro-Labels */
 .bf-badge {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  padding: 0.1rem 0.4rem;
+  padding: 0.12rem 0.45rem;
   border-radius: 6px;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
   white-space: nowrap;
   letter-spacing: 0.3px;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
 }
 
 .bf-balanced {
-  background-color: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.5);
+  background-color: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.6);
   color: #34d399;
 }
 
 .bf-unbalanced {
-  background-color: rgba(244, 63, 94, 0.15);
-  border: 1px solid rgba(244, 63, 94, 0.55);
+  background-color: rgba(244, 63, 94, 0.2);
+  border: 1px solid rgba(244, 63, 94, 0.7);
   color: #fb7185;
   animation: badge-pulse 1.2s ease-in-out infinite;
 }
 
 .eow-badge {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   font-weight: 800;
-  padding: 0.1rem 0.35rem;
+  padding: 0.12rem 0.42rem;
   border-radius: 6px;
-  background-color: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.5);
+  background-color: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.65);
   color: #fbbf24;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.25rem;
   letter-spacing: 0.4px;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
 }
 
 @keyframes badge-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.85; }
 }
 
 /* Prediction Quiz Card - Glassmorphic IDE UI */
@@ -675,4 +678,89 @@
 
 .quiz-continue-btn:hover {
   background-color: var(--accent-hover);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BST / AVL / TRIE LIGHT MODE OVERRIDES
+   High contrast, crystal clear text and badges in Light Theme
+   ═══════════════════════════════════════════════════════════════════ */
+
+.theme-light .bf-balanced {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: #10b981 !important;
+  color: #047857 !important;
+}
+
+.theme-light .bf-unbalanced {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+  border-color: #f43f5e !important;
+  color: #be123c !important;
+}
+
+.theme-light .eow-badge {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border-color: #f59e0b !important;
+  color: #b45309 !important;
+}
+
+.theme-light .bst-canvas-container {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+}
+
+.theme-light .bst-canvas-workspace {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .prediction-quiz-card {
+  background-color: #ffffff !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15), 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+.theme-light .quiz-question {
+  color: #0f172a !important;
+}
+
+.theme-light .quiz-subtext {
+  color: #475569 !important;
+}
+
+.theme-light .left-btn {
+  background-color: #eff6ff !important;
+  border-color: #3b82f6 !important;
+  color: #1d4ed8 !important;
+}
+
+.theme-light .left-btn:hover {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.theme-light .right-btn {
+  background-color: #faf5ff !important;
+  border-color: #a855f7 !important;
+  color: #7e22ce !important;
+}
+
+.theme-light .right-btn:hover {
+  background-color: #a855f7 !important;
+  color: #ffffff !important;
+}
+
+.theme-light .traversal-log-banner {
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+.theme-light .log-title {
+  color: #1d4ed8 !important;
+}
+
+.theme-light .log-pill {
+  background-color: #ffffff !important;
+  border-color: #93c5fd !important;
+  color: #1e40af !important;
 }
