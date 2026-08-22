@@ -99,6 +99,35 @@ export const StackQueuePage: React.FC = () => {
   // Code Debugger Visibility State
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
 
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const searchContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Global Keyboard Shortcut (⌘K / Ctrl+K) & Click Outside to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setIsSearchOpen(true);
+      } else if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Step Player Hook
   const {
     currentStepIndex,
@@ -405,10 +434,11 @@ export const StackQueuePage: React.FC = () => {
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
           {/* Spotlight Search & Category Select Dropdown */}
-          <div className="spotlight-search-container">
+          <div className="spotlight-search-container" ref={searchContainerRef}>
             <div className="spotlight-search-box">
               <Search size={14} className="text-amber-400 shrink-0" />
               <input
+                ref={searchInputRef}
                 type="text"
                 className="spotlight-search-input font-medium"
                 placeholder="Search 20 DSA Problems (#739, Water, Min)..."
@@ -422,8 +452,9 @@ export const StackQueuePage: React.FC = () => {
               <span className="search-shortcut-badge">⌘K</span>
               {searchQuery && (
                 <button
-                  className="text-slate-400 hover:text-slate-200 text-xs font-bold px-1"
+                  className="text-slate-400 hover:text-amber-400 text-xs font-bold px-1 transition-colors"
                   onClick={() => setSearchQuery('')}
+                  title="Clear Search"
                 >
                   ✕
                 </button>
@@ -431,36 +462,51 @@ export const StackQueuePage: React.FC = () => {
             </div>
 
             {/* Instant Search Autocomplete Command Palette Dropdown */}
-            {isSearchOpen && searchQuery.trim().length > 0 && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-slate-900/95 border border-slate-700/90 rounded-2xl shadow-2xl backdrop-blur-xl z-50 max-h-72 overflow-y-auto p-2">
-                <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1.5 border-b border-slate-800 mb-1">
-                  <Filter size={12} className="text-amber-400" />
-                  <span>Matching DSA Problems ({filteredProblems.length})</span>
+            {isSearchOpen && (
+              <div className="spotlight-dropdown-menu">
+                <div className="spotlight-dropdown-header">
+                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                    <Filter size={12} className="text-amber-400" />
+                    <span>Matching DSA Problems ({filteredProblems.length})</span>
+                  </div>
+                  {searchQuery && (
+                    <button
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
+
                 {filteredProblems.length === 0 ? (
-                  <div className="px-3 py-4 text-xs text-slate-400 text-center">No matching DSA problems found</div>
+                  <div className="px-3 py-6 text-xs text-slate-400 text-center flex flex-col items-center gap-1">
+                    <Search size={20} className="text-slate-600 mb-1" />
+                    <span>No matching DSA problems found for "{searchQuery}"</span>
+                  </div>
                 ) : (
                   filteredProblems.map((prob) => (
                     <button
                       key={prob.id}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between hover:bg-slate-800/80 mb-0.5 ${category === prob.id ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30' : 'text-slate-200'}`}
+                      className={`spotlight-result-card ${category === prob.id ? 'active-selected' : ''}`}
                       onClick={() => {
                         setCategory(prob.id);
                         setIsSearchOpen(false);
-                        setActiveSteps([]);
+                        const steps = getCategoryDefaultSteps(prob.id);
+                        setActiveSteps(steps);
                         reset();
                       }}
                     >
-                      <div>
-                        <div className="flex items-center gap-1.5 font-bold">
-                          <span>{prob.name}</span>
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex items-center gap-2 font-bold text-xs">
+                          <span className="truncate">{prob.name}</span>
                           {prob.leetcodeId && (
-                            <span className="bg-slate-800 text-amber-400 px-1.5 py-0.5 rounded-md text-[10px] font-mono">{prob.leetcodeId}</span>
+                            <span className="spotlight-leetcode-badge shrink-0">{prob.leetcodeId}</span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-normal line-clamp-1">{prob.description}</div>
+                        <div className="text-[11px] text-slate-400 font-normal truncate mt-0.5">{prob.description}</div>
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${prob.group === 'Stack' ? 'bg-rose-500/20 text-rose-300' : prob.group === 'Queue' ? 'bg-sky-500/20 text-sky-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                      <span className={`spotlight-group-tag ${prob.group.toLowerCase()} shrink-0`}>
                         {prob.group}
                       </span>
                     </button>
