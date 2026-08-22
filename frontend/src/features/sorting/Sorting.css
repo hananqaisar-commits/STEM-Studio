@@ -8,52 +8,62 @@
   flex: 1;
   background-color: var(--bg-secondary);
   min-height: calc(100vh - 64px);
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-/* Toolbar */
-.sorting-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 0.75rem 1.25rem;
-  box-shadow: var(--shadow-sm);
+/* Algorithm Tabs Container */
+.algorithm-tabs-bar {
+  background: var(--bg-primary, rgba(15, 23, 42, 0.8));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .algorithm-tabs {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   overflow-x: auto;
-  padding-bottom: 2px;
 }
 
 .alg-tab {
-  padding: 0.5rem 0.875rem;
-  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  color: var(--text-secondary, #94a3b8);
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .alg-tab:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-secondary);
+  color: #f8fafc;
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
 }
 
 .alg-tab.active {
   color: #ffffff;
-  background-color: var(--accent-primary);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.4));
+  border-color: #f59e0b;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+}
+
+/* Toolbar */
+.sorting-toolbar {
+  background: var(--bg-primary, rgba(15, 23, 42, 0.8));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 /* Toolbar Right Controls */

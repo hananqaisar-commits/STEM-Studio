@@ -286,6 +286,49 @@ export const StackQueuePage: React.FC = () => {
         </button>
       </header>
 
+      {/* Category Pills Header Bar */}
+      <div className="algorithm-tabs-bar animate-fade-in">
+        <div className="algorithm-tabs flex flex-wrap gap-2">
+          <button
+            className={`alg-tab flex items-center gap-2 ${['stack', 'queue', 'circularQueue'].includes(category) ? 'active' : ''}`}
+            onClick={() => {
+              setCategory('stack');
+              setActiveSteps([]);
+              reset();
+            }}
+          >
+            <Layers size={14} />
+            <span className="font-semibold">Core Primitives (LIFO & FIFO)</span>
+          </button>
+
+          <button
+            className={`alg-tab flex items-center gap-2 ${PROBLEMS_LIST.filter(p => p.group === 'Stack').some(p => p.id === category) ? 'active' : ''}`}
+            onClick={() => {
+              setCategory('validParentheses');
+              setActiveSteps([]);
+              reset();
+            }}
+          >
+            <CheckCircle2 size={14} />
+            <span className="font-semibold">10 Stack Classical Problems</span>
+            <span className="text-[10px] opacity-75 font-mono bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-full font-bold">10 Solved</span>
+          </button>
+
+          <button
+            className={`alg-tab flex items-center gap-2 ${PROBLEMS_LIST.filter(p => p.group === 'Queue').some(p => p.id === category) ? 'active' : ''}`}
+            onClick={() => {
+              setCategory('queueViaStacks');
+              setActiveSteps([]);
+              reset();
+            }}
+          >
+            <Filter size={14} />
+            <span className="font-semibold">10 Queue Classical Problems</span>
+            <span className="text-[10px] opacity-75 font-mono bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded-full font-bold">10 Solved</span>
+          </button>
+        </div>
+      </div>
+
       {/* Control Toolbar with Vector Icons & Spotlight Search Box */}
       <div className="bst-toolbar flex flex-wrap justify-between items-center gap-4">
         {/* Left Section: Spotlight Search & Category Selector */}

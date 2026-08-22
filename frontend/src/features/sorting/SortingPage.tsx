@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Shuffle, Edit3 } from 'lucide-react';
+import {
+  Shuffle, Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, BarChart3, Sliders, ArrowUpDown
+} from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
@@ -23,14 +25,21 @@ import './Sorting.css';
 type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell';
 type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
 
-const ALGORITHMS: { key: AlgorithmKey; name: string }[] = [
-  { key: 'bubble', name: 'Bubble Sort' },
-  { key: 'selection', name: 'Selection Sort' },
-  { key: 'insertion', name: 'Insertion Sort' },
-  { key: 'merge', name: 'Merge Sort' },
-  { key: 'quick', name: 'Quick Sort' },
-  { key: 'heap', name: 'Heap Sort' },
-  { key: 'shell', name: 'Shell Sort' },
+interface AlgMeta {
+  key: AlgorithmKey;
+  name: string;
+  complexity: string;
+  icon: React.ReactNode;
+}
+
+const ALGORITHMS: AlgMeta[] = [
+  { key: 'bubble', name: 'Bubble Sort', complexity: 'O(n²)', icon: <Layers size={14} /> },
+  { key: 'selection', name: 'Selection Sort', complexity: 'O(n²)', icon: <CheckCircle2 size={14} /> },
+  { key: 'insertion', name: 'Insertion Sort', complexity: 'O(n²)', icon: <ArrowDown size={14} /> },
+  { key: 'merge', name: 'Merge Sort', complexity: 'O(n log n)', icon: <GitCommit size={14} /> },
+  { key: 'quick', name: 'Quick Sort', complexity: 'O(n log n)', icon: <Zap size={14} /> },
+  { key: 'heap', name: 'Heap Sort', complexity: 'O(n log n)', icon: <Network size={14} /> },
+  { key: 'shell', name: 'Shell Sort', complexity: 'O(n log n)', icon: <Sparkles size={14} /> },
 ];
 
 function generateArray(size: number, pattern: ArrayPattern): number[] {
@@ -168,34 +177,49 @@ export const SortingPage: React.FC = () => {
 
   return (
     <div className="sorting-page-container">
-      {/* Algorithm Selector Bar */}
+      {/* Category Header */}
+      <header className="page-header flex justify-between items-center">
+        <div>
+          <h1 className="page-title text-xl font-bold flex items-center gap-2">
+            <BarChart3 className="text-amber-400" size={24} />
+            <span>Sorting Algorithms Studio</span>
+          </h1>
+          <p className="page-subtitle text-xs text-slate-400">
+            Interactive Step-by-Step 3D Visualizer & Time-Complexity Inspector for Classical Sorting Algorithms
+          </p>
+        </div>
+      </header>
+
+      {/* Algorithm Vector Tabs Bar */}
       <div className="algorithm-tabs-bar animate-fade-in">
-        <div className="algorithm-tabs">
+        <div className="algorithm-tabs flex flex-wrap gap-2">
           {ALGORITHMS.map((alg) => (
             <button
               key={alg.key}
-              className={`alg-tab ${selectedAlg === alg.key ? 'active' : ''}`}
+              className={`alg-tab flex items-center gap-2 ${selectedAlg === alg.key ? 'active' : ''}`}
               onClick={() => {
                 setSelectedAlg(alg.key);
                 reset();
               }}
             >
-              {alg.name}
+              {alg.icon}
+              <span className="font-semibold">{alg.name}</span>
+              <span className="text-[10px] opacity-75 font-mono bg-black/20 px-1.5 py-0.5 rounded">{alg.complexity}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Dataset & Parameter Toolbar */}
-      <div className="sorting-toolbar animate-fade-in">
-        <div className="toolbar-left">
-          <button className="toolbar-btn primary" onClick={handleRandomize}>
-            <Shuffle size={16} />
+      {/* Dataset & Parameter Control Toolbar */}
+      <div className="sorting-toolbar animate-fade-in flex flex-wrap justify-between items-center gap-4">
+        <div className="toolbar-left flex flex-wrap items-center gap-2">
+          <button className="toolbar-btn primary font-bold text-xs flex items-center gap-1.5" onClick={handleRandomize}>
+            <Shuffle size={14} className="text-amber-400" />
             <span>Generate New Array</span>
           </button>
 
-          <button className="toolbar-btn secondary" onClick={() => setShowCustomEditor(true)}>
-            <Edit3 size={16} />
+          <button className="toolbar-btn secondary font-bold text-xs flex items-center gap-1.5" onClick={() => setShowCustomEditor(true)}>
+            <Edit3 size={14} className="text-sky-400" />
             <span>Custom Values</span>
           </button>
 
@@ -203,7 +227,9 @@ export const SortingPage: React.FC = () => {
 
           {/* Sample Presets Dropdown */}
           <div className="toolbar-select-group">
-            <span className="toolbar-label">Pattern:</span>
+            <span className="toolbar-label text-xs font-bold text-slate-400 flex items-center gap-1">
+              <Sliders size={12} className="text-amber-400" /> Pattern:
+            </span>
             <select
               value={arrayPattern}
               onChange={(e) => {
@@ -212,21 +238,21 @@ export const SortingPage: React.FC = () => {
                 reset();
                 setInitialArray(generateArray(arraySize, pattern));
               }}
-              className="toolbar-select"
+              className="toolbar-select font-bold text-xs"
             >
-              <option value="random">🎲 Random Unsorted</option>
-              <option value="reversed">⬇️ Worst Case (Reversed)</option>
-              <option value="nearlySorted">⚡ Best Case (Nearly Sorted)</option>
+              <option value="random">Random Unsorted</option>
+              <option value="reversed">Worst Case (Reversed)</option>
+              <option value="nearlySorted">Best Case (Nearly Sorted)</option>
             </select>
           </div>
         </div>
 
-        <div className="toolbar-right">
-          <div className="toolbar-slider-group">
-            <div className="slider-label-row">
-              <span className="toolbar-label">Array Size:</span>
-              <span className="slider-value">{arraySize} elements</span>
-            </div>
+        <div className="toolbar-right flex items-center gap-3">
+          <div className="toolbar-slider-group flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-700/60">
+            <span className="toolbar-label text-xs font-bold text-slate-400 flex items-center gap-1">
+              <ArrowUpDown size={12} className="text-amber-400" /> Size:
+            </span>
+            <span className="slider-value text-xs font-mono font-bold text-amber-400">{arraySize}</span>
             <input
               type="range"
               min={5}
@@ -238,7 +264,7 @@ export const SortingPage: React.FC = () => {
                 reset();
                 setInitialArray(generateArray(size, arrayPattern));
               }}
-              className="toolbar-range"
+              className="toolbar-range cursor-pointer accent-amber-400"
             />
           </div>
         </div>
