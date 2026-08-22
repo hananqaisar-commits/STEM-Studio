@@ -32,6 +32,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ─── Auto-create database tables on startup ─────────────────────────
+@app.on_event("startup")
+def on_startup():
+    try:
+        from backend.infrastructure.database.database import engine, Base
+        import backend.infrastructure.database.models  # noqa: F401
+    except ModuleNotFoundError:
+        from infrastructure.database.database import engine, Base
+        import infrastructure.database.models  # noqa: F401
+    Base.metadata.create_all(bind=engine)
+    print("✅ Database tables created/verified successfully!")
+
 # ─── Register Routers ───────────────────────────────────────────────
 app.include_router(auth_router)
 
