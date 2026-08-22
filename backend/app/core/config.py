@@ -16,10 +16,17 @@ class Settings(BaseSettings):
     def format_database_url(cls, v: str) -> str:
         if isinstance(v, str):
             if v.startswith("mysql://"):
-                return v.replace("mysql://", "mysql+pymysql://", 1)
+                v = v.replace("mysql://", "mysql+pymysql://", 1)
             elif v.startswith("postgres://"):
-                return v.replace("postgres://", "postgresql://", 1)
+                v = v.replace("postgres://", "postgresql://", 1)
+            
+            # Clean Aiven/cloud query parameters like ssl-mode which PyMySQL rejects
+            if "?" in v:
+                base_url, query_str = v.split("?", 1)
+                params = [p for p in query_str.split("&") if not p.lower().startswith(("ssl-mode", "ssl_mode"))]
+                v = f"{base_url}?{'&'.join(params)}" if params else base_url
         return v
+
 
     # JWT Configuration
     JWT_SECRET_KEY: str = "change-this-to-a-secure-random-key"
