@@ -14,8 +14,9 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS
+    # CORS & Frontend
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # SMTP Email Configuration
     SMTP_TLS: bool = True

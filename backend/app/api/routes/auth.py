@@ -262,7 +262,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     db.add(reset)
     db.commit()
 
-    reset_url = f"http://localhost:5173/reset-password?token={raw_token}"
+    reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
     send_password_reset_email(to_email=payload.email, reset_url=reset_url)
 
     return MessageResponse(
