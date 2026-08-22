@@ -7,6 +7,7 @@ export type StackQueueCategory =
   | 'minStack'
   | 'postfixEval'
   | 'queueViaStacks'
+  | 'dailyTemperatures'
   | 'slidingWindow';
 
 export type NodeState = 'default' | 'active' | 'comparing' | 'sorted' | 'highlight' | 'popped' | 'pushed' | 'error';
@@ -397,3 +398,220 @@ export function generateMinStackPushSteps(
 
   return { steps, newMain: updatedMain, newMin: updatedMin };
 }
+
+// ─── EVALUATE POSTFIX (RPN) PROBLEM ENGINE ───────────────────────────
+
+export function generatePostfixEvalSteps(exprStr: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const tokens = exprStr.trim().split(/\s+/);
+  const stack: number[] = [];
+
+  steps.push({
+    stepIndex: 0,
+    description: `Starting Postfix Evaluation for tokens: [${tokens.join(', ')}]`,
+    codeLine: 1,
+    elements: [],
+    inputString: exprStr,
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const num = Number(token);
+
+    if (!isNaN(num)) {
+      stack.push(num);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Token '${token}' is a number. Push to Stack.`,
+        codeLine: 3,
+        elements: stack.map((val, idx) => ({ id: `post-${idx}`, value: val, state: idx === stack.length - 1 ? 'pushed' : 'default' })),
+        inputString: exprStr,
+        currentInputIndex: i,
+      });
+    } else if (['+', '-', '*', '/'].includes(token)) {
+      if (stack.length < 2) {
+        steps.push({
+          stepIndex: steps.length,
+          description: `Error: Insufficient operands for operator '${token}'!`,
+          codeLine: 6,
+          elements: stack.map((val, idx) => ({ id: `post-${idx}`, value: val, state: 'error' })),
+          inputString: exprStr,
+          currentInputIndex: i,
+        });
+        return steps;
+      }
+
+      const b = stack.pop()!;
+      const a = stack.pop()!;
+      let result = 0;
+      if (token === '+') result = a + b;
+      if (token === '-') result = a - b;
+      if (token === '*') result = a * b;
+      if (token === '/') result = Math.floor(a / b);
+
+      stack.push(result);
+
+      steps.push({
+        stepIndex: steps.length,
+        description: `Operator '${token}': Pop ${b} and ${a}, calculate ${a} ${token} ${b} = ${result}. Push ${result} to Stack.`,
+        codeLine: 5,
+        elements: stack.map((val, idx) => ({ id: `post-${idx}`, value: val, state: idx === stack.length - 1 ? 'pushed' : 'default' })),
+        inputString: exprStr,
+        currentInputIndex: i,
+      });
+    }
+  }
+
+  const finalResult = stack[stack.length - 1];
+  steps.push({
+    stepIndex: steps.length,
+    description: `✅ Postfix Evaluation Complete! Final Answer = ${finalResult}`,
+    codeLine: 8,
+    elements: stack.map((val, idx) => ({ id: `post-${idx}`, value: val, state: 'sorted' })),
+    inputString: exprStr,
+    currentInputIndex: tokens.length,
+  });
+
+  return steps;
+}
+
+// ─── QUEUE VIA TWO STACKS ENGINE ─────────────────────────────────────
+
+export function generateQueueViaStacksSteps(
+  inStack: (number | string)[],
+  outStack: (number | string)[],
+  opType: 'enqueue' | 'dequeue',
+  val?: number | string
+): { steps: StackQueueStep[]; newIn: (number | string)[]; newOut: (number | string)[] } {
+  const steps: StackQueueStep[] = [];
+
+  if (opType === 'enqueue' && val !== undefined) {
+    const updatedIn = [...inStack, val];
+    steps.push({
+      stepIndex: 0,
+      description: `Enqueue operation: Push '${val}' into In-Stack (Input Buffer).`,
+      codeLine: 2,
+      elements: updatedIn.map((v, i) => ({ id: `in-${i}`, value: v, state: i === updatedIn.length - 1 ? 'pushed' : 'default' })),
+      auxElements: outStack.map((v, i) => ({ id: `out-${i}`, value: v, state: 'default' })),
+      auxLabel: 'OUT-STACK (OUTPUT)',
+    });
+    return { steps, newIn: updatedIn, newOut: outStack };
+  } else {
+    // Dequeue
+    let currentIn = [...inStack];
+    let currentOut = [...outStack];
+
+    if (currentOut.length === 0) {
+      steps.push({
+        stepIndex: 0,
+        description: `Dequeue: Out-Stack is empty! Transferring elements from In-Stack to Out-Stack to reverse order.`,
+        codeLine: 4,
+        elements: currentIn.map((v, i) => ({ id: `in-${i}`, value: v, state: 'active' })),
+        auxElements: currentOut.map((v, i) => ({ id: `out-${i}`, value: v, state: 'default' })),
+        auxLabel: 'OUT-STACK (OUTPUT)',
+      });
+
+      while (currentIn.length > 0) {
+        const item = currentIn.pop()!;
+        currentOut.push(item);
+      }
+
+      steps.push({
+        stepIndex: 1,
+        description: `Transfer complete! In-Stack elements reversed into Out-Stack.`,
+        codeLine: 5,
+        elements: [],
+        auxElements: currentOut.map((v, i) => ({ id: `out-${i}`, value: v, state: 'pushed' })),
+        auxLabel: 'OUT-STACK (OUTPUT)',
+      });
+    }
+
+    if (currentOut.length > 0) {
+      const dequeuedVal = currentOut.pop()!;
+      steps.push({
+        stepIndex: steps.length,
+        description: `Popping top of Out-Stack: Dequeued value '${dequeuedVal}'!`,
+        codeLine: 7,
+        elements: currentIn.map((v, i) => ({ id: `in-${i}`, value: v, state: 'default' })),
+        auxElements: currentOut.map((v, i) => ({ id: `out-${i}`, value: v, state: 'default' })),
+        auxLabel: 'OUT-STACK (OUTPUT)',
+      });
+    }
+
+    return { steps, newIn: currentIn, newOut: currentOut };
+  }
+}
+
+// ─── DAILY TEMPERATURES (NEXT GREATER ELEMENT) ENGINE ─────────────────
+
+export function generateDailyTemperaturesSteps(temperatures: number[]): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const n = temperatures.length;
+  const answer = new Array(n).fill(0);
+  const stack: number[] = []; // stores indices
+
+  steps.push({
+    stepIndex: 0,
+    description: `Starting Daily Temperatures check for temperatures: [${temperatures.join(', ')}]. Objective: Find days to wait for a warmer temperature using Monotonic Stack.`,
+    codeLine: 1,
+    elements: [],
+    auxElements: answer.map((val, idx) => ({ id: `ans-${idx}`, value: val, state: 'default' })),
+    auxLabel: 'WAITING DAYS RESULT ARRAY',
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < n; i++) {
+    const currentTemp = temperatures[i];
+
+    steps.push({
+      stepIndex: steps.length,
+      description: `Day ${i}: Current temperature is ${currentTemp}°F.`,
+      codeLine: 3,
+      elements: stack.map((idx) => ({ id: `st-${idx}`, value: `${temperatures[idx]}° (i=${idx})`, state: 'default' })),
+      auxElements: answer.map((val, idx) => ({ id: `ans-${idx}`, value: val, state: idx === i ? 'active' : 'default' })),
+      auxLabel: 'WAITING DAYS RESULT ARRAY',
+      currentInputIndex: i,
+    });
+
+    while (stack.length > 0 && temperatures[stack[stack.length - 1]] < currentTemp) {
+      const prevIndex = stack.pop()!;
+      answer[prevIndex] = i - prevIndex;
+
+      steps.push({
+        stepIndex: steps.length,
+        description: `Warmer Day Found! Day ${i} (${currentTemp}°F) is warmer than Day ${prevIndex} (${temperatures[prevIndex]}°F). Waiting days for Day ${prevIndex} = ${i} - ${prevIndex} = ${i - prevIndex} days.`,
+        codeLine: 6,
+        elements: stack.map((idx) => ({ id: `st-${idx}`, value: `${temperatures[idx]}° (i=${idx})`, state: 'default' })),
+        auxElements: answer.map((val, idx) => ({ id: `ans-${idx}`, value: val, state: idx === prevIndex ? 'sorted' : 'default' })),
+        auxLabel: 'WAITING DAYS RESULT ARRAY',
+        currentInputIndex: i,
+      });
+    }
+
+    stack.push(i);
+    steps.push({
+      stepIndex: steps.length,
+      description: `Push Day ${i} (${currentTemp}°F) index onto Monotonic Stack.`,
+      codeLine: 8,
+      elements: stack.map((idx) => ({ id: `st-${idx}`, value: `${temperatures[idx]}° (i=${idx})`, state: idx === i ? 'pushed' : 'default' })),
+      auxElements: answer.map((val, idx) => ({ id: `ans-${idx}`, value: val, state: 'default' })),
+      auxLabel: 'WAITING DAYS RESULT ARRAY',
+      currentInputIndex: i,
+    });
+  }
+
+  steps.push({
+    stepIndex: steps.length,
+    description: `✅ Daily Temperatures Complete! Final Waiting Days Array: [${answer.join(', ')}]`,
+    codeLine: 10,
+    elements: stack.map((idx) => ({ id: `st-${idx}`, value: `${temperatures[idx]}° (i=${idx})`, state: 'sorted' })),
+    auxElements: answer.map((val, idx) => ({ id: `ans-${idx}`, value: val, state: 'sorted' })),
+    auxLabel: 'WAITING DAYS RESULT ARRAY',
+    currentInputIndex: n,
+  });
+
+  return steps;
+}
+
+

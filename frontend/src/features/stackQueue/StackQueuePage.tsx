@@ -11,6 +11,9 @@ import {
   generateCircularQueueEnqueueSteps,
   generateValidParenthesesSteps,
   generateMinStackPushSteps,
+  generatePostfixEvalSteps,
+  generateQueueViaStacksSteps,
+  generateDailyTemperaturesSteps,
   type StackQueueCategory,
   type StackQueueStep
 } from './stackQueueEngine';
@@ -40,6 +43,10 @@ export const StackQueuePage: React.FC = () => {
 
   const [minMainStack, setMinMainStack] = useState<number[]>([5, 2, 8]);
   const [minAuxStack, setMinAuxStack] = useState<number[]>([5, 2, 2]);
+
+  // Queue via Two Stacks state
+  const [qvsIn, setQvsIn] = useState<(number | string)[]>([10, 20]);
+  const [qvsOut, setQvsOut] = useState<(number | string)[]>([5]);
 
   // Code Debugger Visibility State
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
@@ -127,6 +134,43 @@ export const StackQueuePage: React.FC = () => {
     play();
   };
 
+  const handlePostfixEval = () => {
+    const expr = inputValue.trim() || '3 4 + 2 *';
+    const steps = generatePostfixEvalSteps(expr);
+    setActiveSteps(steps);
+    reset();
+    play();
+  };
+
+  const handleQueueViaStacksEnqueue = () => {
+    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue) || 99;
+    const res = generateQueueViaStacksSteps(qvsIn, qvsOut, 'enqueue', val);
+    setQvsIn(res.newIn);
+    setQvsOut(res.newOut);
+    setActiveSteps(res.steps);
+    reset();
+    play();
+  };
+
+  const handleQueueViaStacksDequeue = () => {
+    const res = generateQueueViaStacksSteps(qvsIn, qvsOut, 'dequeue');
+    setQvsIn(res.newIn);
+    setQvsOut(res.newOut);
+    setActiveSteps(res.steps);
+    reset();
+    play();
+  };
+
+  const handleDailyTemperatures = () => {
+    const inputTemps = inputValue.trim()
+      ? inputValue.split(/[\s,]+/).map(Number).filter((n) => !isNaN(n))
+      : [73, 74, 75, 71, 69, 72, 76, 73];
+    const steps = generateDailyTemperaturesSteps(inputTemps);
+    setActiveSteps(steps);
+    reset();
+    play();
+  };
+
   const handleClearAll = () => {
     setStackData([]);
     setQueueData([]);
@@ -135,6 +179,8 @@ export const StackQueuePage: React.FC = () => {
     setCqRear(-1);
     setMinMainStack([]);
     setMinAuxStack([]);
+    setQvsIn([]);
+    setQvsOut([]);
     setActiveSteps([]);
     reset();
   };
@@ -181,19 +227,22 @@ export const StackQueuePage: React.FC = () => {
               <option value="queue">Queue (FIFO)</option>
               <option value="circularQueue">Circular Ring Queue</option>
             </optgroup>
-            <optgroup label="Classical Problems">
-              <option value="validParentheses">Valid Parentheses String</option>
-              <option value="minStack">Min Stack O(1)</option>
+            <optgroup label="Top 5 Classical LeetCode Problems">
+              <option value="validParentheses">1. Valid Parentheses (#20)</option>
+              <option value="minStack">2. Min Stack O(1) (#155)</option>
+              <option value="postfixEval">3. Evaluate RPN / Postfix (#150)</option>
+              <option value="queueViaStacks">4. Queue using 2 Stacks (#232)</option>
+              <option value="dailyTemperatures">5. Daily Temperatures / Monotonic (#739)</option>
             </optgroup>
           </select>
 
           {/* Action Input */}
           <input
             type="text"
-            className="bst-input w-24"
+            className="bst-input w-36"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Val / Expr"
+            placeholder="Val / Expr / Temps"
           />
 
           {/* Category Specific Action Buttons */}
@@ -242,6 +291,32 @@ export const StackQueuePage: React.FC = () => {
             </button>
           )}
 
+          {category === 'postfixEval' && (
+            <button className="bst-btn btn-insert" onClick={handlePostfixEval}>
+              <CheckCircle2 size={14} />
+              <span>Evaluate Postfix</span>
+            </button>
+          )}
+
+          {category === 'queueViaStacks' && (
+            <>
+              <button className="bst-btn btn-insert" onClick={handleQueueViaStacksEnqueue}>
+                <Plus size={14} />
+                <span>Enqueue In-Stack</span>
+              </button>
+              <button className="bst-btn btn-search" onClick={handleQueueViaStacksDequeue}>
+                <span>Dequeue Out-Stack</span>
+              </button>
+            </>
+          )}
+
+          {category === 'dailyTemperatures' && (
+            <button className="bst-btn btn-insert" onClick={handleDailyTemperatures}>
+              <CheckCircle2 size={14} />
+              <span>Compute Warmer Days</span>
+            </button>
+          )}
+
           <button className="bst-btn btn-mode" onClick={handleClearAll}>
             <Trash2 size={14} className="text-rose-400" />
             <span>Clear All</span>
@@ -255,7 +330,7 @@ export const StackQueuePage: React.FC = () => {
           {category === 'stack' && <StackRenderer currentStep={currentStep} />}
           {category === 'queue' && <QueueRenderer currentStep={currentStep} />}
           {category === 'circularQueue' && <CircularQueueRenderer currentStep={currentStep} />}
-          {(category === 'validParentheses' || category === 'minStack') && (
+          {['validParentheses', 'minStack', 'postfixEval', 'queueViaStacks', 'dailyTemperatures'].includes(category) && (
             <ProblemRenderer category={category} currentStep={currentStep} />
           )}
 

@@ -107,5 +107,142 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
     );
   }
 
+  // 3. Postfix Evaluation Renderer
+  if (category === 'postfixEval') {
+    const exprStr = currentStep.inputString ?? '';
+    const activeIdx = currentStep.currentInputIndex ?? 0;
+    const tokens = exprStr.trim().split(/\s+/);
+
+    return (
+      <div className="problem-container animate-fade-in">
+        <div className="chamber-header">
+          <span className="chamber-title">POSTFIX (RPN) EXPRESSION EVALUATOR</span>
+          <span className="chamber-subtitle">Push operands · Pop & compute when operator is encountered</span>
+        </div>
+
+        <div className="input-string-ribbon">
+          <span className="ribbon-label">TOKEN STREAM:</span>
+          <div className="char-stream">
+            {tokens.map((tok, idx) => (
+              <span
+                key={idx}
+                className={`stream-char ${idx === activeIdx ? 'char-active' : ''} ${idx < activeIdx ? 'char-processed' : ''}`}
+              >
+                {tok}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="stack-chamber-workspace">
+          <div className="stack-glass-tube">
+            <div className="tube-base-plate">OPERAND EVALUATION STACK</div>
+            {currentStep.elements.length === 0 ? (
+              <div className="stack-empty-notice">
+                <span>Stack Empty</span>
+              </div>
+            ) : (
+              <div className="stack-elements-wrapper">
+                {currentStep.elements.map((el) => (
+                  <div key={el.id} className={`stack-3d-plate ${el.state === 'sorted' ? 'plate-pushed' : 'plate-default'}`}>
+                    <div className="plate-inner-content">
+                      <span className="plate-value font-mono">{el.value}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Queue via Two Stacks Renderer
+  if (category === 'queueViaStacks') {
+    const inEls = currentStep.elements;
+    const outEls = currentStep.auxElements ?? [];
+
+    return (
+      <div className="problem-container animate-fade-in">
+        <div className="chamber-header">
+          <span className="chamber-title">QUEUE VIA TWO STACKS (LIFO ➔ FIFO TRANSFORMATION)</span>
+          <span className="chamber-subtitle">In-Stack (Buffer) receives Enqueues · Out-Stack handles Dequeues in order</span>
+        </div>
+
+        <div className="dual-chamber-workspace">
+          <div className="chamber-column">
+            <span className="column-title text-sky-400">IN-STACK (INPUT BUFFER)</span>
+            <div className="stack-glass-tube min-tube border-sky-500/40">
+              <div className="stack-elements-wrapper">
+                {inEls.map((el) => (
+                  <div key={el.id} className="stack-3d-plate plate-default">
+                    <span className="plate-value">{el.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="chamber-column">
+            <span className="column-title text-emerald-400">OUT-STACK (OUTPUT DEQUEUE)</span>
+            <div className="stack-glass-tube min-tube border-emerald-500/40">
+              <div className="stack-elements-wrapper">
+                {outEls.map((el) => (
+                  <div key={el.id} className="stack-3d-plate plate-pushed border-emerald-400">
+                    <span className="plate-value text-emerald-300">{el.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 5. Daily Temperatures Renderer (Monotonic Stack)
+  if (category === 'dailyTemperatures') {
+    const stackEls = currentStep.elements;
+    const ansEls = currentStep.auxElements ?? [];
+
+    return (
+      <div className="problem-container animate-fade-in">
+        <div className="chamber-header">
+          <span className="chamber-title">DAILY TEMPERATURES (MONOTONIC STACK - NEXT GREATER ELEMENT)</span>
+          <span className="chamber-subtitle">Monotonic Decreasing Stack stores day indices to find next warmer day</span>
+        </div>
+
+        <div className="dual-chamber-workspace">
+          <div className="chamber-column">
+            <span className="column-title text-orange-400">MONOTONIC INDEX STACK</span>
+            <div className="stack-glass-tube min-tube border-orange-500/40">
+              <div className="stack-elements-wrapper">
+                {stackEls.map((el) => (
+                  <div key={el.id} className={`stack-3d-plate ${el.state === 'pushed' ? 'plate-pushed' : 'plate-default'}`}>
+                    <span className="plate-value text-orange-300">{el.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="chamber-column">
+            <span className="column-title text-cyan-400">WAITING DAYS ANSWER ARRAY</span>
+            <div className="stack-glass-tube min-tube border-cyan-500/40">
+              <div className="stack-elements-wrapper">
+                {ansEls.map((el) => (
+                  <div key={el.id} className={`stack-3d-plate ${el.state === 'sorted' ? 'plate-pushed' : 'plate-default'}`}>
+                    <span className="plate-value text-cyan-300">Days: {el.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 };
