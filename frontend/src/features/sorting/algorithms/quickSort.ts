@@ -10,28 +10,34 @@ export function generateQuickSortSteps(initialArray: number[]): AlgorithmExecuti
     array: [...arr],
     description: 'Initial state before Quick Sort starts.',
     codeLine: 1,
+    variables: { low: 0, high: arr.length - 1 },
+    callStack: ['main() -> quickSort(0, ' + (arr.length - 1) + ')'],
   });
 
-  function quickSort(low: number, high: number) {
+  function quickSort(low: number, high: number, stackDepth = 1) {
+    const stackFrame = `quickSort(low=${low}, high=${high})`;
+
     if (low < high) {
-      const pivotIndex = partition(low, high);
+      const pivotIndex = partition(low, high, stackFrame);
       sortedIndices.push(pivotIndex);
 
-      quickSort(low, pivotIndex - 1);
-      quickSort(pivotIndex + 1, high);
+      quickSort(low, pivotIndex - 1, stackDepth + 1);
+      quickSort(pivotIndex + 1, high, stackDepth + 1);
     } else if (low === high) {
       sortedIndices.push(low);
     }
   }
 
-  function partition(low: number, high: number): number {
+  function partition(low: number, high: number, stackFrame: string): number {
     const pivot = arr[high];
     steps.push({
       array: [...arr],
       pivotIndex: high,
       sortedIndices: [...sortedIndices],
       description: `Chosen pivot element ${pivot} at index ${high}.`,
-      codeLine: 3,
+      codeLine: 8,
+      variables: { low, high, pivot, 'arr[high]': pivot },
+      callStack: ['main()', stackFrame, 'partition()'],
     });
 
     let i = low - 1;
@@ -42,8 +48,10 @@ export function generateQuickSortSteps(initialArray: number[]): AlgorithmExecuti
         comparingIndices: [j, high],
         pivotIndex: high,
         sortedIndices: [...sortedIndices],
-        description: `Comparing element ${arr[j]} at index ${j} with pivot ${pivot}.`,
-        codeLine: 5,
+        description: `Comparing arr[${j}] (${arr[j]}) with pivot ${pivot}.`,
+        codeLine: 9,
+        variables: { low, high, pivot, i, j, 'arr[j]': arr[j], condition: `${arr[j]} < ${pivot}` },
+        callStack: ['main()', stackFrame, 'partition()'],
       });
 
       if (arr[j] < pivot) {
@@ -57,13 +65,14 @@ export function generateQuickSortSteps(initialArray: number[]): AlgorithmExecuti
           swappingIndices: [i, j],
           pivotIndex: high,
           sortedIndices: [...sortedIndices],
-          description: `Element ${arr[i]} < pivot (${pivot}). Swapped index ${i} with index ${j}.`,
-          codeLine: 7,
+          description: `Element arr[${j}] (${arr[i]}) < pivot (${pivot}). Swapped index ${i} with index ${j}.`,
+          codeLine: 9,
+          variables: { low, high, pivot, i, j, temp, 'arr[i]': arr[i], 'arr[j]': arr[j] },
+          callStack: ['main()', stackFrame, 'partition()'],
         });
       }
     }
 
-    // Place pivot in correct position
     const temp = arr[i + 1];
     arr[i + 1] = arr[high];
     arr[high] = temp;
@@ -73,7 +82,9 @@ export function generateQuickSortSteps(initialArray: number[]): AlgorithmExecuti
       swappingIndices: [i + 1, high],
       sortedIndices: [...sortedIndices, i + 1],
       description: `Placed pivot ${pivot} into its correct sorted index ${i + 1}.`,
-      codeLine: 9,
+      codeLine: 10,
+      variables: { low, high, pivotPlacedAt: i + 1, pivot },
+      callStack: ['main()', stackFrame, 'partition()'],
     });
 
     return i + 1;
@@ -86,7 +97,9 @@ export function generateQuickSortSteps(initialArray: number[]): AlgorithmExecuti
     array: [...arr],
     sortedIndices: allIndices,
     description: 'Quick Sort complete! Array is fully sorted.',
-    codeLine: 10,
+    codeLine: 5,
+    variables: { status: 'SORTED', totalElements: arr.length },
+    callStack: ['main() [TERMINATED]'],
   });
 
   return {

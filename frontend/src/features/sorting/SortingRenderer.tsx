@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Bar } from '../../components/primitives/Bar';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import './Sorting.css';
@@ -6,12 +6,23 @@ import './Sorting.css';
 interface SortingRendererProps {
   currentStep: ArrayStep | null;
   maxValue?: number;
+  onElementClick?: (index: number, currentValue: number) => void;
 }
 
 export const SortingRenderer: React.FC<SortingRendererProps> = ({
   currentStep,
   maxValue = 100,
+  onElementClick,
 }) => {
+  const [hoveredInfo, setHoveredInfo] = useState<{
+    index: number;
+    value: number;
+    state: ElementState;
+    pointer?: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
   if (!currentStep) {
     return (
       <div className="sorting-canvas-empty">
@@ -20,7 +31,7 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
     );
   }
 
-  const { array, comparingIndices = [], swappingIndices = [], sortedIndices = [], pivotIndex } = currentStep;
+  const { array, comparingIndices = [], swappingIndices = [], sortedIndices = [], pivotIndex, variables = {} } = currentStep;
   const max = Math.max(maxValue, ...array, 1);
 
   const getElementState = (index: number): ElementState => {
@@ -31,24 +42,74 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
     return 'default';
   };
 
+  const getPointerLabel = (index: number): string | undefined => {
+    const labels: string[] = [];
+    if (pivotIndex === index) labels.push('pivot');
+    if (variables.i === index) labels.push('i');
+    if (variables.j === index) labels.push('j');
+    if (variables.minIdx === index) labels.push('minIdx');
+    return labels.length > 0 ? labels.join(', ') : undefined;
+  };
+
+  const handleBarMouseMove = (e: React.MouseEvent, index: number, value: number, state: ElementState) => {
+    const pointer = getPointerLabel(index);
+    setHoveredInfo({
+      index,
+      value,
+      state,
+      pointer,
+      x: e.clientX,
+      y: e.clientY - 40,
+    });
+  };
+
   return (
     <div className="sorting-canvas-container animate-fade-in">
       <div className="bars-canvas">
         {array.map((value, index) => {
           const heightPercent = (value / max) * 100;
           const state = getElementState(index);
+          const pointer = getPointerLabel(index);
 
           return (
-            <Bar
+            <div
               key={index}
-              value={value}
-              heightPercent={heightPercent}
-              state={state}
-              showValue={array.length <= 25}
-            />
+              className="interactive-bar-wrapper"
+              onMouseMove={(e) => handleBarMouseMove(e, index, value, state)}
+              onMouseLeave={() => setHoveredInfo(null)}
+              onClick={() => onElementClick && onElementClick(index, value)}
+              title="Click to edit value"
+            >
+              {pointer && <span className="canvas-pointer-badge">{pointer}</span>}
+              <Bar
+                value={value}
+                heightPercent={heightPercent}
+                state={state}
+                showValue={array.length <= 25}
+              />
+            </div>
           );
         })}
       </div>
+
+      {/* Memory Hover Tooltip Card */}
+      {hoveredInfo && (
+        <div
+          className="canvas-memory-inspect-card animate-fade-in"
+          style={{ left: `${hoveredInfo.x}px`, top: `${hoveredInfo.y}px` }}
+        >
+          <div className="inspect-header">
+            <span>INDEX [{hoveredInfo.index}]</span>
+            <span className={`inspect-state state-${hoveredInfo.state}`}>{hoveredInfo.state.toUpperCase()}</span>
+          </div>
+          <div className="inspect-body">
+            <span>VALUE: <strong>{hoveredInfo.value}</strong></span>
+            {hoveredInfo.pointer && (
+              <span>POINTER: <strong className="pointer-highlight">{hoveredInfo.pointer}</strong></span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

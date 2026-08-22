@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { Shuffle, ArrowUpDown } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Shuffle, ArrowUpDown, Edit3, Bug } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
-import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { FloatingDebugger } from '../../components/debugger/FloatingDebugger';
+import { CodeDebuggerPanel } from '../../components/debugger/CodeDebuggerPanel';
+import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 
 import { generateBubbleSortSteps } from './algorithms/bubbleSort';
@@ -40,7 +42,6 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
     arr.sort((a, b) => b - a);
   } else if (pattern === 'nearlySorted') {
     arr.sort((a, b) => a - b);
-    // Swap 2 random pairs
     if (size > 4) {
       const idx1 = Math.floor(Math.random() * (size / 2));
       const idx2 = Math.floor(Math.random() * (size / 2)) + Math.floor(size / 2);
@@ -55,13 +56,16 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 
 export const SortingPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
-  const [arraySize, setArraySize] = useState<number>(15);
+  const [arraySize, setArraySize] = useState<number>(12);
   const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
+  const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
 
-  // Initial array state
-  const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(15, 'random'));
+  // Debugger state
+  const [showDebugger, setShowDebugger] = useState(true);
+  const [showCustomEditor, setShowCustomEditor] = useState(false);
+  const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
-  // Generate algorithm steps whenever initialArray or selectedAlg changes
+  // Generate algorithm steps
   const executionData = useMemo(() => {
     switch (selectedAlg) {
       case 'bubble':
@@ -97,26 +101,46 @@ export const SortingPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer({ steps: executionData.steps });
 
+  // Breakpoints Auto-Pause Listener
+  useEffect(() => {
+    if (isPlaying && currentStep?.codeLine && breakpoints.includes(currentStep.codeLine)) {
+      pause();
+    }
+  }, [isPlaying, currentStep, breakpoints, pause]);
+
+  const handleToggleBreakpoint = (lineNumber: number) => {
+    setBreakpoints((prev) =>
+      prev.includes(lineNumber) ? prev.filter((line) => line !== lineNumber) : [...prev, lineNumber]
+    );
+  };
+
   const handleGenerateNewArray = () => {
     reset();
     setInitialArray(generateArray(arraySize, arrayPattern));
   };
 
-  const handleSizeChange = (newSize: number) => {
-    setArraySize(newSize);
+  const handleApplyCustomArray = (newArray: number[]) => {
+    setArraySize(newArray.length);
     reset();
-    setInitialArray(generateArray(newSize, arrayPattern));
+    setInitialArray(newArray);
   };
 
-  const handlePatternChange = (pattern: ArrayPattern) => {
-    setArrayPattern(pattern);
-    reset();
-    setInitialArray(generateArray(arraySize, pattern));
+  const handleBarElementClick = (index: number, val: number) => {
+    const newValueStr = prompt(`Edit value for array element at index [${index}]:`, String(val));
+    if (newValueStr !== null) {
+      const num = Number(newValueStr);
+      if (!isNaN(num) && num > 0) {
+        const updated = [...initialArray];
+        updated[index] = Math.min(100, Math.max(5, num));
+        reset();
+        setInitialArray(updated);
+      }
+    }
   };
 
   return (
     <div className="sorting-page-container">
-      {/* Algorithm Header & Controls Toolbar */}
+      {/* Top Toolbar */}
       <div className="sorting-toolbar animate-fade-in">
         <div className="toolbar-left">
           <div className="algorithm-tabs">
@@ -136,16 +160,35 @@ export const SortingPage: React.FC = () => {
         </div>
 
         <div className="toolbar-right">
-          <button className="toolbar-btn" onClick={handleGenerateNewArray} title="Generate New Data">
+          <button
+            className={`toolbar-btn ${showDebugger ? 'active-debugger-btn' : ''}`}
+            onClick={() => setShowDebugger(!showDebugger)}
+            title="Toggle Floating VS Code Debugger Window"
+          >
+            <Bug size={16} />
+            <span>Debugger</span>
+          </button>
+
+          <button className="toolbar-btn" onClick={() => setShowCustomEditor(true)}>
+            <Edit3 size={16} />
+            <span>Custom Values</span>
+          </button>
+
+          <button className="toolbar-btn" onClick={handleGenerateNewArray} title="Generate Random Data">
             <Shuffle size={16} />
-            <span>New Array</span>
+            <span>Randomize</span>
           </button>
 
           <div className="toolbar-select-group">
             <ArrowUpDown size={14} />
             <select
               value={arrayPattern}
-              onChange={(e) => handlePatternChange(e.target.value as ArrayPattern)}
+              onChange={(e) => {
+                const pat = e.target.value as ArrayPattern;
+                setArrayPattern(pat);
+                reset();
+                setInitialArray(generateArray(arraySize, pat));
+              }}
               className="toolbar-select"
             >
               <option value="random">Random</option>
@@ -158,10 +201,15 @@ export const SortingPage: React.FC = () => {
             <span>Size: {arraySize}</span>
             <input
               type="range"
-              min="8"
-              max="40"
+              min="6"
+              max="35"
               value={arraySize}
-              onChange={(e) => handleSizeChange(parseInt(e.target.value))}
+              onChange={(e) => {
+                const size = parseInt(e.target.value);
+                setArraySize(size);
+                reset();
+                setInitialArray(generateArray(size, arrayPattern));
+              }}
               className="toolbar-range"
             />
           </div>
@@ -171,9 +219,13 @@ export const SortingPage: React.FC = () => {
       {/* Main Workspace Layout */}
       <div className="sorting-workspace">
         <div className="renderer-section">
-          <SortingRenderer currentStep={currentStep} />
+          {/* Canvas Renderer */}
+          <SortingRenderer
+            currentStep={currentStep}
+            onElementClick={handleBarElementClick}
+          />
 
-          {/* Interactive Player Controls */}
+          {/* Interactive Debug Controls Bar */}
           <div className="player-bar">
             <div className="player-left">
               <PlayPauseButton
@@ -207,17 +259,42 @@ export const SortingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Explanation & Complexity Panel */}
+        {/* Source Code Debugger & Pseudocode Panel */}
         <div className="explanation-section">
-          <ExplanationPanel
-            description={currentStep?.description || ''}
-            codeLine={currentStep?.codeLine}
+          <CodeDebuggerPanel
             pseudocode={executionData.pseudocode}
-            timeComplexity={executionData.timeComplexity}
-            spaceComplexity={executionData.spaceComplexity}
+            activeLine={currentStep?.codeLine}
+            breakpoints={breakpoints}
+            onToggleBreakpoint={handleToggleBreakpoint}
+            variables={currentStep?.variables}
           />
         </div>
       </div>
+
+      {/* Draggable Floating VS Code Debugger Window */}
+      {showDebugger && (
+        <FloatingDebugger
+          variables={currentStep?.variables}
+          callStack={currentStep?.callStack}
+          breakpoints={breakpoints}
+          currentStepIndex={currentStepIndex}
+          totalSteps={totalSteps}
+          isPlaying={isPlaying}
+          onTogglePlay={isPlaying ? pause : play}
+          onStepForward={stepForward}
+          onReset={reset}
+          onClose={() => setShowDebugger(false)}
+        />
+      )}
+
+      {/* Custom Values Input Modal */}
+      {showCustomEditor && (
+        <CustomArrayEditor
+          currentArray={initialArray}
+          onApplyCustomArray={handleApplyCustomArray}
+          onClose={() => setShowCustomEditor(false)}
+        />
+      )}
     </div>
   );
 };

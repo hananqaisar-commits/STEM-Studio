@@ -11,6 +11,8 @@ export function generateSelectionSortSteps(initialArray: number[]): AlgorithmExe
     array: [...arr],
     description: 'Initial array state before Selection Sort starts.',
     codeLine: 1,
+    variables: { n, i: 0, minIdx: 0 },
+    callStack: ['main() -> selectionSort(arr)'],
   });
 
   for (let i = 0; i < n - 1; i++) {
@@ -20,8 +22,10 @@ export function generateSelectionSortSteps(initialArray: number[]): AlgorithmExe
       array: [...arr],
       pivotIndex: minIdx,
       sortedIndices: [...sortedIndices],
-      description: `Set initial minimum at index ${i} (value: ${arr[i]}).`,
+      description: `Set initial minimum at index ${i} (arr[${i}] = ${arr[i]}).`,
       codeLine: 2,
+      variables: { i, minIdx, 'arr[minIdx]': arr[minIdx] },
+      callStack: ['main() -> selectionSort(arr)'],
     });
 
     for (let j = i + 1; j < n; j++) {
@@ -30,8 +34,10 @@ export function generateSelectionSortSteps(initialArray: number[]): AlgorithmExe
         comparingIndices: [j, minIdx],
         pivotIndex: minIdx,
         sortedIndices: [...sortedIndices],
-        description: `Comparing element at index ${j} (${arr[j]}) with current minimum at index ${minIdx} (${arr[minIdx]}).`,
+        description: `Comparing arr[${j}] (${arr[j]}) with current min arr[${minIdx}] (${arr[minIdx]}).`,
         codeLine: 4,
+        variables: { i, j, minIdx, 'arr[j]': arr[j], 'arr[minIdx]': arr[minIdx] },
+        callStack: ['main() -> selectionSort(arr)'],
       });
 
       if (arr[j] < arr[minIdx]) {
@@ -42,6 +48,8 @@ export function generateSelectionSortSteps(initialArray: number[]): AlgorithmExe
           sortedIndices: [...sortedIndices],
           description: `Found new minimum at index ${minIdx} (value: ${arr[minIdx]}).`,
           codeLine: 5,
+          variables: { i, j, newMinIdx: minIdx, 'arr[newMinIdx]': arr[minIdx] },
+          callStack: ['main() -> selectionSort(arr)'],
         });
       }
     }
@@ -55,8 +63,10 @@ export function generateSelectionSortSteps(initialArray: number[]): AlgorithmExe
         array: [...arr],
         swappingIndices: [i, minIdx],
         sortedIndices: [...sortedIndices],
-        description: `Swapping ${arr[i]} at index ${i} with minimum ${arr[minIdx]} at index ${minIdx}.`,
+        description: `Swapping arr[${i}] (${arr[minIdx]}) with minimum arr[${minIdx}] (${arr[i]}).`,
         codeLine: 7,
+        variables: { i, minIdx, temp, 'arr[i]': arr[i], 'arr[minIdx]': arr[minIdx] },
+        callStack: ['main() -> selectionSort(arr)'],
       });
     }
 
@@ -69,6 +79,8 @@ export function generateSelectionSortSteps(initialArray: number[]): AlgorithmExe
     sortedIndices: allIndices,
     description: 'Selection Sort complete! Array is fully sorted.',
     codeLine: 8,
+    variables: { status: 'SORTED', totalElements: n },
+    callStack: ['main() -> selectionSort(arr) [TERMINATED]'],
   });
 
   return {
