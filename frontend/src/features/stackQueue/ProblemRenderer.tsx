@@ -244,5 +244,88 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
     );
   }
 
+  // 6. Simplify Path & Remove Duplicates Renderer
+  if (category === 'simplifyPath' || category === 'removeAdjacentDuplicates') {
+    const inputStr = currentStep.inputString ?? '';
+
+    return (
+      <div className="problem-container animate-fade-in">
+        <div className="chamber-header">
+          <span className="chamber-title">{category === 'simplifyPath' ? 'CANONICAL PATH SIMPLIFIER' : 'REMOVE ADJACENT DUPLICATES'}</span>
+          <span className="chamber-subtitle">Step-by-step LIFO Stack string transformation</span>
+        </div>
+
+        <div className="input-string-ribbon">
+          <span className="ribbon-label">INPUT STRING:</span>
+          <span className="font-mono text-sm text-amber-300 font-bold ml-2">{inputStr}</span>
+        </div>
+
+        <div className="stack-chamber-workspace">
+          <div className="stack-glass-tube">
+            <div className="tube-base-plate">STACK DISCOVERY CHAMBER</div>
+            {currentStep.elements.length === 0 ? (
+              <div className="stack-empty-notice">
+                <span>Stack Empty</span>
+              </div>
+            ) : (
+              <div className="stack-elements-wrapper">
+                {currentStep.elements.map((el) => (
+                  <div key={el.id} className={`stack-3d-plate ${el.state === 'sorted' ? 'plate-pushed' : 'plate-default'}`}>
+                    <div className="plate-inner-content">
+                      <span className="plate-value font-mono">{el.value}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 7. Sliding Window Maximum Renderer
+  if (category === 'slidingWindow') {
+    const deqEls = currentStep.elements;
+    const resEls = currentStep.auxElements ?? [];
+
+    return (
+      <div className="problem-container animate-fade-in">
+        <div className="chamber-header">
+          <span className="chamber-title">SLIDING WINDOW MAXIMUM (MONOTONIC DEQUE)</span>
+          <span className="chamber-subtitle">Monotonic Deque tracks maximum values in sliding window</span>
+        </div>
+
+        <div className="dual-chamber-workspace">
+          <div className="chamber-column">
+            <span className="column-title text-sky-400">MONOTONIC DEQUE (MAX INDEX AT FRONT)</span>
+            <div className="stack-glass-tube min-tube border-sky-500/40">
+              <div className="stack-elements-wrapper">
+                {deqEls.map((el) => (
+                  <div key={el.id} className="stack-3d-plate plate-default">
+                    <span className="plate-value">{el.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="chamber-column">
+            <span className="column-title text-emerald-400">WINDOW MAX ANSWERS</span>
+            <div className="stack-glass-tube min-tube border-emerald-500/40">
+              <div className="stack-elements-wrapper">
+                {resEls.map((el) => (
+                  <div key={el.id} className="stack-3d-plate plate-pushed border-emerald-400">
+                    <span className="plate-value text-emerald-300">Max: {el.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 };

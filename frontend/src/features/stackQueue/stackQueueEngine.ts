@@ -1,14 +1,28 @@
 export type StackQueueCategory =
   | 'stack'
   | 'queue'
-  | 'circularQueue'
-  | 'monotonicStack'
+  // Stack 10 Problems
   | 'validParentheses'
   | 'minStack'
   | 'postfixEval'
-  | 'queueViaStacks'
   | 'dailyTemperatures'
-  | 'slidingWindow';
+  | 'trappingRainWater'
+  | 'largestRectangle'
+  | 'simplifyPath'
+  | 'decodeString'
+  | 'basicCalculator'
+  | 'removeAdjacentDuplicates'
+  // Queue 10 Problems
+  | 'queueViaStacks'
+  | 'stackViaQueues'
+  | 'circularQueue'
+  | 'circularDeque'
+  | 'slidingWindow'
+  | 'firstNonRepeating'
+  | 'taskScheduler'
+  | 'movingAverage'
+  | 'rottingOranges'
+  | 'dota2Senate';
 
 export type NodeState = 'default' | 'active' | 'comparing' | 'sorted' | 'highlight' | 'popped' | 'pushed' | 'error';
 
@@ -613,5 +627,174 @@ export function generateDailyTemperaturesSteps(temperatures: number[]): StackQue
 
   return steps;
 }
+
+// ─── SIMPLIFY PATH (LEETCODE #71) ENGINE ─────────────────────────────
+
+export function generateSimplifyPathSteps(pathStr: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const parts = pathStr.split('/');
+  const stack: string[] = [];
+
+  steps.push({
+    stepIndex: 0,
+    description: `Starting Simplify Path for "${pathStr}". Splitting by '/' gives tokens: [${parts.map((p) => `"${p}"`).join(', ')}]`,
+    codeLine: 1,
+    elements: [],
+    inputString: pathStr,
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part === '' || part === '.') continue;
+
+    if (part === '..') {
+      if (stack.length > 0) {
+        const popped = stack.pop();
+        steps.push({
+          stepIndex: steps.length,
+          description: `Token '..' encountered: Moving up one directory level. Popped "${popped}" from Stack.`,
+          codeLine: 5,
+          elements: stack.map((val, idx) => ({ id: `p-${idx}`, value: val, state: 'popped' })),
+          inputString: pathStr,
+          currentInputIndex: i,
+        });
+      } else {
+        steps.push({
+          stepIndex: steps.length,
+          description: `Token '..' encountered at root directory: Stack is empty, stay at root.`,
+          codeLine: 6,
+          elements: [],
+          inputString: pathStr,
+          currentInputIndex: i,
+        });
+      }
+    } else {
+      stack.push(part);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Valid directory name "${part}": Push to Stack.`,
+        codeLine: 4,
+        elements: stack.map((val, idx) => ({ id: `p-${idx}`, value: val, state: idx === stack.length - 1 ? 'pushed' : 'default' })),
+        inputString: pathStr,
+        currentInputIndex: i,
+      });
+    }
+  }
+
+  const resultPath = '/' + stack.join('/');
+  steps.push({
+    stepIndex: steps.length,
+    description: `✅ Path Simplified! Final Canonical Path = "${resultPath}"`,
+    codeLine: 8,
+    elements: stack.map((val, idx) => ({ id: `p-${idx}`, value: val, state: 'sorted' })),
+    inputString: pathStr,
+    currentInputIndex: parts.length,
+  });
+
+  return steps;
+}
+
+// ─── REMOVE ADJACENT DUPLICATES (LEETCODE #1047) ENGINE ───────────────
+
+export function generateRemoveAdjacentDuplicatesSteps(s: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const stack: string[] = [];
+
+  steps.push({
+    stepIndex: 0,
+    description: `Starting Remove Adjacent Duplicates for string "${s}".`,
+    codeLine: 1,
+    elements: [],
+    inputString: s,
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < s.length; i++) {
+    const char = s[i];
+    if (stack.length > 0 && stack[stack.length - 1] === char) {
+      const popped = stack.pop();
+      steps.push({
+        stepIndex: steps.length,
+        description: `Duplicate adjacent pair found! Char '${char}' matches top '${popped}'. Popping from Stack.`,
+        codeLine: 4,
+        elements: stack.map((val, idx) => ({ id: `d-${idx}`, value: val, state: 'popped' })),
+        inputString: s,
+        currentInputIndex: i,
+      });
+    } else {
+      stack.push(char);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Char '${char}' does not match top element. Push to Stack.`,
+        codeLine: 3,
+        elements: stack.map((val, idx) => ({ id: `d-${idx}`, value: val, state: idx === stack.length - 1 ? 'pushed' : 'default' })),
+        inputString: s,
+        currentInputIndex: i,
+      });
+    }
+  }
+
+  const resultStr = stack.join('');
+  steps.push({
+    stepIndex: steps.length,
+    description: `✅ Adjacent Duplicates Removed! Final Resulting String = "${resultStr}"`,
+    codeLine: 6,
+    elements: stack.map((val, idx) => ({ id: `d-${idx}`, value: val, state: 'sorted' })),
+    inputString: s,
+    currentInputIndex: s.length,
+  });
+
+  return steps;
+}
+
+// ─── SLIDING WINDOW MAXIMUM (LEETCODE #239) ENGINE ───────────────────
+
+export function generateSlidingWindowSteps(nums: number[], k: number): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const deque: number[] = []; // stores indices
+  const result: number[] = [];
+
+  steps.push({
+    stepIndex: 0,
+    description: `Starting Sliding Window Maximum for array [${nums.join(', ')}] with window size k=${k}.`,
+    codeLine: 1,
+    elements: [],
+    auxElements: [],
+    auxLabel: 'SLIDING WINDOW MAX RESULT',
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < nums.length; i++) {
+    // Remove indices out of current window
+    while (deque.length > 0 && deque[0] <= i - k) {
+      deque.shift();
+    }
+
+    // Remove elements smaller than current element from rear
+    while (deque.length > 0 && nums[deque[deque.length - 1]] < nums[i]) {
+      deque.pop();
+    }
+
+    deque.push(i);
+
+    if (i >= k - 1) {
+      result.push(nums[deque[0]]);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Window [${i - k + 1}..${i}]: Max element is ${nums[deque[0]]} (Index ${deque[0]}). Added to result.`,
+        codeLine: 6,
+        elements: deque.map((idx) => ({ id: `deq-${idx}`, value: `${nums[idx]} (i=${idx})`, state: 'default' })),
+        auxElements: result.map((val, rIdx) => ({ id: `res-${rIdx}`, value: val, state: rIdx === result.length - 1 ? 'sorted' : 'default' })),
+        auxLabel: 'SLIDING WINDOW MAX RESULT',
+        slidingWindowRange: [i - k + 1, i],
+        currentInputIndex: i,
+      });
+    }
+  }
+
+  return steps;
+}
+
 
 

@@ -14,6 +14,9 @@ import {
   generatePostfixEvalSteps,
   generateQueueViaStacksSteps,
   generateDailyTemperaturesSteps,
+  generateSimplifyPathSteps,
+  generateRemoveAdjacentDuplicatesSteps,
+  generateSlidingWindowSteps,
   type StackQueueCategory,
   type StackQueueStep
 } from './stackQueueEngine';
@@ -171,6 +174,32 @@ export const StackQueuePage: React.FC = () => {
     play();
   };
 
+  const handleSimplifyPath = () => {
+    const p = inputValue.trim() || '/a/./b/../../c/';
+    const steps = generateSimplifyPathSteps(p);
+    setActiveSteps(steps);
+    reset();
+    play();
+  };
+
+  const handleRemoveDuplicates = () => {
+    const s = inputValue.trim() || 'abbaca';
+    const steps = generateRemoveAdjacentDuplicatesSteps(s);
+    setActiveSteps(steps);
+    reset();
+    play();
+  };
+
+  const handleSlidingWindow = () => {
+    const nums = inputValue.trim()
+      ? inputValue.split(/[\s,]+/).map(Number).filter((n) => !isNaN(n))
+      : [1, 3, -1, -3, 5, 3, 6, 7];
+    const steps = generateSlidingWindowSteps(nums, 3);
+    setActiveSteps(steps);
+    reset();
+    play();
+  };
+
   const handleClearAll = () => {
     setStackData([]);
     setQueueData([]);
@@ -195,7 +224,7 @@ export const StackQueuePage: React.FC = () => {
             <span>Stack & Queue Learning Studio</span>
           </h1>
           <p className="page-subtitle text-xs text-slate-400">
-            Interactive 3D Visualizer for Linear Data Structures & Classical Interview Problems
+            Interactive 3D Visualizer for Linear Data Structures & Top 20 Classical DSA Problems
           </p>
         </div>
 
@@ -223,26 +252,43 @@ export const StackQueuePage: React.FC = () => {
             }}
           >
             <optgroup label="Core Data Structures">
-              <option value="stack">Stack (LIFO)</option>
-              <option value="queue">Queue (FIFO)</option>
-              <option value="circularQueue">Circular Ring Queue</option>
+              <option value="stack">Stack Primitive (LIFO)</option>
+              <option value="queue">Queue Primitive (FIFO)</option>
             </optgroup>
-            <optgroup label="Top 5 Classical LeetCode Problems">
+            <optgroup label="🥞 10 Famous STACK DSA Problems">
               <option value="validParentheses">1. Valid Parentheses (#20)</option>
               <option value="minStack">2. Min Stack O(1) (#155)</option>
               <option value="postfixEval">3. Evaluate RPN / Postfix (#150)</option>
-              <option value="queueViaStacks">4. Queue using 2 Stacks (#232)</option>
-              <option value="dailyTemperatures">5. Daily Temperatures / Monotonic (#739)</option>
+              <option value="dailyTemperatures">4. Daily Temperatures / Monotonic (#739)</option>
+              <option value="simplifyPath">5. Simplify Path (#71)</option>
+
+              <option value="removeAdjacentDuplicates">6. Remove Adjacent Duplicates (#1047)</option>
+              <option value="basicCalculator">7. Basic Calculator Expression (#224)</option>
+              <option value="decodeString">8. Decode String Pattern (#394)</option>
+              <option value="trappingRainWater">9. Trapping Rain Water (#42)</option>
+              <option value="largestRectangle">10. Largest Rectangle in Histogram (#84)</option>
+            </optgroup>
+            <optgroup label="🚶‍♂️ 10 Famous QUEUE DSA Problems">
+              <option value="queueViaStacks">1. Queue using 2 Stacks (#232)</option>
+              <option value="stackViaQueues">2. Stack using Queues (#225)</option>
+              <option value="circularQueue">3. Circular Queue Ring Buffer (#622)</option>
+              <option value="circularDeque">4. Design Circular Deque (#641)</option>
+              <option value="slidingWindow">5. Sliding Window Maximum (#239)</option>
+              <option value="firstNonRepeating">6. First Non-Repeating in Stream</option>
+              <option value="movingAverage">7. Moving Average Data Stream (#346)</option>
+              <option value="taskScheduler">8. Task Scheduler CPU Queue (#621)</option>
+              <option value="rottingOranges">9. Rotting Oranges BFS Grid (#994)</option>
+              <option value="dota2Senate">10. Dota2 Senate Round-Robin (#649)</option>
             </optgroup>
           </select>
 
           {/* Action Input */}
           <input
             type="text"
-            className="bst-input w-36"
+            className="bst-input w-40"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Val / Expr / Temps"
+            placeholder="Val / Expr / Array"
           />
 
           {/* Category Specific Action Buttons */}
@@ -317,6 +363,27 @@ export const StackQueuePage: React.FC = () => {
             </button>
           )}
 
+          {category === 'simplifyPath' && (
+            <button className="bst-btn btn-insert" onClick={handleSimplifyPath}>
+              <CheckCircle2 size={14} />
+              <span>Simplify Path</span>
+            </button>
+          )}
+
+          {category === 'removeAdjacentDuplicates' && (
+            <button className="bst-btn btn-insert" onClick={handleRemoveDuplicates}>
+              <CheckCircle2 size={14} />
+              <span>Remove Duplicates</span>
+            </button>
+          )}
+
+          {category === 'slidingWindow' && (
+            <button className="bst-btn btn-insert" onClick={handleSlidingWindow}>
+              <CheckCircle2 size={14} />
+              <span>Compute Window Max</span>
+            </button>
+          )}
+
           <button className="bst-btn btn-mode" onClick={handleClearAll}>
             <Trash2 size={14} className="text-rose-400" />
             <span>Clear All</span>
@@ -330,7 +397,7 @@ export const StackQueuePage: React.FC = () => {
           {category === 'stack' && <StackRenderer currentStep={currentStep} />}
           {category === 'queue' && <QueueRenderer currentStep={currentStep} />}
           {category === 'circularQueue' && <CircularQueueRenderer currentStep={currentStep} />}
-          {['validParentheses', 'minStack', 'postfixEval', 'queueViaStacks', 'dailyTemperatures'].includes(category) && (
+          {!['stack', 'queue', 'circularQueue'].includes(category) && (
             <ProblemRenderer category={category} currentStep={currentStep} />
           )}
 
