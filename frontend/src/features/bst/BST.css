@@ -436,17 +436,22 @@
   transition: left 0.45s cubic-bezier(0.4, 0, 0.2, 1), top 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* AVL Balance Factor & Trie Badges — High-Contrast Opaque Micro-Labels */
+/* AVL Balance Factor & Trie Badges — Absolutely Positioned Floating Labels (Zero Overlap) */
 .bf-badge {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 800;
-  padding: 0.15rem 0.5rem;
+  padding: 0.12rem 0.48rem;
   border-radius: 6px;
-  margin-bottom: 0.35rem;
   white-space: nowrap;
   letter-spacing: 0.4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 10;
   transition: all 0.2s ease;
 }
 
@@ -464,17 +469,22 @@
 }
 
 .eow-badge {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  padding: 0.15rem 0.45rem;
+  padding: 0.12rem 0.42rem;
   border-radius: 6px;
   background-color: #1e1404;
   border: 1.5px solid #f59e0b;
   color: #fbbf24;
-  margin-bottom: 0.3rem;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 10;
 }
 
 @keyframes badge-pulse {
