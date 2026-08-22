@@ -48,6 +48,9 @@ const DEFAULT_BST_TREE: BSTTreeStructure = {
   },
 };
 
+const SAMPLE_TRIE_WORDS = ['cat', 'car', 'card', 'dog', 'dot'];
+const RANDOM_WORD_POOL = ['apple', 'app', 'code', 'coder', 'tree', 'trie', 'data', 'algo', 'node', 'heap'];
+
 export const BSTPage: React.FC = () => {
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
   const [inputValue, setInputValue] = useState<string>('45');
@@ -77,10 +80,13 @@ export const BSTPage: React.FC = () => {
       const { steps } = generateHeapInsertSteps([90, 75, 60, 40, 55, 20], 85, 'max');
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'trie') {
-      const root = createTrieRoot();
-      generateTrieInsertSteps(root, 'cat');
-      const { steps, newRoot } = generateTrieInsertSteps(root, 'car');
-      setTrieRoot(newRoot);
+      let root = createTrieRoot();
+      SAMPLE_TRIE_WORDS.forEach((w) => {
+        const res = generateTrieInsertSteps(root, w);
+        root = res.newRoot;
+      });
+      setTrieRoot(root);
+      const { steps } = generateTrieInsertSteps(root, 'cat');
       setActiveOperationSteps(steps);
     }
   }, [treeCategory]);
@@ -112,6 +118,15 @@ export const BSTPage: React.FC = () => {
     if (isNaN(num)) return;
     const { steps, newTree } = generateBSTInsertSteps(bstTree, num);
     setBstTree(newTree);
+    setActiveOperationSteps(steps);
+    reset();
+    if (!isPredictMode) play();
+  };
+
+  const handleBSTSearch = () => {
+    const num = Number(inputValue);
+    if (isNaN(num)) return;
+    const steps = generateBSTSearchSteps(bstTree, num);
     setActiveOperationSteps(steps);
     reset();
     if (!isPredictMode) play();
@@ -150,7 +165,7 @@ export const BSTPage: React.FC = () => {
   // Operations for Trie
   const handleTrieInsert = () => {
     if (!wordValue.trim()) return;
-    const { steps, newRoot } = generateTrieInsertSteps(trieRoot, wordValue);
+    const { steps, newRoot } = generateTrieInsertSteps(trieRoot, wordValue.trim());
     setTrieRoot(newRoot);
     setActiveOperationSteps(steps);
     reset();
@@ -159,10 +174,84 @@ export const BSTPage: React.FC = () => {
 
   const handleTrieSearch = () => {
     if (!wordValue.trim()) return;
-    const steps = generateTrieSearchSteps(trieRoot, wordValue);
+    const steps = generateTrieSearchSteps(trieRoot, wordValue.trim());
     setActiveOperationSteps(steps);
     reset();
     play();
+  };
+
+  // Preset Handlers Across All Categories
+  const handleEmptyTree = () => {
+    if (treeCategory === 'bst') setBstTree(undefined);
+    if (treeCategory === 'avl') setAvlTree(undefined);
+    if (treeCategory === 'heap') setHeapArray([]);
+    if (treeCategory === 'trie') setTrieRoot(createTrieRoot());
+    setActiveOperationSteps([]);
+    reset();
+  };
+
+  const handleSampleTree = () => {
+    if (treeCategory === 'bst') {
+      setBstTree(DEFAULT_BST_TREE);
+      setActiveOperationSteps(generateBSTInsertSteps(DEFAULT_BST_TREE, 45).steps);
+    } else if (treeCategory === 'avl') {
+      let tree: AVLNodeStructure | undefined = undefined;
+      let lastSteps: BSTStep[] = [];
+      [30, 20, 40, 10, 25, 35, 50].forEach((v) => {
+        const res = generateAVLInsertSteps(tree, v);
+        tree = res.newTree;
+        lastSteps = res.steps;
+      });
+      setAvlTree(tree);
+      setActiveOperationSteps(lastSteps);
+    } else if (treeCategory === 'heap') {
+      const sample = [90, 75, 60, 40, 55, 20];
+      setHeapArray(sample);
+      setActiveOperationSteps(generateHeapInsertSteps(sample, 85, heapType).steps);
+    } else if (treeCategory === 'trie') {
+      let root = createTrieRoot();
+      SAMPLE_TRIE_WORDS.forEach((w) => {
+        const res = generateTrieInsertSteps(root, w);
+        root = res.newRoot;
+      });
+      setTrieRoot(root);
+      setActiveOperationSteps(generateTrieInsertSteps(root, 'cat').steps);
+    }
+    reset();
+  };
+
+  const handleRandomTree = () => {
+    if (treeCategory === 'bst') {
+      const rnd = generateRandomBST(6);
+      setBstTree(rnd);
+      setActiveOperationSteps(generateBSTInsertSteps(rnd, Math.floor(Math.random() * 80) + 10).steps);
+    } else if (treeCategory === 'avl') {
+      let tree: AVLNodeStructure | undefined = undefined;
+      let lastSteps: BSTStep[] = [];
+      for (let i = 0; i < 6; i++) {
+        const v = Math.floor(Math.random() * 80) + 10;
+        const res = generateAVLInsertSteps(tree, v);
+        tree = res.newTree;
+        lastSteps = res.steps;
+      }
+      setAvlTree(tree);
+      setActiveOperationSteps(lastSteps);
+    } else if (treeCategory === 'heap') {
+      const rndArr = Array.from({ length: 6 }, () => Math.floor(Math.random() * 85) + 10);
+      setHeapArray(rndArr);
+      setActiveOperationSteps(generateHeapInsertSteps(rndArr, Math.floor(Math.random() * 85) + 10, heapType).steps);
+    } else if (treeCategory === 'trie') {
+      let root = createTrieRoot();
+      const count = 4;
+      const shuffled = [...RANDOM_WORD_POOL].sort(() => 0.5 - Math.random()).slice(0, count);
+      shuffled.forEach((w) => {
+        const res = generateTrieInsertSteps(root, w);
+        root = res.newRoot;
+      });
+      setTrieRoot(root);
+      setActiveOperationSteps(generateTrieInsertSteps(root, shuffled[0]).steps);
+    }
+    reset();
   };
 
   const handleToggleBreakpoint = (lineNumber: number) => {
@@ -200,12 +289,7 @@ export const BSTPage: React.FC = () => {
             <Plus size={14} />
             <span>Insert</span>
           </button>
-          <button className="bst-btn btn-search" onClick={() => {
-            const steps = generateBSTSearchSteps(bstTree, Number(inputValue));
-            setActiveOperationSteps(steps);
-            reset();
-            if (!isPredictMode) play();
-          }}>
+          <button className="bst-btn btn-search" onClick={handleBSTSearch}>
             <Search size={14} />
             <span>Search</span>
           </button>
@@ -213,27 +297,57 @@ export const BSTPage: React.FC = () => {
       )}
 
       {treeCategory === 'avl' && (
-        <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
-          <Plus size={14} />
-          <span>Insert AVL</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
+            <Plus size={14} />
+            <span>Insert AVL</span>
+          </button>
+        </div>
       )}
 
       {treeCategory === 'heap' && (
-        <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
-          <Plus size={14} />
-          <span>Push Heap</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
+            <Plus size={14} />
+            <span>Push Heap</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleHeapExtract}>
+            <ArrowDown size={14} />
+            <span>Extract Root</span>
+          </button>
+        </div>
       )}
 
       {treeCategory === 'trie' && (
-        <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
-          <Plus size={14} />
-          <span>Insert Word</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
+            <Plus size={14} />
+            <span>Insert Word</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleTrieSearch}>
+            <Search size={14} />
+            <span>Search Prefix</span>
+          </button>
+        </div>
       )}
 
-      <label className="predict-toggle-label">
+      {/* Preset Action Buttons Shared Across ALL Categories */}
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleEmptyTree} title="Clear Tree Structure">
+          <Trash2 size={13} className="text-rose-400" />
+          <span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSampleTree} title="Load Standard Sample Tree">
+          <Layers size={13} className="text-amber-400" />
+          <span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomTree} title="Generate Random Tree">
+          <Sparkles size={13} className="text-emerald-400" />
+          <span>Random</span>
+        </button>
+      </div>
+
+      <label className="predict-toggle-label ml-2">
         <HelpCircle size={14} />
         <span>Predict Mode</span>
         <input
@@ -343,12 +457,7 @@ export const BSTPage: React.FC = () => {
                 <Plus size={16} />
                 <span>Insert</span>
               </button>
-              <button className="bst-btn btn-search" onClick={() => {
-                const steps = generateBSTSearchSteps(bstTree, Number(inputValue));
-                setActiveOperationSteps(steps);
-                reset();
-                if (!isPredictMode) play();
-              }}>
+              <button className="bst-btn btn-search" onClick={handleBSTSearch}>
                 <Search size={16} />
                 <span>Search</span>
               </button>
@@ -412,23 +521,21 @@ export const BSTPage: React.FC = () => {
             </>
           )}
 
-          {/* Dataset Initialization Selector Group for BST */}
-          {treeCategory === 'bst' && (
-            <div className="dataset-mode-selector">
-              <button className="bst-btn btn-mode" onClick={() => { setBstTree(undefined); setActiveOperationSteps([]); reset(); }}>
-                <Trash2 size={14} className="text-rose-400" />
-                <span>Empty Tree</span>
-              </button>
-              <button className="bst-btn btn-mode" onClick={() => { setBstTree(DEFAULT_BST_TREE); setActiveOperationSteps(generateBSTInsertSteps(DEFAULT_BST_TREE, 45).steps); reset(); }}>
-                <Layers size={14} className="text-amber-400" />
-                <span>Sample Tree</span>
-              </button>
-              <button className="bst-btn btn-mode" onClick={() => { const rnd = generateRandomBST(6); setBstTree(rnd); setActiveOperationSteps(generateBSTInsertSteps(rnd, 50).steps); reset(); }}>
-                <Sparkles size={14} className="text-emerald-400" />
-                <span>Random Tree</span>
-              </button>
-            </div>
-          )}
+          {/* Dataset Initialization Selector Group for ALL Categories */}
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={handleEmptyTree}>
+              <Trash2 size={14} className="text-rose-400" />
+              <span>Empty Tree</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSampleTree}>
+              <Layers size={14} className="text-amber-400" />
+              <span>Sample Tree</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomTree}>
+              <Sparkles size={14} className="text-emerald-400" />
+              <span>Random Tree</span>
+            </button>
+          </div>
         </div>
 
         <div className="bst-toolbar-right">
