@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Layers, Plus, Trash2, Code, CheckCircle2, Search, Filter, HelpCircle, Maximize2, Sparkles
 } from 'lucide-react';
@@ -245,6 +245,54 @@ export const StackQueuePage: React.FC = () => {
     play();
   };
 
+  // ─── DEFAULT CATEGORY STEP GENERATOR ─────────────────────────────────────
+  const getCategoryDefaultSteps = (
+    cat: StackQueueCategory,
+    currStack: (number | string)[] = stackData,
+    currQueue: (number | string)[] = queueData,
+    currCq: (number | string | null)[] = cqElements,
+    currFront: number = cqFront,
+    currRear: number = cqRear,
+    currMinMain: number[] = minMainStack,
+    currMinAux: number[] = minAuxStack,
+    currQvsIn: (number | string)[] = qvsIn,
+    currQvsOut: (number | string)[] = qvsOut
+  ): StackQueueStep[] => {
+    switch (cat) {
+      case 'stack':
+        return generateStackPushSteps(currStack.length ? currStack : [10, 25, 30], 42);
+      case 'queue':
+        return generateQueueEnqueueSteps(currQueue.length ? currQueue : [15, 28, 40], 42);
+      case 'circularQueue':
+        return generateCircularQueueEnqueueSteps(currCq, currFront, currRear, 6, 50).steps;
+      case 'validParentheses':
+        return generateValidParenthesesSteps('({[]})');
+      case 'minStack':
+        return generateMinStackPushSteps(currMinMain.length ? currMinMain : [5, 2, 8], currMinAux.length ? currMinAux : [5, 2, 2], 3).steps;
+      case 'postfixEval':
+        return generatePostfixEvalSteps('3 4 + 2 *');
+      case 'queueViaStacks':
+        return generateQueueViaStacksSteps(currQvsIn, currQvsOut, 'enqueue', 42).steps;
+      case 'dailyTemperatures':
+        return generateDailyTemperaturesSteps([73, 74, 75, 71, 69, 72, 76, 73]);
+      case 'simplifyPath':
+        return generateSimplifyPathSteps('/a/./b/../../c/');
+      case 'removeAdjacentDuplicates':
+        return generateRemoveAdjacentDuplicatesSteps('abbaca');
+      case 'slidingWindow':
+        return generateSlidingWindowSteps([1, 3, -1, -3, 5, 3, 6, 7], 3);
+      default:
+        return generateStackPushSteps([10, 25, 30], 42);
+    }
+  };
+
+  // Auto-generate step sequence whenever category changes
+  useEffect(() => {
+    const steps = getCategoryDefaultSteps(category);
+    setActiveSteps(steps);
+    reset();
+  }, [category]);
+
   // Filtered problems list based on search query
   const filteredProblems = PROBLEMS_LIST.filter(
     (p) =>
@@ -255,26 +303,45 @@ export const StackQueuePage: React.FC = () => {
   );
 
   const handleSampleData = () => {
-    setStackData([10, 25, 30, 45]);
-    setQueueData([15, 28, 40, 52]);
-    setCqElements([10, 20, 30, 40, null, null]);
+    const sampleStack = [10, 25, 30, 45];
+    const sampleQueue = [15, 28, 40, 52];
+    const sampleCq = [10, 20, 30, 40, null, null];
+    const sampleMinMain = [8, 4, 12, 2];
+    const sampleMinAux = [8, 4, 4, 2];
+    const sampleQvsIn = [10, 20, 30];
+    const sampleQvsOut = [5];
+
+    setStackData(sampleStack);
+    setQueueData(sampleQueue);
+    setCqElements(sampleCq);
     setCqFront(0);
     setCqRear(3);
-    setMinMainStack([8, 4, 12, 2]);
-    setMinAuxStack([8, 4, 4, 2]);
-    setQvsIn([10, 20, 30]);
-    setQvsOut([5]);
-    setActiveSteps([]);
+    setMinMainStack(sampleMinMain);
+    setMinAuxStack(sampleMinAux);
+    setQvsIn(sampleQvsIn);
+    setQvsOut(sampleQvsOut);
+
+    const steps = getCategoryDefaultSteps(category, sampleStack, sampleQueue, sampleCq, 0, 3, sampleMinMain, sampleMinAux, sampleQvsIn, sampleQvsOut);
+    setActiveSteps(steps);
     reset();
+    play();
   };
 
   const handleRandomData = () => {
     const rndStack = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
     const rndQueue = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
+    const rndCq = [rndStack[0], rndStack[1], rndStack[2], null, null, null];
+
     setStackData(rndStack);
     setQueueData(rndQueue);
-    setActiveSteps([]);
+    setCqElements(rndCq);
+    setCqFront(0);
+    setCqRear(2);
+
+    const steps = getCategoryDefaultSteps(category, rndStack, rndQueue, rndCq, 0, 2);
+    setActiveSteps(steps);
     reset();
+    play();
   };
 
   const handleClearAll = () => {

@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2
+  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, HelpCircle
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
+import { SortingPredictionQuiz } from './SortingPredictionQuiz';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
@@ -70,9 +71,10 @@ export const SortingPage: React.FC = () => {
   const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
 
-  // Debugger & Modal state
+  // Debugger & Modal & Predict state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
+  const [isPredictMode, setIsPredictMode] = useState<boolean>(true);
   const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
   // Generate algorithm steps
@@ -110,6 +112,17 @@ export const SortingPage: React.FC = () => {
     reset,
     setSpeed,
   } = useStepPlayer({ steps: executionData.steps });
+
+  const comparing = currentStep?.comparingIndices;
+  const hasPrediction = isPredictMode && comparing && comparing.length >= 2 && currentStep?.array;
+  const val1 = hasPrediction ? currentStep.array[comparing[0]] : undefined;
+  const val2 = hasPrediction ? currentStep.array[comparing[1]] : undefined;
+
+  useEffect(() => {
+    if (hasPrediction && isPlaying) {
+      pause();
+    }
+  }, [hasPrediction, isPlaying, pause]);
 
   const handleRandomize = () => {
     reset();
@@ -259,13 +272,25 @@ export const SortingPage: React.FC = () => {
         </div>
 
         <div className="bst-toolbar-right">
-          <button
-            className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
+          <div className="predict-mode-group flex items-center gap-2">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Predict Mode</span>
+              <input
+                type="checkbox"
+                checked={isPredictMode}
+                onChange={(e) => setIsPredictMode(e.target.checked)}
+              />
+            </label>
+
+            <button
+              className="bst-btn btn-fullscreen"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -273,6 +298,16 @@ export const SortingPage: React.FC = () => {
       <div className="sorting-workspace">
         {/* Left Column: Visual Canvas & Interactive Controls */}
         <div className="renderer-section">
+          {hasPrediction && val1 !== undefined && val2 !== undefined && comparing && (
+            <SortingPredictionQuiz
+              val1={val1}
+              val2={val2}
+              idx1={comparing[0]}
+              idx2={comparing[1]}
+              onCorrectAnswer={() => stepForward()}
+            />
+          )}
+
           <SortingRenderer
             currentStep={currentStep}
             onElementClick={handleBarElementClick}
