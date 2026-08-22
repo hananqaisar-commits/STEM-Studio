@@ -1,0 +1,53 @@
+import type { MultiLanguageSnippets } from '../sorting/data/codeSnippets';
+
+export const BST_CODE_SNIPPETS: MultiLanguageSnippets = {
+  pseudocode: [
+    'insert(root, val):',
+    '  if root is null return new Node(val)',
+    '  if val < root.val:',
+    '    root.left = insert(root.left, val)',
+    '  else if val > root.val:',
+    '    root.right = insert(root.right, val)',
+    '  return root',
+  ],
+  python: [
+    'def insert(root, val):',
+    '    if not root: return Node(val)',
+    '    if val < root.val:',
+    '        root.left = insert(root.left, val)',
+    '    elif val > root.val:',
+    '        root.right = insert(root.right, val)',
+    '    return root',
+  ],
+  cpp: [
+    'Node* insert(Node* root, int val) {',
+    '    if (!root) return new Node(val);',
+    '    if (val < root->val)',
+    '        root->left = insert(root->left, val);',
+    '    else if (val > root->val)',
+    '        root->right = insert(root->right, val);',
+    '    return root;',
+    '}',
+  ],
+  java: [
+    'public Node insert(Node root, int val) {',
+    '    if (root == null) return new Node(val);',
+    '    if (val < root.val)',
+    '        root.left = insert(root.left, val);',
+    '    else if (val > root.val)',
+    '        root.right = insert(root.right, val);',
+    '    return root;',
+    '}',
+  ],
+  go: [
+    'func insert(root *Node, val int) *Node {',
+    '    if root == nil { return &Node{val: val} }',
+    '    if val < root.val {',
+    '        root.left = insert(root.left, val)',
+    '    } else if val > root.val {',
+    '        root.right = insert(root.right, val)',
+    '    }',
+    '    return root',
+    '}',
+  ],
+};

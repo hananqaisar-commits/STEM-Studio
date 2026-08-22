@@ -10,6 +10,7 @@ import { LoadingScreen } from './components/common/LoadingScreen';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { SortingPage } from './features/sorting/SortingPage';
+import { BSTPage } from './features/bst/BSTPage';
 
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
@@ -73,7 +74,7 @@ const DashboardLayout = () => {
             <Route path="sorting" element={<SortingPage />} />
             <Route path="stackQueue" element={<PlaceholderModule title="Stack & Queue" />} />
             <Route path="linkedList" element={<PlaceholderModule title="Linked List" />} />
-            <Route path="bst" element={<PlaceholderModule title="Binary Search Tree" />} />
+            <Route path="bst" element={<BSTPage />} />
             <Route path="binarySearch" element={<PlaceholderModule title="Binary Search" />} />
             <Route path="graph" element={<PlaceholderModule title="Graph Algorithms" />} />
           </Routes>
