@@ -47,6 +47,9 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
   const edges = currentStep.edges;
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
+  // Dynamically compute canvas height so SVG layer never clips lines on deep/large trees
+  const maxY = Math.max(480, ...nodes.map((n) => (n.y ?? 0) + 90));
+
   return (
     <div className="bst-canvas-container animate-fade-in">
       <div className="bst-canvas-header">
@@ -69,7 +72,7 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
 
       <div className="bst-canvas-workspace">
         {/* Subtle grid pattern background */}
-        <svg className="canvas-grid-pattern" width="100%" height="100%">
+        <svg className="canvas-grid-pattern" width="100%" height={`${maxY}px`}>
           <defs>
             <pattern id="dotGrid" width="24" height="24" patternUnits="userSpaceOnUse">
               <circle cx="12" cy="12" r="0.8" fill="rgba(148, 163, 184, 0.15)" />
@@ -78,8 +81,8 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
           <rect width="100%" height="100%" fill="url(#dotGrid)" />
         </svg>
 
-        {/* SVG Edges Layer */}
-        <svg className="bst-svg-layer" width="100%" height="100%">
+        {/* SVG Edges Layer — Dynamic Height to prevent line clipping on large trees */}
+        <svg className="bst-svg-layer" width="100%" height={`${maxY}px`}>
           <defs>
             <filter id="edgeShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
@@ -116,8 +119,8 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
           })}
         </svg>
 
-        {/* Nodes Layer */}
-        <div className="bst-nodes-layer">
+        {/* Nodes Layer — Dynamic Height */}
+        <div className="bst-nodes-layer" style={{ height: `${maxY}px` }}>
           {nodes.map((node) => {
             if (node.x === undefined || node.y === undefined) return null;
 

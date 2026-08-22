@@ -118,6 +118,7 @@ export const TreeRenderer: React.FC<TreeRendererProps> = ({
   };
 
   const { nodes, edges } = calculateHeapTreeNodes();
+  const maxY = Math.max(420, ...nodes.map((n) => n.y + 90));
 
   return (
     <div className="tree-canvas-container animate-fade-in">
@@ -129,8 +130,8 @@ export const TreeRenderer: React.FC<TreeRendererProps> = ({
       </div>
 
       <div className="tree-canvas-workspace">
-        {/* SVG Edges Layer */}
-        <svg className="tree-svg-layer" width="100%" height="100%">
+        {/* SVG Edges Layer — Dynamic Height to prevent clipping */}
+        <svg className="tree-svg-layer" width="100%" height={`${maxY}px`}>
           {edges.map((edge, idx) => (
             <Line
               key={idx}
@@ -144,8 +145,8 @@ export const TreeRenderer: React.FC<TreeRendererProps> = ({
           ))}
         </svg>
 
-        {/* Tree Nodes Layer */}
-        <div className="tree-nodes-layer">
+        {/* Tree Nodes Layer — Dynamic Height */}
+        <div className="tree-nodes-layer" style={{ height: `${maxY}px` }}>
           {nodes.map((node) => (
             <div
               key={node.index}
