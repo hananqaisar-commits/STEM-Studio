@@ -135,6 +135,9 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
                 state={state}
                 showValue={array.length <= 25}
               />
+              {array.length <= 30 && (
+                <span className="bar-index-label">[{index}]</span>
+              )}
             </div>
           );
         })}

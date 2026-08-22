@@ -210,6 +210,15 @@
   letter-spacing: 0.3px;
 }
 
+.bar-index-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
 .canvas-memory-inspect-card {
   position: fixed;
   background-color: rgba(15, 23, 42, 0.95);
