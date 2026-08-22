@@ -293,113 +293,51 @@ export const StackQueuePage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
-      {/* Category Header */}
-      <header className="page-header flex justify-between items-center">
-        <div>
-          <h1 className="page-title text-xl font-bold flex items-center gap-2">
-            <Layers className="text-amber-400" size={24} />
-            <span>Stack & Queue Learning Studio</span>
-          </h1>
-          <p className="page-subtitle text-xs text-slate-400">
-            Interactive 3D Visualizer for Linear Data Structures & Top 20 Classical DSA Problems
-          </p>
-        </div>
-
-        {/* Dataset Mode Selector & Predict Mode Matching BST */}
-        <div className="flex items-center gap-2">
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleClearAll} title="Clear Structure">
-              <Trash2 size={13} className="text-rose-400" />
-              <span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSampleData} title="Load Standard Sample Dataset">
-              <Layers size={13} className="text-amber-400" />
-              <span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomData} title="Generate Random Values">
-              <Sparkles size={13} className="text-emerald-400" />
-              <span>Random</span>
-            </button>
-          </div>
-
-          <label className="predict-toggle-label flex items-center gap-1.5 text-xs font-bold text-slate-300 bg-slate-900/80 px-2.5 py-1.5 rounded-xl border border-slate-700/70 cursor-pointer">
-            <HelpCircle size={14} className="text-amber-400" />
-            <span>Predict</span>
-            <input
-              type="checkbox"
-              checked={isPredictMode}
-              onChange={(e) => setIsPredictMode(e.target.checked)}
-              className="accent-amber-400 cursor-pointer ml-1"
-            />
-          </label>
-
+      {/* Category Tabs Bar Matching BST */}
+      <div className="tree-category-toolbar animate-fade-in">
+        <div className="tree-category-tabs">
           <button
-            className="bst-btn btn-fullscreen p-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 hover:border-amber-400 text-slate-300"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
-
-          {/* Debugger Toggle */}
-          <button
-            className={`bst-btn ${showDebugger ? 'active' : ''}`}
-            onClick={() => setShowDebugger(!showDebugger)}
-          >
-            <Code size={14} />
-            <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Category Pills Header Bar */}
-      <div className="algorithm-tabs-bar animate-fade-in">
-        <div className="algorithm-tabs flex flex-wrap gap-2">
-          <button
-            className={`alg-tab flex items-center gap-2 ${['stack', 'queue', 'circularQueue'].includes(category) ? 'active' : ''}`}
+            className={`category-tab ${['stack', 'queue', 'circularQueue'].includes(category) ? 'active' : ''}`}
             onClick={() => {
               setCategory('stack');
               setActiveSteps([]);
               reset();
             }}
           >
-            <Layers size={14} />
-            <span className="font-semibold">Core Primitives (LIFO & FIFO)</span>
+            <Layers size={16} />
+            <span>Core Primitives (LIFO & FIFO)</span>
           </button>
 
           <button
-            className={`alg-tab flex items-center gap-2 ${PROBLEMS_LIST.filter(p => p.group === 'Stack').some(p => p.id === category) ? 'active' : ''}`}
+            className={`category-tab ${PROBLEMS_LIST.filter((p) => p.group === 'Stack').some((p) => p.id === category) ? 'active' : ''}`}
             onClick={() => {
               setCategory('validParentheses');
               setActiveSteps([]);
               reset();
             }}
           >
-            <CheckCircle2 size={14} />
-            <span className="font-semibold">10 Stack Classical Problems</span>
-            <span className="text-[10px] opacity-75 font-mono bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-full font-bold">10 Solved</span>
+            <CheckCircle2 size={16} />
+            <span>10 Stack Classical Problems</span>
           </button>
 
           <button
-            className={`alg-tab flex items-center gap-2 ${PROBLEMS_LIST.filter(p => p.group === 'Queue').some(p => p.id === category) ? 'active' : ''}`}
+            className={`category-tab ${PROBLEMS_LIST.filter((p) => p.group === 'Queue').some((p) => p.id === category) ? 'active' : ''}`}
             onClick={() => {
               setCategory('queueViaStacks');
               setActiveSteps([]);
               reset();
             }}
           >
-            <Filter size={14} />
-            <span className="font-semibold">10 Queue Classical Problems</span>
-            <span className="text-[10px] opacity-75 font-mono bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded-full font-bold">10 Solved</span>
+            <Filter size={16} />
+            <span>10 Queue Classical Problems</span>
           </button>
         </div>
       </div>
 
-      {/* Control Toolbar with Vector Icons & Spotlight Search Box */}
-      <div className="bst-toolbar flex flex-wrap justify-between items-center gap-4">
-        {/* Left Section: Spotlight Search & Category Selector */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Spotlight Style Search Input */}
+      {/* Operations Control Toolbar Matching BST */}
+      <div className="bst-toolbar animate-fade-in">
+        <div className="bst-toolbar-left">
+          {/* Spotlight Search & Category Select Dropdown */}
           <div className="spotlight-search-container">
             <div className="spotlight-search-box">
               <Search size={14} className="text-amber-400 shrink-0" />
@@ -465,7 +403,6 @@ export const StackQueuePage: React.FC = () => {
             )}
           </div>
 
-          {/* Clean Category Selector Dropdown */}
           <select
             className="bst-select font-bold text-xs"
             value={category}
@@ -504,24 +441,25 @@ export const StackQueuePage: React.FC = () => {
               <option value="dota2Senate">10. Dota2 Senate Round-Robin (#649)</option>
             </optgroup>
           </select>
-        </div>
 
-        {/* Right Section: Inputs & Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Action Input */}
-          <input
-            type="text"
-            className="bst-input w-36"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Val / Expr / Array"
-          />
+          {/* Input Group Matching BST */}
+          <div className="bst-input-group">
+            <span>Value:</span>
+            <input
+              type="text"
+              className="bst-input"
+              style={{ width: '90px' }}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Val / Expr"
+            />
+          </div>
 
-          {/* Category Specific Action Buttons */}
+          {/* Category Action Buttons */}
           {category === 'stack' && (
             <>
               <button className="bst-btn btn-insert" onClick={handlePush}>
-                <Plus size={14} />
+                <Plus size={16} />
                 <span>Push</span>
               </button>
               <button className="bst-btn btn-search" onClick={handlePop}>
@@ -533,7 +471,7 @@ export const StackQueuePage: React.FC = () => {
           {category === 'queue' && (
             <>
               <button className="bst-btn btn-insert" onClick={handleEnqueue}>
-                <Plus size={14} />
+                <Plus size={16} />
                 <span>Enqueue</span>
               </button>
               <button className="bst-btn btn-search" onClick={handleDequeue}>
@@ -544,28 +482,28 @@ export const StackQueuePage: React.FC = () => {
 
           {category === 'circularQueue' && (
             <button className="bst-btn btn-insert" onClick={handleCircularEnqueue}>
-              <Plus size={14} />
+              <Plus size={16} />
               <span>Enqueue Slot</span>
             </button>
           )}
 
           {category === 'validParentheses' && (
             <button className="bst-btn btn-insert" onClick={handleValidParentheses}>
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={16} />
               <span>Evaluate String</span>
             </button>
           )}
 
           {category === 'minStack' && (
             <button className="bst-btn btn-insert" onClick={handleMinStackPush}>
-              <Plus size={14} />
+              <Plus size={16} />
               <span>Push Value</span>
             </button>
           )}
 
           {category === 'postfixEval' && (
             <button className="bst-btn btn-insert" onClick={handlePostfixEval}>
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={16} />
               <span>Evaluate Postfix</span>
             </button>
           )}
@@ -573,7 +511,7 @@ export const StackQueuePage: React.FC = () => {
           {category === 'queueViaStacks' && (
             <>
               <button className="bst-btn btn-insert" onClick={handleQueueViaStacksEnqueue}>
-                <Plus size={14} />
+                <Plus size={16} />
                 <span>Enqueue In-Stack</span>
               </button>
               <button className="bst-btn btn-search" onClick={handleQueueViaStacksDequeue}>
@@ -584,36 +522,78 @@ export const StackQueuePage: React.FC = () => {
 
           {category === 'dailyTemperatures' && (
             <button className="bst-btn btn-insert" onClick={handleDailyTemperatures}>
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={16} />
               <span>Compute Warmer Days</span>
             </button>
           )}
 
           {category === 'simplifyPath' && (
             <button className="bst-btn btn-insert" onClick={handleSimplifyPath}>
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={16} />
               <span>Simplify Path</span>
             </button>
           )}
 
           {category === 'removeAdjacentDuplicates' && (
             <button className="bst-btn btn-insert" onClick={handleRemoveDuplicates}>
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={16} />
               <span>Remove Duplicates</span>
             </button>
           )}
 
           {category === 'slidingWindow' && (
             <button className="bst-btn btn-insert" onClick={handleSlidingWindow}>
-              <CheckCircle2 size={14} />
+              <CheckCircle2 size={16} />
               <span>Compute Window Max</span>
             </button>
           )}
 
-          <button className="bst-btn btn-mode" onClick={handleClearAll}>
-            <Trash2 size={14} className="text-rose-400" />
-            <span>Clear</span>
-          </button>
+          {/* Dataset Selector Group Matching BST */}
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={handleClearAll}>
+              <Trash2 size={14} className="text-rose-400" />
+              <span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSampleData}>
+              <Layers size={14} className="text-amber-400" />
+              <span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomData}>
+              <Sparkles size={14} className="text-emerald-400" />
+              <span>Random</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Toolbar Right Matching BST */}
+        <div className="bst-toolbar-right">
+          <div className="predict-mode-group flex items-center gap-2">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Predict Mode</span>
+              <input
+                type="checkbox"
+                checked={isPredictMode}
+                onChange={(e) => setIsPredictMode(e.target.checked)}
+              />
+            </label>
+
+            <button
+              className="bst-btn btn-fullscreen"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+            </button>
+
+            <button
+              className={`bst-btn ${showDebugger ? 'active' : ''}`}
+              onClick={() => setShowDebugger(!showDebugger)}
+            >
+              <Code size={14} />
+              <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
+            </button>
+          </div>
         </div>
       </div>
 

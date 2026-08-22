@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Shuffle, Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, BarChart3, Sliders, ArrowUpDown, Trash2, Maximize2
+  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -176,86 +176,37 @@ export const SortingPage: React.FC = () => {
   );
 
   return (
-    <div className="sorting-page-container">
-      {/* Category Header */}
-      <header className="page-header flex justify-between items-center">
-        <div>
-          <h1 className="page-title text-xl font-bold flex items-center gap-2">
-            <BarChart3 className="text-amber-400" size={24} />
-            <span>Sorting Algorithms Studio</span>
-          </h1>
-          <p className="page-subtitle text-xs text-slate-400">
-            Interactive Step-by-Step 3D Visualizer & Time-Complexity Inspector for Classical Sorting Algorithms
-          </p>
-        </div>
-
-        {/* Header Right Actions matching BST */}
-        <div className="flex items-center gap-2">
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
-              <Trash2 size={13} className="text-rose-400" />
-              <span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
-              <Layers size={13} className="text-amber-400" />
-              <span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-              <Sparkles size={13} className="text-emerald-400" />
-              <span>Random</span>
-            </button>
-          </div>
-
-          <button
-            className="bst-btn btn-fullscreen p-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 hover:border-amber-400 text-slate-300"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
-      </header>
-
-      {/* Algorithm Vector Tabs Bar */}
-      <div className="algorithm-tabs-bar animate-fade-in">
-        <div className="algorithm-tabs flex flex-wrap gap-2">
+    <div className="bst-page-container">
+      {/* Category Tabs Bar Matching BST */}
+      <div className="tree-category-toolbar animate-fade-in">
+        <div className="tree-category-tabs flex-wrap">
           {ALGORITHMS.map((alg) => (
             <button
               key={alg.key}
-              className={`alg-tab flex items-center gap-2 ${selectedAlg === alg.key ? 'active' : ''}`}
+              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
               onClick={() => {
                 setSelectedAlg(alg.key);
                 reset();
               }}
             >
               {alg.icon}
-              <span className="font-semibold">{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/20 px-1.5 py-0.5 rounded">{alg.complexity}</span>
+              <span>{alg.name}</span>
+              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Dataset & Parameter Control Toolbar */}
-      <div className="sorting-toolbar animate-fade-in flex flex-wrap justify-between items-center gap-4">
-        <div className="toolbar-left flex flex-wrap items-center gap-2">
-          <button className="toolbar-btn primary font-bold text-xs flex items-center gap-1.5" onClick={handleRandomize}>
-            <Shuffle size={14} className="text-amber-400" />
-            <span>Generate New Array</span>
-          </button>
-
-          <button className="toolbar-btn secondary font-bold text-xs flex items-center gap-1.5" onClick={() => setShowCustomEditor(true)}>
-            <Edit3 size={14} className="text-sky-400" />
+      {/* Operations Toolbar Matching BST */}
+      <div className="bst-toolbar animate-fade-in">
+        <div className="bst-toolbar-left">
+          <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
+            <Edit3 size={14} />
             <span>Custom Values</span>
           </button>
 
-          <div className="toolbar-divider" />
-
-          {/* Sample Presets Dropdown */}
-          <div className="toolbar-select-group">
-            <span className="toolbar-label text-xs font-bold text-slate-400 flex items-center gap-1">
-              <Sliders size={12} className="text-amber-400" /> Pattern:
-            </span>
+          <div className="bst-input-group">
+            <span>Pattern:</span>
             <select
               value={arrayPattern}
               onChange={(e) => {
@@ -264,21 +215,16 @@ export const SortingPage: React.FC = () => {
                 reset();
                 setInitialArray(generateArray(arraySize, pattern));
               }}
-              className="toolbar-select font-bold text-xs"
+              className="bst-select font-bold text-xs"
             >
               <option value="random">Random Unsorted</option>
               <option value="reversed">Worst Case (Reversed)</option>
               <option value="nearlySorted">Best Case (Nearly Sorted)</option>
             </select>
           </div>
-        </div>
 
-        <div className="toolbar-right flex items-center gap-3">
-          <div className="toolbar-slider-group flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-700/60">
-            <span className="toolbar-label text-xs font-bold text-slate-400 flex items-center gap-1">
-              <ArrowUpDown size={12} className="text-amber-400" /> Size:
-            </span>
-            <span className="slider-value text-xs font-mono font-bold text-amber-400">{arraySize}</span>
+          <div className="bst-input-group">
+            <span>Size:</span>
             <input
               type="range"
               min={5}
@@ -290,9 +236,36 @@ export const SortingPage: React.FC = () => {
                 reset();
                 setInitialArray(generateArray(size, arrayPattern));
               }}
-              className="toolbar-range cursor-pointer accent-amber-400"
+              className="toolbar-range cursor-pointer accent-amber-400 w-24"
             />
+            <span className="text-xs font-mono font-bold text-amber-400">{arraySize}</span>
           </div>
+
+          {/* Dataset Mode Selector Matching BST */}
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
+              <Trash2 size={14} className="text-rose-400" />
+              <span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
+              <Layers size={14} className="text-amber-400" />
+              <span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
+              <Sparkles size={14} className="text-emerald-400" />
+              <span>Random</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bst-toolbar-right">
+          <button
+            className="bst-btn btn-fullscreen"
+            onClick={() => setIsFullScreenOpen(true)}
+            title="Full Screen Canvas View"
+          >
+            <Maximize2 size={14} />
+          </button>
         </div>
       </div>
 
