@@ -1,0 +1,91 @@
+/* ─── Control Components Stylesheet ────────────────────────────── */
+
+.step-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.control-btn:hover:not(:disabled) {
+  background-color: var(--bg-secondary);
+  border-color: var(--accent-secondary);
+  color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.play-pause-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.play-pause-btn:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  color: #ffffff;
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.5);
+}
+
+.play-pause-btn.is-playing {
+  background-color: #ef4444;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+
+.play-pause-btn.is-playing:hover:not(:disabled) {
+  background-color: #dc2626;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.5);
+}
+
+/* Speed Slider */
+.speed-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.speed-icon {
+  color: var(--text-secondary);
+}
+
+.speed-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 35px;
+  color: var(--text-primary);
+}
+
+.speed-range-input {
+  width: 90px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
