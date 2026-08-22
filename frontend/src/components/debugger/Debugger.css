@@ -1,285 +1,91 @@
-/* ─── VS Code Debugger Stylesheet ─────────────────────────────────── */
+/* ─── Multi-Language Code Panel & Clean Debugger Styles ────────────── */
 
-/* 1. Floating Debugger Window */
-.floating-debugger-window {
-  position: fixed;
-  width: 320px;
+.multi-lang-code-panel {
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  backdrop-filter: blur(16px);
-  transition: box-shadow 0.2s ease;
 }
 
-.floating-debugger-window.dragging {
-  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.4);
-  user-select: none;
-}
-
-.debugger-header {
+.code-panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.6rem 0.875rem;
-  background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
-  border-bottom: 1px solid var(--border-color);
-  cursor: grab;
-}
-
-.debugger-header:active {
-  cursor: grabbing;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #38bdf8;
-  letter-spacing: 0.5px;
-}
-
-.debugger-bug-icon {
-  color: #f43f5e;
-}
-
-.drag-handle {
-  color: var(--text-tertiary);
-}
-
-/* IDE Action Toolbar */
-.debugger-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.debug-action-btn {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.debug-action-btn:hover:not(:disabled) {
-  background-color: var(--accent-primary);
-  color: #ffffff;
-  border-color: var(--accent-primary);
-}
-
-.debug-action-btn.pause {
-  background-color: #f43f5e;
-  color: #ffffff;
-}
-
-.debug-action-btn.play {
-  background-color: #10b981;
-  color: #ffffff;
-}
-
-.debug-action-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-/* Accordion Sections */
-.debugger-body {
-  display: flex;
-  flex-direction: column;
-  max-height: 380px;
-  overflow-y: auto;
-}
-
-.debugger-accordion {
-  border-bottom: 1px solid var(--border-color);
-}
-
-.accordion-header {
-  width: 100%;
+.header-title-group {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.75rem;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.accordion-header:hover {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.accordion-title {
-  flex: 1;
-}
-
-.badge {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--accent-secondary);
-  padding: 0.1rem 0.4rem;
-  border-radius: 10px;
-  font-size: 0.65rem;
-}
-
-.accordion-content {
-  padding: 0.5rem 0.75rem;
-  font-family: 'Fira Code', 'Courier New', monospace;
-  font-size: 0.75rem;
-  background-color: rgba(15, 23, 42, 0.4);
-}
-
-.empty-text {
   color: var(--text-tertiary);
-  font-style: italic;
-  font-size: 0.7rem;
+  letter-spacing: 0.5px;
 }
 
-/* Variables Tree */
-.variable-tree {
+/* Language Tabs */
+.language-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.var-item {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.2rem 0.35rem;
-  border-radius: 4px;
+  gap: 0.25rem;
+  background-color: var(--bg-primary);
+  padding: 0.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
-.var-item:hover {
+.lang-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lang-tab:hover {
+  color: var(--text-primary);
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.var-name {
-  color: #93c5fd;
-  font-weight: 600;
+.lang-tab.active {
+  background-color: var(--accent-primary);
+  color: #ffffff;
 }
 
-.var-value {
-  font-weight: 600;
+.lang-icon {
+  font-size: 0.85rem;
 }
 
-.val-type-number { color: #f59e0b; }
-.val-type-boolean { color: #ec4899; }
-.val-type-string { color: #10b981; }
-
-/* Call Stack */
-.stack-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.stack-item {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--text-secondary);
-  padding: 0.2rem 0.35rem;
-  border-radius: 4px;
-}
-
-.stack-item.active {
-  color: #38bdf8;
-  font-weight: 700;
-  background-color: rgba(56, 189, 248, 0.1);
-}
-
-.stack-arrow {
-  color: #38bdf8;
-}
-
-/* Breakpoints List */
-.breakpoints-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.breakpoint-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-primary);
-}
-
-.bp-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #f43f5e;
-  box-shadow: 0 0 6px rgba(244, 63, 94, 0.8);
-}
-
-/* 2. Code Debugger Panel */
-.code-debugger-panel {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  padding: 1rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-tertiary);
-  margin-bottom: 0.75rem;
-}
-
-.bp-hint {
-  font-size: 0.7rem;
-  font-weight: 400;
-  color: var(--accent-secondary);
-  margin-left: auto;
-}
-
-.code-editor-gutter-container {
+/* Code Editor Container */
+.code-editor-container {
   display: flex;
   flex-direction: column;
   background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 0.825rem;
-  overflow-x: auto;
+  max-height: 360px;
+  overflow-y: auto;
 }
 
 .code-editor-line {
   display: flex;
   align-items: center;
   transition: background-color 0.15s ease;
-  position: relative;
 }
 
 .code-editor-line:hover {
@@ -296,7 +102,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.25rem;
-  width: 44px;
+  width: 40px;
   padding-right: 0.5rem;
   border-right: 1px solid var(--border-color);
   cursor: pointer;
@@ -305,8 +111,8 @@
 }
 
 .red-breakpoint-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background-color: #f43f5e;
   box-shadow: 0 0 8px rgba(244, 63, 94, 0.9);
@@ -326,165 +132,241 @@
   color: var(--text-primary);
 }
 
-/* VS Code Hover Tooltip */
-.vscode-hover-tooltip {
-  position: fixed;
-  background-color: #1e293b;
-  border: 1px solid #38bdf8;
-  border-radius: 6px;
-  padding: 0.35rem 0.65rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  z-index: 2000;
+/* Integrated Scope Section */
+.integrated-scope-section {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+.scope-box {
+  display: flex;
+  flex-direction: column;
   gap: 0.4rem;
+}
+
+.scope-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.5px;
+}
+
+.scope-badge {
+  font-size: 0.65rem;
+  color: var(--accent-secondary);
+}
+
+.scope-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.scope-empty {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.scope-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   font-family: 'Fira Code', monospace;
   font-size: 0.75rem;
-  pointer-events: none;
 }
 
-.tooltip-var-name {
+.pill-name {
   color: #93c5fd;
+  font-weight: 600;
+}
+
+.pill-val {
   font-weight: 700;
 }
 
-.tooltip-var-val {
-  color: #f59e0b;
-  font-weight: 700;
-}
+.val-type-number { color: #f59e0b; }
+.val-type-boolean { color: #ec4899; }
+.val-type-string { color: #10b981; }
 
-/* 3. Custom Array Editor Modal */
-.custom-editor-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+.stack-box {
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 3000;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
 }
 
-.custom-editor-modal {
-  width: 100%;
-  max-width: 480px;
+.stack-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 700;
+}
+
+.stack-pill {
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background-color: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+}
+
+/* ─── Code Mode Toggle (Default / Custom) ───────────────────────────── */
+
+.code-mode-toggle {
+  display: flex;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-primary);
-}
-
-.modal-header h3 {
-  margin: 0;
-  flex: 1;
-  font-size: 1.1rem;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-}
-
-.modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.editor-label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.custom-array-textarea {
-  width: 100%;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.75rem;
-  color: var(--text-primary);
-  font-family: 'Fira Code', monospace;
-  font-size: 0.9rem;
-  outline: none;
-  resize: vertical;
-}
-
-.custom-array-textarea:focus {
-  border-color: var(--accent-primary);
-}
-
-.editor-error-msg {
-  color: var(--error-color);
-  font-size: 0.8rem;
-}
-
-.preset-buttons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.preset-label {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-}
-
-.preset-chip {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.75rem;
   border-radius: 6px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  cursor: pointer;
+  padding: 0.15rem;
+  gap: 0.15rem;
 }
 
-.preset-chip:hover {
-  border-color: var(--accent-primary);
-  color: var(--text-primary);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-.modal-btn {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+.mode-btn {
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
   border: none;
-}
-
-.modal-btn.cancel {
-  background-color: var(--bg-secondary);
+  background: none;
   color: var(--text-secondary);
-  border: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.modal-btn.apply {
+.mode-btn:hover {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mode-btn.active {
   background-color: var(--accent-primary);
   color: #ffffff;
+}
+
+/* ─── Custom Code Editor ────────────────────────────────────────────── */
+
+.custom-code-editor {
+  display: flex;
+  background-color: var(--bg-secondary);
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.custom-editor-gutter {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  min-width: 36px;
+  border-right: 1px solid var(--border-color);
+  user-select: none;
+}
+
+.gutter-line-number {
+  text-align: right;
+  padding: 0 0.5rem;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.custom-editor-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  resize: none;
+  outline: none;
+  tab-size: 2;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.custom-editor-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ─── Run / Reset Bar ───────────────────────────────────────────────── */
+
+.code-run-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+.run-code-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  background-color: #16a34a;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.run-code-btn:hover {
+  background-color: #15803d;
+}
+
+.reset-code-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reset-code-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+/* ─── Error Banner ──────────────────────────────────────────────────── */
+
+.code-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background-color: rgba(239, 68, 68, 0.12);
+  border-top: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
 }

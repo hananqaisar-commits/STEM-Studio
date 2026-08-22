@@ -21,7 +21,7 @@ export const CircleNode: React.FC<CircleNodeProps> = ({
     <div className="node-wrapper" onClick={onClick}>
       <div
         className={`primitive-circle-node state-${state}`}
-        style={{ width: size, height: size, fontSize: size * 0.38 }}
+        style={{ width: size, height: size, fontSize: size * 0.36 }}
       >
         <span>{value}</span>
       </div>

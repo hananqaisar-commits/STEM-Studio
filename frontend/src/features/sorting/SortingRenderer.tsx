@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
 import { Bar } from '../../components/primitives/Bar';
+import { TreeRenderer } from './TreeRenderer';
+import { Maximize2 } from 'lucide-react';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import './Sorting.css';
 
 interface SortingRendererProps {
   currentStep: ArrayStep | null;
+  algorithmKey?: string;
+  viewMode?: 'bars' | 'tree';
   maxValue?: number;
   onElementClick?: (index: number, currentValue: number) => void;
+  onToggleFullscreen?: () => void;
 }
 
 export const SortingRenderer: React.FC<SortingRendererProps> = ({
   currentStep,
+  algorithmKey = 'bubble',
+  viewMode = 'bars',
   maxValue = 100,
   onElementClick,
+  onToggleFullscreen,
 }) => {
   const [hoveredInfo, setHoveredInfo] = useState<{
     index: number;
@@ -26,8 +34,28 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
   if (!currentStep) {
     return (
       <div className="sorting-canvas-empty">
-        <span>No array data available</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style={{ opacity: 0.35, marginBottom: '0.5rem' }}>
+            <rect x="4" y="24" width="7" height="16" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+            <rect x="14" y="14" width="7" height="26" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+            <rect x="24" y="8" width="7" height="32" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+            <rect x="34" y="18" width="7" height="22" rx="2" stroke="#64748b" strokeWidth="1.5" fill="none" />
+          </svg>
+          <span style={{ fontWeight: 600, opacity: 0.7 }}>No array data available</span>
+          <span style={{ fontSize: '0.78rem', opacity: 0.5 }}>Generate an array to begin visualization</span>
+        </div>
       </div>
+    );
+  }
+
+  // Render Tree View if viewMode is 'tree'
+  if (viewMode === 'tree') {
+    return (
+      <TreeRenderer
+        currentStep={currentStep}
+        algorithmKey={algorithmKey}
+        onElementClick={onElementClick}
+      />
     );
   }
 
@@ -63,8 +91,28 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
     });
   };
 
+  const sortedCount = sortedIndices.length;
+
   return (
     <div className="sorting-canvas-container animate-fade-in">
+      <div className="sorting-canvas-header">
+        <div className="canvas-header-left">
+          <span className="bst-title">MEMORY ARRAY CANVAS</span>
+          <span className="bst-subtitle">{array.length} elements · {sortedCount} sorted</span>
+        </div>
+
+        {onToggleFullscreen && (
+          <button
+            className="fullscreen-toggle-btn"
+            onClick={onToggleFullscreen}
+            title="Enter Full Screen Interactive Mode"
+          >
+            <Maximize2 size={14} />
+            <span>Fullscreen</span>
+          </button>
+        )}
+      </div>
+
       <div className="bars-canvas">
         {array.map((value, index) => {
           const heightPercent = (value / max) * 100;
@@ -87,6 +135,9 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
                 state={state}
                 showValue={array.length <= 25}
               />
+              {array.length <= 30 && (
+                <span className="bar-index-label">[{index}]</span>
+              )}
             </div>
           );
         })}

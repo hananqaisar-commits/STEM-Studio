@@ -1,0 +1,349 @@
+.fs-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme Dark */
+.theme-dark {
+  background-color: #090d16;
+  color: #f8fafc;
+}
+
+.theme-dark .fs-modal-header {
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.theme-dark .fs-modal-footer {
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.theme-dark .fs-modal-body {
+  background-color: rgba(15, 23, 42, 0.5);
+}
+
+/* Theme Light */
+.theme-light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.theme-light .fs-modal-header {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .fs-modal-footer {
+  background: rgba(255, 255, 255, 0.95);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .fs-modal-body {
+  background-color: #f1f5f9;
+}
+
+/* Canvas Containers in Light Mode */
+.theme-light .bst-canvas-container,
+.theme-light .sorting-canvas-container {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+
+.theme-light .bst-canvas-workspace {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .bst-canvas-empty,
+.theme-light .sorting-canvas-empty {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+.theme-light .bst-title {
+  color: #1e40af !important;
+}
+
+.theme-light .bst-subtitle {
+  color: #64748b !important;
+}
+
+/* Badges in Light Mode */
+.theme-light .bf-badge {
+  color: #0f172a !important;
+}
+
+.theme-light .bf-balanced {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-color: #10b981 !important;
+  color: #047857 !important;
+}
+
+.theme-light .bf-unbalanced {
+  background-color: rgba(244, 63, 94, 0.1) !important;
+  border-color: #f43f5e !important;
+  color: #be123c !important;
+}
+
+.theme-light .eow-badge {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  border-color: #f59e0b !important;
+  color: #b45309 !important;
+}
+
+/* Canvas Header in Light Mode */
+.theme-light .bst-canvas-header,
+.theme-light .sorting-canvas-header {
+  border-bottom-color: #e2e8f0 !important;
+}
+
+/* Canvas Grid Pattern in Light Mode */
+.theme-light .canvas-grid-pattern circle {
+  fill: rgba(100, 116, 139, 0.12) !important;
+}
+
+/* Pointer Badges in Light Mode */
+.theme-light .canvas-pointer-badge {
+  color: #0369a1 !important;
+  background-color: rgba(14, 165, 233, 0.08) !important;
+  border-color: rgba(14, 165, 233, 0.3) !important;
+}
+
+/* Input Fields in Light Mode */
+.theme-light .bst-input {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Buttons in Light Mode */
+.theme-light .bst-btn {
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+  background-color: #ffffff !important;
+}
+
+.theme-light .bst-btn:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Player Bar in Light Mode */
+.theme-light .player-bar {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .step-counter {
+  color: #475569 !important;
+}
+
+.theme-light .step-progress-bar {
+  background-color: #e2e8f0 !important;
+}
+
+/* Traversal Log in Light Mode */
+.theme-light .traversal-log-banner {
+  background-color: rgba(59, 130, 246, 0.06) !important;
+  border-color: #bfdbfe !important;
+}
+
+.theme-light .log-pill {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #93c5fd !important;
+}
+
+/* Predict toggle in Light Mode */
+.theme-light .predict-toggle-label {
+  color: #b45309 !important;
+}
+
+/* Header Elements - Professional Typography & Zero Overlap */
+.fs-modal-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.75rem 1.5rem !important;
+  backdrop-filter: blur(16px);
+  gap: 1.5rem !important;
+  z-index: 100;
+  flex-wrap: nowrap !important;
+}
+
+.fs-header-branding {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-shrink: 0 !important;
+}
+
+.fs-modal-title {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fs-modal-subtitle {
+  font-size: 0.68rem !important;
+  opacity: 0.75;
+  font-family: 'JetBrains Mono', monospace !important;
+  white-space: nowrap;
+}
+
+/* Floating Controls Horizontal Row */
+.fs-modal-toolbar {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.75rem !important;
+  flex: 1 !important;
+  flex-wrap: nowrap !important;
+}
+
+.fs-floating-controls {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Actions Zone - Light/Dark & Exit Fullscreen Buttons Strictly Side-by-Side */
+.fs-header-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+.fs-icon-btn {
+  position: relative !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+  padding: 0.45rem 0.9rem !important;
+  border-radius: 8px !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  border: 1px solid transparent !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+  transition: all 0.2s ease;
+}
+
+.theme-dark .fs-icon-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.theme-dark .fs-icon-btn:hover {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.theme-light .fs-icon-btn {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+}
+
+.theme-light .fs-icon-btn:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+}
+
+/* Body Workspace with True 100% Fullscreen Viewport & Auto-Scroll */
+.fs-modal-body {
+  flex: 1 !important;
+  width: 100% !important;
+  height: calc(100vh - 120px) !important;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-workspace-scrollable {
+  flex: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: auto !important; /* Auto scrollbars/sliders when tree/graph expands */
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Force canvas container inside modal body to stretch full size */
+.fs-workspace-scrollable .bst-canvas-container,
+.fs-workspace-scrollable .sorting-canvas-container {
+  min-height: calc(100vh - 160px) !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.fs-workspace-scrollable .bst-canvas-workspace,
+.fs-workspace-scrollable .bars-canvas {
+  flex: 1 !important;
+  min-height: calc(100vh - 230px) !important;
+}
+
+/* Sleek Glassmorphic Scrollbars */
+.fs-workspace-scrollable::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.fs-workspace-scrollable::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.fs-workspace-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.4);
+  border-radius: 6px;
+}
+
+.fs-workspace-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+/* Footer Player Bar */
+.fs-modal-footer {
+  padding: 0.6rem 1.25rem;
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}

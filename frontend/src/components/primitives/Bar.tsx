@@ -24,6 +24,7 @@ export const Bar: React.FC<BarProps> = ({
         className="primitive-bar-fill"
         style={{ height: `${Math.max(5, heightPercent)}%` }}
       >
+        {/* Premium glass reflection overlay */}
         <div className="bar-glow" />
       </div>
     </div>

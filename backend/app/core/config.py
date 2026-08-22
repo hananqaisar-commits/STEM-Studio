@@ -17,6 +17,15 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
+    # SMTP Email Configuration
+    SMTP_TLS: bool = True
+    SMTP_PORT: int = 587
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAILS_FROM_EMAIL: str = "noreply@stemstudio.com"
+    EMAILS_FROM_NAME: str = "STEM Studio Support"
+
     # App
     APP_NAME: str = "STEM Studio"
     DEBUG: bool = False
