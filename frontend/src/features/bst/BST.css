@@ -373,7 +373,28 @@
   background-color: rgba(15, 23, 42, 0.35);
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  overflow: hidden;
+  overflow: auto !important;
+  scroll-behavior: smooth;
+}
+
+/* Glassmorphic Workspace Scrollbars / Sliders */
+.bst-canvas-workspace::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.bst-canvas-workspace::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 4px;
+}
+
+.bst-canvas-workspace::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 4px;
+}
+
+.bst-canvas-workspace::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover);
 }
 
 .canvas-grid-pattern {
