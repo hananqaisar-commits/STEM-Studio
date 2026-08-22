@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, HelpCircle
 } from 'lucide-react';
@@ -77,6 +77,9 @@ export const SortingPage: React.FC = () => {
   const [isPredictMode, setIsPredictMode] = useState<boolean>(true);
   const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
+  // Custom code execution state
+  const [customSteps, setCustomSteps] = useState<import('../../engine/types/Step').ArrayStep[] | null>(null);
+
   // Generate algorithm steps
   const executionData = useMemo(() => {
     switch (selectedAlg) {
@@ -111,7 +114,18 @@ export const SortingPage: React.FC = () => {
     stepBack,
     reset,
     setSpeed,
-  } = useStepPlayer({ steps: executionData.steps });
+  } = useStepPlayer({ steps: customSteps ?? executionData.steps });
+
+  // Clear custom steps when algorithm or array changes
+  useEffect(() => {
+    setCustomSteps(null);
+  }, [selectedAlg, initialArray]);
+
+  // Callback: receive steps from custom code execution
+  const handleCustomCodeRun = useCallback((steps: import('../../engine/types/Step').ArrayStep[]) => {
+    setCustomSteps(steps);
+    reset();
+  }, [reset]);
 
   const comparing = currentStep?.comparingIndices;
   const hasPrediction = isPredictMode && comparing && comparing.length >= 2 && currentStep?.array;
@@ -326,6 +340,8 @@ export const SortingPage: React.FC = () => {
             onToggleBreakpoint={handleToggleBreakpoint}
             variables={currentStep?.variables}
             callStack={currentStep?.callStack}
+            onCustomCodeRun={handleCustomCodeRun}
+            currentArray={initialArray}
           />
 
           <ExplanationPanel
