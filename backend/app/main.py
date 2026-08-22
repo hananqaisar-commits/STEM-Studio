@@ -59,7 +59,23 @@ def on_startup():
 app.include_router(auth_router)
 
 
-# ─── Health Check ────────────────────────────────────────────────────
+# ─── Health & DB Check ───────────────────────────────────────────────
 @app.get("/api/health", tags=["Health"])
 def health_check():
     return {"status": "healthy", "service": settings.APP_NAME}
+
+
+@app.get("/api/db-check", tags=["Health"])
+def db_check():
+    try:
+        try:
+            from backend.infrastructure.database.database import engine
+        except ModuleNotFoundError:
+            from infrastructure.database.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "database_connected", "success": True}
+    except Exception as e:
+        return {"status": "database_error", "error": str(e)}, 500
+
