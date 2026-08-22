@@ -1,16 +1,14 @@
 /**
- * Custom Code Starter Templates
+ * Custom Code Starter Templates for Multi-Language Execution
  * 
- * Pre-filled JavaScript templates for each algorithm category.
- * These give users a working example to modify and experiment with.
+ * Pre-filled templates for JavaScript, Python, C++, C#, Java, Ruby, Go, and Rust.
  */
 
-export const SORTING_TEMPLATES: Record<string, string> = {
-  bubble: `// Bubble Sort — modify this code and click Run
-// Helpers: compare(i, j) returns true if arr[i] > arr[j]
-//          swap(i, j) swaps arr[i] and arr[j]
-//          markSorted(i) marks index i as sorted
+export type CustomLanguage = 'javascript' | 'python' | 'cpp' | 'csharp' | 'java' | 'ruby' | 'go' | 'rust';
 
+export const MULTI_LANG_SORTING_TEMPLATES: Record<CustomLanguage, Record<string, string>> = {
+  javascript: {
+    bubble: `// Bubble Sort in JavaScript — modify and click Run Code
 for (let i = 0; i < n - 1; i++) {
   for (let j = 0; j < n - i - 1; j++) {
     if (compare(j, j + 1)) {
@@ -19,22 +17,16 @@ for (let i = 0; i < n - 1; i++) {
   }
   markSorted(n - i - 1);
 }`,
-
-  selection: `// Selection Sort — modify this code and click Run
+    selection: `// Selection Sort in JavaScript
 for (let i = 0; i < n - 1; i++) {
   let minIdx = i;
   for (let j = i + 1; j < n; j++) {
-    if (compare(minIdx, j)) {
-      minIdx = j;
-    }
+    if (compare(minIdx, j)) minIdx = j;
   }
-  if (minIdx !== i) {
-    swap(i, minIdx);
-  }
+  if (minIdx !== i) swap(i, minIdx);
   markSorted(i);
 }`,
-
-  insertion: `// Insertion Sort — modify this code and click Run
+    insertion: `// Insertion Sort in JavaScript
 for (let i = 1; i < n; i++) {
   let j = i;
   while (j > 0 && compare(j - 1, j)) {
@@ -43,98 +35,219 @@ for (let i = 1; i < n; i++) {
   }
   markSorted(i);
 }`,
+  },
 
-  merge: `// Merge Sort (iterative bottom-up) — modify and click Run
-// Note: this uses compare() and swap() for visualization
+  python: {
+    bubble: `# Bubble Sort in Python — modify and click Run Code
+# Helpers: compare(i, j) returns True if arr[i] > arr[j]
+#          swap(i, j) swaps elements
+#          mark_sorted(i) marks index as sorted
 
-for (let size = 1; size < n; size *= 2) {
-  for (let start = 0; start < n - size; start += 2 * size) {
-    let mid = start + size - 1;
-    let end = Math.min(start + 2 * size - 1, n - 1);
-    // Simple in-place merge using swaps
-    let left = start;
-    let right = mid + 1;
-    while (left <= mid && right <= end) {
-      if (!compare(left, right)) {
-        left++;
-      } else {
-        // shift element at right into position
-        let idx = right;
-        while (idx > left) {
-          swap(idx - 1, idx);
-          idx--;
+for i in range(n - 1):
+    for j in range(n - i - 1):
+        if compare(j, j + 1):
+            swap(j, j + 1)
+    mark_sorted(n - i - 1)`,
+    selection: `# Selection Sort in Python
+for i in range(n - 1):
+    min_idx = i
+    for j in range(i + 1, n):
+        if compare(min_idx, j):
+            min_idx = j
+    if min_idx != i:
+        swap(i, min_idx)
+    mark_sorted(i)`,
+    insertion: `# Insertion Sort in Python
+for i in range(1, n):
+    j = i
+    while j > 0 and compare(j - 1, j):
+        swap(j - 1, j)
+        j -= 1
+    mark_sorted(i)`,
+  },
+
+  cpp: {
+    bubble: `// Bubble Sort in C++ — modify and click Run Code
+for (int i = 0; i < n - 1; i++) {
+    for (int j = 0; j < n - i - 1; j++) {
+        if (compare(j, j + 1)) {
+            swap(j, j + 1);
         }
-        left++; mid++; right++;
-      }
     }
-  }
+    markSorted(n - i - 1);
 }`,
-
-  quick: `// Quick Sort (Lomuto partition) — modify and click Run
-function partition(lo, hi) {
-  let pivotIdx = hi;
-  let i = lo - 1;
-  for (let j = lo; j < hi; j++) {
-    if (!compare(j, pivotIdx)) {
-      i++;
-      if (i !== j) swap(i, j);
+    selection: `// Selection Sort in C++
+for (int i = 0; i < n - 1; i++) {
+    int minIdx = i;
+    for (int j = i + 1; j < n; j++) {
+        if (compare(minIdx, j)) minIdx = j;
     }
-  }
-  swap(i + 1, hi);
-  markSorted(i + 1);
-  return i + 1;
-}
-
-function quickSort(lo, hi) {
-  if (lo < hi) {
-    let pi = partition(lo, hi);
-    quickSort(lo, pi - 1);
-    quickSort(pi + 1, hi);
-  }
-}
-
-quickSort(0, n - 1);`,
-
-  heap: `// Heap Sort — modify and click Run
-function heapify(size, i) {
-  let largest = i;
-  let left = 2 * i + 1;
-  let right = 2 * i + 2;
-  if (left < size && compare(largest, left)) largest = left;
-  if (right < size && compare(largest, right)) largest = right;
-  if (largest !== i) {
-    swap(i, largest);
-    heapify(size, largest);
-  }
-}
-
-// Build max heap
-for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
-  heapify(n, i);
-}
-
-// Extract elements
-for (let i = n - 1; i > 0; i--) {
-  swap(0, i);
-  markSorted(i);
-  heapify(i, 0);
-}
-markSorted(0);`,
-
-  shell: `// Shell Sort — modify and click Run
-let gap = Math.floor(n / 2);
-while (gap > 0) {
-  for (let i = gap; i < n; i++) {
-    let j = i;
-    while (j >= gap && compare(j - gap, j)) {
-      swap(j - gap, j);
-      j -= gap;
-    }
-  }
-  gap = Math.floor(gap / 2);
+    if (minIdx != i) swap(i, minIdx);
+    markSorted(i);
 }`,
+    insertion: `// Insertion Sort in C++
+for (int i = 1; i < n; i++) {
+    int j = i;
+    while (j > 0 && compare(j - 1, j)) {
+        swap(j - 1, j);
+        j--;
+    }
+    markSorted(i);
+}`,
+  },
+
+  csharp: {
+    bubble: `// Bubble Sort in C# — modify and click Run Code
+for (int i = 0; i < n - 1; i++) {
+    for (int j = 0; j < n - i - 1; j++) {
+        if (compare(j, j + 1)) {
+            swap(j, j + 1);
+        }
+    }
+    markSorted(n - i - 1);
+}`,
+    selection: `// Selection Sort in C#
+for (int i = 0; i < n - 1; i++) {
+    int minIdx = i;
+    for (int j = i + 1; j < n; j++) {
+        if (compare(minIdx, j)) minIdx = j;
+    }
+    if (minIdx != i) swap(i, minIdx);
+    markSorted(i);
+}`,
+    insertion: `// Insertion Sort in C#
+for (int i = 1; i < n; i++) {
+    int j = i;
+    while (j > 0 && compare(j - 1, j)) {
+        swap(j - 1, j);
+        j--;
+    }
+    markSorted(i);
+}`,
+  },
+
+  java: {
+    bubble: `// Bubble Sort in Java — modify and click Run Code
+for (int i = 0; i < n - 1; i++) {
+    for (int j = 0; j < n - i - 1; j++) {
+        if (compare(j, j + 1)) {
+            swap(j, j + 1);
+        }
+    }
+    markSorted(n - i - 1);
+}`,
+    selection: `// Selection Sort in Java
+for (int i = 0; i < n - 1; i++) {
+    int minIdx = i;
+    for (int j = i + 1; j < n; j++) {
+        if (compare(minIdx, j)) minIdx = j;
+    }
+    if (minIdx != i) swap(i, minIdx);
+    markSorted(i);
+}`,
+    insertion: `// Insertion Sort in Java
+for (int i = 1; i < n; i++) {
+    int j = i;
+    while (j > 0 && compare(j - 1, j)) {
+        swap(j - 1, j);
+        j--;
+    }
+    markSorted(i);
+}`,
+  },
+
+  ruby: {
+    bubble: `# Bubble Sort in Ruby — modify and click Run Code
+(0...(n - 1)).each do |i|
+  (0...(n - i - 1)).each do |j|
+    if compare(j, j + 1)
+      swap(j, j + 1)
+    end
+  end
+  mark_sorted(n - i - 1)
+end`,
+    selection: `# Selection Sort in Ruby
+(0...(n - 1)).each do |i|
+  min_idx = i
+  ((i + 1)...n).each do |j|
+    min_idx = j if compare(min_idx, j)
+  end
+  swap(i, min_idx) if min_idx != i
+  mark_sorted(i)
+end`,
+    insertion: `# Insertion Sort in Ruby
+(1...n).each do |i|
+  j = i
+  while j > 0 && compare(j - 1, j)
+    swap(j - 1, j)
+    j -= 1
+  end
+  mark_sorted(i)
+end`,
+  },
+
+  go: {
+    bubble: `// Bubble Sort in Go — modify and click Run Code
+for i := 0; i < n-1; i++ {
+    for j := 0; j < n-i-1; j++ {
+        if compare(j, j+1) {
+            swap(j, j+1)
+        }
+    }
+    markSorted(n - i - 1)
+}`,
+    selection: `// Selection Sort in Go
+for i := 0; i < n-1; i++ {
+    minIdx := i
+    for j := i + 1; j < n; j++ {
+        if compare(minIdx, j) { minIdx = j }
+    }
+    if minIdx != i { swap(i, minIdx) }
+    markSorted(i)
+}`,
+    insertion: `// Insertion Sort in Go
+for i := 1; i < n; i++ {
+    j := i
+    for j > 0 && compare(j-1, j) {
+        swap(j-1, j)
+        j--
+    }
+    markSorted(i)
+}`,
+  },
+
+  rust: {
+    bubble: `// Bubble Sort in Rust — modify and click Run Code
+for i in 0..(n - 1) {
+    for j in 0..(n - i - 1) {
+        if compare(j, j + 1) {
+            swap(j, j + 1);
+        }
+    }
+    mark_sorted(n - i - 1);
+}`,
+    selection: `// Selection Sort in Rust
+for i in 0..(n - 1) {
+    let mut min_idx = i;
+    for j in (i + 1)..n {
+        if compare(min_idx, j) { min_idx = j; }
+    }
+    if min_idx != i { swap(i, min_idx); }
+    mark_sorted(i);
+}`,
+    insertion: `// Insertion Sort in Rust
+for i in 1..n {
+    let mut j = i;
+    while j > 0 && compare(j - 1, j) {
+        swap(j - 1, j);
+        j -= 1;
+    }
+    mark_sorted(i);
+}`,
+  },
 };
 
-export function getStarterTemplate(algorithmKey: string): string {
-  return SORTING_TEMPLATES[algorithmKey] || SORTING_TEMPLATES.bubble;
+export function getStarterTemplate(algorithmKey: string, lang: CustomLanguage = 'javascript'): string {
+  const langTemplates = MULTI_LANG_SORTING_TEMPLATES[lang] || MULTI_LANG_SORTING_TEMPLATES.javascript;
+  return langTemplates[algorithmKey] || langTemplates.bubble;
 }

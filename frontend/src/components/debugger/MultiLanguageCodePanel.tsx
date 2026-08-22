@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Code, Play, Layers, Terminal, Cpu, Code2, Binary, FileText, RotateCcw, AlertTriangle } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
 import type { CodeLanguage } from '../../features/sorting/data/codeSnippets';
-import { getStarterTemplate } from '../../engine/customCodeTemplates';
+import { getStarterTemplate, type CustomLanguage } from '../../engine/customCodeTemplates';
 import { executeCustomSortingCode } from '../../engine/codeExecutionEngine';
 import type { ArrayStep } from '../../engine/types/Step';
 import './Debugger.css';
@@ -30,6 +30,17 @@ const LANGUAGES: { id: CodeLanguage; label: string; icon: React.ReactNode }[] = 
   { id: 'pseudocode', label: 'Pseudocode', icon: <FileText size={14} /> },
 ];
 
+const CUSTOM_LANGUAGES: { id: CustomLanguage; label: string }[] = [
+  { id: 'javascript', label: 'JavaScript' },
+  { id: 'python', label: 'Python' },
+  { id: 'cpp', label: 'C++' },
+  { id: 'csharp', label: 'C#' },
+  { id: 'java', label: 'Java' },
+  { id: 'ruby', label: 'Ruby' },
+  { id: 'go', label: 'Go' },
+  { id: 'rust', label: 'Rust' },
+];
+
 export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   algorithmKey,
   activeLine,
@@ -42,14 +53,15 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 }) => {
   const [selectedLang, setSelectedLang] = useState<CodeLanguage>('python');
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
-  const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey));
+  const [customLang, setCustomLang] = useState<CustomLanguage>('javascript');
+  const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey, 'javascript'));
   const [executionError, setExecutionError] = useState<string | null>(null);
 
-  // Sync template when algorithm changes
+  // Sync template when algorithm or custom language changes
   React.useEffect(() => {
-    setCustomCode(getStarterTemplate(algorithmKey));
+    setCustomCode(getStarterTemplate(algorithmKey, customLang));
     setExecutionError(null);
-  }, [algorithmKey]);
+  }, [algorithmKey, customLang]);
 
   const algorithmSnippets = SORTING_CODE_SNIPPETS[algorithmKey] || SORTING_CODE_SNIPPETS.bubble;
   const currentCodeLines = algorithmSnippets[selectedLang] || algorithmSnippets.pseudocode;
@@ -63,20 +75,19 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     }
 
     setExecutionError(null);
-    const result = executeCustomSortingCode(customCode, currentArray);
+    const result = executeCustomSortingCode(customCode, currentArray, customLang);
 
     if (result.error) {
       setExecutionError(result.error.message);
     }
 
-    // Always send steps to parent (even partial steps on error so user sees where it broke)
     if (onCustomCodeRun) {
       onCustomCodeRun(result.steps);
     }
   };
 
   const handleResetTemplate = () => {
-    setCustomCode(getStarterTemplate(algorithmKey));
+    setCustomCode(getStarterTemplate(algorithmKey, customLang));
     setExecutionError(null);
   };
 
@@ -121,6 +132,25 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* CUSTOM MODE: Multi-Language Bar */}
+      {codeMode === 'custom' && (
+        <div className="custom-lang-bar flex flex-wrap gap-1 p-2 bg-slate-900/60 border-b border-slate-800">
+          {CUSTOM_LANGUAGES.map((lang) => (
+            <button
+              key={lang.id}
+              className={`px-2 py-0.5 text-xs rounded transition-all ${
+                customLang === lang.id
+                  ? 'bg-blue-600 text-white font-bold shadow'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              onClick={() => setCustomLang(lang.id)}
+            >
+              {lang.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* DEFAULT MODE: Read-only code viewer (existing behavior) */}
       {codeMode === 'default' && (
