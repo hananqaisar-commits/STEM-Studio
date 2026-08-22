@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { HelpCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Lightbulb } from 'lucide-react';
 import type { PredictionPoint } from './bstEngine';
 import './BST.css';
 
@@ -34,13 +34,27 @@ export const PredictionQuiz: React.FC<PredictionQuizProps> = ({
   return (
     <div className="prediction-quiz-card animate-fade-in">
       <div className="quiz-header">
-        <HelpCircle size={18} className="text-amber-400" />
-        <span>PREDICT THE NEXT MOVE (LEARNING QUIZ)</span>
+        <div className="quiz-header-badge">
+          <HelpCircle size={14} className="text-amber-400" />
+          <span>PREDICTIVE ALGORITHM QUIZ</span>
+        </div>
+        <span className="quiz-step-tag">Step Evaluation</span>
       </div>
 
       <div className="quiz-question">
-        Value to insert: <strong>{targetValue}</strong> vs Current Node: <strong>{currentNodeValue}</strong>
-        <div className="question-prompt">Which direction should {targetValue} move next?</div>
+        <div className="comparison-metric">
+          <span className="metric-box target-box">
+            Target Value: <strong>{targetValue}</strong>
+          </span>
+          <span className="metric-vs">vs</span>
+          <span className="metric-box current-box">
+            Current Node: <strong>{currentNodeValue}</strong>
+          </span>
+        </div>
+
+        <p className="question-prompt-text">
+          Select the correct BST subtree direction for value <strong>{targetValue}</strong>:
+        </p>
       </div>
 
       {!isAnswered ? (
@@ -49,13 +63,15 @@ export const PredictionQuiz: React.FC<PredictionQuizProps> = ({
             className="quiz-btn left-btn"
             onClick={() => handleChoice('left')}
           >
-            ⬅️ MOVE LEFT ({targetValue} &lt; {currentNodeValue})
+            <ArrowLeft size={16} />
+            <span>MOVE LEFT SUBTREE ({targetValue} &lt; {currentNodeValue})</span>
           </button>
           <button
             className="quiz-btn right-btn"
             onClick={() => handleChoice('right')}
           >
-            ➡️ MOVE RIGHT ({targetValue} &gt; {currentNodeValue})
+            <span>MOVE RIGHT SUBTREE ({targetValue} &gt; {currentNodeValue})</span>
+            <ArrowRight size={16} />
           </button>
         </div>
       ) : (
@@ -63,22 +79,25 @@ export const PredictionQuiz: React.FC<PredictionQuizProps> = ({
           <div className="feedback-status">
             {isCorrect ? (
               <>
-                <CheckCircle2 size={20} className="text-emerald-400" />
-                <span className="feedback-title correct-title">EXCELLENT! CORRECT PREDICTION 🎉</span>
+                <CheckCircle2 size={18} className="text-emerald-400" />
+                <span className="feedback-title correct-title">PREDICTION CORRECT</span>
               </>
             ) : (
               <>
-                <XCircle size={20} className="text-rose-400" />
-                <span className="feedback-title wrong-title">NOT QUITE! LET'S LEARN WHY 💡</span>
+                <XCircle size={18} className="text-rose-400" />
+                <span className="feedback-title wrong-title">INCORRECT PREDICTION</span>
               </>
             )}
           </div>
 
-          <p className="feedback-explanation">{explanation}</p>
+          <div className="explanation-wrapper">
+            <Lightbulb size={16} className="text-amber-400 flex-shrink-0" />
+            <p className="feedback-explanation">{explanation}</p>
+          </div>
 
           <button className="quiz-continue-btn" onClick={handleContinue}>
-            <span>Continue Step Execution</span>
-            <ArrowRight size={16} />
+            <span>Continue Execution</span>
+            <ArrowRight size={14} />
           </button>
         </div>
       )}
