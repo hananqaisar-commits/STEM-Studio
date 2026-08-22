@@ -72,22 +72,23 @@
   color: #64748b !important;
 }
 
-/* Header Elements - Prevent Overlapping */
+/* Header Elements - Strict Horizontal Alignment & No Overlap */
 .fs-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.6rem 1.25rem;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.6rem 1.25rem !important;
   backdrop-filter: blur(12px);
-  gap: 1rem;
+  gap: 1.5rem !important;
   z-index: 100;
-  flex-wrap: nowrap;
+  flex-wrap: nowrap !important;
 }
 
 .fs-header-branding {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-shrink: 0 !important;
 }
 
 .fs-modal-title {
@@ -95,65 +96,84 @@
   font-weight: 800;
   letter-spacing: 0.8px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .fs-modal-subtitle {
   font-size: 0.65rem;
   opacity: 0.7;
   font-family: 'Fira Code', monospace;
+  white-space: nowrap;
 }
 
+/* Floating Controls Horizontal Row */
 .fs-modal-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  flex: 1;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.75rem !important;
+  flex: 1 !important;
+  flex-wrap: nowrap !important;
 }
 
+.fs-floating-controls {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Actions Zone - Light/Dark & Exit Fullscreen Buttons */
 .fs-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 }
 
 .fs-icon-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  border: 1px solid transparent;
-  white-space: nowrap;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem !important;
+  padding: 0.4rem 0.85rem !important;
+  border-radius: 8px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  border: 1px solid transparent !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
   transition: all 0.2s ease;
 }
 
 .theme-dark .fs-icon-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
 }
 
 .theme-dark .fs-icon-btn:hover {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
+  background: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
 }
 
 .theme-light .fs-icon-btn {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #0f172a;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
 }
 
 .theme-light .fs-icon-btn:hover {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
 }
 
 /* Body Workspace with True 100% Fullscreen Viewport & Auto-Scroll */

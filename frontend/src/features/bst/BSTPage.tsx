@@ -173,14 +173,14 @@ export const BSTPage: React.FC = () => {
 
   // Shared Floating Header Controls for FullScreen Modal
   const renderFloatingControls = () => (
-    <div className="flex items-center gap-2">
+    <div className="fs-floating-controls">
       {treeCategory !== 'trie' ? (
         <input
           type="number"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           className="bst-input"
-          style={{ width: '80px' }}
+          style={{ width: '75px' }}
           placeholder="Val"
         />
       ) : (
@@ -189,13 +189,13 @@ export const BSTPage: React.FC = () => {
           value={wordValue}
           onChange={(e) => setWordValue(e.target.value)}
           className="bst-input"
-          style={{ width: '90px' }}
+          style={{ width: '85px' }}
           placeholder="Word"
         />
       )}
 
       {treeCategory === 'bst' && (
-        <>
+        <div className="flex items-center gap-2">
           <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
             <Plus size={14} />
             <span>Insert</span>
@@ -209,7 +209,7 @@ export const BSTPage: React.FC = () => {
             <Search size={14} />
             <span>Search</span>
           </button>
-        </>
+        </div>
       )}
 
       {treeCategory === 'avl' && (
@@ -233,7 +233,7 @@ export const BSTPage: React.FC = () => {
         </button>
       )}
 
-      <label className="predict-toggle-label ml-2">
+      <label className="predict-toggle-label">
         <HelpCircle size={14} />
         <span>Predict Mode</span>
         <input
