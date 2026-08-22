@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Shuffle, ArrowUpDown, Edit3, Bug } from 'lucide-react';
+import { Shuffle, ArrowUpDown, Edit3 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
-import { FloatingDebugger } from '../../components/debugger/FloatingDebugger';
-import { CodeDebuggerPanel } from '../../components/debugger/CodeDebuggerPanel';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
+import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 
 import { generateBubbleSortSteps } from './algorithms/bubbleSort';
@@ -61,7 +61,6 @@ export const SortingPage: React.FC = () => {
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
 
   // Debugger state
-  const [showDebugger, setShowDebugger] = useState(true);
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
@@ -140,7 +139,7 @@ export const SortingPage: React.FC = () => {
 
   return (
     <div className="sorting-page-container">
-      {/* Top Toolbar */}
+      {/* Top Header & Algorithm Selector Toolbar */}
       <div className="sorting-toolbar animate-fade-in">
         <div className="toolbar-left">
           <div className="algorithm-tabs">
@@ -160,21 +159,12 @@ export const SortingPage: React.FC = () => {
         </div>
 
         <div className="toolbar-right">
-          <button
-            className={`toolbar-btn ${showDebugger ? 'active-debugger-btn' : ''}`}
-            onClick={() => setShowDebugger(!showDebugger)}
-            title="Toggle Floating VS Code Debugger Window"
-          >
-            <Bug size={16} />
-            <span>Debugger</span>
-          </button>
-
           <button className="toolbar-btn" onClick={() => setShowCustomEditor(true)}>
             <Edit3 size={16} />
             <span>Custom Values</span>
           </button>
 
-          <button className="toolbar-btn" onClick={handleGenerateNewArray} title="Generate Random Data">
+          <button className="toolbar-btn" onClick={handleGenerateNewArray} title="Generate Random Array">
             <Shuffle size={16} />
             <span>Randomize</span>
           </button>
@@ -216,16 +206,16 @@ export const SortingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Workspace Layout */}
+      {/* Main Learning Workspace */}
       <div className="sorting-workspace">
+        {/* Left Column: Visual Canvas & Interactive Controls */}
         <div className="renderer-section">
-          {/* Canvas Renderer */}
           <SortingRenderer
             currentStep={currentStep}
             onElementClick={handleBarElementClick}
           />
 
-          {/* Interactive Debug Controls Bar */}
+          {/* Interactive Player Controls */}
           <div className="player-bar">
             <div className="player-left">
               <PlayPauseButton
@@ -259,33 +249,26 @@ export const SortingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Source Code Debugger & Pseudocode Panel */}
+        {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
         <div className="explanation-section">
-          <CodeDebuggerPanel
-            pseudocode={executionData.pseudocode}
+          {/* Multi-Language Code Debugger */}
+          <MultiLanguageCodePanel
+            algorithmKey={selectedAlg}
             activeLine={currentStep?.codeLine}
             breakpoints={breakpoints}
             onToggleBreakpoint={handleToggleBreakpoint}
             variables={currentStep?.variables}
+            callStack={currentStep?.callStack}
+          />
+
+          {/* Real-time Complexity & Description Panel */}
+          <ExplanationPanel
+            description={currentStep?.description || 'Click Play to observe step-by-step execution details.'}
+            timeComplexity={executionData.timeComplexity}
+            spaceComplexity={executionData.spaceComplexity}
           />
         </div>
       </div>
-
-      {/* Draggable Floating VS Code Debugger Window */}
-      {showDebugger && (
-        <FloatingDebugger
-          variables={currentStep?.variables}
-          callStack={currentStep?.callStack}
-          breakpoints={breakpoints}
-          currentStepIndex={currentStepIndex}
-          totalSteps={totalSteps}
-          isPlaying={isPlaying}
-          onTogglePlay={isPlaying ? pause : play}
-          onStepForward={stepForward}
-          onReset={reset}
-          onClose={() => setShowDebugger(false)}
-        />
-      )}
 
       {/* Custom Values Input Modal */}
       {showCustomEditor && (
