@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Layers, Plus, Trash2, Code, CheckCircle2
+  Layers, Plus, Trash2, Code, CheckCircle2, Search, Filter
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import {
@@ -30,8 +30,47 @@ import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
 
+interface ProblemMeta {
+  id: StackQueueCategory;
+  name: string;
+  group: 'Stack' | 'Queue' | 'Core';
+  leetcodeId?: string;
+  description: string;
+}
+
+const PROBLEMS_LIST: ProblemMeta[] = [
+  { id: 'stack', name: 'Stack Primitive (LIFO)', group: 'Core', description: 'Basic LIFO push & pop operations' },
+  { id: 'queue', name: 'Queue Primitive (FIFO)', group: 'Core', description: 'Basic FIFO enqueue & dequeue operations' },
+  
+  // Stack Problems
+  { id: 'validParentheses', name: 'Valid Parentheses', group: 'Stack', leetcodeId: '#20', description: 'Matching brackets evaluation using LIFO stack' },
+  { id: 'minStack', name: 'Min Stack O(1)', group: 'Stack', leetcodeId: '#155', description: 'Stack with O(1) minimum value tracking' },
+  { id: 'postfixEval', name: 'Evaluate RPN / Postfix', group: 'Stack', leetcodeId: '#150', description: 'Evaluate Reverse Polish Notation expressions' },
+  { id: 'dailyTemperatures', name: 'Daily Temperatures', group: 'Stack', leetcodeId: '#739', description: 'Monotonic decreasing stack for next warmer day' },
+  { id: 'simplifyPath', name: 'Simplify Path', group: 'Stack', leetcodeId: '#71', description: 'Canonical Unix directory path simplification' },
+  { id: 'removeAdjacentDuplicates', name: 'Remove Adjacent Duplicates', group: 'Stack', leetcodeId: '#1047', description: 'Remove consecutive matching characters' },
+  { id: 'basicCalculator', name: 'Basic Calculator', group: 'Stack', leetcodeId: '#224', description: 'Evaluate math expression string with signs & brackets' },
+  { id: 'decodeString', name: 'Decode String Pattern', group: 'Stack', leetcodeId: '#394', description: 'Expand nested repeated pattern string k[str]' },
+  { id: 'trappingRainWater', name: 'Trapping Rain Water', group: 'Stack', leetcodeId: '#42', description: 'Monotonic stack elevation boundary calculation' },
+  { id: 'largestRectangle', name: 'Largest Rectangle in Histogram', group: 'Stack', leetcodeId: '#84', description: 'Monotonic stack maximum rectangle area' },
+
+  // Queue Problems
+  { id: 'queueViaStacks', name: 'Queue using 2 Stacks', group: 'Queue', leetcodeId: '#232', description: 'Simulate FIFO queue using 2 LIFO stacks' },
+  { id: 'stackViaQueues', name: 'Stack using Queues', group: 'Queue', leetcodeId: '#225', description: 'Simulate LIFO stack using FIFO queues' },
+  { id: 'circularQueue', name: 'Circular Ring Queue', group: 'Queue', leetcodeId: '#622', description: 'Ring buffer queue with modular index wrapping' },
+  { id: 'circularDeque', name: 'Design Circular Deque', group: 'Queue', leetcodeId: '#641', description: 'Double-ended ring queue with front/rear ops' },
+  { id: 'slidingWindow', name: 'Sliding Window Maximum', group: 'Queue', leetcodeId: '#239', description: 'Monotonic Deque maximum tracking in sliding window' },
+  { id: 'firstNonRepeating', name: 'First Non-Repeating in Stream', group: 'Queue', description: 'Queue-based character frequency stream lookup' },
+  { id: 'movingAverage', name: 'Moving Average Data Stream', group: 'Queue', leetcodeId: '#346', description: 'Sliding window moving average calculation' },
+  { id: 'taskScheduler', name: 'Task Scheduler CPU Queue', group: 'Queue', leetcodeId: '#621', description: 'CPU cooling interval task execution queue' },
+  { id: 'rottingOranges', name: 'Rotting Oranges BFS Grid', group: 'Queue', leetcodeId: '#994', description: 'Multi-source BFS grid level queue traversal' },
+  { id: 'dota2Senate', name: 'Dota2 Senate Round-Robin', group: 'Queue', leetcodeId: '#649', description: 'Round-robin voting ban queue strategy' },
+];
+
 export const StackQueuePage: React.FC = () => {
   const [category, setCategory] = useState<StackQueueCategory>('stack');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Active step dataset
@@ -200,6 +239,15 @@ export const StackQueuePage: React.FC = () => {
     play();
   };
 
+  // Filtered problems list based on search query
+  const filteredProblems = PROBLEMS_LIST.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.leetcodeId && p.leetcodeId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      p.group.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const handleClearAll = () => {
     setStackData([]);
     setQueueData([]);
@@ -238,12 +286,77 @@ export const StackQueuePage: React.FC = () => {
         </button>
       </header>
 
-      {/* Control Toolbar */}
+      {/* Control Toolbar with Vector Icons & Search Box */}
       <div className="bst-toolbar">
         <div className="bst-toolbar-left flex flex-wrap gap-2 items-center">
-          {/* Category Selector */}
+          {/* Rounded Vector Search Input */}
+          <div className="relative">
+            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 focus-within:border-amber-400/80 rounded-full px-3.5 py-1.5 shadow-inner transition-all w-72">
+              <Search size={14} className="text-amber-400 shrink-0" />
+              <input
+                type="text"
+                className="bg-transparent text-xs text-slate-100 placeholder-slate-400 focus:outline-none w-full font-medium"
+                placeholder="Search 20 DSA Problems (e.g. #739, Water, Min)..."
+                value={searchQuery}
+                onFocus={() => setIsSearchOpen(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsSearchOpen(true);
+                }}
+              />
+              {searchQuery && (
+                <button
+                  className="text-slate-400 hover:text-slate-200 text-xs font-bold px-1"
+                  onClick={() => setSearchQuery('')}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Instant Search Autocomplete Dropdown */}
+            {isSearchOpen && searchQuery.trim().length > 0 && (
+              <div className="absolute top-full left-0 mt-2 w-80 bg-slate-900/95 border border-slate-700/90 rounded-xl shadow-2xl backdrop-blur-md z-50 max-h-72 overflow-y-auto p-1.5">
+                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1.5 border-b border-slate-800">
+                  <Filter size={12} className="text-amber-400" />
+                  <span>Search Results ({filteredProblems.length})</span>
+                </div>
+                {filteredProblems.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-slate-400 text-center">No matching DSA problems found</div>
+                ) : (
+                  filteredProblems.map((prob) => (
+                    <button
+                      key={prob.id}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all flex items-center justify-between hover:bg-slate-800/80 ${category === prob.id ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30' : 'text-slate-200'}`}
+                      onClick={() => {
+                        setCategory(prob.id);
+                        setIsSearchOpen(false);
+                        setActiveSteps([]);
+                        reset();
+                      }}
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span>{prob.name}</span>
+                          {prob.leetcodeId && (
+                            <span className="bg-slate-800 text-amber-400 px-1.5 py-0.5 rounded text-[10px] font-mono">{prob.leetcodeId}</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-normal line-clamp-1">{prob.description}</div>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${prob.group === 'Stack' ? 'bg-rose-500/20 text-rose-300' : prob.group === 'Queue' ? 'bg-sky-500/20 text-sky-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                        {prob.group}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Clean Category Selector Dropdown with Vector Section Headers */}
           <select
-            className="bst-select font-bold text-xs"
+            className="bst-select font-bold text-xs rounded-xl px-3 py-1.5"
             value={category}
             onChange={(e) => {
               setCategory(e.target.value as StackQueueCategory);
@@ -251,24 +364,23 @@ export const StackQueuePage: React.FC = () => {
               reset();
             }}
           >
-            <optgroup label="Core Data Structures">
+            <optgroup label="── Core Primitives ──">
               <option value="stack">Stack Primitive (LIFO)</option>
               <option value="queue">Queue Primitive (FIFO)</option>
             </optgroup>
-            <optgroup label="🥞 10 Famous STACK DSA Problems">
+            <optgroup label="── Stack Classical Problems (10) ──">
               <option value="validParentheses">1. Valid Parentheses (#20)</option>
               <option value="minStack">2. Min Stack O(1) (#155)</option>
               <option value="postfixEval">3. Evaluate RPN / Postfix (#150)</option>
               <option value="dailyTemperatures">4. Daily Temperatures / Monotonic (#739)</option>
               <option value="simplifyPath">5. Simplify Path (#71)</option>
-
               <option value="removeAdjacentDuplicates">6. Remove Adjacent Duplicates (#1047)</option>
               <option value="basicCalculator">7. Basic Calculator Expression (#224)</option>
               <option value="decodeString">8. Decode String Pattern (#394)</option>
               <option value="trappingRainWater">9. Trapping Rain Water (#42)</option>
               <option value="largestRectangle">10. Largest Rectangle in Histogram (#84)</option>
             </optgroup>
-            <optgroup label="🚶‍♂️ 10 Famous QUEUE DSA Problems">
+            <optgroup label="── Queue Classical Problems (10) ──">
               <option value="queueViaStacks">1. Queue using 2 Stacks (#232)</option>
               <option value="stackViaQueues">2. Stack using Queues (#225)</option>
               <option value="circularQueue">3. Circular Queue Ring Buffer (#622)</option>
