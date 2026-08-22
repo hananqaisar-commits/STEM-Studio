@@ -11,6 +11,8 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
     sortedIndices: [0],
     description: 'Initial state. First element is considered sorted by default.',
     codeLine: 1,
+    variables: { n, i: 1, key: arr[1] },
+    callStack: ['main() -> insertionSort(arr)'],
   });
 
   for (let i = 1; i < n; i++) {
@@ -23,6 +25,8 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
       sortedIndices: Array.from({ length: i }, (_, k) => k),
       description: `Selected key element ${key} at index ${i} to insert into sorted sub-array.`,
       codeLine: 2,
+      variables: { i, j, key, 'arr[i]': key },
+      callStack: ['main() -> insertionSort(arr)'],
     });
 
     while (j >= 0 && arr[j] > key) {
@@ -30,8 +34,10 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
         array: [...arr],
         comparingIndices: [j, j + 1],
         pivotIndex: i,
-        description: `Comparing key (${key}) with ${arr[j]} at index ${j}. ${arr[j]} > ${key}, shifting ${arr[j]} right.`,
+        description: `Comparing key (${key}) with arr[${j}] (${arr[j]}). ${arr[j]} > ${key}, shifting ${arr[j]} right.`,
         codeLine: 4,
+        variables: { i, j, key, 'arr[j]': arr[j], condition: `${arr[j]} > ${key}` },
+        callStack: ['main() -> insertionSort(arr)'],
       });
 
       arr[j + 1] = arr[j];
@@ -42,6 +48,8 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
         swappingIndices: [j + 1, j + 2],
         description: `Shifted element right to make space for key.`,
         codeLine: 5,
+        variables: { i, j, key, 'shiftedTo': j + 2 },
+        callStack: ['main() -> insertionSort(arr)'],
       });
     }
 
@@ -51,6 +59,8 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
       sortedIndices: Array.from({ length: i + 1 }, (_, k) => k),
       description: `Inserted key ${key} at index ${j + 1}.`,
       codeLine: 7,
+      variables: { i, insertedAt: j + 1, key },
+      callStack: ['main() -> insertionSort(arr)'],
     });
   }
 
@@ -60,6 +70,8 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
     sortedIndices: allIndices,
     description: 'Insertion Sort complete! Entire array is sorted.',
     codeLine: 8,
+    variables: { status: 'SORTED', totalElements: n },
+    callStack: ['main() -> insertionSort(arr) [TERMINATED]'],
   });
 
   return {

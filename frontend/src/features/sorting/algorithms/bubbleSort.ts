@@ -7,63 +7,81 @@ export function generateBubbleSortSteps(initialArray: number[]): AlgorithmExecut
   const n = arr.length;
   const sortedIndices: number[] = [];
 
-  // Step 0: Initial state
   steps.push({
     array: [...arr],
     description: 'Initial array state before Bubble Sort starts.',
     codeLine: 1,
+    variables: { n, i: 0, j: 0, swapped: false },
+    callStack: ['main() -> bubbleSort(arr)'],
   });
 
   for (let i = 0; i < n - 1; i++) {
     let swapped = false;
 
     for (let j = 0; j < n - i - 1; j++) {
-      // Step: Comparing elements
       steps.push({
         array: [...arr],
         comparingIndices: [j, j + 1],
         sortedIndices: [...sortedIndices],
-        description: `Comparing elements at index ${j} (${arr[j]}) and index ${j + 1} (${arr[j + 1]}).`,
+        description: `Comparing index ${j} (arr[${j}] = ${arr[j]}) with index ${j + 1} (arr[${j + 1}] = ${arr[j + 1]}).`,
         codeLine: 3,
+        variables: {
+          i,
+          j,
+          'arr[j]': arr[j],
+          'arr[j+1]': arr[j + 1],
+          swapped,
+          'n - i - 1': n - i - 1,
+        },
+        callStack: ['main() -> bubbleSort(arr)'],
       });
 
       if (arr[j] > arr[j + 1]) {
-        // Swap elements
         const temp = arr[j];
         arr[j] = arr[j + 1];
         arr[j + 1] = temp;
         swapped = true;
 
-        // Step: Swapping elements
         steps.push({
           array: [...arr],
           swappingIndices: [j, j + 1],
           sortedIndices: [...sortedIndices],
-          description: `Swapping ${arr[j + 1]} and ${arr[j]} because ${arr[j + 1]} > ${arr[j]}.`,
+          description: `Swapping arr[${j}] (${arr[j + 1]}) with arr[${j + 1}] (${arr[j]}).`,
           codeLine: 4,
+          variables: {
+            i,
+            j,
+            temp,
+            'arr[j]': arr[j],
+            'arr[j+1]': arr[j + 1],
+            swapped: true,
+          },
+          callStack: ['main() -> bubbleSort(arr)'],
         });
       }
     }
 
-    // Element at n - i - 1 is sorted
     sortedIndices.push(n - i - 1);
     steps.push({
       array: [...arr],
       sortedIndices: [...sortedIndices],
       description: `Element ${arr[n - i - 1]} at index ${n - i - 1} is now in its correct sorted position.`,
       codeLine: 6,
+      variables: { i, sortedIndex: n - i - 1, sortedValue: arr[n - i - 1], swapped },
+      callStack: ['main() -> bubbleSort(arr)'],
     });
 
     if (!swapped) break;
   }
 
-  // All remaining elements are sorted
   const allIndices = Array.from({ length: n }, (_, i) => i);
   steps.push({
     array: [...arr],
     sortedIndices: allIndices,
     description: 'Bubble Sort complete! Entire array is fully sorted.',
     codeLine: 7,
+    variables: { status: 'SORTED', totalElements: n },
+    callStack: ['main() -> bubbleSort(arr) [TERMINATED]'],
   });
 
   return {

@@ -8,4 +8,6 @@ export interface ArrayStep {
   pivotIndex?: number;
   description: string;
   codeLine?: number;
+  variables?: Record<string, string | number | boolean | null>;
+  callStack?: string[];
 }
