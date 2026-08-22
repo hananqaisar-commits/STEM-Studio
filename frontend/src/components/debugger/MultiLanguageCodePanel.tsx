@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Code, Play, Layers } from 'lucide-react';
+import { Code, Play, Layers, Terminal, Cpu, Code2, Binary, FileText } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
 import type { CodeLanguage } from '../../features/sorting/data/codeSnippets';
 import './Debugger.css';
@@ -13,12 +13,12 @@ interface MultiLanguageCodePanelProps {
   callStack?: string[];
 }
 
-const LANGUAGES: { id: CodeLanguage; label: string; icon: string }[] = [
-  { id: 'python', label: 'Python', icon: '🐍' },
-  { id: 'cpp', label: 'C++', icon: '⚡' },
-  { id: 'java', label: 'Java', icon: '☕' },
-  { id: 'go', label: 'Go', icon: '🐹' },
-  { id: 'pseudocode', label: 'Pseudocode', icon: '📜' },
+const LANGUAGES: { id: CodeLanguage; label: string; icon: React.ReactNode }[] = [
+  { id: 'python', label: 'Python', icon: <Terminal size={14} /> },
+  { id: 'cpp', label: 'C++', icon: <Cpu size={14} /> },
+  { id: 'java', label: 'Java', icon: <Code2 size={14} /> },
+  { id: 'go', label: 'Go', icon: <Binary size={14} /> },
+  { id: 'pseudocode', label: 'Pseudocode', icon: <FileText size={14} /> },
 ];
 
 export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({

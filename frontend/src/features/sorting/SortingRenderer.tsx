@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { Bar } from '../../components/primitives/Bar';
+import { TreeRenderer } from './TreeRenderer';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import './Sorting.css';
 
 interface SortingRendererProps {
   currentStep: ArrayStep | null;
+  algorithmKey?: string;
+  viewMode?: 'bars' | 'tree';
   maxValue?: number;
   onElementClick?: (index: number, currentValue: number) => void;
 }
 
 export const SortingRenderer: React.FC<SortingRendererProps> = ({
   currentStep,
+  algorithmKey = 'bubble',
+  viewMode = 'bars',
   maxValue = 100,
   onElementClick,
 }) => {
@@ -28,6 +33,17 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
       <div className="sorting-canvas-empty">
         <span>No array data available</span>
       </div>
+    );
+  }
+
+  // Render Tree View if viewMode is 'tree'
+  if (viewMode === 'tree') {
+    return (
+      <TreeRenderer
+        currentStep={currentStep}
+        algorithmKey={algorithmKey}
+        onElementClick={onElementClick}
+      />
     );
   }
 
