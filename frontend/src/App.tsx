@@ -1,29 +1,17 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Moon, Sun, Monitor, LogOut } from 'lucide-react';
-import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SignIn } from './features/auth/SignIn';
 import { SignUp } from './features/auth/SignUp';
 import { ForgotPassword } from './features/auth/ForgotPassword';
 import { ResetPassword } from './features/auth/ResetPassword';
 import { LoadingScreen } from './components/common/LoadingScreen';
-
-const ThemeToggleButton = () => {
-  const { theme, setTheme } = useTheme();
-
-  const toggleTheme = () => {
-    if (theme === 'light') setTheme('dark');
-    else if (theme === 'dark') setTheme('system');
-    else setTheme('light');
-  };
-
-  return (
-    <button onClick={toggleTheme} className="theme-toggle-btn" aria-label="Toggle Theme">
-      {theme === 'light' ? <Sun size={20} /> : theme === 'dark' ? <Moon size={20} /> : <Monitor size={20} />}
-    </button>
-  );
-};
+import { Navbar } from './components/layout/Navbar';
+import { TopicMenu } from './components/layout/TopicMenu';
+import { SortingPage } from './features/sorting/SortingPage';
+import { BSTPage } from './features/bst/BSTPage';
+import { StackQueuePage } from './features/stackQueue/StackQueuePage';
 
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
@@ -50,30 +38,48 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 /**
- * Simple dashboard placeholder — shows after successful login.
+ * Placeholder component for upcoming module phases
  */
-const Dashboard = () => {
-  const { user, logout } = useAuth();
+const PlaceholderModule: React.FC<{ title: string }> = ({ title }) => (
+  <div style={{
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    justifyContent: 'center', height: '100%', minHeight: '400px',
+    color: 'var(--text-secondary)', gap: '1rem', padding: '2rem'
+  }}>
+    <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>{title} Module</h2>
+    <p>This module is queued for execution in the next implementation phase.</p>
+  </div>
+);
+
+/**
+ * Main STEM Studio Dashboard Layout with Navbar & Sidebar
+ */
+const DashboardLayout = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const pathSegment = location.pathname.split('/')[2] || 'sorting';
+
+  const handleSelectTopic = (topicId: string) => {
+    navigate(`/dashboard/${topicId}`);
+  };
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', minHeight: '100vh', gap: '1.5rem',
-      backgroundColor: 'var(--bg-secondary)', padding: '2rem'
-    }}>
-      <div className="auth-card animate-fade-in" style={{ textAlign: 'center' }}>
-        <img src="/logo.png" alt="STEM Studio" style={{ maxWidth: '100px', marginBottom: '1rem' }}
-          onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
-        <h1 className="auth-title" style={{ marginBottom: '0.5rem' }}>
-          Welcome, {user?.username}!
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-          You are signed in as <strong>{user?.email}</strong>
-        </p>
-        <button onClick={logout} className="auth-button" style={{ maxWidth: '200px', margin: '0 auto' }}>
-          <LogOut size={18} />
-          Sign Out
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Navbar />
+      <div style={{ display: 'flex', flex: 1 }}>
+        <TopicMenu activeTopic={pathSegment} onSelectTopic={handleSelectTopic} />
+        <main style={{ flex: 1, backgroundColor: 'var(--bg-secondary)', overflowY: 'auto' }}>
+          <Routes>
+            <Route path="/" element={<Navigate to="sorting" replace />} />
+            <Route path="sorting" element={<SortingPage />} />
+            <Route path="stackQueue" element={<StackQueuePage />} />
+            <Route path="linkedList" element={<PlaceholderModule title="Linked List" />} />
+            <Route path="bst" element={<BSTPage />} />
+            <Route path="binarySearch" element={<PlaceholderModule title="Binary Search" />} />
+            <Route path="graph" element={<PlaceholderModule title="Graph Algorithms" />} />
+          </Routes>
+        </main>
       </div>
     </div>
   );
@@ -92,17 +98,14 @@ const AppContent = () => {
   }
 
   return (
-    <>
-      <ThemeToggleButton />
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
-        <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
-        <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-        <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
+      <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
+      <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+      <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
+      <Route path="/dashboard/*" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>} />
+    </Routes>
   );
 };
 

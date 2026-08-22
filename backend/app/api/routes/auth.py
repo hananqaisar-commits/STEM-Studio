@@ -236,11 +236,13 @@ def logout(
     return MessageResponse(message="Logged out successfully")
 
 
+from backend.app.core.email import send_password_reset_email
+
 # ─── POST /api/auth/forgot-password ─────────────────────────────────
 
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    """Generate a password reset token (in production, send via email)."""
+    """Generate a password reset token and dispatch email via SMTP."""
 
     user = db.query(User).filter(User.email == payload.email).first()
 
@@ -261,13 +263,10 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     db.commit()
 
     reset_url = f"http://localhost:5173/reset-password?token={raw_token}"
-    print("\n" + "=" * 60)
-    print(f"🔑 PASSWORD RESET LINK GENERATED FOR [{payload.email}]:")
-    print(f"👉 {reset_url}")
-    print("=" * 60 + "\n")
+    send_password_reset_email(to_email=payload.email, reset_url=reset_url)
 
     return MessageResponse(
-        message="If the email exists, a reset link has been sent",
+        message="If the email exists, a reset link has been sent to your email address",
     )
 
 
