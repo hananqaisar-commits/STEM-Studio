@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, RefreshCw, HelpCircle, ListOrdered } from 'lucide-react';
+import { Plus, Search, RefreshCw, HelpCircle, ListOrdered, GitCommit, CornerDownRight } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
 import { PredictionQuiz } from './PredictionQuiz';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
@@ -13,6 +13,8 @@ import {
   generateBSTInsertSteps,
   generateBSTSearchSteps,
   generateBSTInorderSteps,
+  generateBSTPreorderSteps,
+  generateBSTPostorderSteps,
 } from './bstEngine';
 import type { BSTTreeStructure, BSTStep } from './bstEngine';
 
@@ -43,7 +45,7 @@ export const BSTPage: React.FC = () => {
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
   const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
-  // Generate initial steps
+  // Initialize steps
   useEffect(() => {
     const { steps } = generateBSTInsertSteps(DEFAULT_TREE, 45);
     setActiveOperationSteps(steps);
@@ -63,17 +65,19 @@ export const BSTPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer({ steps: activeOperationSteps });
 
-  // Pause for Prediction Quiz if predictMode is enabled
   const bstStep = currentStep as BSTStep | null;
-  const activePrediction = isPredictMode && isPlaying && bstStep?.predictionPoint ? bstStep.predictionPoint : null;
 
+  // Active prediction point check
+  const activePrediction = isPredictMode && bstStep?.predictionPoint ? bstStep.predictionPoint : null;
+
+  // Pause playback automatically when entering a step with a prediction point
   useEffect(() => {
-    if (activePrediction) {
+    if (activePrediction && isPlaying) {
       pause();
     }
-  }, [activePrediction, pause]);
+  }, [activePrediction, isPlaying, pause]);
 
-  // Handle Operations
+  // Operations
   const handleInsert = () => {
     const num = Number(inputValue);
     if (isNaN(num)) return;
@@ -81,6 +85,7 @@ export const BSTPage: React.FC = () => {
     setTree(newTree);
     setActiveOperationSteps(steps);
     reset();
+    if (!isPredictMode) play();
   };
 
   const handleSearch = () => {
@@ -89,12 +94,28 @@ export const BSTPage: React.FC = () => {
     const steps = generateBSTSearchSteps(tree, num);
     setActiveOperationSteps(steps);
     reset();
+    if (!isPredictMode) play();
   };
 
   const handleInorder = () => {
     const steps = generateBSTInorderSteps(tree);
     setActiveOperationSteps(steps);
     reset();
+    play();
+  };
+
+  const handlePreorder = () => {
+    const steps = generateBSTPreorderSteps(tree);
+    setActiveOperationSteps(steps);
+    reset();
+    play();
+  };
+
+  const handlePostorder = () => {
+    const steps = generateBSTPostorderSteps(tree);
+    setActiveOperationSteps(steps);
+    reset();
+    play();
   };
 
   const handleResetTree = () => {
@@ -136,10 +157,23 @@ export const BSTPage: React.FC = () => {
             <span>Search</span>
           </button>
 
-          <button className="bst-btn" onClick={handleInorder}>
-            <ListOrdered size={16} />
-            <span>Inorder Traversal</span>
-          </button>
+          {/* All 3 Traversal Buttons */}
+          <div className="traversal-btn-group">
+            <button className="bst-btn btn-traversal" onClick={handleInorder} title="Inorder Traversal (Left -> Node -> Right)">
+              <ListOrdered size={14} />
+              <span>Inorder</span>
+            </button>
+
+            <button className="bst-btn btn-traversal" onClick={handlePreorder} title="Preorder Traversal (Node -> Left -> Right)">
+              <GitCommit size={14} />
+              <span>Preorder</span>
+            </button>
+
+            <button className="bst-btn btn-traversal" onClick={handlePostorder} title="Postorder Traversal (Left -> Right -> Node)">
+              <CornerDownRight size={14} />
+              <span>Postorder</span>
+            </button>
+          </div>
 
           <button className="bst-btn" onClick={handleResetTree}>
             <RefreshCw size={16} />
@@ -167,11 +201,12 @@ export const BSTPage: React.FC = () => {
       <div className="sorting-workspace">
         {/* Left Column: BST Canvas & Controls */}
         <div className="renderer-section">
+          {/* Interactive Prediction Learning Quiz Prompt */}
           {activePrediction && (
             <PredictionQuiz
               predictionPoint={activePrediction}
               onCorrectAnswer={() => {
-                play();
+                stepForward();
               }}
             />
           )}
@@ -183,6 +218,20 @@ export const BSTPage: React.FC = () => {
               handleSearch();
             }}
           />
+
+          {/* Traversal Log Banner if active */}
+          {bstStep?.traversalLog && bstStep.traversalLog.length > 0 && (
+            <div className="traversal-log-banner animate-fade-in">
+              <span className="log-title">TRAVERSAL LOG:</span>
+              <div className="log-nodes font-mono">
+                {bstStep.traversalLog.map((val, i) => (
+                  <span key={i} className="log-pill">
+                    {val}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Player Controls Bar */}
           <div className="player-bar">
@@ -229,7 +278,7 @@ export const BSTPage: React.FC = () => {
           />
 
           <ExplanationPanel
-            description={bstStep?.description || 'Enter a value and click Insert/Search to visualize Binary Search Tree operations.'}
+            description={bstStep?.description || 'Enter a value and click Insert/Search or pick a Traversal to visualize Binary Search Tree operations.'}
             timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
             spaceComplexity="O(H)"
           />

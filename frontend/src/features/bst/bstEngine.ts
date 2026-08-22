@@ -14,7 +14,7 @@ export interface PredictionPoint {
   questionNodeId: string;
   currentNodeValue: number;
   targetValue: number;
-  correctDirection: 'left' | 'right' | 'found' | 'here';
+  correctDirection: 'left' | 'right' | 'here' | 'found';
   explanation: string;
 }
 
@@ -150,7 +150,6 @@ export function generateBSTInsertSteps(initialTree: BSTTreeStructure | undefined
   let curr: BSTTreeStructure = tree;
 
   while (curr) {
-
     if (newValue === curr.value) {
       steps.push(createStepSnapshot(tree, curr.id, [curr.id], undefined, curr.id, `Value ${newValue} already exists in BST. Duplicates not inserted.`, 4, { newValue, nodeVal: curr.value }));
       return { steps, newTree: tree };
@@ -160,8 +159,6 @@ export function generateBSTInsertSteps(initialTree: BSTTreeStructure | undefined
     const explanation = newValue < curr.value
       ? `Value ${newValue} is LESS than ${curr.value}, so it must go to the LEFT subtree.`
       : `Value ${newValue} is GREATER than ${curr.value}, so it must go to the RIGHT subtree.`;
-
-    const nextChild = newValue < curr.value ? curr.left : curr.right;
 
     steps.push(createStepSnapshot(
       tree,
@@ -176,7 +173,7 @@ export function generateBSTInsertSteps(initialTree: BSTTreeStructure | undefined
         questionNodeId: curr.id,
         currentNodeValue: curr.value,
         targetValue: newValue,
-        correctDirection: nextChild ? direction : 'here',
+        correctDirection: direction,
         explanation,
       }
     ));
@@ -238,7 +235,7 @@ export function generateBSTSearchSteps(tree: BSTTreeStructure | undefined, targe
         questionNodeId: curr.id,
         currentNodeValue: curr.value,
         targetValue,
-        correctDirection: curr.value === targetValue ? 'found' : direction,
+        correctDirection: direction,
         explanation,
       }
     ));
@@ -250,7 +247,7 @@ export function generateBSTSearchSteps(tree: BSTTreeStructure | undefined, targe
   return steps;
 }
 
-// Generate Steps for Inorder Traversal (LNR)
+// 1. Inorder Traversal (LNR: Left -> Node -> Right)
 export function generateBSTInorderSteps(tree: BSTTreeStructure | undefined): BSTStep[] {
   const steps: BSTStep[] = [];
   const log: number[] = [];
@@ -259,12 +256,50 @@ export function generateBSTInorderSteps(tree: BSTTreeStructure | undefined): BST
     if (!node) return;
     inorder(node.left);
     log.push(node.value);
-    steps.push(createStepSnapshot(tree, node.id, [node.id], undefined, node.id, `Visited node ${node.value} in Inorder (Left-Node-Right)`, 5, { visited: node.value }, undefined, [...log]));
+    steps.push(createStepSnapshot(tree, node.id, [node.id], undefined, node.id, `Inorder Traversal: Visited node ${node.value} (Left-Node-Right)`, 5, { visited: node.value, order: 'Inorder (LNR)' }, undefined, [...log]));
     inorder(node.right);
   }
 
-  steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Starting Inorder Traversal (LNR)`, 1, {}, undefined, []));
+  steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Starting Inorder Traversal (Left -> Node -> Right)`, 1, {}, undefined, []));
   inorder(tree);
   steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Inorder Traversal Complete: [${log.join(', ')}]`, 10, { result: log.join(', ') }, undefined, [...log]));
+  return steps;
+}
+
+// 2. Preorder Traversal (NLR: Node -> Left -> Right)
+export function generateBSTPreorderSteps(tree: BSTTreeStructure | undefined): BSTStep[] {
+  const steps: BSTStep[] = [];
+  const log: number[] = [];
+
+  function preorder(node?: BSTTreeStructure) {
+    if (!node) return;
+    log.push(node.value);
+    steps.push(createStepSnapshot(tree, node.id, [node.id], undefined, node.id, `Preorder Traversal: Visited node ${node.value} (Node-Left-Right)`, 3, { visited: node.value, order: 'Preorder (NLR)' }, undefined, [...log]));
+    preorder(node.left);
+    preorder(node.right);
+  }
+
+  steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Starting Preorder Traversal (Node -> Left -> Right)`, 1, {}, undefined, []));
+  preorder(tree);
+  steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Preorder Traversal Complete: [${log.join(', ')}]`, 10, { result: log.join(', ') }, undefined, [...log]));
+  return steps;
+}
+
+// 3. Postorder Traversal (LRN: Left -> Right -> Node)
+export function generateBSTPostorderSteps(tree: BSTTreeStructure | undefined): BSTStep[] {
+  const steps: BSTStep[] = [];
+  const log: number[] = [];
+
+  function postorder(node?: BSTTreeStructure) {
+    if (!node) return;
+    postorder(node.left);
+    postorder(node.right);
+    log.push(node.value);
+    steps.push(createStepSnapshot(tree, node.id, [node.id], undefined, node.id, `Postorder Traversal: Visited node ${node.value} (Left-Right-Node)`, 7, { visited: node.value, order: 'Postorder (LRN)' }, undefined, [...log]));
+  }
+
+  steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Starting Postorder Traversal (Left -> Right -> Node)`, 1, {}, undefined, []));
+  postorder(tree);
+  steps.push(createStepSnapshot(tree, undefined, [], undefined, undefined, `Postorder Traversal Complete: [${log.join(', ')}]`, 10, { result: log.join(', ') }, undefined, [...log]));
   return steps;
 }
