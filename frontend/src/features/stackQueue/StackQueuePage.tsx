@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Layers, Plus, Trash2, Code, CheckCircle2, Search, Filter
+  Layers, Plus, Trash2, Code, CheckCircle2, Search, Filter, HelpCircle, Maximize2, Sparkles
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import {
@@ -27,6 +27,8 @@ import { ProblemRenderer } from './ProblemRenderer';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
 
@@ -72,6 +74,10 @@ export const StackQueuePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState<string>('42');
+
+  // Modes & Modals matching BST
+  const [isPredictMode, setIsPredictMode] = useState<boolean>(false);
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
   // Active step dataset
   const [activeSteps, setActiveSteps] = useState<StackQueueStep[]>([]);
@@ -248,6 +254,29 @@ export const StackQueuePage: React.FC = () => {
       p.group.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleSampleData = () => {
+    setStackData([10, 25, 30, 45]);
+    setQueueData([15, 28, 40, 52]);
+    setCqElements([10, 20, 30, 40, null, null]);
+    setCqFront(0);
+    setCqRear(3);
+    setMinMainStack([8, 4, 12, 2]);
+    setMinAuxStack([8, 4, 4, 2]);
+    setQvsIn([10, 20, 30]);
+    setQvsOut([5]);
+    setActiveSteps([]);
+    reset();
+  };
+
+  const handleRandomData = () => {
+    const rndStack = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
+    const rndQueue = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
+    setStackData(rndStack);
+    setQueueData(rndQueue);
+    setActiveSteps([]);
+    reset();
+  };
+
   const handleClearAll = () => {
     setStackData([]);
     setQueueData([]);
@@ -276,14 +305,51 @@ export const StackQueuePage: React.FC = () => {
           </p>
         </div>
 
-        {/* Debugger Toggle */}
-        <button
-          className={`bst-btn ${showDebugger ? 'active' : ''}`}
-          onClick={() => setShowDebugger(!showDebugger)}
-        >
-          <Code size={14} />
-          <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
-        </button>
+        {/* Dataset Mode Selector & Predict Mode Matching BST */}
+        <div className="flex items-center gap-2">
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={handleClearAll} title="Clear Structure">
+              <Trash2 size={13} className="text-rose-400" />
+              <span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSampleData} title="Load Standard Sample Dataset">
+              <Layers size={13} className="text-amber-400" />
+              <span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomData} title="Generate Random Values">
+              <Sparkles size={13} className="text-emerald-400" />
+              <span>Random</span>
+            </button>
+          </div>
+
+          <label className="predict-toggle-label flex items-center gap-1.5 text-xs font-bold text-slate-300 bg-slate-900/80 px-2.5 py-1.5 rounded-xl border border-slate-700/70 cursor-pointer">
+            <HelpCircle size={14} className="text-amber-400" />
+            <span>Predict</span>
+            <input
+              type="checkbox"
+              checked={isPredictMode}
+              onChange={(e) => setIsPredictMode(e.target.checked)}
+              className="accent-amber-400 cursor-pointer ml-1"
+            />
+          </label>
+
+          <button
+            className="bst-btn btn-fullscreen p-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 hover:border-amber-400 text-slate-300"
+            onClick={() => setIsFullScreenOpen(true)}
+            title="Full Screen Canvas View"
+          >
+            <Maximize2 size={14} />
+          </button>
+
+          {/* Debugger Toggle */}
+          <button
+            className={`bst-btn ${showDebugger ? 'active' : ''}`}
+            onClick={() => setShowDebugger(!showDebugger)}
+          >
+            <Code size={14} />
+            <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
+          </button>
+        </div>
       </header>
 
       {/* Category Pills Header Bar */}
@@ -584,6 +650,15 @@ export const StackQueuePage: React.FC = () => {
               <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
             </div>
           </div>
+
+          {/* Explanation Panel matching BST */}
+          {currentStep && (
+            <div className="mt-4">
+              <ExplanationPanel
+                description={currentStep.description ?? 'Executing operation step'}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right Panel: Code Debugger Panel */}
@@ -596,6 +671,69 @@ export const StackQueuePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* FullScreen Canvas Modal matching BST */}
+      <FullScreenCanvasModal
+        isOpen={isFullScreenOpen}
+        onClose={() => setIsFullScreenOpen(false)}
+        title={PROBLEMS_LIST.find((p) => p.id === category)?.name ?? 'Stack & Queue Visualizer'}
+        toolbarControls={
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              className="bst-input w-28"
+              placeholder="Value"
+            />
+            {category === 'stack' && (
+              <>
+                <button className="bst-btn btn-insert" onClick={handlePush}>
+                  <Plus size={14} />
+                  <span>Push</span>
+                </button>
+                <button className="bst-btn btn-search" onClick={handlePop}>
+                  <span>Pop</span>
+                </button>
+              </>
+            )}
+            {category === 'queue' && (
+              <>
+                <button className="bst-btn btn-insert" onClick={handleEnqueue}>
+                  <Plus size={14} />
+                  <span>Enqueue</span>
+                </button>
+                <button className="bst-btn btn-search" onClick={handleDequeue}>
+                  <span>Dequeue</span>
+                </button>
+              </>
+            )}
+          </div>
+        }
+        playbackControls={
+          <div className="player-bar flex items-center justify-between w-full">
+            <div className="player-left flex items-center gap-2">
+              <PlayPauseButton isPlaying={isPlaying} onToggle={() => (isPlaying ? pause() : play())} />
+              <StepControls
+                onStepForward={stepForward}
+                onStepBack={stepBack}
+                onReset={reset}
+                canStepForward={currentStepIndex < totalSteps - 1}
+                canStepBack={currentStepIndex > 0}
+              />
+            </div>
+            <span className="step-counter font-mono text-xs text-slate-400">Step {currentStepIndex + 1} / {totalSteps}</span>
+            <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+          </div>
+        }
+      >
+        {category === 'stack' && <StackRenderer currentStep={currentStep} />}
+        {category === 'queue' && <QueueRenderer currentStep={currentStep} />}
+        {category === 'circularQueue' && <CircularQueueRenderer currentStep={currentStep} />}
+        {!['stack', 'queue', 'circularQueue'].includes(category) && (
+          <ProblemRenderer category={category} currentStep={currentStep} />
+        )}
+      </FullScreenCanvasModal>
     </div>
   );
 };

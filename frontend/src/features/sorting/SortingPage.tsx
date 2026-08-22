@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Shuffle, Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, BarChart3, Sliders, ArrowUpDown
+  Shuffle, Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, BarChart3, Sliders, ArrowUpDown, Trash2, Maximize2
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -187,6 +187,32 @@ export const SortingPage: React.FC = () => {
           <p className="page-subtitle text-xs text-slate-400">
             Interactive Step-by-Step 3D Visualizer & Time-Complexity Inspector for Classical Sorting Algorithms
           </p>
+        </div>
+
+        {/* Header Right Actions matching BST */}
+        <div className="flex items-center gap-2">
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
+              <Trash2 size={13} className="text-rose-400" />
+              <span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
+              <Layers size={13} className="text-amber-400" />
+              <span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
+              <Sparkles size={13} className="text-emerald-400" />
+              <span>Random</span>
+            </button>
+          </div>
+
+          <button
+            className="bst-btn btn-fullscreen p-1.5 rounded-xl bg-slate-900/80 border border-slate-700/70 hover:border-amber-400 text-slate-300"
+            onClick={() => setIsFullScreenOpen(true)}
+            title="Full Screen Canvas View"
+          >
+            <Maximize2 size={14} />
+          </button>
         </div>
       </header>
 
