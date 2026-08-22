@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Minimize2, Sun, Moon } from 'lucide-react';
 import './FullScreenCanvasModal.css';
 
@@ -27,9 +28,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {
-          /* Fallback gracefully if blocked by browser policy */
-        });
+        document.documentElement.requestFullscreen().catch(() => {});
       }
     } else {
       if (document.fullscreenElement && document.exitFullscreen) {
@@ -51,7 +50,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className={`fs-modal-overlay theme-${theme} animate-fade-in`}>
       {/* Top Floating Glassmorphic Header Toolbar */}
       <header className="fs-modal-header">
@@ -74,13 +73,13 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
           >
-            {theme === 'dark' ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-indigo-400" />}
+            {theme === 'dark' ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-indigo-400" />}
             <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
           </button>
 
           {/* Exit Fullscreen Button */}
           <button className="fs-icon-btn exit-fs-btn" onClick={onClose} title="Exit Fullscreen Mode">
-            <Minimize2 size={16} />
+            <Minimize2 size={15} />
             <span>Exit Fullscreen</span>
           </button>
         </div>
@@ -99,6 +98,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
           {playbackControls}
         </footer>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,14 +1,19 @@
 .fs-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  overflow: hidden;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
   font-family: inherit;
+  margin: 0 !important;
+  padding: 0 !important;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -19,17 +24,17 @@
 }
 
 .theme-dark .fs-modal-header {
-  background: rgba(15, 23, 42, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .theme-dark .fs-modal-footer {
-  background: rgba(15, 23, 42, 0.85);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .theme-dark .fs-modal-body {
-  background-color: rgba(15, 23, 42, 0.4);
+  background-color: rgba(15, 23, 42, 0.5);
 }
 
 /* Theme Light */
@@ -39,13 +44,13 @@
 }
 
 .theme-light .fs-modal-header {
-  background: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .theme-light .fs-modal-footer {
-  background: rgba(255, 255, 255, 0.9);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .theme-light .fs-modal-body {
@@ -53,7 +58,8 @@
 }
 
 .theme-light .bst-canvas-container,
-.theme-light .bst-canvas-workspace {
+.theme-light .bst-canvas-workspace,
+.theme-light .sorting-canvas-container {
   background-color: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
 }
@@ -66,31 +72,33 @@
   color: #64748b !important;
 }
 
-/* Header Elements */
+/* Header Elements - Prevent Overlapping */
 .fs-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.5rem;
+  padding: 0.6rem 1.25rem;
   backdrop-filter: blur(12px);
   gap: 1rem;
-  z-index: 10;
+  z-index: 100;
+  flex-wrap: nowrap;
 }
 
 .fs-header-branding {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .fs-modal-title {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 800;
   letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
 .fs-modal-subtitle {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   opacity: 0.7;
   font-family: 'Fira Code', monospace;
 }
@@ -98,27 +106,30 @@
 .fs-modal-toolbar {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex: 1;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   justify-content: center;
+  flex: 1;
 }
 
 .fs-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .fs-icon-btn {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 8px;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -145,9 +156,11 @@
   border-color: #2563eb;
 }
 
-/* Body Workspace with Auto-Scroll & Sliders */
+/* Body Workspace with True 100% Fullscreen Viewport & Auto-Scroll */
 .fs-modal-body {
-  flex: 1;
+  flex: 1 !important;
+  width: 100% !important;
+  height: calc(100vh - 120px) !important;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -155,12 +168,27 @@
 }
 
 .fs-workspace-scrollable {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-  overflow: auto; /* Auto scrollbars/sliders when tree/graph expands */
+  flex: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: auto !important; /* Auto scrollbars/sliders when tree/graph expands */
   padding: 1rem;
   box-sizing: border-box;
+}
+
+/* Force canvas container inside modal body to stretch full size */
+.fs-workspace-scrollable .bst-canvas-container,
+.fs-workspace-scrollable .sorting-canvas-container {
+  min-height: calc(100vh - 160px) !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.fs-workspace-scrollable .bst-canvas-workspace,
+.fs-workspace-scrollable .bars-canvas {
+  flex: 1 !important;
+  min-height: calc(100vh - 230px) !important;
 }
 
 /* Sleek Glassmorphic Scrollbars */
@@ -185,7 +213,7 @@
 
 /* Footer Player Bar */
 .fs-modal-footer {
-  padding: 0.75rem 1.5rem;
+  padding: 0.6rem 1.25rem;
   backdrop-filter: blur(12px);
-  z-index: 10;
+  z-index: 100;
 }
