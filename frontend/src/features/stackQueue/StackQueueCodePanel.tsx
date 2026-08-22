@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Code, Terminal, Cpu, Code2, Play, RotateCcw, AlertTriangle } from 'lucide-react';
 import { STACK_SNIPPETS, QUEUE_SNIPPETS, PARENTHESES_SNIPPETS, POSTFIX_SNIPPETS, QVS_SNIPPETS, DAILY_TEMP_SNIPPETS, type LanguageKey } from './stackQueueSnippets';
 import type { StackQueueCategory } from './stackQueueEngine';
+import type { CustomLanguage } from '../../engine/customCodeTemplates';
 import '../../components/debugger/Debugger.css';
 
 type CodeMode = 'default' | 'custom';
@@ -9,7 +10,7 @@ type CodeMode = 'default' | 'custom';
 interface StackQueueCodePanelProps {
   category: StackQueueCategory;
   activeLine?: number;
-  onCustomCodeRun?: (code: string) => void;
+  onCustomCodeRun?: (code: string, lang: CustomLanguage) => void;
 }
 
 const LANGUAGES: { id: LanguageKey; label: string; icon: React.ReactNode }[] = [
@@ -19,27 +20,48 @@ const LANGUAGES: { id: LanguageKey; label: string; icon: React.ReactNode }[] = [
   { id: 'java', label: 'Java', icon: <Code2 size={14} /> },
 ];
 
-const STACK_QUEUE_TEMPLATES: Record<string, string> = {
-  stack: `// Stack Push — modify and click Run
-// 'stack' array and 'value' are provided
-stack.push(value);`,
+const CUSTOM_LANGUAGES: { id: CustomLanguage; label: string }[] = [
+  { id: 'javascript', label: 'JavaScript' },
+  { id: 'python', label: 'Python' },
+  { id: 'cpp', label: 'C++' },
+  { id: 'csharp', label: 'C#' },
+  { id: 'java', label: 'Java' },
+  { id: 'ruby', label: 'Ruby' },
+  { id: 'go', label: 'Go' },
+  { id: 'rust', label: 'Rust' },
+];
 
-  queue: `// Queue Enqueue — modify and click Run
-// 'queue' array and 'value' are provided
-queue.push(value);`,
-
-  validParentheses: `// Valid Parentheses — modify and click Run
-// 'input' string is provided
-const stack = [];
-const map = { ')': '(', ']': '[', '}': '{' };
-for (let ch of input) {
-  if ('([{'.includes(ch)) {
-    stack.push(ch);
-  } else {
-    if (stack.pop() !== map[ch]) return false;
-  }
-}
-return stack.length === 0;`,
+const PROBLEM_TEMPLATES: Record<string, Record<CustomLanguage, string>> = {
+  stack: {
+    javascript: `// Stack Push (LIFO) in JavaScript\nstack.push(value);`,
+    python: `# Stack Push in Python\nstack.append(value)`,
+    cpp: `// Stack Push in C++\nstack.push(value);`,
+    csharp: `// Stack Push in C#\nstack.Push(value);`,
+    java: `// Stack Push in Java\nstack.push(value);`,
+    ruby: `# Stack Push in Ruby\nstack.push(value)`,
+    go: `// Stack Push in Go\nstack = append(stack, value)`,
+    rust: `// Stack Push in Rust\nstack.push(value);`,
+  },
+  queue: {
+    javascript: `// Queue Enqueue (FIFO) in JavaScript\nqueue.push(value);`,
+    python: `# Queue Enqueue in Python\nqueue.append(value)`,
+    cpp: `// Queue Enqueue in C++\nqueue.push(value);`,
+    csharp: `// Queue Enqueue in C#\nqueue.Enqueue(value);`,
+    java: `// Queue Enqueue in Java\nqueue.add(value);`,
+    ruby: `# Queue Enqueue in Ruby\nqueue.push(value)`,
+    go: `// Queue Enqueue in Go\nqueue = append(queue, value)`,
+    rust: `// Queue Enqueue in Rust\nqueue.push_back(value);`,
+  },
+  validParentheses: {
+    javascript: `// Valid Parentheses (#20) in JavaScript\nconst stack = [];\nfor (let ch of input) {\n  if ('([{'.includes(ch)) stack.push(ch);\n  else {\n    const top = stack.pop();\n    if ((ch === ')' && top !== '(') || (ch === ']' && top !== '[') || (ch === '}' && top !== '{')) return false;\n  }\n}\nreturn stack.length === 0;`,
+    python: `# Valid Parentheses (#20) in Python\nstack = []\nmapping = {")": "(", "]": "[", "}": "{"}\nfor char in s:\n    if char in mapping:\n        top_element = stack.pop() if stack else '#'\n        if mapping[char] != top_element:\n            return False\n    else:\n        stack.append(char)\nreturn not stack`,
+    cpp: `// Valid Parentheses (#20) in C++\nstack<char> st;\nfor (char c : s) {\n    if (c == '(' || c == '{' || c == '[') st.push(c);\n    else {\n        if (st.empty()) return false;\n        if ((c == ')' && st.top() != '(') || (c == ']' && st.top() != '[') || (c == '}' && st.top() != '{')) return false;\n        st.pop();\n    }\n}\nreturn st.empty();`,
+    csharp: `// Valid Parentheses (#20) in C#\nStack<char> stack = new Stack<char>();\nforeach (char c in s) {\n    if (c == '(' || c == '{' || c == '[') stack.Push(c);\n    else {\n        if (stack.Count == 0) return false;\n        char top = stack.Pop();\n        if ((c == ')' && top != '(') || (c == ']' && top != '[') || (c == '}' && top != '{')) return false;\n    }\n}\nreturn stack.Count == 0;`,
+    java: `// Valid Parentheses (#20) in Java\nStack<Character> stack = new Stack<>();\nfor (char c : s.toCharArray()) {\n    if (c == '(' || c == '{' || c == '[') stack.push(c);\n    else {\n        if (stack.isEmpty()) return false;\n        char top = stack.pop();\n        if ((c == ')' && top != '(') || (c == ']' && top != '[') || (c == '}' && top != '{')) return false;\n    }\n}\nreturn stack.isEmpty();`,
+    ruby: `# Valid Parentheses (#20) in Ruby\nstack = []\nmap = { ')' => '(', ']' => '[', '}' => '{' }\ns.each_char do |ch|\n  if map.key?(ch)\n    return false if stack.pop != map[ch]\n  else\n    stack.push(ch)\n  end\nend\nstack.empty?`,
+    go: `// Valid Parentheses (#20) in Go\nstack := []rune{}\nfor _, char := range s {\n    if char == '(' || char == '{' || char == '[' {\n        stack = append(stack, char)\n    } else {\n        if len(stack) == 0 { return false }\n        top := stack[len(stack)-1]\n        stack = stack[:len(stack)-1]\n        if (char == ')' && top != '(') || (char == ']' && top != '[') || (char == '}' && top != '{') { return false }\n    }\n}\nreturn len(stack) == 0`,
+    rust: `// Valid Parentheses (#20) in Rust\nlet mut stack = Vec::new();\nfor c in s.chars() {\n    match c {\n        '(' | '{' | '[' => stack.push(c),\n        ')' => if stack.pop() != Some('(') { return false; },\n        ']' => if stack.pop() != Some('[') { return false; },\n        '}' => if stack.pop() != Some('{') { return false; },\n        _ => ()\n    }\n}\nstack.is_empty()`,
+  },
 };
 
 export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
@@ -49,15 +71,19 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
 }) => {
   const [selectedLang, setSelectedLang] = useState<LanguageKey>('javascript');
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
-  const [customCode, setCustomCode] = useState<string>(() =>
-    STACK_QUEUE_TEMPLATES[category] || STACK_QUEUE_TEMPLATES.stack
-  );
+  const [customLang, setCustomLang] = useState<CustomLanguage>('javascript');
+  
+  const getTemplate = (cat: string, lang: CustomLanguage): string => {
+    return PROBLEM_TEMPLATES[cat]?.[lang] || PROBLEM_TEMPLATES.stack[lang];
+  };
+
+  const [customCode, setCustomCode] = useState<string>(() => getTemplate(category, 'javascript'));
   const [executionError, setExecutionError] = useState<string | null>(null);
 
   React.useEffect(() => {
-    setCustomCode(STACK_QUEUE_TEMPLATES[category] || STACK_QUEUE_TEMPLATES.stack);
+    setCustomCode(getTemplate(category, customLang));
     setExecutionError(null);
-  }, [category]);
+  }, [category, customLang]);
 
   let snippetObj = STACK_SNIPPETS;
   if (category === 'queue') snippetObj = QUEUE_SNIPPETS;
@@ -73,12 +99,12 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   const handleRunCustomCode = () => {
     setExecutionError(null);
     if (onCustomCodeRun) {
-      onCustomCodeRun(customCode);
+      onCustomCodeRun(customCode, customLang);
     }
   };
 
   const handleResetTemplate = () => {
-    setCustomCode(STACK_QUEUE_TEMPLATES[category] || STACK_QUEUE_TEMPLATES.stack);
+    setCustomCode(getTemplate(category, customLang));
     setExecutionError(null);
   };
 
@@ -124,6 +150,25 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
         )}
       </div>
 
+      {/* CUSTOM MODE: Multi-Language Bar */}
+      {codeMode === 'custom' && (
+        <div className="custom-lang-bar flex flex-wrap gap-1 p-2 bg-slate-900/60 border-b border-slate-800">
+          {CUSTOM_LANGUAGES.map((lang) => (
+            <button
+              key={lang.id}
+              className={`px-2 py-0.5 text-xs rounded transition-all ${
+                customLang === lang.id
+                  ? 'bg-amber-500 text-black font-bold shadow'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              onClick={() => setCustomLang(lang.id)}
+            >
+              {lang.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* DEFAULT MODE: Read-only viewer */}
       {codeMode === 'default' && (
         <div className="code-editor-container">
@@ -163,7 +208,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
               value={customCode}
               onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); }}
               spellCheck={false}
-              placeholder="Write your JavaScript code here..."
+              placeholder={`Write your ${customLang.toUpperCase()} code here...`}
             />
           </div>
 
@@ -189,3 +234,4 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
     </div>
   );
 };
+
