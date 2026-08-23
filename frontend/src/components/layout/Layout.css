@@ -205,14 +205,20 @@
   display: flex;
   flex-direction: column;
   padding: 1.25rem 1rem;
-  height: calc(100vh - 64px);
+  height: calc(100vh - var(--navbar-height));
   position: sticky;
-  top: 64px;
+  top: var(--navbar-height);
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 500;
 }
 
 .sidebar-header {
   margin-bottom: 1rem;
   padding: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .sidebar-title {
@@ -222,10 +228,48 @@
   color: var(--text-tertiary);
 }
 
+/* Sidebar close button — only visible on mobile/tablet */
+.sidebar-close-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-close-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-secondary);
+  background-color: var(--bg-tertiary);
+}
+
+/* Sidebar overlay backdrop — only visible on mobile/tablet */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 499;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
 .topic-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow-y: auto;
 }
 
 .topic-card {
@@ -261,6 +305,7 @@
   align-items: center;
   color: var(--text-secondary);
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .topic-card.active .topic-icon {
@@ -283,6 +328,47 @@
 .topic-category {
   font-size: 0.7rem;
   color: var(--text-tertiary);
+}
+
+/* Hamburger menu button — only visible on mobile/tablet */
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.hamburger-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-secondary);
+  background-color: var(--bg-secondary);
+}
+
+/* Dashboard layout classes */
+.dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.dashboard-body {
+  display: flex;
+  flex: 1;
+}
+
+.dashboard-main {
+  flex: 1;
+  background-color: var(--bg-secondary);
+  overflow-y: auto;
+  min-width: 0;
 }
 
 /* 3. Explanation Panel */
@@ -389,4 +475,126 @@
 
 .line-code {
   color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT — TABLET (≤1024px)
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  :root {
+    --navbar-height: 56px;
+  }
+
+  .app-navbar {
+    height: 56px;
+    padding: 0 1rem;
+  }
+
+  /* Show hamburger button */
+  .hamburger-btn {
+    display: flex;
+  }
+
+  /* Show sidebar close button */
+  .sidebar-close-btn {
+    display: flex;
+  }
+
+  /* Convert sidebar to off-canvas drawer */
+  .topic-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+    padding-top: 1.5rem;
+    overflow-y: auto;
+  }
+
+  .topic-sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  /* Make navbar tabs scrollable */
+  .navbar-center {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    flex-shrink: 1;
+    min-width: 0;
+    padding: 0.25rem 0;
+  }
+
+  .navbar-center::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Compact user controls */
+  .user-name {
+    display: none;
+  }
+
+  .user-profile-btn {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .brand-title {
+    font-size: 1.1rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT — MOBILE (≤768px)
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .app-navbar {
+    gap: 0.5rem;
+  }
+
+  /* Hide center nav tabs on mobile — use sidebar for navigation */
+  .navbar-center {
+    display: none;
+  }
+
+  .navbar-right {
+    gap: 0.5rem;
+  }
+
+  .brand-title {
+    font-size: 1rem;
+  }
+
+  .brand-logo-glow {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .navbar-brand {
+    gap: 0.5rem;
+  }
+
+  /* Sidebar drawer narrower on mobile */
+  .topic-sidebar {
+    width: 260px;
+  }
+
+  /* Explanation panel compact */
+  .explanation-panel {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .complexity-grid {
+    grid-template-columns: 1fr;
+  }
 }
