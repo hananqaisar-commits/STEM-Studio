@@ -7,15 +7,20 @@ from backend.app.core.config import get_settings
 
 settings = get_settings()
 
-# ─── Engine with Connection Pooling ──────────────────────────────────
-# pool_size: Number of persistent connections kept in the pool
-# max_overflow: Extra connections allowed beyond pool_size under load
-# pool_pre_ping: Test connections before using them (detects stale/dead connections)
-# pool_recycle: Recycle connections after N seconds to avoid MySQL timeout issues
+# ─── Engine with Connection Pooling & SSL Support ────────────────────
+connect_args = {}
+if "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL:
+    connect_args = {"ssl": {"check_hostname": False}}
 
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False},
+
+
+    connect_args=connect_args,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    pool_recycle=3600,
     echo=settings.DEBUG,
 )
 
