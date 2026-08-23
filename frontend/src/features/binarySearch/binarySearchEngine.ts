@@ -96,7 +96,7 @@ export function generateBinarySearchSteps(
   arr: number[],
   target: number
 ): BinarySearchStep[] {
-  const steps: LinkedListStep[] | BinarySearchStep[] = [];
+  const steps: BinarySearchStep[] = [];
   let left = 0;
   let right = arr.length - 1;
   let iteration = 0;

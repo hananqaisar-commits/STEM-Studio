@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Code2, Terminal, Cpu, Binary, FileText } from 'lucide-react';
 import { LINKED_LIST_SNIPPETS, type LLCodeLanguage } from './linkedListSnippets';
-import '../debugger/Debugger.css';
+import '../../components/debugger/Debugger.css';
 
 interface LinkedListCodePanelProps {
   snippetKey: string;

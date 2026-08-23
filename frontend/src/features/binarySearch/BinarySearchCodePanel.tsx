@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Code2, Terminal, Cpu, Binary, FileText } from 'lucide-react';
 import { BINARY_SEARCH_SNIPPETS, type BSCodeLanguage } from './binarySearchSnippets';
-import '../debugger/Debugger.css';
+import '../../components/debugger/Debugger.css';
 
 interface BinarySearchCodePanelProps {
   snippetKey: string;

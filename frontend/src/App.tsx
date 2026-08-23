@@ -40,19 +40,7 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-/**
- * Placeholder component for upcoming module phases
- */
-const PlaceholderModule: React.FC<{ title: string }> = ({ title }) => (
-  <div style={{
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', height: '100%', minHeight: '400px',
-    color: 'var(--text-secondary)', gap: '1rem', padding: '2rem'
-  }}>
-    <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>{title} Module</h2>
-    <p>This module is queued for execution in the next implementation phase.</p>
-  </div>
-);
+
 
 /**
  * Main STEM Studio Dashboard Layout with Navbar & Sidebar

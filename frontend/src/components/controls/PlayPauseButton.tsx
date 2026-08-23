@@ -4,19 +4,33 @@ import './Controls.css';
 
 interface PlayPauseButtonProps {
   isPlaying: boolean;
-  onToggle: () => void;
+  onToggle?: () => void;
+  onPlay?: () => void;
+  onPause?: () => void;
   disabled?: boolean;
 }
 
 export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
   isPlaying,
   onToggle,
+  onPlay,
+  onPause,
   disabled = false,
 }) => {
+  const handleClick = () => {
+    if (onToggle) {
+      onToggle();
+    } else if (isPlaying && onPause) {
+      onPause();
+    } else if (!isPlaying && onPlay) {
+      onPlay();
+    }
+  };
+
   return (
     <button
       className={`control-btn play-pause-btn ${isPlaying ? 'is-playing' : ''}`}
-      onClick={onToggle}
+      onClick={handleClick}
       disabled={disabled}
       aria-label={isPlaying ? 'Pause execution' : 'Play execution'}
     >

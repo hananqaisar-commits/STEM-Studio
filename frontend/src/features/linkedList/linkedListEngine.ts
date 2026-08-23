@@ -84,7 +84,7 @@ export function createInitialNodes(
 
   if (type === 'circular' && nodes.length > 0) {
     nodes[nodes.length - 1].nextId = nodes[0].id;
-    if (type === 'doubly') {
+    if ((type as string) === 'doubly') {
       nodes[0].prevId = nodes[nodes.length - 1].id;
     }
   }

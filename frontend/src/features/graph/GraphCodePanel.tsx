@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Code2, Terminal, Cpu, Binary, FileText } from 'lucide-react';
 import { GRAPH_SNIPPETS, type GraphCodeLanguage } from './graphSnippets';
-import '../debugger/Debugger.css';
+import '../../components/debugger/Debugger.css';
 
 interface GraphCodePanelProps {
   snippetKey: string;

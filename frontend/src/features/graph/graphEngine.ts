@@ -400,7 +400,7 @@ export function generateDijkstraSteps(
     );
 
     for (const edge of incidentEdges) {
-      const neighborId = edge.from === currId ? e.to || edge.to : edge.from;
+      const neighborId = edge.from === currId ? edge.to : edge.from;
       if (visited.has(neighborId)) continue;
 
       const weight = edge.weight || 1;
@@ -499,8 +499,8 @@ export function generatePrimsSteps(
     let nextNodeId: string | null = null;
 
     // Find minimum cut edge connecting inMST to outside
-    edges.forEach((e) => {
-      if (e.state === 'mst') return;
+    for (const e of edges) {
+      if (e.state === 'mst') continue;
       const uIn = inMST.has(e.from);
       const vIn = inMST.has(e.to);
 
@@ -512,7 +512,7 @@ export function generatePrimsSteps(
           nextNodeId = uIn ? e.to : e.from;
         }
       }
-    });
+    }
 
     if (!minEdge || !nextNodeId) break;
 
