@@ -6,7 +6,7 @@ import json
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
+    """STEM Studio Central Application settings loaded from environment variables."""
 
     # Database
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost/stem_studio"
