@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -58,3 +58,68 @@ class UserResponse(BaseModel):
 class MessageResponse(BaseModel):
     message: str
     success: bool = True
+
+
+# ─── Progress & Quiz Schemas ─────────────────────────────────────────
+
+class QuizSubmissionRequest(BaseModel):
+    module_name: str = Field(..., max_length=50)
+    algorithm_id: str = Field(..., max_length=50)
+    question_prompt: str = Field(..., max_length=500)
+    selected_option: str = Field(..., max_length=255)
+    is_correct: bool
+
+
+class QuizSubmissionResponse(BaseModel):
+    attempt_id: int
+    is_correct: bool
+    total_quizzes_taken: int
+    accuracy_percentage: float
+    current_streak: int
+    message: str
+
+
+class CompleteAlgorithmRequest(BaseModel):
+    module_name: str = Field(..., max_length=50)
+    algorithm_id: str = Field(..., max_length=50)
+
+
+class ModuleProgressResponse(BaseModel):
+    module_name: str
+    completed_algorithms: List[str]
+    completion_percentage: int
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserStatsResponse(BaseModel):
+    total_quizzes: int
+    correct_quizzes: int
+    accuracy_percentage: float
+    current_streak: int
+    highest_streak: int
+    modules: List[ModuleProgressResponse]
+
+
+# ─── Saved Session Schemas ───────────────────────────────────────────
+
+class SaveSessionRequest(BaseModel):
+    title: str = Field(..., max_length=100)
+    module_name: str = Field(..., max_length=50)
+    algorithm_id: str = Field(..., max_length=50)
+    dataset_json: str = Field(..., max_length=5000)
+
+
+class SavedSessionResponse(BaseModel):
+    session_id: int
+    title: str
+    module_name: str
+    algorithm_id: str
+    dataset_json: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+

@@ -50,6 +50,10 @@ class User(Base):
     )
     roles: Mapped[List["Role"]] = relationship(secondary=user_roles, back_populates="users")
     login_attempts: Mapped[List["LoginAttempt"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    quiz_attempts: Mapped[List["QuizAttempt"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    module_progress: Mapped[List["ModuleProgress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    streak: Mapped[Optional["UserStreak"]] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
+    saved_sessions: Mapped[List["SavedSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class UserSession(Base):
@@ -122,3 +126,60 @@ class LoginAttempt(Base):
     failure_reason: Mapped[Optional[str]] = mapped_column(String(255))
 
     user: Mapped[Optional["User"]] = relationship(back_populates="login_attempts")
+
+
+class QuizAttempt(Base):
+    __tablename__ = "quiz_attempts"
+
+    attempt_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    module_name: Mapped[str] = mapped_column(String(50), index=True)
+    algorithm_id: Mapped[str] = mapped_column(String(50))
+    question_prompt: Mapped[str] = mapped_column(String(500))
+    selected_option: Mapped[str] = mapped_column(String(255))
+    is_correct: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="quiz_attempts")
+
+
+class ModuleProgress(Base):
+    __tablename__ = "module_progress"
+
+    progress_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    module_name: Mapped[str] = mapped_column(String(50), index=True)
+    completed_algorithms: Mapped[str] = mapped_column(String(1000), default="[]")
+    completion_percentage: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="module_progress")
+
+
+class UserStreak(Base):
+    __tablename__ = "user_streaks"
+
+    streak_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, index=True)
+    current_streak: Mapped[int] = mapped_column(Integer, default=1)
+    highest_streak: Mapped[int] = mapped_column(Integer, default=1)
+    last_active_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="streak")
+
+
+class SavedSession(Base):
+    __tablename__ = "saved_sessions"
+
+    session_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(100))
+    module_name: Mapped[str] = mapped_column(String(50))
+    algorithm_id: Mapped[str] = mapped_column(String(50))
+    dataset_json: Mapped[str] = mapped_column(String(5000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="saved_sessions")
+
