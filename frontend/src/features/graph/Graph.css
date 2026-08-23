@@ -1,0 +1,317 @@
+/* ─── GRAPH CONTAINER & LAYOUT ────────────────────────────────────── */
+
+.graph-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: calc(100vh - 64px);
+  padding: 1.5rem 2rem;
+  gap: 1.5rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+/* ─── HEADER & COMMAND PALETTE SEARCH ─────────────────────────────── */
+
+.graph-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.graph-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.graph-title-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(59, 130, 246, 0.2));
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
+.graph-title-text h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  background: linear-gradient(to right, var(--text-primary), var(--text-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.graph-title-text p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0.15rem 0 0 0;
+}
+
+/* ─── SEARCH COMMAND BAR ─────────────────────────────────────────── */
+
+.graph-search-wrapper {
+  position: relative;
+  min-width: 320px;
+}
+
+.graph-search-input-box {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  padding: 0.45rem 0.9rem;
+  gap: 0.6rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.graph-search-input-box:focus-within {
+  border-color: #c084fc;
+  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.2);
+}
+
+.graph-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  width: 100%;
+}
+
+.graph-search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 0.5rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+  backdrop-filter: blur(16px);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.graph-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.graph-search-item:hover,
+.graph-search-item.active {
+  background: rgba(192, 132, 252, 0.15);
+}
+
+/* ─── CATEGORY TABS ──────────────────────────────────────────────── */
+
+.graph-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.graph-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.graph-tab-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.graph-tab-btn.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(59, 130, 246, 0.2));
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #c084fc;
+}
+
+/* ─── ACTION TOOLBAR ──────────────────────────────────────────────── */
+
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+}
+
+.graph-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ─── MAIN WORKSPACE GRID ─────────────────────────────────────────── */
+
+.graph-workspace {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.25rem;
+  flex: 1;
+  min-height: 480px;
+}
+
+@media (max-width: 1100px) {
+  .graph-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── CANVAS CARD ─────────────────────────────────────────────────── */
+
+.graph-canvas-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.graph-canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.graph-canvas-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  min-height: 340px;
+  position: relative;
+}
+
+/* ─── GRAPH SVG CANVAS ────────────────────────────────────────────── */
+
+.graph-svg-canvas {
+  width: 100%;
+  max-width: 580px;
+  height: 320px;
+  overflow: visible;
+}
+
+.graph-node-circle {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.graph-node-circle.state-current {
+  fill: #f59e0b;
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.6));
+}
+
+.graph-node-circle.state-visited {
+  fill: #818cf8;
+  filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.4));
+}
+
+.graph-node-circle.state-queued {
+  fill: #38bdf8;
+}
+
+.graph-node-circle.state-shortest {
+  fill: #10b981;
+  filter: drop-shadow(0 0 14px rgba(16, 185, 129, 0.6));
+}
+
+.graph-node-circle.state-mst {
+  fill: #ec4899;
+  filter: drop-shadow(0 0 12px rgba(236, 72, 153, 0.6));
+}
+
+.graph-edge-line {
+  transition: all 0.3s ease;
+}
+
+.graph-edge-line.edge-traversing {
+  stroke: #f59e0b !important;
+  stroke-width: 3.5 !important;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+.graph-edge-line.edge-relaxed {
+  stroke: #38bdf8 !important;
+  stroke-width: 3 !important;
+}
+
+.graph-edge-line.edge-mst {
+  stroke: #10b981 !important;
+  stroke-width: 4 !important;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
+}
+
+/* ─── REAL-TIME GRAPH HUD ─────────────────────────────────────────── */
+
+.graph-hud-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 580px;
+  margin-top: 1rem;
+}
+
+.graph-hud-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+}
+
+.graph-hud-badge-title {
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}

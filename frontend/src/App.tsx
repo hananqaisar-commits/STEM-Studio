@@ -14,6 +14,7 @@ import { BSTPage } from './features/bst/BSTPage';
 import { StackQueuePage } from './features/stackQueue/StackQueuePage';
 import { LinkedListPage } from './features/linkedList/LinkedListPage';
 import { BinarySearchPage } from './features/binarySearch/BinarySearchPage';
+import { GraphPage } from './features/graph/GraphPage';
 
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
@@ -79,7 +80,7 @@ const DashboardLayout = () => {
             <Route path="linkedList" element={<LinkedListPage />} />
             <Route path="bst" element={<BSTPage />} />
             <Route path="binarySearch" element={<BinarySearchPage />} />
-            <Route path="graph" element={<PlaceholderModule title="Graph Algorithms" />} />
+            <Route path="graph" element={<GraphPage />} />
           </Routes>
         </main>
       </div>
