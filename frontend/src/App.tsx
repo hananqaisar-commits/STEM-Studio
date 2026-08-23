@@ -48,6 +48,7 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const pathSegment = location.pathname.split('/')[2] || 'sorting';
 
@@ -55,12 +56,20 @@ const DashboardLayout = () => {
     navigate(`/dashboard/${topicId}`);
   };
 
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const closeSidebar = () => setIsSidebarOpen(false);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Navbar />
-      <div style={{ display: 'flex', flex: 1 }}>
-        <TopicMenu activeTopic={pathSegment} onSelectTopic={handleSelectTopic} />
-        <main style={{ flex: 1, backgroundColor: 'var(--bg-secondary)', overflowY: 'auto' }}>
+    <div className="dashboard-shell">
+      <Navbar onToggleSidebar={toggleSidebar} />
+      <div className="dashboard-body">
+        <TopicMenu
+          activeTopic={pathSegment}
+          onSelectTopic={handleSelectTopic}
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+        />
+        <main className="dashboard-main">
           <Routes>
             <Route path="/" element={<Navigate to="sorting" replace />} />
             <Route path="sorting" element={<SortingPage />} />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart2, Layers, GitCommit, GitPullRequest, Search, Share2 } from 'lucide-react';
+import { BarChart2, Layers, GitCommit, GitPullRequest, Search, Share2, X } from 'lucide-react';
 import './Layout.css';
 
 interface TopicItem {
@@ -21,33 +21,59 @@ const TOPICS: TopicItem[] = [
 interface TopicMenuProps {
   activeTopic: string;
   onSelectTopic: (topicId: string) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const TopicMenu: React.FC<TopicMenuProps> = ({
   activeTopic,
   onSelectTopic,
+  isOpen = false,
+  onClose,
 }) => {
-  return (
-    <aside className="topic-sidebar">
-      <div className="sidebar-header">
-        <span className="sidebar-title">ALGORITHM MODULES</span>
-      </div>
+  const handleTopicClick = (topicId: string) => {
+    onSelectTopic(topicId);
+    // Auto-close drawer on mobile after selection
+    if (onClose) onClose();
+  };
 
-      <nav className="topic-list">
-        {TOPICS.map((topic) => (
+  return (
+    <>
+      {/* Overlay backdrop — only visible on mobile/tablet when sidebar is open */}
+      <div
+        className={`sidebar-overlay ${isOpen ? 'visible' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside className={`topic-sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+        <div className="sidebar-header">
+          <span className="sidebar-title">ALGORITHM MODULES</span>
           <button
-            key={topic.id}
-            className={`topic-card ${activeTopic === topic.id ? 'active' : ''}`}
-            onClick={() => onSelectTopic(topic.id)}
+            className="sidebar-close-btn"
+            onClick={onClose}
+            aria-label="Close sidebar"
           >
-            <div className="topic-icon">{topic.icon}</div>
-            <div className="topic-info">
-              <span className="topic-name">{topic.name}</span>
-              <span className="topic-category">{topic.category}</span>
-            </div>
+            <X size={18} />
           </button>
-        ))}
-      </nav>
-    </aside>
+        </div>
+
+        <nav className="topic-list">
+          {TOPICS.map((topic) => (
+            <button
+              key={topic.id}
+              className={`topic-card ${activeTopic === topic.id ? 'active' : ''}`}
+              onClick={() => handleTopicClick(topic.id)}
+            >
+              <div className="topic-icon">{topic.icon}</div>
+              <div className="topic-info">
+                <span className="topic-name">{topic.name}</span>
+                <span className="topic-category">{topic.category}</span>
+              </div>
+            </button>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 };
