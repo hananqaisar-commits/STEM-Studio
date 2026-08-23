@@ -126,3 +126,23 @@ img, video, svg, canvas {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary); 
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE OVERRIDES
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+}

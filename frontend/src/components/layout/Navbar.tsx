@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Monitor, LogOut, User, Sparkles } from 'lucide-react';
+import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import './Layout.css';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  onToggleSidebar?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -20,6 +24,15 @@ export const Navbar: React.FC = () => {
   return (
     <header className="app-navbar">
       <div className="navbar-left">
+        {/* Hamburger — visible only on mobile/tablet via CSS */}
+        <button
+          className="hamburger-btn"
+          onClick={onToggleSidebar}
+          aria-label="Toggle navigation menu"
+        >
+          <Menu size={20} />
+        </button>
+
         <Link to="/dashboard" className="navbar-brand">
           <div className="brand-logo-glow">
             <Sparkles size={22} className="brand-icon" />
