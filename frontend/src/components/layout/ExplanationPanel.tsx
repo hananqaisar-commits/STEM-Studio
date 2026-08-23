@@ -9,7 +9,10 @@ interface TimeComplexity {
 }
 
 interface ExplanationPanelProps {
-  description: string;
+  description?: string;
+  explanation?: string;
+  stepNumber?: number;
+  totalSteps?: number;
   codeLine?: number;
   pseudocode?: string[];
   timeComplexity?: TimeComplexity;
@@ -18,20 +21,29 @@ interface ExplanationPanelProps {
 
 export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
   description,
+  explanation,
+  stepNumber,
+  totalSteps,
   codeLine,
   pseudocode = [],
   timeComplexity,
   spaceComplexity,
 }) => {
+  const textToShow = explanation || description || 'Select an algorithm and click Play to start visualization.';
+  const headerText =
+    stepNumber !== undefined && totalSteps !== undefined
+      ? `STEP ${stepNumber} OF ${totalSteps}`
+      : 'CURRENT STEP EXPLANATION';
+
   return (
     <div className="explanation-panel">
       {/* Step Explanation Header */}
       <div className="panel-section step-explanation">
         <div className="section-title">
           <Info size={16} />
-          <span>CURRENT STEP EXPLANATION</span>
+          <span>{headerText}</span>
         </div>
-        <p className="explanation-text">{description || 'Select an algorithm and click Play to start visualization.'}</p>
+        <p className="explanation-text">{textToShow}</p>
       </div>
 
       {/* Complexity Cards */}

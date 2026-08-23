@@ -12,6 +12,9 @@ import { TopicMenu } from './components/layout/TopicMenu';
 import { SortingPage } from './features/sorting/SortingPage';
 import { BSTPage } from './features/bst/BSTPage';
 import { StackQueuePage } from './features/stackQueue/StackQueuePage';
+import { LinkedListPage } from './features/linkedList/LinkedListPage';
+import { BinarySearchPage } from './features/binarySearch/BinarySearchPage';
+import { GraphPage } from './features/graph/GraphPage';
 
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
@@ -37,19 +40,7 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-/**
- * Placeholder component for upcoming module phases
- */
-const PlaceholderModule: React.FC<{ title: string }> = ({ title }) => (
-  <div style={{
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', height: '100%', minHeight: '400px',
-    color: 'var(--text-secondary)', gap: '1rem', padding: '2rem'
-  }}>
-    <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>{title} Module</h2>
-    <p>This module is queued for execution in the next implementation phase.</p>
-  </div>
-);
+
 
 /**
  * Main STEM Studio Dashboard Layout with Navbar & Sidebar
@@ -74,10 +65,10 @@ const DashboardLayout = () => {
             <Route path="/" element={<Navigate to="sorting" replace />} />
             <Route path="sorting" element={<SortingPage />} />
             <Route path="stackQueue" element={<StackQueuePage />} />
-            <Route path="linkedList" element={<PlaceholderModule title="Linked List" />} />
+            <Route path="linkedList" element={<LinkedListPage />} />
             <Route path="bst" element={<BSTPage />} />
-            <Route path="binarySearch" element={<PlaceholderModule title="Binary Search" />} />
-            <Route path="graph" element={<PlaceholderModule title="Graph Algorithms" />} />
+            <Route path="binarySearch" element={<BinarySearchPage />} />
+            <Route path="graph" element={<GraphPage />} />
           </Routes>
         </main>
       </div>

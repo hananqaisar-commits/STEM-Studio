@@ -1,5 +1,6 @@
 import os
 import sys
+from contextlib import asynccontextmanager
 
 # Ensure backend directory is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -9,31 +10,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 try:
     from backend.app.api.routes.auth import router as auth_router
+    from backend.app.api.routes.progress import router as progress_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
+    from app.api.routes.progress import router as progress_router
     from app.core.config import get_settings
 
 
 settings = get_settings()
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    description="STEM Studio - Interactive Algorithm Visualization Platform",
-    version="1.0.0",
-)
-
-from backend.infrastructure.database.database import Base, engine
-import backend.infrastructure.database.models # Keep models imported
-
-# ─── CORS Middleware ─────────────────────────────────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ─── Auto-create database tables ─────────────────────────────────────
 def init_db_tables():
@@ -49,17 +35,34 @@ def init_db_tables():
     except Exception as e:
         print(f"⚠️ Table creation notice: {e}")
 
-# Create tables immediately on module import
-init_db_tables()
 
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(application):
+    """Application lifespan handler — runs startup logic."""
     init_db_tables()
+    yield
 
 
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="STEM Studio - Interactive Algorithm Visualization Platform",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# ─── CORS Middleware ─────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ─── Register Routers ───────────────────────────────────────────────
 app.include_router(auth_router)
+app.include_router(progress_router)
+
 
 
 # ─── Health & DB Check ───────────────────────────────────────────────
