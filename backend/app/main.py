@@ -23,6 +23,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
+from backend.infrastructure.database.database import Base, engine
+import backend.infrastructure.database.models # Keep models imported
+
 # ─── CORS Middleware ─────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,

@@ -14,6 +14,8 @@ if "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATA
 
 engine = create_engine(
     settings.DATABASE_URL,
+
+
     connect_args=connect_args,
     pool_size=10,
     max_overflow=20,
@@ -21,7 +23,6 @@ engine = create_engine(
     pool_recycle=3600,
     echo=settings.DEBUG,
 )
-
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
