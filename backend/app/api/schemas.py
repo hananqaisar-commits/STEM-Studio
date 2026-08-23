@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # ─── Auth Request Schemas ────────────────────────────────────────────
@@ -51,8 +51,7 @@ class UserResponse(BaseModel):
     is_verified: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageResponse(BaseModel):
@@ -90,8 +89,7 @@ class ModuleProgressResponse(BaseModel):
     completion_percentage: int
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserStatsResponse(BaseModel):
@@ -120,6 +118,5 @@ class SavedSessionResponse(BaseModel):
     dataset_json: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
