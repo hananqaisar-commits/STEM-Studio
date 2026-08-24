@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2 } from 'lucide-react';
-import { useAuth, ApiError } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import './Auth.css';
 
 export const SignIn: React.FC = () => {
@@ -22,12 +22,8 @@ export const SignIn: React.FC = () => {
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

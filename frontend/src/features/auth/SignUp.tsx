@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, UserPlus, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
-import { useAuth, ApiError } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import './Auth.css';
 
 export const SignUp: React.FC = () => {
@@ -26,12 +26,8 @@ export const SignUp: React.FC = () => {
       await signup(username, email, password);
       setSuccess('Account created successfully! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
