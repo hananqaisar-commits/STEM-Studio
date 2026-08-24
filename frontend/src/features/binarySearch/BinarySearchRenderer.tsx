@@ -35,7 +35,7 @@ export const BinarySearchRenderer: React.FC<BinarySearchRendererProps> = ({
           </span>
         </div>
 
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+        <div style={{ width: '1px', height: '24px', background: 'var(--color-border)' }} />
 
         <div className="bs-hud-metric">
           <span className="bs-hud-label">ARR[MID]</span>
@@ -46,7 +46,7 @@ export const BinarySearchRenderer: React.FC<BinarySearchRendererProps> = ({
           </span>
         </div>
 
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+        <div style={{ width: '1px', height: '24px', background: 'var(--color-border)' }} />
 
         <div className="bs-hud-metric">
           <span className="bs-hud-label">EVALUATION</span>

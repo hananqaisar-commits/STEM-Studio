@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check } from 'lucide-react';
+import { useTheme, Theme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import './Layout.css';
 
@@ -13,13 +13,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showThemeDropdown, setShowThemeDropdown] = useState(false);
+  
+  const themeDropdownRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  const toggleTheme = () => {
-    if (theme === 'light') setTheme('dark');
-    else if (theme === 'dark') setTheme('system');
-    else setTheme('light');
-  };
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target as Node)) {
+        setShowThemeDropdown(false);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] = [
+    { value: 'grayscale-light', label: 'Grayscale Light', icon: <Sun size={14} /> },
+    { value: 'warm-light', label: 'Warm Light', icon: <Sun size={14} /> },
+    { value: 'dark', label: 'Dark', icon: <Moon size={14} /> },
+    { value: 'warm-neutral', label: 'Warm Neutral', icon: <Sun size={14} /> },
+    { value: 'system', label: 'System', icon: <Monitor size={14} /> },
+  ];
 
   return (
     <header className="app-navbar">
@@ -81,19 +101,42 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
       </nav>
 
       <div className="navbar-right">
-        <button
-          onClick={toggleTheme}
-          className="navbar-icon-btn"
-          title={`Theme: ${theme}`}
-          aria-label="Toggle Theme"
-        >
-          {theme === 'light' ? <Sun size={18} /> : theme === 'dark' ? <Moon size={18} /> : <Monitor size={18} />}
-        </button>
+        <div className="theme-dropdown-container" ref={themeDropdownRef}>
+          <button
+            className="theme-selector-btn"
+            onClick={() => setShowThemeDropdown(!showThemeDropdown)}
+            aria-label="Select Appearance"
+          >
+            <span className="theme-selector-label">Appearance</span>
+            <ChevronDown size={14} />
+          </button>
 
-        <div className="user-dropdown-container">
+          {showThemeDropdown && (
+            <div className="theme-dropdown-menu animate-fade-in">
+              <div className="dropdown-header">Appearance</div>
+              <div className="dropdown-divider" />
+              {themeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  className={`dropdown-item theme-option-btn ${theme === option.value ? 'active' : ''}`}
+                  onClick={() => {
+                    setTheme(option.value);
+                    setShowThemeDropdown(false);
+                  }}
+                >
+                  <span className="theme-option-icon">{option.icon}</span>
+                  <span className="theme-option-text">{option.label}</span>
+                  {theme === option.value && <Check size={14} className="theme-active-icon" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="user-dropdown-container" ref={userDropdownRef}>
           <button
             className="user-profile-btn"
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
           >
             <div className="user-avatar">
               <User size={16} />
@@ -101,7 +144,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             <span className="user-name">{user?.username || 'Account'}</span>
           </button>
 
-          {showDropdown && (
+          {showUserDropdown && (
             <div className="user-dropdown-menu animate-fade-in">
               <div className="dropdown-user-info">
                 <span className="dropdown-username">{user?.username}</span>

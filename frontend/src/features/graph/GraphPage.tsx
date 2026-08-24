@@ -251,7 +251,7 @@ export const GraphPage: React.FC = () => {
         <div className="graph-toolbar-actions">
           {category !== 'topoSort' && (
             <div className="bs-input-group">
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: '4px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
                 Start:
               </span>
               <select
@@ -259,7 +259,7 @@ export const GraphPage: React.FC = () => {
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  color: 'var(--text-primary)',
+                  color: 'var(--color-text)',
                   fontSize: '0.82rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -268,7 +268,7 @@ export const GraphPage: React.FC = () => {
                 onChange={(e) => setStartNode(e.target.value)}
               >
                 {nodes.map((n) => (
-                  <option key={n.id} value={n.id} style={{ background: 'var(--bg-card)' }}>
+                  <option key={n.id} value={n.id} style={{ background: 'var(--color-surface)' }}>
                     Vertex {n.label}
                   </option>
                 ))}

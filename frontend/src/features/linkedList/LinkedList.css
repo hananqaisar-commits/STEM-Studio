@@ -7,8 +7,8 @@
   min-height: calc(100vh - 64px);
   padding: 1.5rem 2rem;
   gap: 1.5rem;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--color-app-bg);
+  color: var(--color-text);
   box-sizing: border-box;
 }
 
@@ -45,14 +45,14 @@
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
-  background: linear-gradient(to right, var(--text-primary), var(--text-secondary));
+  background: linear-gradient(to right, var(--color-text), var(--color-text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .ll-title-text p {
   font-size: 0.82rem;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   margin: 0.15rem 0 0 0;
 }
 
@@ -66,8 +66,8 @@
 .ll-search-input-box {
   display: flex;
   align-items: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 9999px;
   padding: 0.45rem 0.9rem;
   gap: 0.6rem;
@@ -85,12 +85,12 @@
   border: none;
   outline: none;
   font-size: 0.85rem;
-  color: var(--text-primary);
+  color: var(--color-text);
   width: 100%;
 }
 
 .ll-search-input::placeholder {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .ll-shortcut-badge {
@@ -98,8 +98,8 @@
   padding: 0.15rem 0.4rem;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   font-family: monospace;
 }
 
@@ -108,8 +108,8 @@
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 0.5rem;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
@@ -137,12 +137,12 @@
 .ll-item-name {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 .ll-item-desc {
   font-size: 0.72rem;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 /* ─── CATEGORY PILL TABS ─────────────────────────────────────────── */
@@ -163,17 +163,17 @@
   border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 500;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .ll-tab-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
 }
 
 .ll-tab-btn.active {
@@ -190,8 +190,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 0.75rem 1rem;
 }
@@ -206,8 +206,8 @@
 .ll-input-group {
   display: flex;
   align-items: center;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.2rem 0.5rem;
 }
@@ -216,7 +216,7 @@
   background: transparent;
   border: none;
   outline: none;
-  color: var(--text-primary);
+  color: var(--color-text);
   font-size: 0.82rem;
   width: 55px;
   text-align: center;
@@ -246,13 +246,13 @@
 }
 
 .ll-btn-secondary {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-  color: var(--text-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }
 
 .ll-btn-secondary:hover {
-  background: var(--bg-hover);
+  background: var(--color-surface-elevated);
 }
 
 .ll-btn-danger {
@@ -286,8 +286,8 @@
 .ll-canvas-card {
   display: flex;
   flex-direction: column;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -298,14 +298,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--color-border);
   background: rgba(0, 0, 0, 0.02);
 }
 
 .ll-canvas-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--color-text);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -400,8 +400,8 @@
 .ll-node-box {
   display: flex;
   align-items: center;
-  background: var(--bg-secondary);
-  border: 2px solid var(--border-color);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -437,7 +437,7 @@
   padding: 0.6rem 0.9rem;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--color-text);
   min-width: 38px;
   text-align: center;
   font-family: monospace;
@@ -449,7 +449,7 @@
   justify-content: center;
   padding: 0.6rem 0.6rem;
   background: rgba(0, 0, 0, 0.08);
-  border-left: 1px solid var(--border-color);
+  border-left: 1px solid var(--color-border);
 }
 
 .ll-ptr-dot {
@@ -479,10 +479,10 @@
   padding: 0.4rem 0.7rem;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed var(--border-color);
+  border: 1px dashed var(--color-border);
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-family: monospace;
   margin-left: 0.25rem;
 }

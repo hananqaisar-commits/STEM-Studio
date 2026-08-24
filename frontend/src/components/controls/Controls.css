@@ -13,18 +13,18 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: var(--shadow-sm);
 }
 
 .control-btn:hover:not(:disabled) {
-  background-color: var(--bg-secondary);
-  border-color: var(--accent-secondary);
-  color: var(--accent-primary);
+  background-color: var(--color-surface);
+  border-color: var(--color-primary-hover);
+  color: var(--color-primary);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -38,7 +38,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: var(--accent-primary);
+  background-color: var(--color-primary);
   border: none;
   color: #ffffff;
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
@@ -67,25 +67,25 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.875rem;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
 }
 
 .speed-icon {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .speed-label {
   font-size: 0.85rem;
   font-weight: 600;
   min-width: 35px;
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 .speed-range-input {
   width: 90px;
-  accent-color: var(--accent-primary);
+  accent-color: var(--color-primary);
   cursor: pointer;
 }

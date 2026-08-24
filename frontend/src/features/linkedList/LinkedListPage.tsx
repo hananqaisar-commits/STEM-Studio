@@ -308,7 +308,7 @@ export const LinkedListPage: React.FC = () => {
         <div className="ll-toolbar-actions">
           {/* Custom Input */}
           <div className="ll-input-group">
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: '4px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
               Val:
             </span>
             <input
