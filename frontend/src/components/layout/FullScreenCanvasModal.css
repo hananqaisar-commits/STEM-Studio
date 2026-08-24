@@ -290,7 +290,10 @@
 .fs-modal-body {
   flex: 1 !important;
   width: 100% !important;
-  height: calc(100vh - 120px) !important;
+  /* Sized by flex against the header/footer rather than a hard-coded
+     `calc(100vh - 120px)`. The old fixed height assumed a footer was
+     always present and over-reserved ~60px on pages that render none. */
+  min-height: 0;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -300,7 +303,7 @@
 .fs-workspace-scrollable {
   flex: 1 !important;
   width: 100% !important;
-  height: 100% !important;
+  min-height: 0;
   overflow: auto !important; /* Auto scrollbars/sliders when tree/graph expands */
   padding: 1rem;
   box-sizing: border-box;

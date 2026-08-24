@@ -3,6 +3,7 @@ import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Spar
 import { BSTRenderer } from './BSTRenderer';
 import { PredictionQuiz } from './PredictionQuiz';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -386,6 +387,21 @@ export const BSTPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <VisualizerHeader
+        icon={<Network size={22} />}
+        title="Tree Structures Studio"
+        subtitle="Interactive Binary Search Trees, Self-Balancing AVL, Heaps, & Tries"
+        items={[
+          { id: 'bst', name: 'Binary Search Tree (BST)', description: 'Ordered insert, search, and depth-first traversals', group: 'Trees' },
+          { id: 'avl', name: 'AVL Tree (Self-Balancing)', description: 'Height-balanced tree with LL/RR/LR/RL rotations', group: 'Balanced' },
+          { id: 'heap', name: 'Binary Heap (Priority Queue)', description: 'Array-backed complete tree with sift-up and sift-down', group: 'Heaps' },
+          { id: 'trie', name: 'Trie (Prefix Tree)', description: 'Character-indexed prefix tree for word lookup', group: 'Strings' },
+        ]}
+        activeId={treeCategory}
+        onSelect={(id) => setTreeCategory(id as TreeCategory)}
+        placeholder="Search tree structure or operation..."
+      />
+
       {/* Category Tabs with Pure Vector Icons */}
       <div className="tree-category-toolbar animate-fade-in">
         <div className="tree-category-tabs">

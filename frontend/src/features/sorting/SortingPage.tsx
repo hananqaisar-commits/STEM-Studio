@@ -11,6 +11,7 @@ import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 
 import { generateBubbleSortSteps } from './algorithms/bubbleSort';
@@ -202,8 +203,73 @@ export const SortingPage: React.FC = () => {
     </div>
   );
 
+  const renderFloatingControls = () => (
+    <div className="fs-floating-controls">
+      <div className="bst-input-group">
+        <span>Size:</span>
+        <input
+          type="range"
+          min={5}
+          max={30}
+          value={arraySize}
+          onChange={(e) => {
+            const size = parseInt(e.target.value);
+            setArraySize(size);
+            reset();
+            setInitialArray(generateArray(size, arrayPattern));
+          }}
+          className="toolbar-range w-24"
+        />
+        <span className="text-xs font-mono font-bold">{arraySize}</span>
+      </div>
+
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
+          <Trash2 size={14} />
+          <span>Empty</span>
+        </button>
+        <button
+          className="bst-btn btn-mode"
+          onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])}
+          title="Sample Array"
+        >
+          <Layers size={14} />
+          <span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
+          <Sparkles size={14} />
+          <span>Random</span>
+        </button>
+      </div>
+
+      <label className="predict-toggle-label ml-2">
+        <HelpCircle size={16} />
+        <span>Predict Mode</span>
+        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+      </label>
+    </div>
+  );
+
   return (
     <div className="bst-page-container">
+      <VisualizerHeader
+        icon={<Layers size={22} />}
+        title="Sorting Algorithms Studio"
+        subtitle="Interactive Comparison, Partitioning, & In-Place Array Sorting"
+        items={ALGORITHMS.map((alg) => ({
+          id: alg.key,
+          name: alg.name,
+          description: `Step-by-step ${alg.name} execution over a live memory array`,
+          group: alg.complexity,
+        }))}
+        activeId={selectedAlg}
+        onSelect={(id) => {
+          setSelectedAlg(id as AlgorithmKey);
+          reset();
+        }}
+        placeholder="Search sorting algorithm or complexity..."
+      />
+
       {/* Category Tabs Bar Matching BST */}
       <div className="tree-category-toolbar animate-fade-in">
         <div className="tree-category-tabs flex-wrap">
@@ -358,8 +424,18 @@ export const SortingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
+        toolbarControls={renderFloatingControls()}
         playbackControls={renderPlayerControls()}
       >
+        {hasPrediction && val1 !== undefined && val2 !== undefined && comparing && (
+          <SortingPredictionQuiz
+            val1={val1}
+            val2={val2}
+            idx1={comparing[0]}
+            idx2={comparing[1]}
+            onCorrectAnswer={() => stepForward()}
+          />
+        )}
         <SortingRenderer
           currentStep={currentStep}
           onElementClick={handleBarElementClick}

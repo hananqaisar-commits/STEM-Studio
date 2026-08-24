@@ -1,0 +1,390 @@
+/* ═══════════════════════════════════════════════════════════════════
+   VISUALIZER SHELL — shared layout contract for all 6 algorithm pages
+   ═══════════════════════════════════════════════════════════════════
+
+   Single source of truth for the page shell that every category page
+   (Sorting, BST, Stack & Queue, Linked List, Binary Search, Graph)
+   renders. The BST page is the reference design; everything here either
+   defines a piece that was missing, or pulls a divergent page onto BST's
+   geometry so all six align identically.
+
+   Loaded once from main.tsx, after index.css.
+
+   Scope: page shell only — page container, header, tabs, toolbar,
+   workspace grid, side column, player bar. Renderer-internal styling
+   (nodes, bars, edges, tubes) stays in each feature's own stylesheet.
+   ─────────────────────────────────────────────────────────────────── */
+
+/* ─── 0. PAGE CONTAINER ────────────────────────────────────────────
+   The three studio pages each declared their own container with the
+   same intent but slightly different padding. Aligned on one shape so
+   all six pages start at the same page inset and vertical rhythm. */
+
+.linked-list-container,
+.graph-container,
+.bs-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--navbar-height));
+  padding: var(--space-page);
+  gap: var(--space-section);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+/* ─── 0b. SHARED PAGE HEADER + ⌘K PALETTE ──────────────────────────
+   Styling for `VisualizerHeader`, which replaces the three byte-identical
+   header copies in LinkedList.css / Graph.css / BinarySearch.css and adds
+   the same header to BST and Sorting, which had none. Visual design is
+   carried over from the studio pages so those three do not change look. */
+
+.viz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.viz-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.viz-title-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #818cf8;
+}
+
+.viz-title-text h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.viz-title-text p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0.15rem 0 0 0;
+}
+
+.viz-search-wrapper {
+  position: relative;
+  min-width: 320px;
+  flex: 0 1 380px;
+}
+
+.viz-search-input-box {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.9rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  color: var(--text-secondary);
+  cursor: text;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.viz-search-input-box:focus-within {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
+
+.viz-search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.viz-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.viz-shortcut-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.viz-search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.viz-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.viz-search-item:hover,
+.viz-search-item.active {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.viz-item-body {
+  min-width: 0;
+}
+
+.viz-item-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.viz-item-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.viz-search-empty {
+  padding: 0.85rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 720px) {
+  .viz-search-wrapper {
+    min-width: 100%;
+  }
+}
+
+/* ─── 1. WORKSPACE GRID ────────────────────────────────────────────
+   BST/Sorting used `1fr 340px` breaking at 1024px; Linked List, Graph
+   and Binary Search used `1fr 380px` breaking at 1100px. That mismatch
+   is why the side column sat at a different width on three of the six
+   pages. Standardised on the BST reference geometry. */
+
+.sorting-workspace,
+.ll-workspace,
+.graph-workspace,
+.bs-workspace {
+  display: grid;
+  grid-template-columns: 1fr var(--viz-side-col, 340px);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .sorting-workspace,
+  .ll-workspace,
+  .graph-workspace,
+  .bs-workspace {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* ─── 2. COLUMNS ───────────────────────────────────────────────────
+   `.renderer-section` was defined in Sorting.css and relied on by BST.
+   `.explanation-section` and `.debugger-sidebar` were referenced by
+   four pages but defined in NO stylesheet — which is why the right-hand
+   column had no gap or alignment of its own. Defined here. */
+
+.renderer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0; /* lets the canvas shrink instead of overflowing the grid */
+}
+
+.explanation-section,
+.debugger-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* ─── 3. CANVAS CARD ───────────────────────────────────────────────
+   Linked List / Graph / Binary Search wrap their renderer in a card with
+   a page-level header. Keep that shape but align padding, radius and
+   shadow with BST's `.bst-canvas-container`. */
+
+.ll-canvas-card,
+.graph-canvas-card,
+.bs-canvas-card,
+.bst-canvas-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.ll-canvas-header,
+.graph-canvas-header,
+.bs-canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ─── 4. MISSING BUTTON VARIANT ────────────────────────────────────
+   `.btn-fullscreen` was used by Sorting and Stack & Queue but never
+   defined anywhere, so those buttons rendered as a bare `.bst-btn`. */
+
+.bst-btn.btn-fullscreen {
+  color: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+}
+
+.bst-btn.btn-fullscreen:hover {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+/* ─── 5. STRUCTURAL UTILITIES ──────────────────────────────────────
+   The pages were authored against Tailwind utility classes, but Tailwind
+   was never a dependency, so every one of them was a silent no-op — the
+   main cause of the misalignment. These are the structurally
+   load-bearing ones, defined as real CSS so the layout holds whether or
+   not Tailwind is present. Purely cosmetic utilities (text colours,
+   font sizes) are left to Tailwind. */
+
+.viz-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.viz-row-tight {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.viz-row-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.viz-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── 6. FULLSCREEN — CANVAS FILL ──────────────────────────────────
+   Only `.bst-canvas-container` and `.sorting-canvas-container` had
+   fullscreen stretch overrides (in FullScreenCanvasModal.css), so the
+   other eight renderers stayed pinned at their authored height —
+   480px for the Stack & Queue family, 320-340px min-height for Linked
+   List / Graph / Binary Search — leaving most of the screen empty.
+   These bring the remaining containers up to full height. */
+
+.fs-workspace-scrollable .stack-container,
+.fs-workspace-scrollable .queue-container,
+.fs-workspace-scrollable .circular-queue-container,
+.fs-workspace-scrollable .problem-container,
+.fs-workspace-scrollable .tree-canvas-container {
+  height: 100% !important;
+  min-height: calc(100vh - 190px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.fs-workspace-scrollable .ll-canvas-card,
+.fs-workspace-scrollable .graph-canvas-card,
+.fs-workspace-scrollable .bs-canvas-card,
+.fs-workspace-scrollable .bst-canvas-card {
+  height: 100% !important;
+  min-height: calc(100vh - 190px) !important;
+}
+
+.fs-workspace-scrollable .ll-canvas-body,
+.fs-workspace-scrollable .graph-canvas-body,
+.fs-workspace-scrollable .bs-canvas-body {
+  flex: 1 !important;
+  min-height: calc(100vh - 260px) !important;
+}
+
+/* Empty states were left behind by the original overrides and stayed at
+   their authored fixed height in fullscreen. */
+.fs-workspace-scrollable .bst-canvas-empty,
+.fs-workspace-scrollable .sorting-canvas-empty {
+  height: 100% !important;
+  min-height: calc(100vh - 190px) !important;
+}
+
+/* Graph's SVG is hard-capped at 580x320 for the dashboard layout, which
+   would never fill a fullscreen canvas. */
+.fs-workspace-scrollable .graph-svg-canvas {
+  max-width: none !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: calc(100vh - 280px) !important;
+}
+
+/* `.min-tube` is authored with `height: 300px !important`, so it needs
+   an equally strong override to grow. */
+.fs-workspace-scrollable .min-tube {
+  height: auto !important;
+  min-height: calc(100vh - 340px) !important;
+}
+
+.fs-workspace-scrollable .stack-glass-tube {
+  height: auto !important;
+  min-height: calc(100vh - 320px) !important;
+}
+
+/* ─── 7. FULLSCREEN — PLAYER BAR ───────────────────────────────────
+   The modal footer hosts the same player bar the dashboard uses; drop
+   its outer margin so it sits flush inside the footer. */
+
+.fs-modal-footer .player-bar {
+  margin: 0 !important;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
