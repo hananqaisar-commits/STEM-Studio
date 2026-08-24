@@ -108,9 +108,27 @@ main
   - Keep `/api/health` and `/api/db-check` active for diagnostic verification.
 - **Database URL Formatting (`backend/app/core/config.py`)**:
   - Automatically convert `mysql://` to `mysql+pymysql://` and `postgres://` to `postgresql://`. Strip query params like `ssl-mode`/`ssl_mode` incompatible with PyMySQL.
-- **Frontend Core Components & Types (`frontend/src/`)**:
-  - Do not break shared component interfaces (`PlayPauseButton`, `ExplanationPanel`) used across visualizer pages.
-  - Always verify `npm run build` (`tsc -b && vite build`) passes with zero errors before pushing to `dev` or `main`.
+## 15. Protected Files & Unchangeable Logic Matrix (Strict Safety Enforcement)
+To prevent deployment regressions and broken production pipelines, the following file blocks MUST NOT be modified or stripped without explicit architectural review:
+
+1. **Database Dialect Isolation (`backend/infrastructure/database/database.py`)**:
+   - **Protected Block**: Dialect detection (`db_url.startswith("sqlite")`), SQLite `check_same_thread=False` setting, and MySQL `ssl.SSLContext` (`verify_mode = ssl.CERT_NONE`).
+   - **Enforcement**: NEVER pass MySQL SSL dictionary options to SQLite connections, as SQLite will crash with `TypeError`.
+2. **Application Lifespan & Diagnostics (`backend/app/main.py`)**:
+   - **Protected Block**: `init_db_tables()` inside `lifespan(application)`, `traceback.format_exc()` error logging, and `/api/db-check` endpoint.
+   - **Enforcement**: DO NOT swallow table creation exceptions or remove lifespan startup hooks.
+3. **Database URL Sanitization (`backend/app/core/config.py`)**:
+   - **Protected Block**: `format_database_url` validator.
+   - **Enforcement**: MUST maintain `mysql://` → `mysql+pymysql://` conversion and query parameter stripping (e.g. `ssl-mode`).
+4. **API Client & Network Error Handling (`frontend/src/api/apiClient.ts`)**:
+   - **Protected Block**: `fetch` wrapper with `ApiError(0, ...)` catch block, authorization token header attachment, and `tryRefreshToken()` mechanics.
+   - **Enforcement**: DO NOT remove network exception catching to prevent generic `"Something went wrong"` UI masks.
+5. **Authentication Context (`frontend/src/contexts/AuthContext.tsx`)**:
+   - **Protected Block**: `access_token` and `refresh_token` localStorage management and `/api/auth/me` user state initialization.
+   - **Enforcement**: DO NOT alter storage keys or session initialization logic.
+6. **Shared Visualizer Components (`frontend/src/components/controls/PlayPauseButton.tsx` & `ExplanationPanel.tsx`)**:
+   - **Protected Block**: `PlayPauseButtonProps` and `ExplanationPanelProps` interfaces.
+   - **Enforcement**: DO NOT rename or delete prop definitions used by algorithm visualizer modules (`BinarySearch`, `Graph`, `LinkedList`, `BST`, `Sorting`).
 
 ---
 
