@@ -53,6 +53,24 @@
   gap: 0.5rem;
 }
 
+/* Two inputs side by side (e.g. First Name / Last Name) */
+.input-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.input-row .input-group {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 400px) {
+  .input-row {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+}
+
 .input-group label {
   font-size: 0.875rem;
   font-weight: 500;
