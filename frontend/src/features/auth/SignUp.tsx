@@ -5,10 +5,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import './Auth.css';
 
 export const SignUp: React.FC = () => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,10 +24,17 @@ export const SignUp: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Client-side check: the two passwords must match before we hit the API
+    if (password !== confirmPassword) {
+      setError('Passwords do not match. Please re-enter them.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await signup(username, email, password);
+      await signup(username, email, password, firstName, lastName);
       setSuccess('Account created successfully! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
@@ -57,6 +68,44 @@ export const SignUp: React.FC = () => {
         )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="input-row">
+            <div className="input-group">
+              <label htmlFor="firstName">First Name</label>
+              <div className="input-wrapper">
+                <User className="input-icon" size={18} />
+                <input
+                  type="text"
+                  id="firstName"
+                  className="auth-input"
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  maxLength={50}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="lastName">Last Name</label>
+              <div className="input-wrapper">
+                <User className="input-icon" size={18} />
+                <input
+                  type="text"
+                  id="lastName"
+                  className="auth-input"
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  maxLength={50}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="input-group">
             <label htmlFor="username">Username</label>
             <div className="input-wrapper">
@@ -70,6 +119,7 @@ export const SignUp: React.FC = () => {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 minLength={3}
+                maxLength={50}
                 disabled={isSubmitting}
               />
             </div>
@@ -93,7 +143,7 @@ export const SignUp: React.FC = () => {
           </div>
 
           <div className="input-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Create Password</label>
             <div className="input-wrapper">
               <Lock className="input-icon" size={18} />
               <input
@@ -105,6 +155,7 @@ export const SignUp: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                maxLength={128}
                 disabled={isSubmitting}
               />
               <button
@@ -114,6 +165,33 @@ export const SignUp: React.FC = () => {
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="confirmPassword">Retype Password</label>
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                className="auth-input"
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                maxLength={128}
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
