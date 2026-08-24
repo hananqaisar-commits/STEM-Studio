@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Search,
   RotateCcw,
@@ -27,6 +27,7 @@ import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import './BinarySearch.css';
 
@@ -47,8 +48,6 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const BinarySearchPage: React.FC = () => {
   const [category, setCategory] = useState<BinarySearchCategory>('binarySearch');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
   const [array, setArray] = useState<number[]>([4, 8, 15, 23, 42, 56, 77, 89, 94]);
   const [targetInput, setTargetInput] = useState<string>('42');
@@ -60,35 +59,6 @@ export const BinarySearchPage: React.FC = () => {
 
   // Active steps dataset
   const [activeSteps, setActiveSteps] = useState<BinarySearchStep[]>([]);
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  // Global Keyboard Shortcut (⌘K / Ctrl+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        setIsSearchOpen(true);
-      } else if (e.key === 'Escape') {
-        setIsSearchOpen(false);
-      }
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   // Step Player Hook
   const {
@@ -108,7 +78,6 @@ export const BinarySearchPage: React.FC = () => {
   // Handle Category Switching
   const handleSelectCategory = (cat: BinarySearchCategory) => {
     setCategory(cat);
-    setIsSearchOpen(false);
     reset();
 
     if (cat === 'searchRotatedArray') {
@@ -229,12 +198,6 @@ export const BinarySearchPage: React.FC = () => {
     handleSelectCategory(category);
   };
 
-  const filteredAlgorithms = ALGORITHMS_LIST.filter(
-    (alg) =>
-      alg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alg.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const snippetKey =
     category === 'lowerBound'
       ? 'lowerBound'
@@ -244,55 +207,81 @@ export const BinarySearchPage: React.FC = () => {
 
   const currentTarget = Number(targetInput) || 0;
 
+  const renderPlayerControls = () => (
+    <div className="player-bar" style={{ margin: 0 }}>
+      <div className="player-left">
+        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
+        <StepControls
+          onStepBack={stepBack}
+          onStepForward={stepForward}
+          onReset={reset}
+          canStepBack={currentStepIndex > 0}
+          canStepForward={currentStepIndex < totalSteps - 1}
+        />
+      </div>
+
+      <div className="player-center">
+        <div className="step-progress-bar">
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+        </div>
+        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
+      </div>
+
+      <div className="player-right">
+        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+      </div>
+    </div>
+  );
+
+  const renderFloatingControls = () => (
+    <div className="fs-floating-controls">
+      <div className="bst-input-group">
+        <span>Target:</span>
+        <input
+          type="text"
+          className="bst-input"
+          value={targetInput}
+          onChange={(e) => setTargetInput(e.target.value)}
+        />
+      </div>
+
+      <button className="bst-btn btn-insert" onClick={handleRunSearch}>
+        <Play size={14} />
+        <span>Search</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleRandomize}>
+        <Shuffle size={14} />
+        <span>Random</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleReset}>
+        <RotateCcw size={14} />
+        <span>Reset</span>
+      </button>
+
+      <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
+        <HelpCircle size={16} />
+        <span>Quiz Mode</span>
+        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+      </label>
+    </div>
+  );
+
   return (
     <div className="bs-container">
-      {/* ─── TOP HEADER ──────────────────────────────────────────────────────── */}
-      <header className="bs-header">
-        <div className="bs-title-group">
-          <div className="bs-title-icon">
-            <Search size={22} />
-          </div>
-          <div className="bs-title-text">
-            <h1>Binary Search Studio</h1>
-            <p>Interactive Logarithmic Search, Bounds, & Pivoted Rotations</p>
-          </div>
-        </div>
-
-        {/* Spotlight Command Palette Search */}
-        <div className="bs-search-wrapper" ref={searchContainerRef}>
-          <div className="bs-search-input-box" onClick={() => setIsSearchOpen(true)}>
-            <Search size={15} className="text-secondary" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="bs-search-input"
-              placeholder="Search algorithm or pattern..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchOpen(true)}
-            />
-            <kbd className="ll-shortcut-badge">⌘K</kbd>
-          </div>
-
-          {isSearchOpen && (
-            <div className="bs-search-dropdown">
-              {filteredAlgorithms.map((alg) => (
-                <div
-                  key={alg.id}
-                  className={`bs-search-item ${category === alg.id ? 'active' : ''}`}
-                  onClick={() => handleSelectCategory(alg.id)}
-                >
-                  <div>
-                    <div className="ll-item-name">{alg.name}</div>
-                    <div className="ll-item-desc">{alg.description}</div>
-                  </div>
-                  <span className="ll-shortcut-badge">{alg.group}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </header>
+      <VisualizerHeader
+        icon={<Search size={22} />}
+        title="Binary Search Studio"
+        subtitle="Interactive Logarithmic Search, Bounds, & Pivoted Rotations"
+        items={ALGORITHMS_LIST.map((alg) => ({ id: alg.id, name: alg.name, description: alg.description, group: alg.group }))}
+        activeId={category}
+        onSelect={(id) => handleSelectCategory(id as BinarySearchCategory)}
+        placeholder="Search algorithm or pattern..."
+      />
 
       {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
       <div className="bs-tabs-bar">
@@ -396,76 +385,36 @@ export const BinarySearchPage: React.FC = () => {
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
       <div className="bs-workspace">
-        {/* Visualizer Canvas & Controls Card */}
-        <div className="bs-canvas-card">
-          <div className="bs-canvas-header">
-            <div className="ll-canvas-title">
-              <Sparkles size={16} color="#38bdf8" />
-              <span>
-                {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
-              </span>
-            </div>
-            {totalSteps > 0 && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                Step {currentStepIndex + 1} of {totalSteps}
-              </span>
-            )}
-          </div>
-
-          {/* Interactive Prediction Quiz Banner */}
+        <div className="renderer-section">
           {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-            <div style={{ padding: '1rem 1.25rem 0' }}>
-              <BinarySearchPredictionQuiz
-                quizData={currentStep.quizData}
-                onCorrectAnswer={() => stepForward()}
-              />
-            </div>
+            <BinarySearchPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
           )}
 
-          {/* Visual Canvas Renderer */}
-          <BinarySearchRenderer step={currentStep} array={array} target={currentTarget} />
-
-          {/* Playback Controls & Speed */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.75rem 1.25rem',
-              borderTop: '1px solid var(--border-color)',
-              background: 'var(--bg-secondary)',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PlayPauseButton isPlaying={isPlaying} onPlay={play} onPause={pause} />
-              <StepControls
-                onStepBack={stepBack}
-                onStepForward={stepForward}
-                onReset={reset}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < totalSteps - 1}
-              />
+          <div className="bs-canvas-card">
+            <div className="bs-canvas-header">
+              <div className="ll-canvas-title">
+                <Sparkles size={16} color="#38bdf8" />
+                <span>
+                  {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
+                </span>
+              </div>
+              <button
+                className="bst-btn btn-fullscreen"
+                onClick={() => setIsFullScreenOpen(true)}
+                title="Full Screen Canvas"
+              >
+                <Maximize2 size={14} />
+              </button>
             </div>
 
-            <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+            <BinarySearchRenderer step={currentStep} array={array} target={currentTarget} />
           </div>
 
-          {/* Explanation Panel */}
-          {currentStep && (
-            <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-color)' }}>
-              <ExplanationPanel
-                stepNumber={currentStepIndex + 1}
-                totalSteps={totalSteps}
-                explanation={currentStep.explanation}
-              />
-            </div>
-          )}
+          {renderPlayerControls()}
         </div>
 
-        {/* Multi-Language Code Panel */}
-        <div style={{ height: '100%' }}>
+        {/* Right Column: Code & Explanation */}
+        <div className="explanation-section">
           <BinarySearchCodePanel
             snippetKey={snippetKey}
             activeLine={currentStep?.codeLine}
@@ -474,6 +423,10 @@ export const BinarySearchPage: React.FC = () => {
             right={currentStep?.right}
             target={currentTarget}
           />
+
+          <ExplanationPanel
+            description={currentStep?.explanation || 'Click Search to observe step-by-step execution.'}
+          />
         </div>
       </div>
 
@@ -481,8 +434,14 @@ export const BinarySearchPage: React.FC = () => {
       <FullScreenCanvasModal
         isOpen={isFullScreenOpen}
         onClose={() => setIsFullScreenOpen(false)}
-        title="Binary Search Full-Screen Studio"
+        title={`Binary Search Studio | ${category.toUpperCase()}`}
+        subtitle="Interactive Logarithmic Search Inspector"
+        toolbarControls={renderFloatingControls()}
+        playbackControls={renderPlayerControls()}
       >
+        {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
+          <BinarySearchPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
+        )}
         <BinarySearchRenderer step={currentStep} array={array} target={currentTarget} />
       </FullScreenCanvasModal>
     </div>

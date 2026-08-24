@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Share2,
   RotateCcw,
@@ -31,6 +31,7 @@ import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import './Graph.css';
 
@@ -51,8 +52,6 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const GraphPage: React.FC = () => {
   const [category, setCategory] = useState<GraphCategory>('bfs');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
   const [startNode, setStartNode] = useState<string>('A');
   const [nodes, setNodes] = useState<GraphNode[]>(() => getPresetGraph('standard').nodes);
@@ -64,35 +63,6 @@ export const GraphPage: React.FC = () => {
 
   // Active steps dataset
   const [activeSteps, setActiveSteps] = useState<GraphStep[]>([]);
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  // Global Keyboard Shortcut (⌘K / Ctrl+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        setIsSearchOpen(true);
-      } else if (e.key === 'Escape') {
-        setIsSearchOpen(false);
-      }
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   // Step Player Hook
   const {
@@ -112,7 +82,6 @@ export const GraphPage: React.FC = () => {
   // Handle Category Switching
   const handleSelectCategory = (cat: GraphCategory) => {
     setCategory(cat);
-    setIsSearchOpen(false);
     reset();
 
     const topologyType = cat === 'topoSort' ? 'dag' : 'standard';
@@ -170,63 +139,92 @@ export const GraphPage: React.FC = () => {
     handleSelectCategory(category);
   };
 
-  const filteredAlgorithms = ALGORITHMS_LIST.filter(
-    (alg) =>
-      alg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alg.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const snippetKey = category;
+
+  const renderPlayerControls = () => (
+    <div className="player-bar" style={{ margin: 0 }}>
+      <div className="player-left">
+        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
+        <StepControls
+          onStepBack={stepBack}
+          onStepForward={stepForward}
+          onReset={reset}
+          canStepBack={currentStepIndex > 0}
+          canStepForward={currentStepIndex < totalSteps - 1}
+        />
+      </div>
+
+      <div className="player-center">
+        <div className="step-progress-bar">
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+        </div>
+        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
+      </div>
+
+      <div className="player-right">
+        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+      </div>
+    </div>
   );
 
-  const snippetKey = category;
+  const renderFloatingControls = () => (
+    <div className="fs-floating-controls">
+      {category !== 'topoSort' && (
+        <div className="bst-input-group">
+          <span>Start:</span>
+          <select
+            className="bst-select"
+            value={startNode}
+            onChange={(e) => setStartNode(e.target.value)}
+          >
+            {nodes.map((n) => (
+              <option key={n.id} value={n.id}>
+                Vertex {n.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <button className="bst-btn btn-insert" onClick={handleRunAlgorithm}>
+        <Play size={14} />
+        <span>Run Traversal</span>
+      </button>
+
+      {(category === 'dijkstra' || category === 'prim') && (
+        <button className="bst-btn btn-search" onClick={handleRandomizeWeights}>
+          <Shuffle size={14} />
+          <span>Random Weights</span>
+        </button>
+      )}
+
+      <button className="bst-btn btn-search" onClick={handleReset}>
+        <RotateCcw size={14} />
+        <span>Reset</span>
+      </button>
+
+      <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
+        <HelpCircle size={16} />
+        <span>Quiz Mode</span>
+        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+      </label>
+    </div>
+  );
 
   return (
     <div className="graph-container">
-      {/* ─── TOP HEADER ──────────────────────────────────────────────────────── */}
-      <header className="graph-header">
-        <div className="graph-title-group">
-          <div className="graph-title-icon">
-            <Share2 size={22} />
-          </div>
-          <div className="graph-title-text">
-            <h1>Graph Algorithms Studio</h1>
-            <p>Interactive Network Traversals, Shortest Paths, & Minimum Spanning Trees</p>
-          </div>
-        </div>
-
-        {/* Spotlight Command Palette Search */}
-        <div className="graph-search-wrapper" ref={searchContainerRef}>
-          <div className="graph-search-input-box" onClick={() => setIsSearchOpen(true)}>
-            <Share2 size={15} className="text-secondary" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="graph-search-input"
-              placeholder="Search graph algorithm, MST, or traversal..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchOpen(true)}
-            />
-            <kbd className="ll-shortcut-badge">⌘K</kbd>
-          </div>
-
-          {isSearchOpen && (
-            <div className="graph-search-dropdown">
-              {filteredAlgorithms.map((alg) => (
-                <div
-                  key={alg.id}
-                  className={`graph-search-item ${category === alg.id ? 'active' : ''}`}
-                  onClick={() => handleSelectCategory(alg.id)}
-                >
-                  <div>
-                    <div className="ll-item-name">{alg.name}</div>
-                    <div className="ll-item-desc">{alg.description}</div>
-                  </div>
-                  <span className="ll-shortcut-badge">{alg.group}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </header>
+      <VisualizerHeader
+        icon={<Share2 size={22} />}
+        title="Graph Algorithms Studio"
+        subtitle="Interactive Network Traversals, Shortest Paths, & Minimum Spanning Trees"
+        items={ALGORITHMS_LIST.map((alg) => ({ id: alg.id, name: alg.name, description: alg.description, group: alg.group }))}
+        activeId={category}
+        onSelect={(id) => handleSelectCategory(id as GraphCategory)}
+        placeholder="Search graph algorithm, MST, or traversal..."
+      />
 
       {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
       <div className="graph-tabs-bar">
@@ -324,81 +322,46 @@ export const GraphPage: React.FC = () => {
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
       <div className="graph-workspace">
         {/* Visualizer Canvas & Controls Card */}
-        <div className="graph-canvas-card">
-          <div className="graph-canvas-header">
-            <div className="ll-canvas-title">
-              <Sparkles size={16} color="#c084fc" />
-              <span>
-                {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
-              </span>
-            </div>
-            {totalSteps > 0 && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                Step {currentStepIndex + 1} of {totalSteps}
-              </span>
-            )}
-          </div>
-
-          {/* Interactive Prediction Quiz Banner */}
+        <div className="renderer-section">
           {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-            <div style={{ padding: '1rem 1.25rem 0' }}>
-              <GraphPredictionQuiz
-                quizData={currentStep.quizData}
-                onCorrectAnswer={() => stepForward()}
-              />
-            </div>
+            <GraphPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
           )}
 
-          {/* Visual Canvas Renderer */}
-          <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
-
-          {/* Playback Controls & Speed */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.75rem 1.25rem',
-              borderTop: '1px solid var(--border-color)',
-              background: 'var(--bg-secondary)',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PlayPauseButton isPlaying={isPlaying} onPlay={play} onPause={pause} />
-              <StepControls
-                onStepBack={stepBack}
-                onStepForward={stepForward}
-                onReset={reset}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < totalSteps - 1}
-              />
+          <div className="graph-canvas-card">
+            <div className="graph-canvas-header">
+              <div className="ll-canvas-title">
+                <Sparkles size={16} color="#c084fc" />
+                <span>
+                  {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
+                </span>
+              </div>
+              <button
+                className="bst-btn btn-fullscreen"
+                onClick={() => setIsFullScreenOpen(true)}
+                title="Full Screen Canvas"
+              >
+                <Maximize2 size={14} />
+              </button>
             </div>
 
-            <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+            <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
           </div>
 
-          {/* Explanation Panel */}
-          {currentStep && (
-            <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-color)' }}>
-              <ExplanationPanel
-                stepNumber={currentStepIndex + 1}
-                totalSteps={totalSteps}
-                explanation={currentStep.explanation}
-              />
-            </div>
-          )}
+          {renderPlayerControls()}
         </div>
 
-        {/* Multi-Language Code Panel */}
-        <div style={{ height: '100%' }}>
+        {/* Right Column: Code & Explanation */}
+        <div className="explanation-section">
           <GraphCodePanel
             snippetKey={snippetKey}
             activeLine={currentStep?.codeLine}
             currentNodeId={currentStep?.currentNodeId}
             visitedCount={currentStep?.visitedNodeIds.length || 0}
             queueSize={currentStep?.queueOrStack.length || 0}
+          />
+
+          <ExplanationPanel
+            description={currentStep?.explanation || 'Click Play to observe step-by-step execution.'}
           />
         </div>
       </div>
@@ -407,8 +370,14 @@ export const GraphPage: React.FC = () => {
       <FullScreenCanvasModal
         isOpen={isFullScreenOpen}
         onClose={() => setIsFullScreenOpen(false)}
-        title="Graph Algorithms Full-Screen Studio"
+        title={`Graph Studio | ${category.toUpperCase()}`}
+        subtitle="Interactive Network Inspector"
+        toolbarControls={renderFloatingControls()}
+        playbackControls={renderPlayerControls()}
       >
+        {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
+          <GraphPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
+        )}
         <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
       </FullScreenCanvasModal>
     </div>

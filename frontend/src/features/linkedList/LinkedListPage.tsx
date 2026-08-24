@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Link2,
   Plus,
   Trash2,
   RotateCcw,
-  Search,
   HelpCircle,
   Maximize2,
   Sparkles,
@@ -34,6 +33,7 @@ import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import './LinkedList.css';
 
@@ -55,8 +55,6 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const LinkedListPage: React.FC = () => {
   const [category, setCategory] = useState<LinkedListCategory>('singly');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Interactive & Quiz Modes
@@ -68,35 +66,6 @@ export const LinkedListPage: React.FC = () => {
   const [baseNodes, setBaseNodes] = useState<ListNodeItem[]>(() =>
     createInitialNodes([10, 20, 30, 40], 'singly')
   );
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  // Global Keyboard Shortcut (⌘K / Ctrl+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        setIsSearchOpen(true);
-      } else if (e.key === 'Escape') {
-        setIsSearchOpen(false);
-      }
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   // Step Player Hook
   const {
@@ -116,7 +85,6 @@ export const LinkedListPage: React.FC = () => {
   // Handle Category Switching
   const handleSelectCategory = (cat: LinkedListCategory) => {
     setCategory(cat);
-    setIsSearchOpen(false);
     reset();
 
     if (cat === 'doubly') {
@@ -205,12 +173,6 @@ export const LinkedListPage: React.FC = () => {
     reset();
   };
 
-  const filteredAlgorithms = ALGORITHMS_LIST.filter(
-    (alg) =>
-      alg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alg.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const snippetKey =
     category === 'reverse'
       ? 'reverse'
@@ -220,55 +182,106 @@ export const LinkedListPage: React.FC = () => {
       ? 'middle_node'
       : 'singly_insert_head';
 
+  const renderPlayerControls = () => (
+    <div className="player-bar" style={{ margin: 0 }}>
+      <div className="player-left">
+        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
+        <StepControls
+          onStepBack={stepBack}
+          onStepForward={stepForward}
+          onReset={reset}
+          canStepBack={currentStepIndex > 0}
+          canStepForward={currentStepIndex < totalSteps - 1}
+        />
+      </div>
+
+      <div className="player-center">
+        <div className="step-progress-bar">
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+        </div>
+        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
+      </div>
+
+      <div className="player-right">
+        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+      </div>
+    </div>
+  );
+
+  const renderFloatingControls = () => (
+    <div className="fs-floating-controls">
+      <div className="bst-input-group">
+        <span>Val:</span>
+        <input
+          type="text"
+          className="bst-input"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+        />
+      </div>
+
+      <button className="bst-btn btn-insert" onClick={handleInsertHead}>
+        <Plus size={14} />
+        <span>Head</span>
+      </button>
+
+      <button className="bst-btn btn-insert" onClick={handleInsertTail}>
+        <Plus size={14} />
+        <span>Tail</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleDeleteHead}>
+        <Trash2 size={14} />
+        <span>Delete</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleReverse}>
+        <RotateCcw size={14} />
+        <span>Reverse</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleCycleDetect}>
+        <RefreshCw size={14} />
+        <span>Cycle</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleFindMiddle}>
+        <Sparkles size={14} />
+        <span>Mid</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleRandomize}>
+        <Shuffle size={14} />
+        <span>Random</span>
+      </button>
+
+      <button className="bst-btn btn-search" onClick={handleResetList}>
+        <RotateCcw size={14} />
+        <span>Reset</span>
+      </button>
+
+      <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
+        <HelpCircle size={16} />
+        <span>Quiz Mode</span>
+        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+      </label>
+    </div>
+  );
+
   return (
     <div className="linked-list-container">
-      {/* ─── TOP HEADER ──────────────────────────────────────────────────────── */}
-      <header className="ll-header">
-        <div className="ll-title-group">
-          <div className="ll-title-icon">
-            <Link2 size={22} />
-          </div>
-          <div className="ll-title-text">
-            <h1>Linked List Visualizer</h1>
-            <p>Interactive Pointer Manipulations, Reversals, & Cycle Detection</p>
-          </div>
-        </div>
-
-        {/* Spotlight Command Palette Search */}
-        <div className="ll-search-wrapper" ref={searchContainerRef}>
-          <div className="ll-search-input-box" onClick={() => setIsSearchOpen(true)}>
-            <Search size={15} className="text-secondary" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="ll-search-input"
-              placeholder="Search algorithm, operation, or concept..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchOpen(true)}
-            />
-            <kbd className="ll-shortcut-badge">⌘K</kbd>
-          </div>
-
-          {isSearchOpen && (
-            <div className="ll-search-dropdown">
-              {filteredAlgorithms.map((alg) => (
-                <div
-                  key={alg.id}
-                  className={`ll-search-item ${category === alg.id ? 'active' : ''}`}
-                  onClick={() => handleSelectCategory(alg.id)}
-                >
-                  <div>
-                    <div className="ll-item-name">{alg.name}</div>
-                    <div className="ll-item-desc">{alg.description}</div>
-                  </div>
-                  <span className="ll-shortcut-badge">{alg.group}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </header>
+      <VisualizerHeader
+        icon={<Link2 size={22} />}
+        title="Linked List Visualizer"
+        subtitle="Interactive Pointer Manipulations, Reversals, & Cycle Detection"
+        items={ALGORITHMS_LIST.map((alg) => ({ id: alg.id, name: alg.name, description: alg.description, group: alg.group }))}
+        activeId={category}
+        onSelect={(id) => handleSelectCategory(id as LinkedListCategory)}
+        placeholder="Search algorithm, operation, or concept..."
+      />
 
       {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
       <div className="ll-tabs-bar">
@@ -369,81 +382,45 @@ export const LinkedListPage: React.FC = () => {
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
       <div className="ll-workspace">
-        {/* Visualizer Canvas & Controls Card */}
-        <div className="ll-canvas-card">
-          <div className="ll-canvas-header">
-            <div className="ll-canvas-title">
-              <Link2 size={16} className="text-accent" />
-              <span>
-                {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
-              </span>
-            </div>
-            {totalSteps > 0 && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                Step {currentStepIndex + 1} of {totalSteps}
-              </span>
-            )}
-          </div>
-
-          {/* Interactive Prediction Quiz Banner */}
+        <div className="renderer-section">
           {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-            <div style={{ padding: '1rem 1.25rem 0' }}>
-              <LinkedListPredictionQuiz
-                quizData={currentStep.quizData}
-                onCorrectAnswer={() => stepForward()}
-              />
-            </div>
+            <LinkedListPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
           )}
 
-          {/* Canvas Renderer */}
-          <LinkedListRenderer step={currentStep} nodes={baseNodes} />
-
-          {/* Playback Controls & Speed */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.75rem 1.25rem',
-              borderTop: '1px solid var(--border-color)',
-              background: 'var(--bg-secondary)',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PlayPauseButton isPlaying={isPlaying} onPlay={play} onPause={pause} />
-              <StepControls
-                onStepBack={stepBack}
-                onStepForward={stepForward}
-                onReset={reset}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < totalSteps - 1}
-              />
+          <div className="ll-canvas-card">
+            <div className="ll-canvas-header">
+              <div className="ll-canvas-title">
+                <Link2 size={16} className="text-accent" />
+                <span>
+                  {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
+                </span>
+              </div>
+              <button
+                className="bst-btn btn-fullscreen"
+                onClick={() => setIsFullScreenOpen(true)}
+                title="Full Screen Canvas"
+              >
+                <Maximize2 size={14} />
+              </button>
             </div>
 
-            <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+            <LinkedListRenderer step={currentStep} nodes={baseNodes} />
           </div>
 
-          {/* Explanation Panel */}
-          {currentStep && (
-            <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-color)' }}>
-              <ExplanationPanel
-                stepNumber={currentStepIndex + 1}
-                totalSteps={totalSteps}
-                explanation={currentStep.explanation}
-              />
-            </div>
-          )}
+          {renderPlayerControls()}
         </div>
 
-        {/* Multi-Language Code Panel */}
-        <div style={{ height: '100%' }}>
+        {/* Right Column: Code & Explanation */}
+        <div className="explanation-section">
           <LinkedListCodePanel
             snippetKey={snippetKey}
             activeLine={currentStep?.codeLine}
             pointers={currentStep?.pointers}
             nodesCount={currentStep ? currentStep.nodes.length : baseNodes.length}
+          />
+
+          <ExplanationPanel
+            description={currentStep?.explanation || 'Run an operation to observe step-by-step execution.'}
           />
         </div>
       </div>
@@ -452,8 +429,14 @@ export const LinkedListPage: React.FC = () => {
       <FullScreenCanvasModal
         isOpen={isFullScreenOpen}
         onClose={() => setIsFullScreenOpen(false)}
-        title="Linked List Full-Screen Visualizer"
+        title={`Linked List Visualizer | ${category.toUpperCase()}`}
+        subtitle="Interactive Pointer Inspector"
+        toolbarControls={renderFloatingControls()}
+        playbackControls={renderPlayerControls()}
       >
+        {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
+          <LinkedListPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
+        )}
         <LinkedListRenderer step={currentStep} nodes={baseNodes} />
       </FullScreenCanvasModal>
     </div>

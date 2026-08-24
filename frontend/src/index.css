@@ -1,3 +1,14 @@
+/* ── Tailwind v4 ──────────────────────────────────────────────────────
+   Imported as theme + utilities ONLY. `preflight.css` is deliberately
+   NOT imported: its base reset would strip button, heading and list
+   styling out from under the ~4,000 lines of hand-written CSS this app
+   already ships, visually breaking every page. Utilities are all the
+   markup actually asks for.
+   ─────────────────────────────────────────────────────────────────── */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
 :root {
   /* Light Theme Palette - Professional & Crisp */
   --bg-primary: #ffffff;
@@ -27,6 +38,16 @@
 
   /* Responsive Navbar Height */
   --navbar-height: 64px;
+
+  /* Raised surface tokens.
+     `--bg-card` and `--bg-hover` were referenced 24 times across the
+     Linked List / Graph / Binary Search stylesheets but never defined
+     anywhere, so every card, search box and pill tab on those three
+     pages resolved to no background at all. Aliased onto the existing
+     scale — `var()` resolves at use time, so these follow the active
+     theme automatically. */
+  --bg-card: var(--bg-secondary);
+  --bg-hover: var(--bg-tertiary);
 }
 
 [data-theme="dark"] {

@@ -16,7 +16,13 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string) => Promise<void>;
+  signup: (
+    username: string,
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
@@ -69,10 +75,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userData);
   };
 
-  const signup = async (username: string, email: string, password: string) => {
+  const signup = async (
+    username: string,
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => {
     await apiClient('/api/auth/signup', {
       method: 'POST',
-      body: { username, email, password },
+      body: {
+        username,
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+      },
     });
   };
 

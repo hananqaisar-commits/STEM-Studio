@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layers, Plus, Trash2, Code, CheckCircle2, Search, Filter, HelpCircle, Maximize2, Sparkles
+  Layers, Plus, Trash2, Code, CheckCircle2, Filter, HelpCircle, Maximize2, Sparkles
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import {
@@ -29,6 +29,7 @@ import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
 
@@ -71,8 +72,6 @@ const PROBLEMS_LIST: ProblemMeta[] = [
 
 export const StackQueuePage: React.FC = () => {
   const [category, setCategory] = useState<StackQueueCategory>('stack');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Modes & Modals matching BST
@@ -98,35 +97,6 @@ export const StackQueuePage: React.FC = () => {
 
   // Code Debugger Visibility State
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const searchContainerRef = React.useRef<HTMLDivElement>(null);
-
-  // Global Keyboard Shortcut (⌘K / Ctrl+K) & Click Outside to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        setIsSearchOpen(true);
-      } else if (e.key === 'Escape') {
-        setIsSearchOpen(false);
-      }
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   // Step Player Hook
   const {
@@ -322,15 +292,6 @@ export const StackQueuePage: React.FC = () => {
     reset();
   }, [category]);
 
-  // Filtered problems list based on search query
-  const filteredProblems = PROBLEMS_LIST.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.leetcodeId && p.leetcodeId.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      p.group.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const handleSampleData = () => {
     const sampleStack = [10, 25, 30, 45];
     const sampleQueue = [15, 28, 40, 52];
@@ -387,8 +348,209 @@ export const StackQueuePage: React.FC = () => {
     reset();
   };
 
+  const handleSelectProblem = (id: StackQueueCategory) => {
+    setCategory(id);
+    const steps = getCategoryDefaultSteps(id);
+    setActiveSteps(steps);
+    reset();
+  };
+
+  /* Operation buttons for the active category. Shared by the page toolbar and the
+     full-screen toolbar so both always expose the exact same actions. */
+  const renderCategoryActions = () => (
+    <>
+      {category === 'stack' && (
+        <>
+          <button className="bst-btn btn-insert" onClick={handlePush}>
+            <Plus size={14} />
+            <span>Push</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handlePop}>
+            <span>Pop</span>
+          </button>
+        </>
+      )}
+
+      {category === 'queue' && (
+        <>
+          <button className="bst-btn btn-insert" onClick={handleEnqueue}>
+            <Plus size={14} />
+            <span>Enqueue</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleDequeue}>
+            <span>Dequeue</span>
+          </button>
+        </>
+      )}
+
+      {category === 'circularQueue' && (
+        <button className="bst-btn btn-insert" onClick={handleCircularEnqueue}>
+          <Plus size={14} />
+          <span>Enqueue Slot</span>
+        </button>
+      )}
+
+      {category === 'validParentheses' && (
+        <button className="bst-btn btn-insert" onClick={handleValidParentheses}>
+          <CheckCircle2 size={14} />
+          <span>Evaluate String</span>
+        </button>
+      )}
+
+      {category === 'minStack' && (
+        <button className="bst-btn btn-insert" onClick={handleMinStackPush}>
+          <Plus size={14} />
+          <span>Push Value</span>
+        </button>
+      )}
+
+      {category === 'postfixEval' && (
+        <button className="bst-btn btn-insert" onClick={handlePostfixEval}>
+          <CheckCircle2 size={14} />
+          <span>Evaluate Postfix</span>
+        </button>
+      )}
+
+      {category === 'queueViaStacks' && (
+        <>
+          <button className="bst-btn btn-insert" onClick={handleQueueViaStacksEnqueue}>
+            <Plus size={14} />
+            <span>Enqueue In-Stack</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleQueueViaStacksDequeue}>
+            <span>Dequeue Out-Stack</span>
+          </button>
+        </>
+      )}
+
+      {category === 'dailyTemperatures' && (
+        <button className="bst-btn btn-insert" onClick={handleDailyTemperatures}>
+          <CheckCircle2 size={14} />
+          <span>Compute Warmer Days</span>
+        </button>
+      )}
+
+      {category === 'simplifyPath' && (
+        <button className="bst-btn btn-insert" onClick={handleSimplifyPath}>
+          <CheckCircle2 size={14} />
+          <span>Simplify Path</span>
+        </button>
+      )}
+
+      {category === 'removeAdjacentDuplicates' && (
+        <button className="bst-btn btn-insert" onClick={handleRemoveDuplicates}>
+          <CheckCircle2 size={14} />
+          <span>Remove Duplicates</span>
+        </button>
+      )}
+
+      {category === 'slidingWindow' && (
+        <button className="bst-btn btn-insert" onClick={handleSlidingWindow}>
+          <CheckCircle2 size={14} />
+          <span>Compute Window Max</span>
+        </button>
+      )}
+    </>
+  );
+
+  const renderCanvas = () => (
+    <>
+      {category === 'stack' && <StackRenderer currentStep={currentStep} />}
+      {category === 'queue' && <QueueRenderer currentStep={currentStep} />}
+      {category === 'circularQueue' && <CircularQueueRenderer currentStep={currentStep} />}
+      {!['stack', 'queue', 'circularQueue'].includes(category) && (
+        <ProblemRenderer category={category} currentStep={currentStep} />
+      )}
+    </>
+  );
+
+  const renderPlayerControls = () => (
+    <div className="player-bar" style={{ margin: 0 }}>
+      <div className="player-left">
+        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
+        <StepControls
+          onStepBack={stepBack}
+          onStepForward={stepForward}
+          onReset={reset}
+          canStepBack={currentStepIndex > 0}
+          canStepForward={currentStepIndex < totalSteps - 1}
+        />
+      </div>
+
+      <div className="player-center">
+        <div className="step-progress-bar">
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+        </div>
+        <span className="step-counter">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
+      </div>
+
+      <div className="player-right">
+        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+      </div>
+    </div>
+  );
+
+  const renderFloatingControls = () => (
+    <div className="fs-floating-controls">
+      <div className="bst-input-group">
+        <span>Value:</span>
+        <input
+          type="text"
+          className="bst-input"
+          style={{ width: '90px' }}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Val / Expr"
+        />
+      </div>
+
+      {renderCategoryActions()}
+
+      <div className="dataset-mode-selector">
+        <button className="bst-btn btn-mode" onClick={handleClearAll}>
+          <Trash2 size={14} />
+          <span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSampleData}>
+          <Layers size={14} />
+          <span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomData}>
+          <Sparkles size={14} />
+          <span>Random</span>
+        </button>
+      </div>
+
+      <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
+        <HelpCircle size={16} />
+        <span>Predict Mode</span>
+        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+      </label>
+    </div>
+  );
+
   return (
     <div className="bst-page-container">
+      <VisualizerHeader
+        icon={<Layers size={22} />}
+        title="Stack & Queue Studio"
+        subtitle="Interactive LIFO / FIFO Primitives & 20 Classical Interview Problems"
+        items={PROBLEMS_LIST.map((prob) => ({
+          id: prob.id,
+          name: prob.leetcodeId ? `${prob.name}  ${prob.leetcodeId}` : prob.name,
+          description: prob.description,
+          group: prob.group,
+        }))}
+        activeId={category}
+        onSelect={(id) => handleSelectProblem(id as StackQueueCategory)}
+        placeholder="Search 20 DSA problems (#739, Water, Min)..."
+      />
+
       {/* Category Tabs Bar Matching BST */}
       <div className="tree-category-toolbar animate-fade-in">
         <div className="tree-category-tabs">
@@ -433,89 +595,7 @@ export const StackQueuePage: React.FC = () => {
       {/* Operations Control Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {/* Spotlight Search & Category Select Dropdown */}
-          <div className="spotlight-search-container" ref={searchContainerRef}>
-            <div className="spotlight-search-box">
-              <Search size={14} className="text-amber-400 shrink-0" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                className="spotlight-search-input font-medium"
-                placeholder="Search 20 DSA Problems (#739, Water, Min)..."
-                value={searchQuery}
-                onFocus={() => setIsSearchOpen(true)}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setIsSearchOpen(true);
-                }}
-              />
-              <span className="search-shortcut-badge">⌘K</span>
-              {searchQuery && (
-                <button
-                  className="text-slate-400 hover:text-amber-400 text-xs font-bold px-1 transition-colors"
-                  onClick={() => setSearchQuery('')}
-                  title="Clear Search"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Instant Search Autocomplete Command Palette Dropdown */}
-            {isSearchOpen && (
-              <div className="spotlight-dropdown-menu">
-                <div className="spotlight-dropdown-header">
-                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    <Filter size={12} className="text-amber-400" />
-                    <span>Matching DSA Problems ({filteredProblems.length})</span>
-                  </div>
-                  {searchQuery && (
-                    <button
-                      className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                {filteredProblems.length === 0 ? (
-                  <div className="px-3 py-6 text-xs text-slate-400 text-center flex flex-col items-center gap-1">
-                    <Search size={20} className="text-slate-600 mb-1" />
-                    <span>No matching DSA problems found for "{searchQuery}"</span>
-                  </div>
-                ) : (
-                  filteredProblems.map((prob) => (
-                    <button
-                      key={prob.id}
-                      className={`spotlight-result-card ${category === prob.id ? 'active-selected' : ''}`}
-                      onClick={() => {
-                        setCategory(prob.id);
-                        setIsSearchOpen(false);
-                        const steps = getCategoryDefaultSteps(prob.id);
-                        setActiveSteps(steps);
-                        reset();
-                      }}
-                    >
-                      <div className="flex-1 min-w-0 pr-2">
-                        <div className="flex items-center gap-2 font-bold text-xs">
-                          <span className="truncate">{prob.name}</span>
-                          {prob.leetcodeId && (
-                            <span className="spotlight-leetcode-badge shrink-0">{prob.leetcodeId}</span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-normal truncate mt-0.5">{prob.description}</div>
-                      </div>
-                      <span className={`spotlight-group-tag ${prob.group.toLowerCase()} shrink-0`}>
-                        {prob.group}
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-
+          {/* Problem Selector Dropdown (⌘K search lives in the shared page header) */}
           <select
             className="bst-select font-bold text-xs"
             value={category}
@@ -569,97 +649,7 @@ export const StackQueuePage: React.FC = () => {
           </div>
 
           {/* Category Action Buttons */}
-          {category === 'stack' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handlePush}>
-                <Plus size={16} />
-                <span>Push</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handlePop}>
-                <span>Pop</span>
-              </button>
-            </>
-          )}
-
-          {category === 'queue' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleEnqueue}>
-                <Plus size={16} />
-                <span>Enqueue</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleDequeue}>
-                <span>Dequeue</span>
-              </button>
-            </>
-          )}
-
-          {category === 'circularQueue' && (
-            <button className="bst-btn btn-insert" onClick={handleCircularEnqueue}>
-              <Plus size={16} />
-              <span>Enqueue Slot</span>
-            </button>
-          )}
-
-          {category === 'validParentheses' && (
-            <button className="bst-btn btn-insert" onClick={handleValidParentheses}>
-              <CheckCircle2 size={16} />
-              <span>Evaluate String</span>
-            </button>
-          )}
-
-          {category === 'minStack' && (
-            <button className="bst-btn btn-insert" onClick={handleMinStackPush}>
-              <Plus size={16} />
-              <span>Push Value</span>
-            </button>
-          )}
-
-          {category === 'postfixEval' && (
-            <button className="bst-btn btn-insert" onClick={handlePostfixEval}>
-              <CheckCircle2 size={16} />
-              <span>Evaluate Postfix</span>
-            </button>
-          )}
-
-          {category === 'queueViaStacks' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleQueueViaStacksEnqueue}>
-                <Plus size={16} />
-                <span>Enqueue In-Stack</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleQueueViaStacksDequeue}>
-                <span>Dequeue Out-Stack</span>
-              </button>
-            </>
-          )}
-
-          {category === 'dailyTemperatures' && (
-            <button className="bst-btn btn-insert" onClick={handleDailyTemperatures}>
-              <CheckCircle2 size={16} />
-              <span>Compute Warmer Days</span>
-            </button>
-          )}
-
-          {category === 'simplifyPath' && (
-            <button className="bst-btn btn-insert" onClick={handleSimplifyPath}>
-              <CheckCircle2 size={16} />
-              <span>Simplify Path</span>
-            </button>
-          )}
-
-          {category === 'removeAdjacentDuplicates' && (
-            <button className="bst-btn btn-insert" onClick={handleRemoveDuplicates}>
-              <CheckCircle2 size={16} />
-              <span>Remove Duplicates</span>
-            </button>
-          )}
-
-          {category === 'slidingWindow' && (
-            <button className="bst-btn btn-insert" onClick={handleSlidingWindow}>
-              <CheckCircle2 size={16} />
-              <span>Compute Window Max</span>
-            </button>
-          )}
+          {renderCategoryActions()}
 
           {/* Dataset Selector Group Matching BST */}
           <div className="dataset-mode-selector">
@@ -712,54 +702,40 @@ export const StackQueuePage: React.FC = () => {
 
       {/* Main Workspace Layout (Canvas + Code Debugger) */}
       <div className="sorting-workspace">
-        <div className="renderer-section flex-1">
-          {category === 'stack' && <StackRenderer currentStep={currentStep} />}
-          {category === 'queue' && <QueueRenderer currentStep={currentStep} />}
-          {category === 'circularQueue' && <CircularQueueRenderer currentStep={currentStep} />}
-          {!['stack', 'queue', 'circularQueue'].includes(category) && (
-            <ProblemRenderer category={category} currentStep={currentStep} />
-          )}
-
-          {/* Player Control Bar */}
-          <div className="player-bar mt-4 flex items-center justify-between">
-            <div className="player-left flex items-center gap-2">
-              <PlayPauseButton
-                isPlaying={isPlaying}
-                onToggle={() => (isPlaying ? pause() : play())}
-              />
-              <StepControls
-                onStepForward={stepForward}
-                onStepBack={stepBack}
-                onReset={reset}
-                canStepForward={currentStepIndex < totalSteps - 1}
-                canStepBack={currentStepIndex > 0}
-              />
+        <div className="renderer-section">
+          <div className="bst-canvas-card">
+            <div className="bst-canvas-header">
+              <div className="ll-canvas-title">
+                <Layers size={16} className="text-accent" />
+                <span>
+                  {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
+                </span>
+              </div>
+              <button
+                className="bst-btn btn-fullscreen"
+                onClick={() => setIsFullScreenOpen(true)}
+                title="Full Screen Canvas View"
+              >
+                <Maximize2 size={14} />
+              </button>
             </div>
 
-            <div className="player-center flex items-center gap-3">
-              <span className="step-counter font-mono text-xs text-slate-400">
-                Step {totalSteps > 0 ? currentStepIndex + 1 : 0} of {totalSteps}
-              </span>
-              <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-            </div>
+            {renderCanvas()}
           </div>
 
-          {/* Explanation Panel matching BST */}
-          {currentStep && (
-            <div className="mt-4">
-              <ExplanationPanel
-                description={currentStep.description ?? 'Executing operation step'}
-              />
-            </div>
-          )}
+          {renderPlayerControls()}
         </div>
 
-        {/* Right Panel: Code Debugger Panel */}
+        {/* Right Panel: Code Debugger + Explanation */}
         {showDebugger && (
-          <div className="debugger-sidebar w-80">
+          <div className="explanation-section">
             <StackQueueCodePanel
               category={category}
               activeLine={currentStep?.codeLine ?? 1}
+            />
+
+            <ExplanationPanel
+              description={currentStep?.description ?? 'Run an operation to observe step-by-step execution.'}
             />
           </div>
         )}
@@ -769,63 +745,12 @@ export const StackQueuePage: React.FC = () => {
       <FullScreenCanvasModal
         isOpen={isFullScreenOpen}
         onClose={() => setIsFullScreenOpen(false)}
-        title={PROBLEMS_LIST.find((p) => p.id === category)?.name ?? 'Stack & Queue Visualizer'}
-        toolbarControls={
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="bst-input w-28"
-              placeholder="Value"
-            />
-            {category === 'stack' && (
-              <>
-                <button className="bst-btn btn-insert" onClick={handlePush}>
-                  <Plus size={14} />
-                  <span>Push</span>
-                </button>
-                <button className="bst-btn btn-search" onClick={handlePop}>
-                  <span>Pop</span>
-                </button>
-              </>
-            )}
-            {category === 'queue' && (
-              <>
-                <button className="bst-btn btn-insert" onClick={handleEnqueue}>
-                  <Plus size={14} />
-                  <span>Enqueue</span>
-                </button>
-                <button className="bst-btn btn-search" onClick={handleDequeue}>
-                  <span>Dequeue</span>
-                </button>
-              </>
-            )}
-          </div>
-        }
-        playbackControls={
-          <div className="player-bar flex items-center justify-between w-full">
-            <div className="player-left flex items-center gap-2">
-              <PlayPauseButton isPlaying={isPlaying} onToggle={() => (isPlaying ? pause() : play())} />
-              <StepControls
-                onStepForward={stepForward}
-                onStepBack={stepBack}
-                onReset={reset}
-                canStepForward={currentStepIndex < totalSteps - 1}
-                canStepBack={currentStepIndex > 0}
-              />
-            </div>
-            <span className="step-counter font-mono text-xs text-slate-400">Step {currentStepIndex + 1} / {totalSteps}</span>
-            <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-          </div>
-        }
+        title={`Stack & Queue Studio | ${(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? 'Visualizer').toUpperCase()}`}
+        subtitle="Interactive LIFO / FIFO Inspector"
+        toolbarControls={renderFloatingControls()}
+        playbackControls={renderPlayerControls()}
       >
-        {category === 'stack' && <StackRenderer currentStep={currentStep} />}
-        {category === 'queue' && <QueueRenderer currentStep={currentStep} />}
-        {category === 'circularQueue' && <CircularQueueRenderer currentStep={currentStep} />}
-        {!['stack', 'queue', 'circularQueue'].includes(category) && (
-          <ProblemRenderer category={category} currentStep={currentStep} />
-        )}
+        {renderCanvas()}
       </FullScreenCanvasModal>
     </div>
   );
