@@ -8,8 +8,8 @@
 .circular-queue-container,
 .problem-container {
   height: 480px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 1.25rem;
   display: flex;
@@ -25,21 +25,21 @@
   gap: 0.15rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .chamber-title {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.78rem;
   font-weight: 800;
-  color: var(--accent-primary);
+  color: var(--color-primary);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .chamber-subtitle {
   font-size: 0.68rem;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -87,7 +87,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   gap: 0.25rem;
   font-size: 0.85rem;
   font-weight: 600;
@@ -275,7 +275,7 @@
   align-items: center;
   gap: 0.75rem;
   background-color: rgba(15, 23, 42, 0.6);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--color-border);
   padding: 0.5rem 0.85rem;
   border-radius: 8px;
   margin-bottom: 0.75rem;
@@ -284,7 +284,7 @@
 .ribbon-label {
   font-size: 0.68rem;
   font-weight: 800;
-  color: var(--accent-primary);
+  color: var(--color-primary);
 }
 
 .char-stream {
@@ -299,14 +299,14 @@
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
   background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 .char-active {
-  background-color: var(--accent-primary) !important;
+  background-color: var(--color-primary) !important;
   color: #ffffff !important;
-  border-color: var(--accent-primary) !important;
+  border-color: var(--color-primary) !important;
 }
 
 .char-processed {
@@ -330,7 +330,7 @@
 .column-title {
   font-size: 0.68rem;
   font-weight: 800;
-  color: var(--accent-primary);
+  color: var(--color-primary);
 }
 
 .min-tube {

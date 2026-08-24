@@ -31,8 +31,8 @@ export const GraphPredictionQuiz: React.FC<GraphPredictionQuizProps> = ({
   return (
     <div
       style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
         borderRadius: '16px',
         padding: '1.25rem',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
@@ -59,7 +59,7 @@ export const GraphPredictionQuiz: React.FC<GraphPredictionQuizProps> = ({
         <span
           style={{
             fontSize: '0.7rem',
-            color: 'var(--text-secondary)',
+            color: 'var(--color-text-secondary)',
             background: 'rgba(255,255,255,0.05)',
             padding: '0.15rem 0.5rem',
             borderRadius: '6px',
@@ -69,7 +69,7 @@ export const GraphPredictionQuiz: React.FC<GraphPredictionQuizProps> = ({
         </span>
       </div>
 
-      <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+      <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 500, color: 'var(--color-text)' }}>
         {quizData.prompt}
       </p>
 
@@ -85,9 +85,9 @@ export const GraphPredictionQuiz: React.FC<GraphPredictionQuizProps> = ({
                 justifyContent: 'space-between',
                 padding: '0.65rem 1rem',
                 borderRadius: '10px',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text)',
                 fontSize: '0.82rem',
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -131,7 +131,7 @@ export const GraphPredictionQuiz: React.FC<GraphPredictionQuizProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
             <Lightbulb size={16} color="#fbbf24" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
               {quizData.explanation}
             </p>
           </div>
