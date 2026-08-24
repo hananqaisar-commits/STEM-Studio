@@ -6,7 +6,7 @@
   gap: 1.25rem;
   padding: 1.5rem;
   flex: 1;
-  background-color: var(--bg-secondary);
+  background-color: var(--color-surface);
   min-height: calc(100vh - 64px);
   max-width: 1600px;
   margin: 0 auto;
@@ -14,9 +14,9 @@
 
 /* Algorithm Tabs Container */
 .algorithm-tabs-bar {
-  background: var(--bg-primary, rgba(15, 23, 42, 0.8));
+  background: var(--color-app-bg, rgba(15, 23, 42, 0.8));
   backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
   border-radius: 16px;
   padding: 0.5rem 0.75rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -33,7 +33,7 @@
   padding: 0.45rem 0.9rem;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--color-text-secondary, #94a3b8);
   background: rgba(30, 41, 59, 0.5);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 12px;
@@ -58,9 +58,9 @@
 
 /* Toolbar */
 .sorting-toolbar {
-  background: var(--bg-primary, rgba(15, 23, 42, 0.8));
+  background: var(--color-app-bg, rgba(15, 23, 42, 0.8));
   backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
   border-radius: 16px;
   padding: 0.75rem 1.25rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
@@ -80,17 +80,17 @@
   padding: 0.45rem 0.85rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-primary);
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .toolbar-btn:hover {
-  border-color: var(--accent-secondary);
-  color: var(--accent-primary);
+  border-color: var(--color-primary-hover);
+  color: var(--color-primary);
 }
 
 .toolbar-select-group {
@@ -98,17 +98,17 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.65rem;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .toolbar-select {
   background: none;
   border: none;
-  color: var(--text-primary);
+  color: var(--color-text);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -121,12 +121,12 @@
   gap: 0.5rem;
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .toolbar-range {
   width: 90px;
-  accent-color: var(--accent-primary);
+  accent-color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -153,8 +153,8 @@
 /* Sorting Canvas */
 .sorting-canvas-container {
   height: 440px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 1.25rem 1.5rem 1.25rem 1.5rem;
   box-shadow: var(--shadow-md), 0 0 0 1px rgba(255,255,255,0.03);
@@ -168,7 +168,7 @@
   align-items: center;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sorting-canvas-empty {
@@ -177,10 +177,10 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   font-size: 0.85rem;
   text-align: center;
   padding: 2rem;
@@ -224,7 +224,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem;
   font-weight: 600;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   margin-top: 0.25rem;
   opacity: 0.8;
 }
@@ -252,7 +252,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .inspect-state {
@@ -271,7 +271,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 /* View Mode Toggle Buttons */
@@ -279,8 +279,8 @@
   display: flex;
   align-items: center;
   gap: 0.2rem;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   padding: 0.2rem;
   border-radius: 8px;
 }
@@ -293,7 +293,7 @@
   border-radius: 6px;
   border: none;
   background: none;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -301,12 +301,12 @@
 }
 
 .view-toggle-btn:hover:not(.disabled-view) {
-  color: var(--text-primary);
+  color: var(--color-text);
   background-color: rgba(255, 255, 255, 0.05);
 }
 
 .view-toggle-btn.active {
-  background-color: var(--accent-primary);
+  background-color: var(--color-primary);
   color: #ffffff;
 }
 
@@ -317,8 +317,8 @@
 
 .view-notice-banner {
   background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(59, 130, 246, 0.15));
-  border: 1px solid var(--accent-secondary);
-  color: var(--accent-secondary);
+  border: 1px solid var(--color-primary-hover);
+  color: var(--color-primary-hover);
   padding: 0.4rem 1rem;
   border-radius: 8px;
   font-size: 0.775rem;
@@ -330,8 +330,8 @@
 /* Tree Canvas Styles */
 .tree-canvas-container {
   height: 420px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 1rem;
   display: flex;
@@ -346,7 +346,7 @@
   justify-content: space-between;
   align-items: center;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .tree-title {
@@ -358,7 +358,7 @@
 
 .tree-subtitle {
   font-size: 0.7rem;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
 }
 
 .tree-canvas-workspace {
@@ -410,7 +410,7 @@
 
 .tree-node-index {
   font-size: 0.65rem;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   margin-top: 0.15rem;
 }
 
@@ -419,8 +419,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 0.875rem 1.25rem;
   box-shadow: var(--shadow-sm);
@@ -445,21 +445,21 @@
 .step-progress-bar {
   width: 100%;
   height: 6px;
-  background-color: var(--bg-secondary);
+  background-color: var(--color-surface);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .step-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   transition: width 0.2s ease;
 }
 
 .step-counter {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
 }
 
 .player-right {

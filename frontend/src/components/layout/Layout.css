@@ -7,8 +7,8 @@
   align-items: center;
   height: 64px;
   padding: 0 1.5rem;
-  background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border-bottom: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
@@ -26,7 +26,7 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -37,12 +37,12 @@
 .brand-title {
   font-size: 1.25rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: var(--color-text);
   letter-spacing: -0.5px;
 }
 
 .brand-accent {
-  color: var(--accent-secondary);
+  color: var(--color-primary-hover);
 }
 
 /* Navbar Tabs */
@@ -56,20 +56,20 @@
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   text-decoration: none;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .nav-tab:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-secondary);
+  color: var(--color-text);
+  background-color: var(--color-surface);
 }
 
 .nav-tab.active {
-  color: var(--accent-primary);
-  background-color: var(--bg-secondary);
+  color: var(--color-primary);
+  background-color: var(--color-surface);
   font-weight: 600;
 }
 
@@ -82,8 +82,8 @@
 
 .navbar-icon-btn {
   background: none;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   width: 36px;
   height: 36px;
   border-radius: 8px;
@@ -95,9 +95,9 @@
 }
 
 .navbar-icon-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--accent-secondary);
-  background-color: var(--bg-secondary);
+  color: var(--color-text);
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-surface);
 }
 
 /* User Dropdown */
@@ -111,9 +111,9 @@
   gap: 0.5rem;
   padding: 0.35rem 0.75rem;
   border-radius: 20px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
   cursor: pointer;
   font-weight: 500;
   font-size: 0.875rem;
@@ -121,14 +121,14 @@
 }
 
 .user-profile-btn:hover {
-  border-color: var(--accent-secondary);
+  border-color: var(--color-primary-hover);
 }
 
 .user-avatar {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background-color: var(--accent-primary);
+  background-color: var(--color-primary);
   color: #ffffff;
   display: flex;
   justify-content: center;
@@ -140,8 +140,8 @@
   top: calc(100% + 8px);
   right: 0;
   width: 220px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 0.75rem;
@@ -157,17 +157,17 @@
 .dropdown-username {
   font-weight: 700;
   font-size: 0.95rem;
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 .dropdown-email {
   font-size: 0.75rem;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
 }
 
 .dropdown-divider {
   height: 1px;
-  background-color: var(--border-color);
+  background-color: var(--color-border);
   margin: 0.5rem 0;
 }
 
@@ -179,7 +179,7 @@
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   background: none;
   border: none;
   border-radius: 6px;
@@ -188,8 +188,8 @@
 }
 
 .dropdown-item:hover {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 
 .dropdown-item.logout-btn:hover {
@@ -200,8 +200,8 @@
 /* 2. Topic Menu Sidebar */
 .topic-sidebar {
   width: 260px;
-  background-color: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   padding: 1.25rem 1rem;
@@ -225,7 +225,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 1px;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
 }
 
 /* Sidebar close button — only visible on mobile/tablet */
@@ -236,17 +236,17 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .sidebar-close-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--accent-secondary);
-  background-color: var(--bg-tertiary);
+  color: var(--color-text);
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-surface-elevated);
 }
 
 /* Sidebar overlay backdrop — only visible on mobile/tablet */
@@ -286,32 +286,32 @@
 }
 
 .topic-card:hover {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-surface);
 }
 
 .topic-card.active {
-  background-color: var(--bg-secondary);
-  border-color: var(--accent-secondary);
+  background-color: var(--color-surface);
+  border-color: var(--color-primary-hover);
 }
 
 .topic-icon {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   display: flex;
   justify-content: center;
   align-items: center;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
 .topic-card.active .topic-icon {
-  background-color: var(--accent-primary);
+  background-color: var(--color-primary);
   color: #ffffff;
-  border-color: var(--accent-primary);
+  border-color: var(--color-primary);
 }
 
 .topic-info {
@@ -322,12 +322,12 @@
 .topic-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 .topic-category {
   font-size: 0.7rem;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
 }
 
 /* Hamburger menu button — only visible on mobile/tablet */
@@ -336,8 +336,8 @@
   align-items: center;
   justify-content: center;
   background: none;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   width: 36px;
   height: 36px;
   border-radius: 8px;
@@ -347,9 +347,9 @@
 }
 
 .hamburger-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--accent-secondary);
-  background-color: var(--bg-secondary);
+  color: var(--color-text);
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-surface);
 }
 
 /* Dashboard layout classes */
@@ -366,7 +366,7 @@
 
 .dashboard-main {
   flex: 1;
-  background-color: var(--bg-secondary);
+  background-color: var(--color-surface);
   overflow-y: auto;
   min-width: 0;
 }
@@ -376,8 +376,8 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
@@ -396,12 +396,12 @@
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
 }
 
 .explanation-text {
   font-size: 0.95rem;
-  color: var(--text-primary);
+  color: var(--color-text);
   line-height: 1.5;
   margin: 0;
 }
@@ -414,8 +414,8 @@
 }
 
 .complexity-card {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem;
 }
@@ -426,7 +426,7 @@
   gap: 0.4rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   margin-bottom: 0.5rem;
 }
 
@@ -435,17 +435,17 @@
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .complexity-body strong {
-  color: var(--accent-secondary);
+  color: var(--color-primary-hover);
 }
 
 /* Pseudocode Tracker */
 .pseudocode-container {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem;
   font-family: 'Fira Code', 'Courier New', Courier, monospace;
@@ -464,17 +464,17 @@
 
 .code-line.active-line {
   background-color: rgba(59, 130, 246, 0.2);
-  border-left: 3px solid var(--accent-primary);
+  border-left: 3px solid var(--color-primary);
 }
 
 .line-num {
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   user-select: none;
   min-width: 20px;
 }
 
 .line-code {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -597,4 +597,97 @@
   .complexity-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   THEME DROPDOWN
+   ═══════════════════════════════════════════════════════════════════ */
+
+.theme-dropdown-container {
+  position: relative;
+}
+
+.theme-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.theme-selector-btn:hover {
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-surface-elevated);
+}
+
+.theme-selector-label {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .theme-selector-label {
+    display: inline;
+  }
+}
+
+.theme-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 180px;
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--color-shadow);
+  padding: 0.5rem;
+  z-index: 200;
+}
+
+.dropdown-header {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.theme-option-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  justify-content: flex-start;
+}
+
+.theme-option-btn:hover {
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text);
+}
+
+.theme-option-btn.active {
+  background-color: var(--color-surface-elevated);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.theme-active-icon {
+  margin-left: auto;
+  color: var(--color-primary);
 }

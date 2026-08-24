@@ -59,14 +59,14 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
                     width="20"
                     height="16"
                     rx="4"
-                    fill="var(--bg-secondary)"
-                    stroke="var(--border-color)"
+                    fill="var(--color-surface)"
+                    stroke="var(--color-border)"
                     strokeWidth="1"
                   />
                   <text
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill="var(--text-secondary)"
+                    fill="var(--color-text-secondary)"
                     fontSize="10"
                     fontWeight="700"
                     fontFamily="monospace"
@@ -107,8 +107,8 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
               {/* Node Body */}
               <circle
                 r="18"
-                fill="var(--bg-card)"
-                stroke="var(--border-color)"
+                fill="var(--color-surface)"
+                stroke="var(--color-border)"
                 strokeWidth="2"
                 className={`graph-node-circle ${stateClass}`}
               />
@@ -117,7 +117,7 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
               <text
                 textAnchor="middle"
                 dominantBaseline="central"
-                fill="var(--text-primary)"
+                fill="var(--color-text)"
                 fontSize="12"
                 fontWeight="700"
                 fontFamily="monospace"
@@ -153,7 +153,7 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
                 <g transform="translate(0, 26)">
                   <text
                     textAnchor="middle"
-                    fill="var(--text-secondary)"
+                    fill="var(--color-text-secondary)"
                     fontSize="9"
                     fontFamily="monospace"
                   >

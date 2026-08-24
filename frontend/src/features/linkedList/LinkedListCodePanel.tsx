@@ -79,8 +79,8 @@ export const LinkedListCodePanel: React.FC<LinkedListCodePanelProps> = ({
       </div>
 
       {/* Live Pointer & Variable Inspector */}
-      <div className="variables-section" style={{ borderTop: '1px solid var(--border-color)', padding: '0.75rem' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem', letterSpacing: '0.04em' }}>
+      <div className="variables-section" style={{ borderTop: '1px solid var(--color-border)', padding: '0.75rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-secondary)', marginBottom: '0.4rem', letterSpacing: '0.04em' }}>
           LIVE POINTER STATE
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>

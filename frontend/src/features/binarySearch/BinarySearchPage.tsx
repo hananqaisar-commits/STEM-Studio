@@ -308,7 +308,7 @@ export const BinarySearchPage: React.FC = () => {
         <div className="bs-toolbar-actions">
           {/* Target Input */}
           <div className="bs-input-group">
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: '4px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
               Target:
             </span>
             <input
@@ -321,7 +321,7 @@ export const BinarySearchPage: React.FC = () => {
 
           {/* Array Input */}
           <div className="bs-input-group" style={{ minWidth: '220px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: '4px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
               Arr:
             </span>
             <input
@@ -330,7 +330,7 @@ export const BinarySearchPage: React.FC = () => {
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',
-                color: 'var(--text-primary)',
+                color: 'var(--color-text)',
                 fontSize: '0.8rem',
                 width: '100%',
                 fontFamily: 'monospace',

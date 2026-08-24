@@ -9,69 +9,154 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
-:root {
-  /* Light Theme Palette - Professional & Crisp */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f4f4f5;
-  --bg-tertiary: #e4e4e7;
+:root, [data-theme="grayscale-light"] {
+  /* Grayscale Light Palette (Default) */
+  --bright-snow: #f8f9fa;
+  --platinum: #e9ecef;
+  --alabaster-grey: #dee2e6;
+  --pale-slate: #ced4da;
+  --pale-slate-2: #adb5bd;
+  --slate-grey: #6c757d;
+  --iron-grey: #495057;
+  --gunmetal: #343a40;
+  --carbon-black: #212529;
+
+  --color-app-bg: var(--bright-snow);
+  --color-surface: #ffffff;
+  --color-surface-elevated: var(--platinum);
+  --color-surface-muted: var(--platinum);
+  --color-border: var(--alabaster-grey);
+  --color-border-strong: var(--pale-slate);
   
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-tertiary: #a1a1aa;
+  --color-text: var(--carbon-black);
+  --color-text-secondary: var(--gunmetal);
+  --color-text-muted: var(--slate-grey);
+  --color-text-on-primary: var(--bright-snow);
   
-  --accent-primary: #0f172a;
-  --accent-secondary: #334155;
-  --accent-hover: #1e293b;
+  --color-primary: var(--carbon-black);
+  --color-primary-hover: var(--gunmetal);
+  --color-primary-active: var(--iron-grey);
   
-  --border-color: #e4e4e7;
-  --focus-ring: rgba(15, 23, 42, 0.2);
+  --color-nav-active: var(--carbon-black);
+  --color-control-bg: var(--platinum);
+  --color-control-hover: var(--alabaster-grey);
+  --color-control-selected: var(--pale-slate);
+  --color-focus: var(--pale-slate-2);
+  
+  --color-shadow: rgba(33, 37, 41, 0.08);
+
   --error-color: #ef4444;
   --success-color: #22c55e;
-  
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgba(33, 37, 41, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(33, 37, 41, 0.08), 0 2px 4px -2px rgba(33, 37, 41, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(33, 37, 41, 0.1), 0 4px 6px -4px rgba(33, 37, 41, 0.05);
 
-  /* Responsive Spacing Tokens */
   --space-page: clamp(0.75rem, 2vw, 1.5rem);
   --space-section: clamp(0.75rem, 1.5vw, 1.25rem);
-
-  /* Responsive Navbar Height */
   --navbar-height: 64px;
+}
 
-  /* Raised surface tokens.
-     `--bg-card` and `--bg-hover` were referenced 24 times across the
-     Linked List / Graph / Binary Search stylesheets but never defined
-     anywhere, so every card, search box and pill tab on those three
-     pages resolved to no background at all. Aliased onto the existing
-     scale — `var()` resolves at use time, so these follow the active
-     theme automatically. */
-  --bg-card: var(--bg-secondary);
-  --bg-hover: var(--bg-tertiary);
+[data-theme="warm-light"] {
+  /* Warm Light Palette */
+  --tea-green: #ccd5ae;
+  --beige: #e9edc9;
+  --cornsilk: #fefae0;
+  --papaya-whip: #faedcd;
+  --light-bronze: #d4a373;
+
+  --color-app-bg: var(--cornsilk);
+  --color-surface: #ffffff;
+  --color-surface-elevated: var(--papaya-whip);
+  --color-surface-muted: var(--beige);
+  --color-border: var(--beige);
+  --color-border-strong: var(--tea-green);
+  
+  --color-text: #343a40;
+  --color-text-secondary: #495057;
+  --color-text-muted: #6c757d;
+  --color-text-on-primary: #ffffff;
+  
+  --color-primary: var(--light-bronze);
+  --color-primary-hover: #c89562;
+  --color-primary-active: #b5804d;
+  
+  --color-nav-active: var(--light-bronze);
+  --color-control-bg: var(--papaya-whip);
+  --color-control-hover: var(--beige);
+  --color-control-selected: var(--tea-green);
+  --color-focus: var(--light-bronze);
+  
+  --color-shadow: rgba(52, 58, 64, 0.05);
 }
 
 [data-theme="dark"] {
-  /* Dark Theme Palette - Mature Slate/Deep Blues */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
+  /* Dark Palette */
+  --ink-black: #02111b;
+  --gunmetal-dark: #3f4045;
+  --shadow-grey: #30292f;
+  --blue-slate: #5d737e;
+
+  --color-app-bg: var(--ink-black);
+  --color-surface: var(--shadow-grey);
+  --color-surface-elevated: var(--gunmetal-dark);
+  --color-surface-muted: var(--shadow-grey);
+  --color-border: var(--gunmetal-dark);
+  --color-border-strong: var(--blue-slate);
   
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
+  --color-text: #f8f9fa;
+  --color-text-secondary: #e9ecef;
+  --color-text-muted: #adb5bd;
+  --color-text-on-primary: #ffffff;
   
-  --accent-primary: #e2e8f0;
-  --accent-secondary: #cbd5e1;
-  --accent-hover: #f1f5f9;
+  --color-primary: var(--blue-slate);
+  --color-primary-hover: #6d8590;
+  --color-primary-active: #4d616c;
   
-  --border-color: #334155;
-  --focus-ring: rgba(226, 232, 240, 0.2);
-  --error-color: #f87171;
-  --success-color: #4ade80;
+  --color-nav-active: var(--blue-slate);
+  --color-control-bg: var(--shadow-grey);
+  --color-control-hover: var(--gunmetal-dark);
+  --color-control-selected: var(--blue-slate);
+  --color-focus: var(--blue-slate);
   
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+  --color-shadow: rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="warm-neutral"] {
+  /* Warm Neutral Palette */
+  --light-bronze-alt: #cb997e;
+  --powder-petal: #eddcd2;
+  --linen: #fff1e6;
+  --parchment: #f0efeb;
+  --desert-sand: #ddbea9;
+  --dry-sage: #a5a58d;
+  --ash-grey: #b7b7a4;
+
+  --color-app-bg: var(--linen);
+  --color-surface: var(--parchment);
+  --color-surface-elevated: var(--powder-petal);
+  --color-surface-muted: var(--powder-petal);
+  --color-border: var(--desert-sand);
+  --color-border-strong: var(--dry-sage);
+  
+  --color-text: #343a40;
+  --color-text-secondary: #495057;
+  --color-text-muted: #6c757d;
+  --color-text-on-primary: #ffffff;
+  
+  --color-primary: var(--light-bronze-alt);
+  --color-primary-hover: #b58870;
+  --color-primary-active: #a5775f;
+  
+  --color-nav-active: var(--light-bronze-alt);
+  --color-control-bg: var(--powder-petal);
+  --color-control-hover: var(--desert-sand);
+  --color-control-selected: var(--dry-sage);
+  --color-focus: var(--light-bronze-alt);
+  
+  --color-shadow: rgba(52, 58, 64, 0.05);
 }
 
 * {
@@ -88,8 +173,8 @@ html {
 
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--color-app-bg);
+  color: var(--color-text);
   transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100vh;
   display: flex;
@@ -97,6 +182,7 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
+
 
 /* Responsive Media */
 img, video, svg, canvas {
