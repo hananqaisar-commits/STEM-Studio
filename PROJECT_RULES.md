@@ -98,7 +98,19 @@ CI ✅ + Review
    ↓
 main
 ```
-**Core rule:** Do not break the existing system to implement a new feature. Inspect → implement → test → validate → PR → CI → review → merge.
+## 14. Critical Production & Database Rules (Non-Negotiable Safety Checklist)
+- **Database Engine & Dialect Isolation (`backend/infrastructure/database/database.py`)**:
+  - Never hardcode MySQL SSL arguments (`connect_args={"ssl": ...}`) globally. SQLite (`sqlite:///...`) MUST NOT receive MySQL SSL kwargs, or it will crash with `TypeError`.
+  - Remote Cloud Databases (Aiven / Render / Supabase): Remote MySQL requires `ssl.SSLContext` (`check_hostname = False`, `verify_mode = ssl.CERT_NONE`) passed to PyMySQL.
+  - Connection pooling (`pool_size`, `max_overflow`) applies to MySQL/Postgres only. SQLite uses `check_same_thread=False`.
+- **Database Initialization & Exception Reporting (`backend/app/main.py`)**:
+  - Never silently swallow database connection or table creation errors in `init_db_tables()`. Always log full tracebacks (`traceback.format_exc()`) so database failures are immediately visible in server deployment logs.
+  - Keep `/api/health` and `/api/db-check` active for diagnostic verification.
+- **Database URL Formatting (`backend/app/core/config.py`)**:
+  - Automatically convert `mysql://` to `mysql+pymysql://` and `postgres://` to `postgresql://`. Strip query params like `ssl-mode`/`ssl_mode` incompatible with PyMySQL.
+- **Frontend Core Components & Types (`frontend/src/`)**:
+  - Do not break shared component interfaces (`PlayPauseButton`, `ExplanationPanel`) used across visualizer pages.
+  - Always verify `npm run build` (`tsc -b && vite build`) passes with zero errors before pushing to `dev` or `main`.
 
 ---
 

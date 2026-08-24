@@ -33,7 +33,8 @@ def init_db_tables():
         Base.metadata.create_all(bind=engine)
         print("✅ Database tables created/verified successfully! Production deployment ready.")
     except Exception as e:
-        print(f"⚠️ Table creation notice: {e}")
+        import traceback
+        print(f"❌ CRITICAL DATABASE ERROR during table creation:\n{traceback.format_exc()}")
 
 
 @asynccontextmanager
@@ -81,7 +82,17 @@ def db_check():
         from sqlalchemy import text
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return {"status": "database_connected", "success": True}
+        return {
+            "status": "database_connected",
+            "success": True,
+            "dialect": engine.dialect.name
+        }
     except Exception as e:
-        return {"status": "database_error", "error": str(e)}, 500
+        import traceback
+        return {
+            "status": "database_error",
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, 500
 
