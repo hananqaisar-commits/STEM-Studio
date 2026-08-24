@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check } from 'lucide-react';
-import { useTheme, Theme } from '../../contexts/ThemeContext';
+import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import './Layout.css';
 
