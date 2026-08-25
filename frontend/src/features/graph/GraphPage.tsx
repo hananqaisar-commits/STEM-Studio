@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Share2,
   RotateCcw,
@@ -12,6 +12,11 @@ import {
   GitMerge,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { QuizDock } from '../../components/quiz/QuizDock';
+import { useQuizSession } from '../../hooks/useQuizSession';
+import { maskNarration } from '../../components/quiz/quizMask';
+import { buildGraphCheckpoints } from './quizAdapter';
+import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   getPresetGraph,
   generateBFSSteps,
@@ -26,7 +31,6 @@ import {
 } from './graphEngine';
 import { GraphRenderer } from './GraphRenderer';
 import { GraphCodePanel } from './GraphCodePanel';
-import { GraphPredictionQuiz } from './GraphPredictionQuiz';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -58,7 +62,8 @@ export const GraphPage: React.FC = () => {
   const [edges, setEdges] = useState<GraphEdge[]>(() => getPresetGraph('standard').edges);
 
   // Modes & Modals
-  const [isPredictMode, setIsPredictMode] = useState<boolean>(false);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [cadence, setCadence] = React.useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
   // Active steps dataset
@@ -79,10 +84,29 @@ export const GraphPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer<GraphStep>({ steps: activeSteps });
 
+  // Build quiz checkpoints from the current active steps
+  const quizCheckpoints = useMemo(
+    () => buildGraphCheckpoints(activeSteps, category),
+    [activeSteps, category]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'graph',
+    algorithmId: category,
+  });
+
   // Handle Category Switching
   const handleSelectCategory = (cat: GraphCategory) => {
     setCategory(cat);
     reset();
+    quizSession.resetSession();
 
     const topologyType = cat === 'topoSort' ? 'dag' : 'standard';
     const preset = getPresetGraph(topologyType);
@@ -119,6 +143,7 @@ export const GraphPage: React.FC = () => {
       steps = generateTopoSortSteps(nodes, edges);
     }
     setActiveSteps(steps);
+    quizSession.resetSession();
   };
 
   const handleRandomizeWeights = () => {
@@ -209,7 +234,7 @@ export const GraphPage: React.FC = () => {
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
-        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
   );
@@ -301,9 +326,9 @@ export const GraphPage: React.FC = () => {
         {/* Mode Toggles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button
-            className={`ll-btn ${isPredictMode ? 'll-btn-primary' : 'll-btn-secondary'}`}
-            onClick={() => setIsPredictMode(!isPredictMode)}
-            style={isPredictMode ? { background: '#c084fc', color: '#0f172a' } : {}}
+            className={`ll-btn ${quizEnabled ? 'll-btn-primary' : 'll-btn-secondary'}`}
+            onClick={() => setQuizEnabled(!quizEnabled)}
+            style={quizEnabled ? { background: '#c084fc', color: '#0f172a' } : {}}
           >
             <HelpCircle size={14} />
             <span>Quiz Mode</span>
@@ -323,10 +348,6 @@ export const GraphPage: React.FC = () => {
       <div className="graph-workspace">
         {/* Visualizer Canvas & Controls Card */}
         <div className="renderer-section">
-          {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-            <GraphPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
-          )}
-
           <div className="graph-canvas-card">
             <div className="graph-canvas-header">
               <div className="ll-canvas-title">
@@ -352,6 +373,8 @@ export const GraphPage: React.FC = () => {
 
         {/* Right Column: Code & Explanation */}
         <div className="explanation-section">
+          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
           <GraphCodePanel
             snippetKey={snippetKey}
             activeLine={currentStep?.codeLine}
@@ -361,7 +384,7 @@ export const GraphPage: React.FC = () => {
           />
 
           <ExplanationPanel
-            description={currentStep?.explanation || 'Click Play to observe step-by-step execution.'}
+            description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)}
           />
         </div>
       </div>
@@ -375,9 +398,6 @@ export const GraphPage: React.FC = () => {
         toolbarControls={renderFloatingControls()}
         playbackControls={renderPlayerControls()}
       >
-        {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-          <GraphPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
-        )}
         <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
       </FullScreenCanvasModal>
     </div>

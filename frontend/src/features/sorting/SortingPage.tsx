@@ -3,7 +3,6 @@ import {
   Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, HelpCircle
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
-import { SortingPredictionQuiz } from './SortingPredictionQuiz';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
@@ -13,6 +12,11 @@ import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { QuizDock } from '../../components/quiz/QuizDock';
+import { useQuizSession } from '../../hooks/useQuizSession';
+import { maskNarration } from '../../components/quiz/quizMask';
+import { buildSortingCheckpoints } from './quizAdapter';
+import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { generateBubbleSortSteps } from './algorithms/bubbleSort';
 import { generateSelectionSortSteps } from './algorithms/selectionSort';
@@ -75,8 +79,8 @@ export const SortingPage: React.FC = () => {
   // Debugger & Modal & Predict state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [isPredictMode, setIsPredictMode] = useState<boolean>(true);
-  const [breakpoints, setBreakpoints] = useState<number[]>([]);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Custom code execution state
   const [customSteps, setCustomSteps] = useState<import('../../engine/types/Step').ArrayStep[] | null>(null);
@@ -117,6 +121,24 @@ export const SortingPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer({ steps: customSteps ?? executionData.steps });
 
+  // Build quiz checkpoints from the current execution steps
+  const quizCheckpoints = useMemo(
+    () => buildSortingCheckpoints(customSteps ?? executionData.steps, selectedAlg),
+    [customSteps, executionData.steps, selectedAlg]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'sorting',
+    algorithmId: selectedAlg,
+  });
+
   // Clear custom steps when algorithm or array changes
   useEffect(() => {
     setCustomSteps(null);
@@ -128,24 +150,17 @@ export const SortingPage: React.FC = () => {
     reset();
   }, [reset]);
 
-  const comparing = currentStep?.comparingIndices;
-  const hasPrediction = isPredictMode && comparing && comparing.length >= 2 && currentStep?.array;
-  const val1 = hasPrediction ? currentStep.array[comparing[0]] : undefined;
-  const val2 = hasPrediction ? currentStep.array[comparing[1]] : undefined;
 
-  useEffect(() => {
-    if (hasPrediction && isPlaying) {
-      pause();
-    }
-  }, [hasPrediction, isPlaying, pause]);
 
   const handleRandomize = () => {
     reset();
+    quizSession.resetSession();
     setInitialArray(generateArray(arraySize, arrayPattern));
   };
 
   const handleApplyCustomArray = (newArr: number[]) => {
     reset();
+    quizSession.resetSession();
     setArraySize(newArr.length);
     setInitialArray(newArr);
     setShowCustomEditor(false);
@@ -163,11 +178,7 @@ export const SortingPage: React.FC = () => {
     }
   };
 
-  const handleToggleBreakpoint = (lineNumber: number) => {
-    setBreakpoints((prev) =>
-      prev.includes(lineNumber) ? prev.filter((line) => line !== lineNumber) : [...prev, lineNumber]
-    );
-  };
+
 
   const renderPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
@@ -245,7 +256,7 @@ export const SortingPage: React.FC = () => {
       <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} />
         <span>Predict Mode</span>
-        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
   );
@@ -266,6 +277,7 @@ export const SortingPage: React.FC = () => {
         onSelect={(id) => {
           setSelectedAlg(id as AlgorithmKey);
           reset();
+          quizSession.resetSession();
         }}
         placeholder="Search sorting algorithm or complexity..."
       />
@@ -280,6 +292,7 @@ export const SortingPage: React.FC = () => {
               onClick={() => {
                 setSelectedAlg(alg.key);
                 reset();
+                quizSession.resetSession();
               }}
             >
               {alg.icon}
@@ -358,8 +371,8 @@ export const SortingPage: React.FC = () => {
               <span>Predict Mode</span>
               <input
                 type="checkbox"
-                checked={isPredictMode}
-                onChange={(e) => setIsPredictMode(e.target.checked)}
+                checked={quizEnabled}
+                onChange={(e) => setQuizEnabled(e.target.checked)}
               />
             </label>
 
@@ -378,16 +391,6 @@ export const SortingPage: React.FC = () => {
       <div className="sorting-workspace">
         {/* Left Column: Visual Canvas & Interactive Controls */}
         <div className="renderer-section">
-          {hasPrediction && val1 !== undefined && val2 !== undefined && comparing && (
-            <SortingPredictionQuiz
-              val1={val1}
-              val2={val2}
-              idx1={comparing[0]}
-              idx2={comparing[1]}
-              onCorrectAnswer={() => stepForward()}
-            />
-          )}
-
           <SortingRenderer
             currentStep={currentStep}
             onElementClick={handleBarElementClick}
@@ -399,11 +402,13 @@ export const SortingPage: React.FC = () => {
 
         {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
         <div className="explanation-section">
+          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             activeLine={currentStep?.codeLine}
-            breakpoints={breakpoints}
-            onToggleBreakpoint={handleToggleBreakpoint}
+            breakpoints={[]}
+            onToggleBreakpoint={() => {}}
             variables={currentStep?.variables}
             callStack={currentStep?.callStack}
             onCustomCodeRun={handleCustomCodeRun}
@@ -411,7 +416,7 @@ export const SortingPage: React.FC = () => {
           />
 
           <ExplanationPanel
-            description={currentStep?.description || 'Click Play to observe step-by-step execution details.'}
+            description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
@@ -427,15 +432,6 @@ export const SortingPage: React.FC = () => {
         toolbarControls={renderFloatingControls()}
         playbackControls={renderPlayerControls()}
       >
-        {hasPrediction && val1 !== undefined && val2 !== undefined && comparing && (
-          <SortingPredictionQuiz
-            val1={val1}
-            val2={val2}
-            idx1={comparing[0]}
-            idx2={comparing[1]}
-            onCorrectAnswer={() => stepForward()}
-          />
-        )}
         <SortingRenderer
           currentStep={currentStep}
           onElementClick={handleBarElementClick}

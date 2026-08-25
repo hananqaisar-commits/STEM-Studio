@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Search,
   RotateCcw,
@@ -11,6 +11,11 @@ import {
   Compass,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { QuizDock } from '../../components/quiz/QuizDock';
+import { useQuizSession } from '../../hooks/useQuizSession';
+import { maskNarration } from '../../components/quiz/quizMask';
+import { buildBinarySearchCheckpoints } from './quizAdapter';
+import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateBinarySearchSteps,
   generateLowerBoundSteps,
@@ -22,7 +27,6 @@ import {
 } from './binarySearchEngine';
 import { BinarySearchRenderer } from './BinarySearchRenderer';
 import { BinarySearchCodePanel } from './BinarySearchCodePanel';
-import { BinarySearchPredictionQuiz } from './BinarySearchPredictionQuiz';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -54,7 +58,8 @@ export const BinarySearchPage: React.FC = () => {
   const [customArrayInput, setCustomArrayInput] = useState<string>('4, 8, 15, 23, 42, 56, 77, 89, 94');
 
   // Modes & Modals
-  const [isPredictMode, setIsPredictMode] = useState<boolean>(false);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
   // Active steps dataset
@@ -75,10 +80,29 @@ export const BinarySearchPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer<BinarySearchStep>({ steps: activeSteps });
 
+  // Build quiz checkpoints from the current active steps
+  const quizCheckpoints = useMemo(
+    () => buildBinarySearchCheckpoints(activeSteps, category),
+    [activeSteps, category]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'binarySearch',
+    algorithmId: category,
+  });
+
   // Handle Category Switching
   const handleSelectCategory = (cat: BinarySearchCategory) => {
     setCategory(cat);
     reset();
+    quizSession.resetSession();
 
     if (cat === 'searchRotatedArray') {
       const rotated = [30, 45, 60, 75, 5, 12, 18, 24];
@@ -128,6 +152,7 @@ export const BinarySearchPage: React.FC = () => {
     }
 
     setActiveSteps(steps);
+    quizSession.resetSession();
   };
 
   const handleApplyCustomArray = () => {
@@ -159,6 +184,7 @@ export const BinarySearchPage: React.FC = () => {
         : generateBinarySearchSteps(parsed, target);
 
     setActiveSteps(steps);
+    quizSession.resetSession();
   };
 
   const handleRandomize = () => {
@@ -192,6 +218,7 @@ export const BinarySearchPage: React.FC = () => {
           : generateBinarySearchSteps(randomVals, target);
       setActiveSteps(steps);
     }
+    quizSession.resetSession();
   };
 
   const handleReset = () => {
@@ -266,7 +293,7 @@ export const BinarySearchPage: React.FC = () => {
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
-        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
   );
@@ -365,9 +392,9 @@ export const BinarySearchPage: React.FC = () => {
         {/* Mode Toggles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button
-            className={`ll-btn ${isPredictMode ? 'll-btn-primary' : 'll-btn-secondary'}`}
-            onClick={() => setIsPredictMode(!isPredictMode)}
-            style={isPredictMode ? { background: '#38bdf8', color: '#0f172a' } : {}}
+            className={`ll-btn ${quizEnabled ? 'll-btn-primary' : 'll-btn-secondary'}`}
+            onClick={() => setQuizEnabled(!quizEnabled)}
+            style={quizEnabled ? { background: '#38bdf8', color: '#0f172a' } : {}}
           >
             <HelpCircle size={14} />
             <span>Quiz Mode</span>
@@ -386,10 +413,6 @@ export const BinarySearchPage: React.FC = () => {
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
       <div className="bs-workspace">
         <div className="renderer-section">
-          {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-            <BinarySearchPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
-          )}
-
           <div className="bs-canvas-card">
             <div className="bs-canvas-header">
               <div className="ll-canvas-title">
@@ -415,6 +438,8 @@ export const BinarySearchPage: React.FC = () => {
 
         {/* Right Column: Code & Explanation */}
         <div className="explanation-section">
+          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
           <BinarySearchCodePanel
             snippetKey={snippetKey}
             activeLine={currentStep?.codeLine}
@@ -425,7 +450,7 @@ export const BinarySearchPage: React.FC = () => {
           />
 
           <ExplanationPanel
-            description={currentStep?.explanation || 'Click Search to observe step-by-step execution.'}
+            description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)}
           />
         </div>
       </div>
@@ -439,9 +464,6 @@ export const BinarySearchPage: React.FC = () => {
         toolbarControls={renderFloatingControls()}
         playbackControls={renderPlayerControls()}
       >
-        {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-          <BinarySearchPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
-        )}
         <BinarySearchRenderer step={currentStep} array={array} target={currentTarget} />
       </FullScreenCanvasModal>
     </div>

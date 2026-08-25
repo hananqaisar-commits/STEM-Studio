@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Layers, Plus, Trash2, Code, CheckCircle2, Filter, HelpCircle, Maximize2, Sparkles
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { QuizDock } from '../../components/quiz/QuizDock';
+import { useQuizSession } from '../../hooks/useQuizSession';
+import { maskNarration } from '../../components/quiz/quizMask';
+import { buildStackQueueCheckpoints } from './quizAdapter';
+import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateStackPushSteps,
   generateStackPopSteps,
@@ -75,7 +80,8 @@ export const StackQueuePage: React.FC = () => {
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Modes & Modals matching BST
-  const [isPredictMode, setIsPredictMode] = useState<boolean>(false);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
   // Active step dataset
@@ -112,6 +118,24 @@ export const StackQueuePage: React.FC = () => {
     reset,
     setSpeed,
   } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
+
+  // Build quiz checkpoints from the current active steps
+  const quizCheckpoints = useMemo(
+    () => buildStackQueueCheckpoints(activeSteps, category),
+    [activeSteps, category]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'stackQueue',
+    algorithmId: category,
+  });
 
   // ─── ACTION HANDLERS ─────────────────────────────────────────────
 
@@ -353,6 +377,7 @@ export const StackQueuePage: React.FC = () => {
     const steps = getCategoryDefaultSteps(id);
     setActiveSteps(steps);
     reset();
+    quizSession.resetSession();
   };
 
   /* Operation buttons for the active category. Shared by the page toolbar and the
@@ -529,7 +554,7 @@ export const StackQueuePage: React.FC = () => {
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
         <span>Predict Mode</span>
-        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
   );
@@ -676,8 +701,8 @@ export const StackQueuePage: React.FC = () => {
               <span>Predict Mode</span>
               <input
                 type="checkbox"
-                checked={isPredictMode}
-                onChange={(e) => setIsPredictMode(e.target.checked)}
+                checked={quizEnabled}
+                onChange={(e) => setQuizEnabled(e.target.checked)}
               />
             </label>
 
@@ -729,13 +754,15 @@ export const StackQueuePage: React.FC = () => {
         {/* Right Panel: Code Debugger + Explanation */}
         {showDebugger && (
           <div className="explanation-section">
+            <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
             <StackQueueCodePanel
               category={category}
               activeLine={currentStep?.codeLine ?? 1}
             />
 
             <ExplanationPanel
-              description={currentStep?.description ?? 'Run an operation to observe step-by-step execution.'}
+              description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
             />
           </div>
         )}
