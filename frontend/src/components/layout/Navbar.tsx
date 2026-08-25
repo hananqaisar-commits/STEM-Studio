@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check } from 'lucide-react';
+import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check, Palette } from 'lucide-react';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import './Layout.css';
@@ -34,10 +34,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   }, []);
 
   const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] = [
-    { value: 'grayscale-light', label: 'Grayscale Light', icon: <Sun size={14} /> },
+    { value: 'grayscale-light', label: 'Greyscale', icon: <Sun size={14} /> },
     { value: 'warm-light', label: 'Warm Light', icon: <Sun size={14} /> },
     { value: 'dark', label: 'Dark', icon: <Moon size={14} /> },
-    { value: 'warm-neutral', label: 'Warm Neutral', icon: <Sun size={14} /> },
+    { value: 'warm-neutral', label: 'Warm Beige', icon: <Sun size={14} /> },
     { value: 'system', label: 'System', icon: <Monitor size={14} /> },
   ];
 
@@ -107,6 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             onClick={() => setShowThemeDropdown(!showThemeDropdown)}
             aria-label="Select Appearance"
           >
+            <Palette size={15} aria-hidden="true" />
             <span className="theme-selector-label">Appearance</span>
             <ChevronDown size={14} />
           </button>
