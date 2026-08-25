@@ -1,0 +1,412 @@
+/* ═══════════════════════════════════════════════════════════════════
+   QUIZ PANEL — shared interactive learning mode UI
+   ═══════════════════════════════════════════════════════════════════
+
+   One card, used by all six visualizer categories. Replaces four
+   different card designs (BST.css's self-described "Glassmorphic IDE
+   UI" plus three copies of ~100 lines of inline styles in the Graph,
+   Binary Search and Linked List quiz components).
+
+   Design language is taken from VisualizerShell.css, which is already
+   the app's clean, fully-tokenised shell: var(--bg-card),
+   1px solid var(--border-color), 16px radius, var(--shadow-sm), and
+   #818cf8 as the single interactive accent.
+
+   Rules this file holds to, because breaking them is what made the old
+   card look unfinished:
+     · no backdrop-filter, no outer glow, no hardcoded surface colour —
+       every background and border comes from a theme token, so the
+       panel is readable in light mode as well as dark;
+     · one accent, not three competing neons;
+     · sentence case at weight 600 — no uppercase, no letter-spacing
+       tracked out.
+   ─────────────────────────────────────────────────────────────────── */
+
+.quiz-dock {
+  /* Single accent, matching the shell's focus ring. */
+  --quiz-accent: #818cf8;
+  --quiz-accent-soft: rgba(129, 140, 248, 0.09);
+  --quiz-accent-ring: rgba(129, 140, 248, 0.2);
+  --quiz-ok-soft: rgba(34, 197, 94, 0.09);
+  --quiz-bad-soft: rgba(239, 68, 68, 0.08);
+
+  /* Reserved so the cards below in the same rail hold still when a
+     checkpoint opens and closes. */
+  min-height: 268px;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme='dark'] .quiz-dock {
+  --quiz-accent-soft: rgba(129, 140, 248, 0.14);
+  --quiz-ok-soft: rgba(74, 222, 128, 0.12);
+  --quiz-bad-soft: rgba(248, 113, 113, 0.12);
+}
+
+/* ─── Card shell ───────────────────────────────────────────────────── */
+
+.quiz-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  flex: 1;
+  padding: 0.95rem 1rem 0.85rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+}
+
+/* ─── Header ───────────────────────────────────────────────────────── */
+
+.quiz-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.quiz-head-text {
+  min-width: 0;
+}
+
+.quiz-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.quiz-title {
+  margin: 0.1rem 0 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.quiz-concept {
+  flex-shrink: 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ─── Prompt ───────────────────────────────────────────────────────── */
+
+.quiz-prompt {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+/* ─── Options ──────────────────────────────────────────────────────── */
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.83rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.quiz-option:hover:not(:disabled) {
+  border-color: var(--quiz-accent);
+}
+
+.quiz-option:focus-visible {
+  outline: none;
+  border-color: var(--quiz-accent);
+  box-shadow: 0 0 0 3px var(--quiz-accent-ring);
+}
+
+.quiz-option[aria-checked='true'] {
+  border-color: var(--quiz-accent);
+  background: var(--quiz-accent-soft);
+}
+
+.quiz-option:disabled {
+  cursor: default;
+}
+
+/* Revealed states. Semantic colours only — the accent stays reserved
+   for "this is what you picked", so the two never read as the same
+   signal. */
+.quiz-option.is-correct {
+  border-color: var(--success-color);
+  background: var(--quiz-ok-soft);
+}
+
+.quiz-option.is-wrong {
+  border-color: var(--error-color);
+  background: var(--quiz-bad-soft);
+}
+
+.quiz-option.is-muted {
+  opacity: 0.55;
+}
+
+.quiz-option-key {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.quiz-option[aria-checked='true'] .quiz-option-key {
+  border-color: var(--quiz-accent);
+  color: var(--quiz-accent);
+}
+
+.quiz-option-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.quiz-option-mark {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.quiz-option.is-correct .quiz-option-mark {
+  color: var(--success-color);
+}
+
+.quiz-option.is-wrong .quiz-option-mark {
+  color: var(--error-color);
+}
+
+/* ─── Feedback ─────────────────────────────────────────────────────── */
+
+.quiz-feedback {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  font-size: 0.79rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.quiz-feedback svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.quiz-feedback.is-hint svg {
+  color: var(--quiz-accent);
+}
+
+.quiz-feedback.is-ok {
+  border-color: var(--success-color);
+  background: var(--quiz-ok-soft);
+}
+
+.quiz-feedback.is-ok svg {
+  color: var(--success-color);
+}
+
+.quiz-feedback.is-bad {
+  border-color: var(--error-color);
+  background: var(--quiz-bad-soft);
+}
+
+.quiz-feedback.is-bad svg {
+  color: var(--error-color);
+}
+
+.quiz-feedback-title {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ─── Footer ───────────────────────────────────────────────────────── */
+
+.quiz-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.quiz-score {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quiz-action {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.42rem 0.8rem;
+  border: 1px solid var(--quiz-accent);
+  border-radius: 8px;
+  background: var(--quiz-accent);
+  font-family: inherit;
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.quiz-action:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.quiz-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--quiz-accent-ring);
+}
+
+.quiz-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Idle / ready state ───────────────────────────────────────────── */
+
+.quiz-idle-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex: 1;
+  justify-content: center;
+  padding: 0.35rem 0;
+}
+
+.quiz-idle-line {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.quiz-idle-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-tertiary);
+}
+
+/* ─── Cadence selector ─────────────────────────────────────────────── */
+
+.quiz-cadence {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.quiz-cadence-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.quiz-cadence-group {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+}
+
+.quiz-cadence-btn {
+  flex: 1;
+  padding: 0.32rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.quiz-cadence-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.quiz-cadence-btn:focus-visible {
+  outline: none;
+  border-color: var(--quiz-accent);
+  box-shadow: 0 0 0 3px var(--quiz-accent-ring);
+}
+
+.quiz-cadence-btn[aria-pressed='true'] {
+  background: var(--quiz-accent-soft);
+  border-color: var(--quiz-accent);
+  color: var(--text-primary);
+}
+
+.quiz-cadence-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quiz-cadence-hint {
+  margin: 0;
+  font-size: 0.71rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+
+/* ─── Narrow layouts ───────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .quiz-dock {
+    /* The rail is full-width below the canvas here, so a reserved
+       height would just be dead space. */
+    min-height: 0;
+  }
+}

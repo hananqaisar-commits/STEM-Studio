@@ -168,7 +168,11 @@ export function generateBSTInsertSteps(initialTree: BSTTreeStructure | undefined
       undefined,
       `Comparing ${newValue} with current node ${curr.value}. ${explanation}`,
       5,
-      { newValue, currentNode: curr.value, direction },
+      /* `direction` is deliberately not exposed here: BSTPage renders the
+         variables panel next to the quiz panel (BSTPage.tsx:609), so a
+         `direction: 'left'` entry would print the answer to the open
+         prediction question. The reveal reads it from `predictionPoint`. */
+      { newValue, currentNode: curr.value },
       {
         questionNodeId: curr.id,
         currentNodeValue: curr.value,
@@ -230,7 +234,9 @@ export function generateBSTSearchSteps(tree: BSTTreeStructure | undefined, targe
       undefined,
       `Comparing target ${targetValue} with ${curr.value}. ${explanation}`,
       4,
-      { targetValue, currNode: curr.value, direction },
+      /* See the note on the insert step: `direction` would print the
+         answer to the open prediction question. */
+      { targetValue, currNode: curr.value },
       {
         questionNodeId: curr.id,
         currentNodeValue: curr.value,
