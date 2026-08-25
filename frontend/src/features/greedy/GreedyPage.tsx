@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Clock, Package, Calendar, FileText, Maximize2, HelpCircle, Sparkles, Layers
+  Clock, Package, Calendar, FileText, Maximize2, HelpCircle, Sparkles, Layers, Trash2
 } from 'lucide-react';
 import { ArrayRenderer } from '../arrays/ArrayRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -211,6 +211,16 @@ export const GreedyPage: React.FC = () => {
     setHuffmanText(DEFAULT_TEXT);
   };
 
+  const handleClearInputs = () => {
+    reset();
+    quizSession.resetSession();
+    setActivitiesRaw('(0,1)');
+    setItemsRaw('(1,10)');
+    setCapacity(10);
+    setJobsRaw('(1,10)');
+    setHuffmanText('a');
+  };
+
   const renderPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
@@ -248,13 +258,14 @@ export const GreedyPage: React.FC = () => {
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
       <div className="dataset-mode-selector ml-1">
-        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Reset to Defaults">
-          <Layers size={14} />
-          <span>Defaults</span>
+        <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Inputs">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Input">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
-          <Sparkles size={14} />
-          <span>Random</span>
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
 
@@ -413,13 +424,14 @@ export const GreedyPage: React.FC = () => {
 
           {/* Dataset Mode Selector */}
           <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Reset to Defaults">
-              <Layers size={14} className="text-amber-400" />
-              <span>Defaults</span>
+            <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Inputs">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Input">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
             </button>
             <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random</span>
+              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
             </button>
           </div>
         </div>
