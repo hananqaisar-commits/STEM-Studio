@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  GitBranch, Calculator, Binary, Sigma, Layers, HelpCircle, Maximize2, Sparkles,
+  GitBranch, Calculator, Binary, Sigma, Layers, HelpCircle, Maximize2, Sparkles, Trash2,
 } from 'lucide-react';
 import { RecursionTreeRenderer } from './RecursionTreeRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -110,6 +110,28 @@ export const RecursionPage: React.FC = () => {
     if (selectedAlg === 'towerOfHanoi') setHanoiN(Math.floor(Math.random() * 2) + 2);
   };
 
+  const handleResetDefaults = () => {
+    reset();
+    quizSession.resetSession();
+    setFactorialN(5);
+    setFibonacciN(5);
+    setPowerBase(2);
+    setPowerExp(4);
+    setArraySumArr([3, 7, 2, 5, 1]);
+    setHanoiN(3);
+  };
+
+  const handleEmpty = () => {
+    reset();
+    quizSession.resetSession();
+    setFactorialN(1);
+    setFibonacciN(1);
+    setPowerBase(1);
+    setPowerExp(1);
+    setArraySumArr([1]);
+    setHanoiN(1);
+  };
+
   const renderPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
@@ -206,9 +228,17 @@ export const RecursionPage: React.FC = () => {
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
       {renderAlgInputs()}
-      <button className="bst-btn btn-mode" onClick={handleRandomize} title="Randomize">
-        <Sparkles size={14} /><span>Random</span>
-      </button>
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+        </button>
+      </div>
       <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} /><span>Predict Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
@@ -256,7 +286,13 @@ export const RecursionPage: React.FC = () => {
         <div className="bst-toolbar-left">
           {renderAlgInputs()}
           <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Randomize Input">
+            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty Array">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Array">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
               <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
             </button>
           </div>

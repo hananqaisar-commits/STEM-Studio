@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Layers, Grid3X3, Target, Shuffle, Maximize2, HelpCircle, Sparkles,
+  Layers, Grid3X3, Target, Shuffle, Maximize2, HelpCircle, Sparkles, Trash2, Edit3,
 } from 'lucide-react';
 import { BacktrackingRenderer } from './BacktrackingRenderer';
+import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
@@ -52,6 +53,7 @@ export const BacktrackingPage: React.FC = () => {
   const [queensN, setQueensN] = useState<number>(4);
   const [comboCandidates, setComboCandidates] = useState<number[]>([2, 3, 6, 7]);
   const [comboTarget, setComboTarget] = useState<number>(7);
+  const [showCustomEditor, setShowCustomEditor] = useState(false);
 
   // Generate execution steps
   const executionData = useMemo(() => {
@@ -134,6 +136,26 @@ export const BacktrackingPage: React.FC = () => {
     }
   };
 
+  const handleResetDefaults = () => {
+    reset();
+    quizSession.resetSession();
+    setSubsetArr([1, 2, 3]);
+    setPermArr([1, 2, 3]);
+    setQueensN(4);
+    setComboCandidates([2, 3, 6, 7]);
+    setComboTarget(7);
+  };
+
+  const handleClearInputs = () => {
+    reset();
+    quizSession.resetSession();
+    setSubsetArr([1]);
+    setPermArr([1]);
+    setQueensN(2);
+    setComboCandidates([2]);
+    setComboTarget(2);
+  };
+
   const renderPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
@@ -163,10 +185,17 @@ export const BacktrackingPage: React.FC = () => {
 
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
-      <button className="bst-btn btn-mode" onClick={handleRandomize} title="Randomize">
-        <Sparkles size={14} />
-        <span>Randomize</span>
-      </button>
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Defaults">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+        </button>
+      </div>
       <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} />
         <span>Predict Mode</span>
@@ -319,10 +348,18 @@ export const BacktrackingPage: React.FC = () => {
         <div className="bst-toolbar-left">
           {renderAlgorithmInputs()}
 
+          <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
+            <Edit3 size={14} /><span>Custom Values</span>
+          </button>
           <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Randomize Input">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Randomize</span>
+            <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Input">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Default Values">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
+              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
             </button>
           </div>
         </div>
@@ -352,7 +389,7 @@ export const BacktrackingPage: React.FC = () => {
 
       {/* Main Learning Workspace */}
       <div className="sorting-workspace">
-        <div className="bt-renderer-section">
+        <div className="renderer-section">
           <BacktrackingRenderer
             currentStep={currentStep}
             algorithmKey={selectedAlg}
@@ -361,7 +398,7 @@ export const BacktrackingPage: React.FC = () => {
           {renderPlayerControls()}
         </div>
 
-        <div className="bt-explanation-section">
+        <div className="explanation-section">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
@@ -385,6 +422,21 @@ export const BacktrackingPage: React.FC = () => {
           algorithmKey={selectedAlg}
         />
       </FullScreenCanvasModal>
+
+      {showCustomEditor && (
+        <CustomArrayEditor
+          currentArray={selectedAlg === 'subsets' ? subsetArr : selectedAlg === 'permutations' ? permArr : comboCandidates}
+          onApplyCustomArray={(newArr) => {
+            reset();
+            quizSession.resetSession();
+            if (selectedAlg === 'subsets') setSubsetArr(newArr.slice(0, 4));
+            else if (selectedAlg === 'permutations') setPermArr(newArr.slice(0, 4));
+            else { setComboCandidates(newArr.sort((a, b) => a - b).slice(0, 5)); }
+            setShowCustomEditor(false);
+          }}
+          onClose={() => setShowCustomEditor(false)}
+        />
+      )}
     </div>
   );
 };
