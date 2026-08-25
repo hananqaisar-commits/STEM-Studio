@@ -153,16 +153,19 @@
 /* TOP Pointer Badge */
 .top-pointer-badge {
   position: absolute;
-  right: -95px;
+  right: -34px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
   background-color: #061e14;
   border: 1.5px solid #10b981;
   color: #34d399;
   font-size: 0.65rem;
   font-weight: 800;
-  padding: 0.15rem 0.5rem;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
@@ -186,6 +189,9 @@
 }
 
 .flow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.65rem;
   font-weight: 800;
   padding: 0.2rem 0.5rem;
@@ -239,20 +245,27 @@
 .queue-pointer-badge {
   position: absolute;
   top: -26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   font-size: 0.58rem;
   font-weight: 800;
-  padding: 0.1rem 0.35rem;
+  padding: 0;
   border-radius: 4px;
   white-space: nowrap;
 }
 
 .front-badge {
+  left: 2px;
   background-color: #032030;
   border: 1px solid #38bdf8;
   color: #38bdf8;
 }
 
 .rear-badge {
+  right: 2px;
   background-color: #1e1404;
   border: 1px solid #f59e0b;
   color: #fbbf24;
