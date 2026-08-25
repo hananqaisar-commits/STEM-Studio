@@ -1,0 +1,336 @@
+/* Complexity Page Styles */
+
+.complexity-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  min-height: 100vh;
+}
+
+.complexity-section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: var(--color-surface, #1e1e2e);
+  border: 1px solid var(--color-border, #2a2a3e);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.1));
+}
+
+.complexity-section h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--color-primary, #6366f1);
+  color: var(--color-text, #e4e4e7);
+}
+
+.complexity-section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.75rem;
+  color: var(--color-text, #e4e4e7);
+}
+
+.section-intro {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #a1a1aa);
+  margin-bottom: 1.25rem;
+}
+
+/* Notation Grid - Big O, Omega, Theta */
+.notation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.notation-card {
+  background: var(--color-surface-elevated, #252538);
+  border: 1px solid var(--color-border, #2a2a3e);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.notation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.2));
+}
+
+.notation-symbol {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-primary, #6366f1);
+  margin-bottom: 0.5rem;
+  font-family: 'Courier New', monospace;
+}
+
+.notation-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text, #e4e4e7);
+  margin-bottom: 0.5rem;
+}
+
+.notation-def {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #a1a1aa);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.notation-formula {
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  background: var(--color-surface, #1e1e2e);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  color: var(--color-text-muted, #71717a);
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+}
+
+.notation-example {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #71717a);
+  line-height: 1.5;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border, #2a2a3e);
+}
+
+.notation-example strong {
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+/* Complexity Tables */
+.complexity-table-wrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #2a2a3e);
+}
+
+.complexity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--color-surface-elevated, #252538);
+}
+
+.complexity-table thead {
+  background: var(--color-surface-elevated, #252538);
+  border-bottom: 2px solid var(--color-border, #2a2a3e);
+}
+
+.complexity-table th {
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  color: var(--color-text, #e4e4e7);
+  white-space: nowrap;
+}
+
+.complexity-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border, #2a2a3e);
+  color: var(--color-text-secondary, #a1a1aa);
+}
+
+.complexity-table tbody tr:hover {
+  background: var(--color-surface, #1e1e2e);
+}
+
+.complexity-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.complexity-table code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  background: var(--color-surface, #1e1e2e);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  color: var(--color-primary, #6366f1);
+  white-space: nowrap;
+}
+
+/* Growth Visual */
+.growth-visual {
+  margin-top: 1.5rem;
+  background: var(--color-surface-elevated, #252538);
+  border: 1px solid var(--color-border, #2a2a3e);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.growth-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text, #e4e4e7);
+  margin-bottom: 0.75rem;
+}
+
+.growth-chart {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted, #71717a);
+  white-space: pre;
+  margin: 0;
+}
+
+/* Space Cards */
+.space-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.space-cards .notation-card {
+  background: var(--color-surface-elevated, #252538);
+}
+
+.space-cards .notation-symbol {
+  font-size: 1.75rem;
+}
+
+/* Master Theorem */
+.master-theorem {
+  background: var(--color-surface-elevated, #252538);
+  border: 1px solid var(--color-border, #2a2a3e);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.master-theorem h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  color: var(--color-text, #e4e4e7);
+}
+
+.master-theorem p {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary, #a1a1aa);
+  margin-bottom: 0.75rem;
+}
+
+.master-theorem code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  background: var(--color-surface, #1e1e2e);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: var(--color-primary, #6366f1);
+}
+
+.master-theorem ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+
+.master-theorem li {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #a1a1aa);
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border, #2a2a3e);
+  line-height: 1.5;
+}
+
+.master-theorem li:last-child {
+  border-bottom: none;
+}
+
+.master-theorem li code {
+  font-size: 0.8rem;
+}
+
+/* Call Tree */
+.call-tree {
+  background: var(--color-surface-elevated, #252538);
+  border: 1px solid var(--color-border, #2a2a3e);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+
+.call-tree h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.call-tree pre {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted, #71717a);
+  white-space: pre;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .complexity-page {
+    padding: 1rem;
+  }
+
+  .complexity-section {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .notation-grid,
+  .space-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .complexity-table-wrapper {
+    font-size: 0.8rem;
+  }
+
+  .complexity-table th,
+  .complexity-table td {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .growth-chart,
+  .call-tree pre {
+    font-size: 0.65rem;
+  }
+
+  .notation-symbol {
+    font-size: 1.75rem;
+  }
+
+  .complexity-section h2 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .complexity-section {
+    padding: 0.75rem;
+    border-radius: 10px;
+  }
+
+  .notation-card {
+    padding: 1rem;
+  }
+
+  .master-theorem,
+  .call-tree {
+    padding: 1rem;
+  }
+
+  .complexity-table {
+    font-size: 0.75rem;
+  }
+}

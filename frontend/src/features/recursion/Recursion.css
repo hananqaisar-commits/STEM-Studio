@@ -1,0 +1,334 @@
+/* ── Recursion Studio Styles ─────────────────────────────────────────────
+   Professional CSS for the recursion call tree visualizer.
+   Uses shared CSS variables from the design system.
+   ─────────────────────────────────────────────────────────────────── */
+
+/* ── Canvas container ──────────────────────────────────────────────── */
+.recursion-canvas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--color-surface, #0f172a);
+  border: 1px solid var(--color-border, #1e293b);
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
+}
+
+.recursion-canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: var(--color-surface-elevated, #1e293b);
+  border-bottom: 1px solid var(--color-border, #1e293b);
+}
+
+.recursion-canvas-header .canvas-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.recursion-canvas-header .tree-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text, #e2e8f0);
+  opacity: 0.9;
+}
+
+.recursion-canvas-header .tree-subtitle {
+  font-size: 0.68rem;
+  color: var(--color-text-muted, #94a3b8);
+  font-family: 'Fira Code', monospace;
+}
+
+/* ── Workspace: tree area + call stack sidebar ────────────────────── */
+.recursion-workspace {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.recursion-tree-area {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  overflow: auto;
+}
+
+.recursion-svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.recursion-nodes-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+/* ── Tree nodes ────────────────────────────────────────────────────── */
+.recursion-node-wrapper {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 3;
+  transition: transform 0.25s ease;
+}
+
+.recursion-node-wrapper:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.recursion-call-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  letter-spacing: 0.02em;
+  transition: color 0.3s ease;
+}
+
+.recursion-node-wrapper.state-active .recursion-call-label {
+  font-size: 0.72rem;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+
+.recursion-node-wrapper.state-returning .recursion-call-label {
+  font-size: 0.68rem;
+}
+
+.recursion-return-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: opacity 0.4s ease, background 0.3s ease;
+}
+
+.recursion-return-badge.state-completed {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.recursion-return-badge.state-returning {
+  background: rgba(236, 72, 153, 0.25);
+  color: #f472b6;
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  animation: rec-badge-glow 1s ease-in-out infinite alternate;
+}
+
+.recursion-return-badge.state-active {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.recursion-return-badge.state-pending {
+  opacity: 0;
+}
+
+/* ── Call stack sidebar ────────────────────────────────────────────── */
+.recursion-callstack-sidebar {
+  width: 200px;
+  min-width: 180px;
+  background: var(--color-surface-elevated, #1e293b);
+  border-left: 1px solid var(--color-border, #334155);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.callstack-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--color-border, #334155);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-text, #e2e8f0);
+}
+
+.callstack-icon {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.callstack-count {
+  margin-left: auto;
+  font-size: 0.6rem;
+  font-family: 'Fira Code', monospace;
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.callstack-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.4rem 0;
+}
+
+.callstack-empty {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--color-text-muted, #64748b);
+  opacity: 0.7;
+}
+
+.callstack-frame {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.65rem;
+  font-family: 'Fira Code', monospace;
+  color: var(--color-text-muted, #94a3b8);
+  border-left: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.callstack-frame.frame-top {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.08);
+  border-left-color: #f59e0b;
+  font-weight: 700;
+}
+
+.callstack-frame:not(.frame-top):hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.frame-depth {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.frame-top .frame-depth {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.frame-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Step description bar ──────────────────────────────────────────── */
+.recursion-description-bar {
+  padding: 0.6rem 1rem;
+  font-size: 0.76rem;
+  font-family: 'Fira Code', monospace;
+  color: var(--color-text, #cbd5e1);
+  background: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid var(--color-border, #1e293b);
+  line-height: 1.5;
+  min-height: 2.5rem;
+}
+
+/* ── Toolbar inputs ────────────────────────────────────────────────── */
+.rec-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--color-surface, #0f172a);
+  border: 1px solid var(--color-border, #1e293b);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text, #e2e8f0);
+}
+
+.rec-val {
+  font-size: 0.75rem;
+  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  color: #fbbf24;
+  min-width: 1.2rem;
+  text-align: center;
+}
+
+.rec-num-input {
+  width: 48px;
+  padding: 0.2rem 0.3rem;
+  background: var(--color-surface-elevated, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 4px;
+  color: var(--color-text, #e2e8f0);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.rec-text-input {
+  width: 140px;
+  padding: 0.2rem 0.4rem;
+  background: var(--color-surface-elevated, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 4px;
+  color: var(--color-text, #e2e8f0);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+}
+
+/* ── Animations ────────────────────────────────────────────────────── */
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+
+@keyframes rec-badge-glow {
+  from { box-shadow: 0 0 2px rgba(236, 72, 153, 0.2); }
+  to   { box-shadow: 0 0 8px rgba(236, 72, 153, 0.5); }
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .recursion-workspace {
+    flex-direction: column;
+  }
+  .recursion-callstack-sidebar {
+    width: 100%;
+    max-height: 120px;
+    border-left: none;
+    border-top: 1px solid var(--color-border, #334155);
+  }
+  .callstack-body {
+    max-height: 80px;
+  }
+}

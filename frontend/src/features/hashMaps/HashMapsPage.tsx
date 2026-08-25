@@ -1,13 +1,12 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, HelpCircle, Hash
+  Edit3, Search, Hash, Maximize2, HelpCircle, Sparkles, Trash2, Layers, Copy, Map
 } from 'lucide-react';
-import { SortingRenderer } from './SortingRenderer';
+import { HashMapRenderer } from './HashMapRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
-import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
@@ -15,109 +14,75 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildSortingCheckpoints } from './quizAdapter';
+import { buildHashMapsCheckpoints } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
+import type { HashMapsAlgorithmKey } from './quizAdapter';
 
-import { generateBubbleSortSteps } from './algorithms/bubbleSort';
-import { generateSelectionSortSteps } from './algorithms/selectionSort';
-import { generateInsertionSortSteps } from './algorithms/insertionSort';
-import { generateMergeSortSteps } from './algorithms/mergeSort';
-import { generateQuickSortSteps } from './algorithms/quickSort';
-import { generateHeapSortSteps } from './algorithms/heapSort';
-import { generateShellSortSteps } from './algorithms/shellSort';
-import { generateCountingSortSteps } from './algorithms/countingSort';
-import { generateRadixSortSteps } from './algorithms/radixSort';
-import { generateBucketSortSteps } from './algorithms/bucketSort';
+import { runTwoSum } from './algorithms/twoSum';
+import { runDuplicateDetect } from './algorithms/duplicateDetect';
+import { runFrequencyMap } from './algorithms/frequencyMap';
+import { runSubarraySum } from './algorithms/subarraySum';
 
-import './Sorting.css';
-
-type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell' | 'counting' | 'radix' | 'bucket';
-type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
+import '../sorting/Sorting.css';
+import './HashMaps.css';
 
 interface AlgMeta {
-  key: AlgorithmKey;
+  key: HashMapsAlgorithmKey;
   name: string;
   complexity: string;
   icon: React.ReactNode;
 }
 
 const ALGORITHMS: AlgMeta[] = [
-  { key: 'bubble', name: 'Bubble Sort', complexity: 'O(n²)', icon: <Layers size={14} /> },
-  { key: 'selection', name: 'Selection Sort', complexity: 'O(n²)', icon: <CheckCircle2 size={14} /> },
-  { key: 'insertion', name: 'Insertion Sort', complexity: 'O(n²)', icon: <ArrowDown size={14} /> },
-  { key: 'merge', name: 'Merge Sort', complexity: 'O(n log n)', icon: <GitCommit size={14} /> },
-  { key: 'quick', name: 'Quick Sort', complexity: 'O(n log n)', icon: <Zap size={14} /> },
-  { key: 'heap', name: 'Heap Sort', complexity: 'O(n log n)', icon: <Network size={14} /> },
-  { key: 'shell', name: 'Shell Sort', complexity: 'O(n log n)', icon: <Sparkles size={14} /> },
-  { key: 'counting', name: 'Counting Sort', complexity: 'O(n+k)', icon: <Hash size={14} /> },
-  { key: 'radix', name: 'Radix Sort', complexity: 'O(d·(n+k))', icon: <Hash size={14} /> },
-  { key: 'bucket', name: 'Bucket Sort', complexity: 'O(n+k)', icon: <Hash size={14} /> },
+  { key: 'twoSum', name: 'Two Sum', complexity: 'O(n)', icon: <Search size={14} /> },
+  { key: 'duplicateDetect', name: 'Duplicate Detect', complexity: 'O(n)', icon: <Copy size={14} /> },
+  { key: 'frequencyMap', name: 'Frequency Map', complexity: 'O(n)', icon: <Hash size={14} /> },
+  { key: 'subarraySum', name: 'Subarray Sum', complexity: 'O(n)', icon: <Map size={14} /> },
 ];
 
-function generateArray(size: number, pattern: ArrayPattern): number[] {
-  const arr: number[] = [];
-  for (let i = 0; i < size; i++) {
-    arr.push(Math.floor(Math.random() * 85) + 15);
-  }
+// Default inputs per algorithm
+const DEFAULT_INPUTS: Record<HashMapsAlgorithmKey, { arr: number[]; target?: number }> = {
+  twoSum:         { arr: [2, 7, 11, 15], target: 9 },
+  duplicateDetect:{ arr: [3, 1, 4, 1, 5, 9, 2, 6] },
+  frequencyMap:   { arr: [1, 2, 2, 3, 3, 3, 4, 4, 4, 4] },
+  subarraySum:    { arr: [1, 4, 20, 3, 10, 5], target: 33 },
+};
 
-  if (pattern === 'reversed') {
-    arr.sort((a, b) => b - a);
-  } else if (pattern === 'nearlySorted') {
-    arr.sort((a, b) => a - b);
-    if (size > 4) {
-      const idx1 = Math.floor(Math.random() * (size / 2));
-      const idx2 = Math.floor(Math.random() * (size / 2)) + Math.floor(size / 2);
-      const temp = arr[idx1];
-      arr[idx1] = arr[idx2];
-      arr[idx2] = temp;
-    }
-  }
+export const HashMapsPage: React.FC = () => {
+  const [selectedAlg, setSelectedAlg] = useState<HashMapsAlgorithmKey>('twoSum');
 
-  return arr;
-}
+  // Custom input state
+  const [inputArr, setInputArr] = useState<number[]>(DEFAULT_INPUTS.twoSum.arr);
+  const [target, setTarget] = useState<number>(DEFAULT_INPUTS.twoSum.target ?? 9);
 
-export const SortingPage: React.FC = () => {
-  const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
-  const [arraySize, setArraySize] = useState<number>(12);
-  const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
-  const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
-
-  // Debugger & Modal & Predict state
+  // UI state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
-  // Custom code execution state
-  const [customSteps, setCustomSteps] = useState<import('../../engine/types/Step').ArrayStep[] | null>(null);
+  // Sync inputs when algorithm changes
+  useEffect(() => {
+    const defaults = DEFAULT_INPUTS[selectedAlg];
+    setInputArr(defaults.arr);
+    if (defaults.target !== undefined) setTarget(defaults.target);
+  }, [selectedAlg]);
 
   // Generate algorithm steps
   const executionData = useMemo(() => {
     switch (selectedAlg) {
-      case 'bubble':
-        return generateBubbleSortSteps(initialArray);
-      case 'selection':
-        return generateSelectionSortSteps(initialArray);
-      case 'insertion':
-        return generateInsertionSortSteps(initialArray);
-      case 'merge':
-        return generateMergeSortSteps(initialArray);
-      case 'quick':
-        return generateQuickSortSteps(initialArray);
-      case 'heap':
-        return generateHeapSortSteps(initialArray);
-      case 'shell':
-        return generateShellSortSteps(initialArray);
-      case 'counting':
-        return generateCountingSortSteps(initialArray);
-      case 'radix':
-        return generateRadixSortSteps(initialArray);
-      case 'bucket':
-        return generateBucketSortSteps(initialArray);
+      case 'twoSum':
+        return runTwoSum(inputArr, target);
+      case 'duplicateDetect':
+        return runDuplicateDetect(inputArr);
+      case 'frequencyMap':
+        return runFrequencyMap(inputArr);
+      case 'subarraySum':
+        return runSubarraySum(inputArr, target);
       default:
-        return generateBubbleSortSteps(initialArray);
+        return runTwoSum(inputArr, target);
     }
-  }, [selectedAlg, initialArray]);
+  }, [selectedAlg, inputArr, target]);
 
   const {
     currentStepIndex,
@@ -131,12 +96,12 @@ export const SortingPage: React.FC = () => {
     stepBack,
     reset,
     setSpeed,
-  } = useStepPlayer({ steps: customSteps ?? executionData.steps });
+  } = useStepPlayer({ steps: executionData.steps });
 
-  // Build quiz checkpoints from the current execution steps
+  // Build quiz checkpoints
   const quizCheckpoints = useMemo(
-    () => buildSortingCheckpoints(customSteps ?? executionData.steps, selectedAlg),
-    [customSteps, executionData.steps, selectedAlg]
+    () => buildHashMapsCheckpoints(executionData.steps, selectedAlg),
+    [executionData.steps, selectedAlg]
   );
 
   const quizSession = useQuizSession({
@@ -147,50 +112,53 @@ export const SortingPage: React.FC = () => {
     isPlaying,
     pause,
     stepForward,
-    module: 'sorting',
+    module: 'hashMaps' as any,
     algorithmId: selectedAlg,
   });
 
-  // Clear custom steps when algorithm or array changes
+  // Clear quiz when algorithm or array changes
   useEffect(() => {
-    setCustomSteps(null);
-  }, [selectedAlg, initialArray]);
-
-  // Callback: receive steps from custom code execution
-  const handleCustomCodeRun = useCallback((steps: import('../../engine/types/Step').ArrayStep[]) => {
-    setCustomSteps(steps);
-    reset();
-  }, [reset]);
-
-
+    quizSession.resetSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAlg, inputArr]);
 
   const handleRandomize = () => {
     reset();
     quizSession.resetSession();
-    setInitialArray(generateArray(arraySize, arrayPattern));
+    const size = Math.floor(Math.random() * 8) + 5;
+    const newArr: number[] = [];
+    for (let i = 0; i < size; i++) {
+      newArr.push(Math.floor(Math.random() * 20) + 1);
+    }
+    setInputArr(newArr);
+    if (selectedAlg === 'twoSum' && newArr.length >= 2) {
+      setTarget(newArr[0] + newArr[newArr.length - 1]);
+    } else if (selectedAlg === 'subarraySum' && newArr.length >= 3) {
+      setTarget(newArr[1] + newArr[2] + newArr[3]);
+    }
   };
 
   const handleApplyCustomArray = (newArr: number[]) => {
     reset();
     quizSession.resetSession();
-    setArraySize(newArr.length);
-    setInitialArray(newArr);
+    setInputArr(newArr);
     setShowCustomEditor(false);
+    if (selectedAlg === 'twoSum' && newArr.length >= 2) {
+      setTarget(newArr[0] + newArr[newArr.length - 1]);
+    }
   };
 
   const handleBarElementClick = (index: number, currentValue: number) => {
     const valStr = prompt(`Edit value at index [${index}]:`, currentValue.toString());
     if (valStr !== null) {
       const num = parseInt(valStr, 10);
-      if (!isNaN(num) && num > 0) {
-        const updated = [...initialArray];
+      if (!isNaN(num)) {
+        const updated = [...inputArr];
         updated[index] = num;
         handleApplyCustomArray(updated);
       }
     }
   };
-
-
 
   const renderPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
@@ -228,24 +196,6 @@ export const SortingPage: React.FC = () => {
 
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
-      <div className="bst-input-group">
-        <span>Size:</span>
-        <input
-          type="range"
-          min={5}
-          max={30}
-          value={arraySize}
-          onChange={(e) => {
-            const size = parseInt(e.target.value);
-            setArraySize(size);
-            reset();
-            setInitialArray(generateArray(size, arrayPattern));
-          }}
-          className="toolbar-range w-24"
-        />
-        <span className="text-xs font-mono font-bold">{arraySize}</span>
-      </div>
-
       <div className="dataset-mode-selector ml-1">
         <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
           <Trash2 size={14} />
@@ -253,7 +203,11 @@ export const SortingPage: React.FC = () => {
         </button>
         <button
           className="bst-btn btn-mode"
-          onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])}
+          onClick={() => {
+            const defaults = DEFAULT_INPUTS[selectedAlg];
+            handleApplyCustomArray(defaults.arr);
+            if (defaults.target !== undefined) setTarget(defaults.target);
+          }}
           title="Sample Array"
         >
           <Layers size={14} />
@@ -273,28 +227,72 @@ export const SortingPage: React.FC = () => {
     </div>
   );
 
+  /* ── Algorithm-specific toolbar inputs ─────────────────────────────── */
+  const renderAlgorithmInputs = () => {
+    switch (selectedAlg) {
+      case 'twoSum':
+        return (
+          <div className="hashmaps-target-input">
+            <Search size={14} />
+            <span>Target Sum:</span>
+            <input
+              type="number"
+              value={target}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val)) {
+                  setTarget(val);
+                  reset();
+                }
+              }}
+            />
+          </div>
+        );
+      case 'subarraySum':
+        return (
+          <div className="hashmaps-target-input">
+            <Map size={14} />
+            <span>Target Sum:</span>
+            <input
+              type="number"
+              value={target}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val)) {
+                  setTarget(val);
+                  reset();
+                }
+              }}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="bst-page-container">
       <VisualizerHeader
-        icon={<Layers size={22} />}
-        title="Sorting Algorithms Studio"
-        subtitle="Interactive Comparison, Partitioning, & In-Place Array Sorting"
+        icon={<Hash size={22} />}
+        title="Hash Map Algorithms Studio"
+        subtitle="Interactive HashMap & HashSet Techniques — Lookup, Frequency, Subarrays"
         items={ALGORITHMS.map((alg) => ({
           id: alg.key,
           name: alg.name,
-          description: `Step-by-step ${alg.name} execution over a live memory array`,
+          description: `Step-by-step ${alg.name} execution with live HashMap visualization`,
           group: alg.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => {
-          setSelectedAlg(id as AlgorithmKey);
+          setSelectedAlg(id as HashMapsAlgorithmKey);
           reset();
           quizSession.resetSession();
         }}
-        placeholder="Search sorting algorithm or complexity..."
+        placeholder="Search hash map algorithm or technique..."
       />
 
-      {/* Category Tabs Bar Matching BST */}
+      {/* Category Tabs Bar */}
       <div className="tree-category-toolbar animate-fade-in">
         <div className="tree-category-tabs flex-wrap">
           {ALGORITHMS.map((alg) => (
@@ -315,7 +313,7 @@ export const SortingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Operations Toolbar Matching BST */}
+      {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
           <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
@@ -323,49 +321,24 @@ export const SortingPage: React.FC = () => {
             <span>Custom Values</span>
           </button>
 
-          <div className="bst-input-group">
-            <span>Pattern:</span>
-            <select
-              value={arrayPattern}
-              onChange={(e) => {
-                const pattern = e.target.value as ArrayPattern;
-                setArrayPattern(pattern);
-                reset();
-                setInitialArray(generateArray(arraySize, pattern));
-              }}
-              className="bst-select font-bold text-xs"
-            >
-              <option value="random">Random Unsorted</option>
-              <option value="reversed">Worst Case (Reversed)</option>
-              <option value="nearlySorted">Best Case (Nearly Sorted)</option>
-            </select>
-          </div>
+          {renderAlgorithmInputs()}
 
-          <div className="bst-input-group">
-            <span>Size:</span>
-            <input
-              type="range"
-              min={5}
-              max={30}
-              value={arraySize}
-              onChange={(e) => {
-                const size = parseInt(e.target.value);
-                setArraySize(size);
-                reset();
-                setInitialArray(generateArray(size, arrayPattern));
-              }}
-              className="toolbar-range cursor-pointer accent-amber-400 w-24"
-            />
-            <span className="text-xs font-mono font-bold text-amber-400">{arraySize}</span>
-          </div>
-
-          {/* Dataset Mode Selector Matching BST */}
           <div className="dataset-mode-selector">
             <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
               <Trash2 size={14} className="text-rose-400" />
               <span>Empty</span>
             </button>
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
+            <button
+              className="bst-btn btn-mode"
+              onClick={() => {
+                const defaults = DEFAULT_INPUTS[selectedAlg];
+                reset();
+                quizSession.resetSession();
+                setInputArr(defaults.arr);
+                if (defaults.target !== undefined) setTarget(defaults.target);
+              }}
+              title="Sample Array"
+            >
               <Layers size={14} className="text-amber-400" />
               <span>Sample</span>
             </button>
@@ -403,7 +376,7 @@ export const SortingPage: React.FC = () => {
       <div className="sorting-workspace">
         {/* Left Column: Visual Canvas & Interactive Controls */}
         <div className="renderer-section">
-          <SortingRenderer
+          <HashMapRenderer
             currentStep={currentStep}
             onElementClick={handleBarElementClick}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
@@ -412,20 +385,9 @@ export const SortingPage: React.FC = () => {
           {renderPlayerControls()}
         </div>
 
-        {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
+        {/* Right Column: Quiz & Explanation */}
         <div className="explanation-section">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            activeLine={currentStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            variables={currentStep?.variables}
-            callStack={currentStep?.callStack}
-            onCustomCodeRun={handleCustomCodeRun}
-            currentArray={initialArray}
-          />
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
@@ -439,12 +401,12 @@ export const SortingPage: React.FC = () => {
       <FullScreenCanvasModal
         isOpen={isFullScreenOpen}
         onClose={() => setIsFullScreenOpen(false)}
-        title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
-        subtitle="Memory Array Inspector"
+        title={`Hash Map Algorithms | ${selectedAlg.toUpperCase()}`}
+        subtitle="HashMap Inspector"
         toolbarControls={renderFloatingControls()}
         playbackControls={renderPlayerControls()}
       >
-        <SortingRenderer
+        <HashMapRenderer
           currentStep={currentStep}
           onElementClick={handleBarElementClick}
         />
@@ -453,7 +415,7 @@ export const SortingPage: React.FC = () => {
       {/* Custom Values Input Modal */}
       {showCustomEditor && (
         <CustomArrayEditor
-          currentArray={initialArray}
+          currentArray={inputArr}
           onApplyCustomArray={handleApplyCustomArray}
           onClose={() => setShowCustomEditor(false)}
         />

@@ -17,7 +17,13 @@ export type QuizModule =
   | 'linkedList'
   | 'bst'
   | 'binarySearch'
-  | 'graph';
+  | 'graph'
+  | 'strings'
+  | 'arrays'
+  | 'recursion'
+  | 'greedy'
+  | 'hashMaps'
+  | 'backtracking';
 
 /**
  * How essential a checkpoint is.
