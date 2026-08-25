@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "target": "ES2022", "module": "commonjs", "moduleResolution": "node",
-    "strict": true, "skipLibCheck": true, "esModuleInterop": true,
-    "ignoreDeprecations": "6.0", "outDir": "out2", "rootDir": ".."
-  },
-  "include": ["truth.ts"]
-}
