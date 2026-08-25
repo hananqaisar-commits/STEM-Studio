@@ -166,7 +166,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
     return (
       <div className="problem-container animate-fade-in">
         <div className="chamber-header">
-          <span className="chamber-title">QUEUE VIA TWO STACKS (LIFO ➔ FIFO TRANSFORMATION)</span>
+          <span className="chamber-title">QUEUE VIA TWO STACKS (LIFO TO FIFO TRANSFORMATION)</span>
           <span className="chamber-subtitle">In-Stack (Buffer) receives Enqueues · Out-Stack handles Dequeues in order</span>
         </div>
 

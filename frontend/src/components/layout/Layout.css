@@ -660,7 +660,8 @@
 }
 
 .theme-option-btn {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr) 1rem;
   align-items: center;
   width: 100%;
   gap: 0.75rem;
@@ -673,7 +674,23 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  justify-content: flex-start;
+}
+
+.theme-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-option-text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  justify-self: stretch;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .theme-option-btn:hover {
@@ -688,6 +705,5 @@
 }
 
 .theme-active-icon {
-  margin-left: auto;
   color: var(--color-primary);
 }
