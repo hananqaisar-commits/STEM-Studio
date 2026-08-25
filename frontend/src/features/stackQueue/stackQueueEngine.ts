@@ -354,7 +354,7 @@ export function generateValidParenthesesSteps(expr: string): StackQueueStep[] {
     if (stack.length === 0) {
       steps.push({
         stepIndex: steps.length,
-        description: `✅ Expression "${expr}" is VALID! Stack is empty after processing.`,
+        description: `Expression "${expr}" is valid. Stack is empty after processing.`,
         codeLine: 8,
         elements: [],
         inputString: expr,
@@ -363,7 +363,7 @@ export function generateValidParenthesesSteps(expr: string): StackQueueStep[] {
     } else {
       steps.push({
         stepIndex: steps.length,
-        description: `❌ Expression "${expr}" is INVALID! Stack still contains unclosed brackets.`,
+        description: `Expression "${expr}" is invalid. Stack still contains unclosed brackets.`,
         codeLine: 9,
         elements: stack.map((val, idx) => ({ id: `p-${idx}`, value: val, state: 'error' })),
         inputString: expr,
@@ -480,7 +480,7 @@ export function generatePostfixEvalSteps(exprStr: string): StackQueueStep[] {
   const finalResult = stack[stack.length - 1];
   steps.push({
     stepIndex: steps.length,
-    description: `✅ Postfix Evaluation Complete! Final Answer = ${finalResult}`,
+    description: `Postfix evaluation complete. Final answer = ${finalResult}`,
     codeLine: 8,
     elements: stack.map((val, idx) => ({ id: `post-${idx}`, value: val, state: 'sorted' })),
     inputString: exprStr,
@@ -617,7 +617,7 @@ export function generateDailyTemperaturesSteps(temperatures: number[]): StackQue
 
   steps.push({
     stepIndex: steps.length,
-    description: `✅ Daily Temperatures Complete! Final Waiting Days Array: [${answer.join(', ')}]`,
+    description: `Daily Temperatures complete. Final waiting-days array: [${answer.join(', ')}]`,
     codeLine: 10,
     elements: stack.map((idx) => ({ id: `st-${idx}`, value: `${temperatures[idx]}° (i=${idx})`, state: 'sorted' })),
     auxElements: answer.map((val, idx) => ({ id: `ans-${idx}`, value: val, state: 'sorted' })),
@@ -685,7 +685,7 @@ export function generateSimplifyPathSteps(pathStr: string): StackQueueStep[] {
   const resultPath = '/' + stack.join('/');
   steps.push({
     stepIndex: steps.length,
-    description: `✅ Path Simplified! Final Canonical Path = "${resultPath}"`,
+    description: `Path simplified. Final canonical path = "${resultPath}"`,
     codeLine: 8,
     elements: stack.map((val, idx) => ({ id: `p-${idx}`, value: val, state: 'sorted' })),
     inputString: pathStr,
@@ -738,7 +738,7 @@ export function generateRemoveAdjacentDuplicatesSteps(s: string): StackQueueStep
   const resultStr = stack.join('');
   steps.push({
     stepIndex: steps.length,
-    description: `✅ Adjacent Duplicates Removed! Final Resulting String = "${resultStr}"`,
+    description: `Adjacent duplicates removed. Final resulting string = "${resultStr}"`,
     codeLine: 6,
     elements: stack.map((val, idx) => ({ id: `d-${idx}`, value: val, state: 'sorted' })),
     inputString: s,

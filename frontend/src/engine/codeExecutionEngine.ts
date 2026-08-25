@@ -123,7 +123,7 @@ export function executeCustomSortingCode(
 
   steps.push({
     array: [...arr],
-    description: `⚡ Custom Code (${lang.toUpperCase()}): Initial array state.`,
+    description: `Custom code (${lang.toUpperCase()}): Initial array state.`,
     codeLine: 1,
     variables: { n: arr.length, language: lang.toUpperCase() },
     callStack: [`custom_sort_${lang}(arr)`],
@@ -184,7 +184,7 @@ export function executeCustomSortingCode(
     steps.push({
       array: [...arr],
       sortedIndices: allIndices,
-      description: `✅ Custom ${lang.toUpperCase()} code complete! Final array state.`,
+    description: `Custom ${lang.toUpperCase()} code complete. Final array state.`,
       codeLine: 7,
       variables: { status: 'COMPLETE', totalSteps: steps.length },
       callStack: [`custom_sort_${lang}(arr) [TERMINATED]`],
@@ -204,7 +204,7 @@ export function executeCustomSortingCode(
 
     steps.push({
       array: [...arr],
-      description: `❌ Error in ${lang.toUpperCase()}: ${errorMessage}`,
+    description: `Error in ${lang.toUpperCase()}: ${errorMessage}`,
       codeLine: errorLine,
       variables: { error: errorMessage },
       callStack: [`custom_sort_${lang}(arr) [ERROR]`],

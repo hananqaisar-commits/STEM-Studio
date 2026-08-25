@@ -473,10 +473,12 @@
   bottom: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.62rem;
-  font-weight: 800;
-  padding: 0.12rem 0.42rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border-radius: 6px;
   background-color: #1e1404;
   border: 1.5px solid #f59e0b;

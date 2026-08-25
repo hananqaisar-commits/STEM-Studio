@@ -1,7 +1,7 @@
 import React from 'react';
 import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
-import { Maximize2 } from 'lucide-react';
+import { CircleCheck, Maximize2 } from 'lucide-react';
 import type { BSTStep, BSTNodeData } from './bstEngine';
 import './BST.css';
 
@@ -142,7 +142,9 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
 
                 {/* Trie End of Word Badge */}
                 {node.isEndOfWord && (
-                  <span className="eow-badge">END</span>
+                  <span className="eow-badge" title="End of word" aria-label="End of word">
+                    <CircleCheck size={14} strokeWidth={2.5} aria-hidden="true" />
+                  </span>
                 )}
 
                 <CircleNode

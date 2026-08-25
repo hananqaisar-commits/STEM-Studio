@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowLeft, Inbox } from 'lucide-react';
 import type { StackQueueStep } from './stackQueueEngine';
 import './StackQueue.css';
 
@@ -26,7 +27,7 @@ export const StackRenderer: React.FC<StackRendererProps> = ({ currentStep }) => 
 
           {elements.length === 0 ? (
             <div className="stack-empty-notice">
-              <span className="notice-icon">📥</span>
+              <Inbox size={24} className="notice-icon" aria-hidden="true" />
               <span>Stack is Empty</span>
               <span className="notice-sub">Push elements to fill the chamber</span>
             </div>
@@ -43,9 +44,8 @@ export const StackRenderer: React.FC<StackRendererProps> = ({ currentStep }) => 
                   <div key={el.id} className={`stack-3d-plate ${stateClass}`}>
                     {/* Animated TOP Pointer Badge */}
                     {isTop && (
-                      <div className="top-pointer-badge">
-                        <span className="pointer-arrow">👉</span>
-                        <span className="pointer-label">TOP [{idx}]</span>
+                      <div className="top-pointer-badge" title={`Top of stack (index ${idx})`} aria-label={`Top of stack, index ${idx}`}>
+                        <ArrowLeft size={14} strokeWidth={2.5} aria-hidden="true" />
                       </div>
                     )}
 
