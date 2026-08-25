@@ -215,6 +215,14 @@
   background: rgba(0, 0, 0, 0.02);
 }
 
+/* ─── GRAPH CANVAS CONTAINER (wraps header + body) ────────────────── */
+
+.graph-canvas-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .graph-canvas-body {
   flex: 1;
   display: flex;
@@ -235,55 +243,8 @@
   overflow: visible;
 }
 
-.graph-node-circle {
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.graph-node-circle.state-current {
-  fill: #f59e0b;
-  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.6));
-}
-
-.graph-node-circle.state-visited {
-  fill: #818cf8;
-  filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.4));
-}
-
-.graph-node-circle.state-queued {
-  fill: #38bdf8;
-}
-
-.graph-node-circle.state-shortest {
-  fill: #10b981;
-  filter: drop-shadow(0 0 14px rgba(16, 185, 129, 0.6));
-}
-
-.graph-node-circle.state-mst {
-  fill: #ec4899;
-  filter: drop-shadow(0 0 12px rgba(236, 72, 153, 0.6));
-}
-
-.graph-edge-line {
-  transition: all 0.3s ease;
-}
-
-.graph-edge-line.edge-traversing {
-  stroke: #f59e0b !important;
-  stroke-width: 3.5 !important;
-  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
-}
-
-.graph-edge-line.edge-relaxed {
-  stroke: #38bdf8 !important;
-  stroke-width: 3 !important;
-}
-
-.graph-edge-line.edge-mst {
-  stroke: #10b981 !important;
-  stroke-width: 4 !important;
-  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
-}
+/* Node and edge styling now handled by shared Primitives.css (CircleNode, Line, Arrow).
+   Graph-specific overlays (glow rings, badges) are rendered inline in GraphRenderer. */
 
 /* ─── REAL-TIME GRAPH HUD ─────────────────────────────────────────── */
 

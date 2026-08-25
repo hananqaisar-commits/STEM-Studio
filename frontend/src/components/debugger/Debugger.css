@@ -258,3 +258,177 @@
   line-height: 1.45;
   border-left: 3px solid #ef4444;
 }
+
+/* ── Custom Array Editor Modal ────────────────────────────────────── */
+
+.custom-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.custom-editor-modal {
+  width: 480px;
+  max-width: 92vw;
+  max-height: 85vh;
+  background: var(--color-surface, #0f172a);
+  border: 1px solid var(--color-border, #1e293b);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.custom-editor-modal .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--color-border, #1e293b);
+  color: #e2e8f0;
+}
+
+.custom-editor-modal .modal-header h3 {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.custom-editor-modal .modal-header .close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.custom-editor-modal .modal-header .close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.custom-editor-modal .modal-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+}
+
+.custom-editor-modal .editor-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.custom-editor-modal .custom-array-textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-surface-elevated, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.custom-editor-modal .custom-array-textarea:focus {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.custom-editor-modal .editor-error-msg {
+  font-size: 0.75rem;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.custom-editor-modal .preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.custom-editor-modal .preset-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-right: 0.25rem;
+}
+
+.custom-editor-modal .preset-chip {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #334155);
+  background: var(--color-surface-elevated, #1e293b);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.custom-editor-modal .preset-chip:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--color-primary, #3b82f6);
+  color: #60a5fa;
+}
+
+.custom-editor-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--color-border, #1e293b);
+}
+
+.custom-editor-modal .modal-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.custom-editor-modal .modal-btn.cancel {
+  background: transparent;
+  border-color: var(--color-border, #334155);
+  color: #94a3b8;
+}
+.custom-editor-modal .modal-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+.custom-editor-modal .modal-btn.apply {
+  background: var(--color-primary, #3b82f6);
+  color: #fff;
+  border-color: var(--color-primary, #3b82f6);
+}
+.custom-editor-modal .modal-btn.apply:hover {
+  background: #2563eb;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+}

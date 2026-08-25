@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Type, Repeat, ArrowLeftRight, BarChart3, Maximize2, HelpCircle, Sparkles
+  Type, Repeat, ArrowLeftRight, BarChart3, Maximize2, HelpCircle, Sparkles, Trash2, Layers
 } from 'lucide-react';
 import { StringRenderer } from './StringRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -133,6 +133,21 @@ export const StringsPage: React.FC = () => {
     }
   };
 
+  const handleEmpty = () => {
+    reset();
+    quizSession.resetSession();
+    setInputStr('');
+    setSecondStr('');
+  };
+
+  const handleSample = () => {
+    reset();
+    quizSession.resetSession();
+    const sample = SAMPLE_STRINGS[selectedAlg];
+    setInputStr(sample.primary);
+    setSecondStr(sample.secondary);
+  };
+
   const renderPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
@@ -191,10 +206,18 @@ export const StringsPage: React.FC = () => {
         </div>
       )}
 
-      <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random String">
-        <Sparkles size={14} />
-        <span>Random</span>
-      </button>
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear Input">
+          <Trash2 size={14} /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSample} title="Sample Input">
+          <Layers size={14} /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random String">
+          <Sparkles size={14} />
+          <span>Random</span>
+        </button>
+      </div>
 
       <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} />
@@ -264,6 +287,12 @@ export const StringsPage: React.FC = () => {
           )}
 
           <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear Input">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample Input">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
+            </button>
             <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random String">
               <Sparkles size={14} className="text-emerald-400" />
               <span>Random</span>
