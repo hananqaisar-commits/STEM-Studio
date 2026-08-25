@@ -8,6 +8,7 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -400,6 +401,17 @@ export const BacktrackingPage: React.FC = () => {
 
         <div className="explanation-section">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
+          <MultiLanguageCodePanel
+            algorithmKey={selectedAlg}
+            activeLine={currentStep?.codeLine}
+            breakpoints={[]}
+            onToggleBreakpoint={() => {}}
+            variables={currentStep?.variables}
+            callStack={currentStep?.callStack}
+            currentArray={[]}
+          />
+
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             timeComplexity={executionData.timeComplexity}
