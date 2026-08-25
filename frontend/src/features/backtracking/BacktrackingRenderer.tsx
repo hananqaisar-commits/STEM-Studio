@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { Maximize2 } from 'lucide-react';
-import type { ArrayStep } from '../../engine/types/Step';
+import { CircleNode } from '../../components/primitives/CircleNode';
+import { Line } from '../../components/primitives/Line';
+import { Bar } from '../../components/primitives/Bar';
+import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import './Backtracking.css';
 
 interface BacktrackingRendererProps {
@@ -100,11 +103,12 @@ const DecisionTreeSidebar: React.FC<{
     return { x, y };
   });
 
-  function getNodeClass(idx: number): string {
-    if (currentPathSet.has(idx)) return 'bt-tree-node-path';
-    if (solutionSet.has(idx)) return 'bt-tree-node-solution';
-    if (prunedSet.has(idx)) return 'bt-tree-node-pruned';
-    return 'bt-tree-node-default';
+  /** Map backtracking tree node state to shared ElementState. */
+  function mapTreeNodeState(idx: number): ElementState {
+    if (currentPathSet.has(idx)) return 'comparing';
+    if (solutionSet.has(idx)) return 'sorted';
+    if (prunedSet.has(idx)) return 'swapping';
+    return 'default';
   }
 
   return (
@@ -115,55 +119,45 @@ const DecisionTreeSidebar: React.FC<{
       </div>
       <div className="bt-tree-scroll">
         <svg width="100%" height={svgHeight} viewBox={`0 0 100 ${svgHeight}`} preserveAspectRatio="xMidYMin meet">
-          {/* Edges */}
+          {/* Edges (shared Line primitive) */}
           {nodes.map((node) => {
             if (node.parent < 0) return null;
             const p1 = positions[node.parent];
             const p2 = positions[node.idx];
             const onPath = currentPathSet.has(node.idx) && currentPathSet.has(node.parent);
+            const edgeState: ElementState = onPath ? 'comparing' : prunedSet.has(node.idx) ? 'swapping' : 'default';
             return (
-              <line
+              <Line
                 key={`e-${node.idx}`}
                 x1={`${p1.x}%`}
                 y1={p1.y + nodeSize / 2}
                 x2={`${p2.x}%`}
                 y2={p2.y - nodeSize / 2}
-                stroke={onPath ? '#f59e0b' : prunedSet.has(node.idx) ? '#ef4444' : '#334155'}
+                state={edgeState}
                 strokeWidth={onPath ? 2 : 1}
-                opacity={prunedSet.has(node.idx) ? 0.4 : onPath ? 1 : 0.5}
               />
             );
           })}
-          {/* Nodes */}
+          {/* Nodes (shared CircleNode via foreignObject) */}
           {nodes.map((node) => {
             const pos = positions[node.idx];
-            const cls = getNodeClass(node.idx);
-            const r = nodeSize / 2;
+            const mappedState = mapTreeNodeState(node.idx);
+            const displayVal = prunedSet.has(node.idx) ? '\u2715' : node.label;
             return (
-              <g key={`n-${node.idx}`}>
-                <circle
-                  cx={`${pos.x}%`}
-                  cy={pos.y}
-                  r={r}
-                  className={cls}
+              <foreignObject
+                key={`n-${node.idx}`}
+                x={`${pos.x}%`}
+                y={pos.y - nodeSize / 2}
+                width={nodeSize}
+                height={nodeSize}
+                style={{ overflow: 'visible', transform: `translateX(-${nodeSize / 2}px)` }}
+              >
+                <CircleNode
+                  value={displayVal}
+                  state={mappedState}
+                  size={nodeSize}
                 />
-                {prunedSet.has(node.idx) && (
-                  <text
-                    x={`${pos.x}%`}
-                    y={pos.y + 1}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize={r}
-                    fill="#ef4444"
-                    fontWeight="bold"
-                  >
-                    ✕
-                  </text>
-                )}
-                {nodeSize >= 16 && !prunedSet.has(node.idx) && (
-                  <title>{node.label}</title>
-                )}
-              </g>
+              </foreignObject>
             );
           })}
         </svg>
@@ -240,11 +234,11 @@ const ArrayStateView: React.FC<{ step: ArrayStep; algorithmKey: string }> = ({ s
   const vars = step.variables || {};
   const max = Math.max(...array, 1);
 
-  function getElementClass(idx: number): string {
-    if (swappingIndices.includes(idx)) return 'bt-bar bt-bar-swapping';
-    if (comparingIndices.includes(idx)) return 'bt-bar bt-bar-comparing';
-    if (sortedIndices.includes(idx)) return 'bt-bar bt-bar-chosen';
-    return 'bt-bar bt-bar-default';
+  function getElementState(idx: number): ElementState {
+    if (swappingIndices.includes(idx)) return 'swapping';
+    if (comparingIndices.includes(idx)) return 'comparing';
+    if (sortedIndices.includes(idx)) return 'sorted';
+    return 'default';
   }
 
   // For combinationSum: show current combination and remainder
@@ -260,12 +254,12 @@ const ArrayStateView: React.FC<{ step: ArrayStep; algorithmKey: string }> = ({ s
           const heightPct = (value / max) * 100;
           return (
             <div key={idx} className="bt-bar-wrapper">
-              <div
-                className={getElementClass(idx)}
-                style={{ height: `${heightPct}%` }}
-              >
-                <span className="bt-bar-value">{value}</span>
-              </div>
+              <Bar
+                value={value}
+                heightPercent={heightPct}
+                state={getElementState(idx)}
+                showValue={array.length <= 25}
+              />
               <span className="bt-bar-index">[{idx}]</span>
             </div>
           );
@@ -333,8 +327,9 @@ export const BacktrackingRenderer: React.FC<BacktrackingRendererProps> = ({
             </span>
           </div>
           {onToggleFullscreen && (
-            <button className="bt-fullscreen-btn" onClick={onToggleFullscreen} title="Fullscreen">
+            <button className="fullscreen-toggle-btn" onClick={onToggleFullscreen} title="Enter Full Screen">
               <Maximize2 size={14} />
+              <span>Fullscreen</span>
             </button>
           )}
         </div>

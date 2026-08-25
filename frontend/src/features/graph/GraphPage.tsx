@@ -365,7 +365,7 @@ export const GraphPage: React.FC = () => {
               </button>
             </div>
 
-            <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
+            <GraphRenderer step={currentStep} nodes={nodes} edges={edges} onToggleFullscreen={() => setIsFullScreenOpen(true)} />
           </div>
 
           {renderPlayerControls()}

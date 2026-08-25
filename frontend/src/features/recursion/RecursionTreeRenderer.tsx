@@ -1,4 +1,5 @@
 import React from 'react';
+import { Maximize2 } from 'lucide-react';
 import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
@@ -165,8 +166,9 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
           <span className="tree-subtitle">{n} call{n !== 1 ? 's' : ''} &bull; depth {maxDepth + 1}</span>
         </div>
         {onToggleFullscreen && (
-          <button className="fullscreen-toggle-btn" onClick={onToggleFullscreen}>
-            <span>⛶</span> <span>Fullscreen</span>
+          <button className="fullscreen-toggle-btn" onClick={onToggleFullscreen} title="Enter Full Screen">
+            <Maximize2 size={14} />
+            <span>Fullscreen</span>
           </button>
         )}
       </div>
