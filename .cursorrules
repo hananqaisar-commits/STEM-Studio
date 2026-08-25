@@ -130,6 +130,46 @@ To prevent deployment regressions and broken production pipelines, the following
    - **Protected Block**: `PlayPauseButtonProps` and `ExplanationPanelProps` interfaces.
    - **Enforcement**: DO NOT rename or delete prop definitions used by algorithm visualizer modules (`BinarySearch`, `Graph`, `LinkedList`, `BST`, `Sorting`).
 
+## 16. Fullscreen & Visualization Primitives (Global Standard)
+
+### 16A. Shared Primitives (Reuse-Only Policy)
+- All tree/graph structures MUST use `CircleNode` for nodes and `Line`/`Arrow` for edges.
+  - **Gold Reference**: `BSTRenderer` (BST) and `RecursionTreeRenderer` (Recursion).
+- All array/bar visualizations MUST use the `Bar` primitive.
+  - **Gold Reference**: `SortingRenderer` and `ArrayRenderer`.
+- Primitives live in `frontend/src/components/primitives/` — `CircleNode.tsx`, `Line.tsx`, `Bar.tsx`, `Arrow.tsx`, styled via `Primitives.css`.
+- **Prohibited**: inline `<circle>`, `<line>`, or custom bar divs when a shared primitive already covers the use-case.
+- State color palette is defined once in `Primitives.css` and MUST NOT be redefined per-category:
+  - `default` = `#3b82f6` (blue), `comparing` = `#f59e0b` (amber), `swapping` = `#ef4444` (red), `sorted` = `#10b981` (emerald), `pivot` = `#8b5cf6` (violet), `selected` = `#ec4899` (pink).
+- State mapping for non-standard states (e.g. graph `current` → `comparing`, graph `visited` → `sorted`, graph `shortest` → `selected`, graph `mst` → `pivot`) MUST be done via a local helper — NOT by hard-coding colors.
+- New categories/modules MUST import and reuse existing primitives — never create duplicate shapes or copy CSS from `Primitives.css`.
+
+### 16B. FullScreen Modal Standard
+- All categories MUST use `FullScreenCanvasModal` from `components/layout/FullScreenCanvasModal.tsx`.
+- Standard interface: `isOpen`, `onClose`, `title`, `subtitle`, `toolbarControls`, `playbackControls`, `children`.
+- Every **Page** component MUST:
+  1. Maintain `const [isFullScreenOpen, setIsFullScreenOpen] = useState(false)`.
+  2. Render `<FullScreenCanvasModal>` at the bottom of the JSX tree.
+  3. Pass `onToggleFullscreen={() => setIsFullScreenOpen(true)}` to its renderer.
+- Every **Renderer** component MUST:
+  1. Accept `onToggleFullscreen?: () => void` as an optional prop.
+  2. Render the fullscreen button using the standard pattern:
+     ```tsx
+     {onToggleFullscreen && (
+       <button className="fullscreen-toggle-btn" onClick={onToggleFullscreen} title="Enter Full Screen">
+         <Maximize2 size={14} />
+         <span>Fullscreen</span>
+       </button>
+     )}
+     ```
+  3. Use `Maximize2` from `lucide-react` — never substitute with raw unicode characters.
+- Toolbar and playback controls inside fullscreen must follow `renderFloatingControls()` and `renderPlayerControls()` render-function pattern.
+
+### 16C. Fullscreen CSS Rules
+- FullScreen modal CSS is self-contained in `FullScreenCanvasModal.css` — categories MUST NOT add category-specific fullscreen overrides inside their own CSS files.
+- The `fs-workspace-scrollable` container auto-stretches `*-canvas-container` children — categories should use standard canvas container class names for automatic sizing.
+- Theme toggle (dark/light) is built into the `FullScreenCanvasModal` header — categories must NOT implement their own theme switching inside fullscreen.
+
 ---
 
 # Architecture Reference
