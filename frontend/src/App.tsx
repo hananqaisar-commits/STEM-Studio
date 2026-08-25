@@ -9,12 +9,20 @@ import { ResetPassword } from './features/auth/ResetPassword';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
+import { DSAHub } from './features/hub/DSAHub';
+import { ComplexityPage } from './features/complexity/ComplexityPage';
 import { SortingPage } from './features/sorting/SortingPage';
 import { BSTPage } from './features/bst/BSTPage';
 import { StackQueuePage } from './features/stackQueue/StackQueuePage';
 import { LinkedListPage } from './features/linkedList/LinkedListPage';
 import { BinarySearchPage } from './features/binarySearch/BinarySearchPage';
 import { GraphPage } from './features/graph/GraphPage';
+import { ArraysPage } from './features/arrays/ArraysPage';
+import { StringsPage } from './features/strings/StringsPage';
+import { RecursionPage } from './features/recursion/RecursionPage';
+import { GreedyPage } from './features/greedy/GreedyPage';
+import { HashMapsPage } from './features/hashMaps/HashMapsPage';
+import { BacktrackingPage } from './features/backtracking/BacktrackingPage';
 
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
@@ -50,10 +58,12 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const pathSegment = location.pathname.split('/')[2] || 'sorting';
+  const pathSegment = location.pathname.split('/')[2] || '';
 
-  const handleSelectTopic = (topicId: string) => {
-    navigate(`/dashboard/${topicId}`);
+  const handleSelectModule = (moduleId: string) => {
+    if (moduleId === 'dsa') {
+      navigate('/dashboard');
+    }
   };
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
@@ -64,20 +74,27 @@ const DashboardLayout = () => {
       <Navbar onToggleSidebar={toggleSidebar} />
       <div className="dashboard-body">
         <TopicMenu
-          activeTopic={pathSegment}
-          onSelectTopic={handleSelectTopic}
+          activeModule={pathSegment}
+          onSelectModule={handleSelectModule}
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
         />
         <main className="dashboard-main">
           <Routes>
-            <Route path="/" element={<Navigate to="sorting" replace />} />
+            <Route index element={<DSAHub />} />
+            <Route path="complexity" element={<ComplexityPage />} />
             <Route path="sorting" element={<SortingPage />} />
             <Route path="stackQueue" element={<StackQueuePage />} />
             <Route path="linkedList" element={<LinkedListPage />} />
             <Route path="bst" element={<BSTPage />} />
             <Route path="binarySearch" element={<BinarySearchPage />} />
             <Route path="graph" element={<GraphPage />} />
+            <Route path="arrays" element={<ArraysPage />} />
+            <Route path="strings" element={<StringsPage />} />
+            <Route path="recursion" element={<RecursionPage />} />
+            <Route path="greedy" element={<GreedyPage />} />
+            <Route path="hashMaps" element={<HashMapsPage />} />
+            <Route path="backtracking" element={<BacktrackingPage />} />
           </Routes>
         </main>
       </div>

@@ -1,0 +1,487 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  Clock, Package, Calendar, FileText, Maximize2, HelpCircle, Sparkles, Layers
+} from 'lucide-react';
+import { ArrayRenderer } from '../arrays/ArrayRenderer';
+import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
+import { StepControls } from '../../components/controls/StepControls';
+import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { QuizDock } from '../../components/quiz/QuizDock';
+import { useQuizSession } from '../../hooks/useQuizSession';
+import { maskNarration } from '../../components/quiz/quizMask';
+import { buildGreedyCheckpoints } from './quizAdapter';
+import type { GreedyAlgorithmKey } from './quizAdapter';
+import type { QuizCadence } from '../../engine/types/Quiz';
+
+import { runActivitySelection } from './algorithms/activitySelection';
+import { runFractionalKnapsack } from './algorithms/fractionalKnapsack';
+import { runJobScheduling } from './algorithms/jobScheduling';
+import { runHuffmanCoding } from './algorithms/huffmanCoding';
+
+import '../sorting/Sorting.css';
+import './Greedy.css';
+
+interface AlgMeta {
+  key: GreedyAlgorithmKey;
+  name: string;
+  complexity: string;
+  icon: React.ReactNode;
+}
+
+const ALGORITHMS: AlgMeta[] = [
+  { key: 'activitySelection', name: 'Activity Selection', complexity: 'O(n log n)', icon: <Clock size={14} /> },
+  { key: 'fractionalKnapsack', name: 'Fractional Knapsack', complexity: 'O(n log n)', icon: <Package size={14} /> },
+  { key: 'jobScheduling', name: 'Job Scheduling', complexity: 'O(n·d)', icon: <Calendar size={14} /> },
+  { key: 'huffmanCoding', name: 'Huffman Coding', complexity: 'O(n log n)', icon: <FileText size={14} /> },
+];
+
+/* ── Default inputs ─────────────────────────────────────────────────────── */
+const DEFAULT_ACTIVITIES = '(1,4) (3,5) (0,6) (5,7) (3,9) (5,9) (6,10) (8,11)';
+const DEFAULT_ITEMS = '(10,60) (20,100) (30,120)';
+const DEFAULT_CAPACITY = 50;
+const DEFAULT_JOBS = '(2,100) (1,19) (2,27) (1,25) (3,15)';
+const DEFAULT_TEXT = 'aabbbcccc';
+
+/* ── Parsing helpers ─────────────────────────────────────────────────────── */
+
+interface Activity { start: number; end: number }
+interface Item { weight: number; value: number }
+interface Job { deadline: number; profit: number }
+
+function parseActivities(raw: string): Activity[] {
+  const matches = raw.match(/\((\d+)\s*,\s*(\d+)\)/g);
+  if (!matches) return [];
+  return matches.map((m) => {
+    const nums = m.match(/\d+/g)!;
+    return { start: parseInt(nums[0], 10), end: parseInt(nums[1], 10) };
+  });
+}
+
+function parseItems(raw: string): Item[] {
+  const matches = raw.match(/\((\d+)\s*,\s*(\d+)\)/g);
+  if (!matches) return [];
+  return matches.map((m) => {
+    const nums = m.match(/\d+/g)!;
+    return { weight: parseInt(nums[0], 10), value: parseInt(nums[1], 10) };
+  });
+}
+
+function parseJobs(raw: string): Job[] {
+  const matches = raw.match(/\((\d+)\s*,\s*(\d+)\)/g);
+  if (!matches) return [];
+  return matches.map((m) => {
+    const nums = m.match(/\d+/g)!;
+    return { deadline: parseInt(nums[0], 10), profit: parseInt(nums[1], 10) };
+  });
+}
+
+export const GreedyPage: React.FC = () => {
+  const [selectedAlg, setSelectedAlg] = useState<GreedyAlgorithmKey>('activitySelection');
+
+  // Debugger & Modal & Quiz state
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
+
+  // Algorithm-specific parameters
+  const [activitiesRaw, setActivitiesRaw] = useState<string>(DEFAULT_ACTIVITIES);
+  const [itemsRaw, setItemsRaw] = useState<string>(DEFAULT_ITEMS);
+  const [capacity, setCapacity] = useState<number>(DEFAULT_CAPACITY);
+  const [jobsRaw, setJobsRaw] = useState<string>(DEFAULT_JOBS);
+  const [huffmanText, setHuffmanText] = useState<string>(DEFAULT_TEXT);
+
+  // Generate algorithm steps
+  const executionData = useMemo(() => {
+    switch (selectedAlg) {
+      case 'activitySelection': {
+        const activities = parseActivities(activitiesRaw);
+        return runActivitySelection(activities.length > 0 ? activities : parseActivities(DEFAULT_ACTIVITIES));
+      }
+      case 'fractionalKnapsack': {
+        const items = parseItems(itemsRaw);
+        return runFractionalKnapsack(items.length > 0 ? items : parseItems(DEFAULT_ITEMS), capacity);
+      }
+      case 'jobScheduling': {
+        const jobs = parseJobs(jobsRaw);
+        return runJobScheduling(jobs.length > 0 ? jobs : parseJobs(DEFAULT_JOBS));
+      }
+      case 'huffmanCoding': {
+        const text = huffmanText.trim() || DEFAULT_TEXT;
+        return runHuffmanCoding(text);
+      }
+      default:
+        return runActivitySelection(parseActivities(DEFAULT_ACTIVITIES));
+    }
+  }, [selectedAlg, activitiesRaw, itemsRaw, capacity, jobsRaw, huffmanText]);
+
+  const {
+    currentStepIndex,
+    currentStep,
+    totalSteps,
+    isPlaying,
+    speed,
+    play,
+    pause,
+    stepForward,
+    stepBack,
+    reset,
+    setSpeed,
+  } = useStepPlayer({ steps: executionData.steps });
+
+  // Build quiz checkpoints from the current execution steps
+  const quizCheckpoints = useMemo(
+    () => buildGreedyCheckpoints(executionData.steps, selectedAlg),
+    [executionData.steps, selectedAlg]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'greedy' as any,
+    algorithmId: selectedAlg,
+  });
+
+  // Clear quiz when algorithm or inputs change
+  useEffect(() => {
+    quizSession.resetSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAlg, activitiesRaw, itemsRaw, capacity, jobsRaw, huffmanText]);
+
+  const handleRandomize = () => {
+    reset();
+    quizSession.resetSession();
+    switch (selectedAlg) {
+      case 'activitySelection': {
+        const acts: string[] = [];
+        for (let i = 0; i < 8; i++) {
+          const s = Math.floor(Math.random() * 10);
+          const e = s + Math.floor(Math.random() * 5) + 1;
+          acts.push(`(${s},${e})`);
+        }
+        setActivitiesRaw(acts.join(' '));
+        break;
+      }
+      case 'fractionalKnapsack': {
+        const items: string[] = [];
+        for (let i = 0; i < 5; i++) {
+          const w = Math.floor(Math.random() * 25) + 5;
+          const v = Math.floor(Math.random() * 120) + 20;
+          items.push(`(${w},${v})`);
+        }
+        setItemsRaw(items.join(' '));
+        setCapacity(Math.floor(Math.random() * 40) + 30);
+        break;
+      }
+      case 'jobScheduling': {
+        const jobs: string[] = [];
+        for (let i = 0; i < 6; i++) {
+          const d = Math.floor(Math.random() * 4) + 1;
+          const p = Math.floor(Math.random() * 90) + 10;
+          jobs.push(`(${d},${p})`);
+        }
+        setJobsRaw(jobs.join(' '));
+        break;
+      }
+      case 'huffmanCoding': {
+        const chars = 'abcdefgh';
+        let t = '';
+        for (let i = 0; i < 20; i++) t += chars[Math.floor(Math.random() * chars.length)];
+        setHuffmanText(t);
+        break;
+      }
+    }
+  };
+
+  const handleResetDefaults = () => {
+    reset();
+    quizSession.resetSession();
+    setActivitiesRaw(DEFAULT_ACTIVITIES);
+    setItemsRaw(DEFAULT_ITEMS);
+    setCapacity(DEFAULT_CAPACITY);
+    setJobsRaw(DEFAULT_JOBS);
+    setHuffmanText(DEFAULT_TEXT);
+  };
+
+  const renderPlayerControls = () => (
+    <div className="player-bar" style={{ margin: 0 }}>
+      <div className="player-left">
+        <PlayPauseButton
+          isPlaying={isPlaying}
+          onToggle={isPlaying ? pause : play}
+        />
+        <StepControls
+          onStepBack={stepBack}
+          onStepForward={stepForward}
+          onReset={reset}
+          canStepBack={currentStepIndex > 0}
+          canStepForward={currentStepIndex < totalSteps - 1}
+        />
+      </div>
+
+      <div className="player-center">
+        <div className="step-progress-bar">
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+        </div>
+        <span className="step-counter">
+          Step {currentStepIndex + 1} / {totalSteps}
+        </span>
+      </div>
+
+      <div className="player-right">
+        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
+      </div>
+    </div>
+  );
+
+  const renderFloatingControls = () => (
+    <div className="fs-floating-controls">
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Reset to Defaults">
+          <Layers size={14} />
+          <span>Defaults</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
+          <Sparkles size={14} />
+          <span>Random</span>
+        </button>
+      </div>
+
+      <label className="predict-toggle-label ml-2">
+        <HelpCircle size={16} />
+        <span>Predict Mode</span>
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
+      </label>
+    </div>
+  );
+
+  /* ── Algorithm-specific toolbar inputs ─────────────────────────────── */
+  const renderAlgorithmInputs = () => {
+    switch (selectedAlg) {
+      case 'activitySelection':
+        return (
+          <div className="greedy-input-group">
+            <Clock size={14} />
+            <span>Activities (start,end):</span>
+            <input
+              type="text"
+              value={activitiesRaw}
+              onChange={(e) => {
+                setActivitiesRaw(e.target.value);
+                reset();
+              }}
+              placeholder="(1,4) (3,5) ..."
+              style={{ width: '220px' }}
+            />
+          </div>
+        );
+
+      case 'fractionalKnapsack':
+        return (
+          <>
+            <div className="greedy-input-group">
+              <Package size={14} />
+              <span>Items (w,v):</span>
+              <input
+                type="text"
+                value={itemsRaw}
+                onChange={(e) => {
+                  setItemsRaw(e.target.value);
+                  reset();
+                }}
+                placeholder="(10,60) (20,100) ..."
+                style={{ width: '200px' }}
+              />
+            </div>
+            <div className="greedy-input-group">
+              <span>Capacity:</span>
+              <input
+                type="number"
+                value={capacity}
+                min={1}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val > 0) {
+                    setCapacity(val);
+                    reset();
+                  }
+                }}
+              />
+            </div>
+          </>
+        );
+
+      case 'jobScheduling':
+        return (
+          <div className="greedy-input-group">
+            <Calendar size={14} />
+            <span>Jobs (deadline,profit):</span>
+            <input
+              type="text"
+              value={jobsRaw}
+              onChange={(e) => {
+                setJobsRaw(e.target.value);
+                reset();
+              }}
+              placeholder="(2,100) (1,19) ..."
+              style={{ width: '220px' }}
+            />
+          </div>
+        );
+
+      case 'huffmanCoding':
+        return (
+          <div className="greedy-input-group">
+            <FileText size={14} />
+            <span>Text:</span>
+            <input
+              type="text"
+              value={huffmanText}
+              onChange={(e) => {
+                setHuffmanText(e.target.value);
+                reset();
+              }}
+              placeholder="Enter text..."
+              style={{ width: '180px' }}
+            />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="bst-page-container">
+      <VisualizerHeader
+        icon={<Package size={22} />}
+        title="Greedy Algorithms Studio"
+        subtitle="Interactive Activity Selection, Knapsack, Job Scheduling & Huffman Coding"
+        items={ALGORITHMS.map((alg) => ({
+          id: alg.key,
+          name: alg.name,
+          description: `Step-by-step ${alg.name} with greedy choice visualization`,
+          group: alg.complexity,
+        }))}
+        activeId={selectedAlg}
+        onSelect={(id) => {
+          setSelectedAlg(id as GreedyAlgorithmKey);
+          reset();
+          quizSession.resetSession();
+        }}
+        placeholder="Search greedy algorithm or technique..."
+      />
+
+      {/* Category Tabs Bar */}
+      <div className="tree-category-toolbar animate-fade-in">
+        <div className="tree-category-tabs flex-wrap">
+          {ALGORITHMS.map((alg) => (
+            <button
+              key={alg.key}
+              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
+              onClick={() => {
+                setSelectedAlg(alg.key);
+                reset();
+                quizSession.resetSession();
+              }}
+            >
+              {alg.icon}
+              <span>{alg.name}</span>
+              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Operations Toolbar */}
+      <div className="bst-toolbar animate-fade-in">
+        <div className="bst-toolbar-left">
+          {/* Algorithm-specific inputs */}
+          {renderAlgorithmInputs()}
+
+          {/* Dataset Mode Selector */}
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Reset to Defaults">
+              <Layers size={14} className="text-amber-400" />
+              <span>Defaults</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
+              <Sparkles size={14} className="text-emerald-400" />
+              <span>Random</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bst-toolbar-right">
+          <div className="predict-mode-group flex items-center gap-2">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Predict Mode</span>
+              <input
+                type="checkbox"
+                checked={quizEnabled}
+                onChange={(e) => setQuizEnabled(e.target.checked)}
+              />
+            </label>
+
+            <button
+              className="bst-btn btn-fullscreen"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Learning Workspace */}
+      <div className="sorting-workspace">
+        {/* Left Column: Visual Canvas & Interactive Controls */}
+        <div className="renderer-section">
+          <ArrayRenderer
+            currentStep={currentStep}
+            onToggleFullscreen={() => setIsFullScreenOpen(true)}
+          />
+
+          {renderPlayerControls()}
+        </div>
+
+        {/* Right Column: Quiz & Explanation */}
+        <div className="explanation-section">
+          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
+          <ExplanationPanel
+            description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step greedy execution.', quizSession.phase)}
+            timeComplexity={executionData.timeComplexity}
+            spaceComplexity={executionData.spaceComplexity}
+          />
+        </div>
+      </div>
+
+      {/* Reusable Native FullScreen Canvas Modal */}
+      <FullScreenCanvasModal
+        isOpen={isFullScreenOpen}
+        onClose={() => setIsFullScreenOpen(false)}
+        title={`Greedy Algorithms | ${selectedAlg.toUpperCase()}`}
+        subtitle="Greedy Choice Visualizer"
+        toolbarControls={renderFloatingControls()}
+        playbackControls={renderPlayerControls()}
+      >
+        <ArrayRenderer currentStep={currentStep} />
+      </FullScreenCanvasModal>
+    </div>
+  );
+};

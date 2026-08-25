@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check, Palette } from 'lucide-react';
+import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check, Palette, ChevronRight } from 'lucide-react';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { getCategoryById } from '../../data/categories';
 import './Layout.css';
 
 interface NavbarProps {
@@ -33,6 +34,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Derive breadcrumb from current path
+  const pathSegment = location.pathname.split('/')[2] || '';
+  const currentCategory = pathSegment ? getCategoryById(pathSegment) : null;
+
   const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] = [
     { value: 'grayscale-light', label: 'Greyscale', icon: <Sun size={14} /> },
     { value: 'warm-light', label: 'Warm Light', icon: <Sun size={14} /> },
@@ -61,43 +66,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
         </Link>
       </div>
 
+      {/* Breadcrumb — shows current category context */}
       <nav className="navbar-center">
-        <Link
-          to="/dashboard/sorting"
-          className={`nav-tab ${location.pathname.includes('/sorting') ? 'active' : ''}`}
-        >
-          Sorting
-        </Link>
-        <Link
-          to="/dashboard/stackQueue"
-          className={`nav-tab ${location.pathname.includes('/stackQueue') ? 'active' : ''}`}
-        >
-          Stack & Queue
-        </Link>
-        <Link
-          to="/dashboard/linkedList"
-          className={`nav-tab ${location.pathname.includes('/linkedList') ? 'active' : ''}`}
-        >
-          Linked List
-        </Link>
-        <Link
-          to="/dashboard/bst"
-          className={`nav-tab ${location.pathname.includes('/bst') ? 'active' : ''}`}
-        >
-          BST
-        </Link>
-        <Link
-          to="/dashboard/binarySearch"
-          className={`nav-tab ${location.pathname.includes('/binarySearch') ? 'active' : ''}`}
-        >
-          Binary Search
-        </Link>
-        <Link
-          to="/dashboard/graph"
-          className={`nav-tab ${location.pathname.includes('/graph') ? 'active' : ''}`}
-        >
-          Graphs
-        </Link>
+        {currentCategory ? (
+          <div className="nav-breadcrumb">
+            <Link to="/dashboard" className="nav-crumb-link">DSA</Link>
+            <ChevronRight size={14} className="nav-crumb-sep" />
+            <span className="nav-crumb-current">{currentCategory.name}</span>
+          </div>
+        ) : (
+          <span className="nav-crumb-current">Dashboard</span>
+        )}
       </nav>
 
       <div className="navbar-right">
