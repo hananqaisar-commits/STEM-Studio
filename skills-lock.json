@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "atxp": {
+      "source": "atxp-dev/cli",
+      "sourceType": "github",
+      "skillPath": "skills/atxp/SKILL.md",
+      "computedHash": "fcef89f8eba21cb0274708f8ed2487d261180f38c768f019830a4f23a5a87fc0"
+    }
+  }
+}
