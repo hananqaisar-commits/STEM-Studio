@@ -707,3 +707,70 @@
 .theme-active-icon {
   color: var(--color-primary);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   BREADCRUMB NAVIGATION (replaces old navbar tabs)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.nav-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.nav-crumb-link {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.nav-crumb-link:hover {
+  color: var(--color-primary);
+  background-color: var(--color-surface);
+}
+
+.nav-crumb-sep {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.nav-crumb-current {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODULE CARDS IN SIDEBAR
+   ═══════════════════════════════════════════════════════════════════ */
+
+.module-card {
+  position: relative;
+}
+
+.module-card-disabled {
+  opacity: 0.45;
+  cursor: default !important;
+}
+
+.module-card-disabled:hover {
+  background-color: transparent !important;
+}
+
+.module-soon-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text-muted);
+}

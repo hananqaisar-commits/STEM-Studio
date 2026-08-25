@@ -28,7 +28,10 @@ export type SortingAlgorithmKey =
   | 'merge'
   | 'quick'
   | 'heap'
-  | 'shell';
+  | 'shell'
+  | 'counting'
+  | 'radix'
+  | 'bucket';
 
 /** SortingRenderer.tsx:138 stops drawing `[i]` labels past this size, so
  *  an index-based question is unanswerable on bigger arrays. */
@@ -45,6 +48,9 @@ const KINDS: Record<SortingAlgorithmKey, readonly Kind[]> = {
   insertion: ['landing'],
   shell: ['shift'],
   merge: ['midpoint'],
+  counting: ['lockIn'],
+  radix: ['lockIn'],
+  bucket: ['lockIn'],
 };
 
 /* ── Conceptual anchor ─────────────────────────────────────────────────
@@ -149,6 +155,42 @@ const ANCHORS: Record<SortingAlgorithmKey, Anchor> = {
       'Plain insertion sort moves a value one slot per write, so a value far from home is expensive. Large gaps let it jump many positions at once, leaving the final gap-of-1 pass with very little left to do.',
     hint: 'Compare how far one write can move a value at gap 6 versus at gap 1.',
     concept: 'Gap sequence',
+  },
+  counting: {
+    prompt: 'What makes counting sort fundamentally different from comparison sorts?',
+    correct: 'It uses the actual values as array indices in a count table — no comparisons needed',
+    distractors: [
+      'It compares values but stores them in a separate table',
+      'It only works on already-sorted input',
+      'It uses a binary search to find positions',
+    ],
+    explanation: 'It uses the actual values as array indices in a count table — no comparisons needed.',
+    hint: 'Think about how it maps values to positions.',
+    concept: 'counting-sort',
+  },
+  radix: {
+    prompt: 'Why does radix sort process digits from least significant to most significant?',
+    correct: 'LSD order preserves the relative ordering from previous passes (stability), which is essential for correctness',
+    distractors: [
+      'Because the most significant digit is always zero',
+      'It processes from most significant to least significant instead',
+      'The order does not matter as long as all digits are processed',
+    ],
+    explanation: 'LSD order preserves the relative ordering from previous passes (stability), which is essential for correctness.',
+    hint: 'Consider what happens if you process digits in the opposite order.',
+    concept: 'radix-sort',
+  },
+  bucket: {
+    prompt: 'What input distribution gives bucket sort its worst-case O(n²) time?',
+    correct: 'When all elements fall into the same bucket, the per-bucket sort becomes O(n²)',
+    distractors: [
+      'When elements are evenly spread across all buckets',
+      'When every bucket has exactly one element',
+      'When the input is already sorted',
+    ],
+    explanation: 'When all elements fall into the same bucket, the per-bucket sort becomes O(n²).',
+    hint: 'Think about what happens when values are clustered.',
+    concept: 'bucket-sort',
   },
 };
 

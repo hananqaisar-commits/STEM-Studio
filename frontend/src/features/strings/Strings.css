@@ -1,0 +1,51 @@
+/* Strings Page Styles */
+.strings-page-container { display: flex; flex-direction: column; gap: 1rem; padding: 1.25rem; height: 100%; }
+.strings-workspace { display: grid; grid-template-columns: 1fr 380px; gap: 1rem; flex: 1; min-height: 0; }
+
+/* String cell grid for character display */
+.string-cells-canvas {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 1.25rem;
+  justify-content: center; align-items: center; min-height: 120px;
+}
+
+.string-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 48px; height: 56px; border-radius: 8px;
+  border: 1px solid var(--color-border); background: var(--color-surface);
+  transition: all 0.2s ease;
+}
+
+.string-cell .cell-char {
+  font-size: 1.2rem; font-weight: 700; font-family: 'Fira Code', monospace;
+  color: var(--color-text);
+}
+
+.string-cell .cell-index {
+  font-size: 0.6rem; color: var(--color-text-muted); margin-top: 2px;
+}
+
+/* State colors — match the Bar component's state colors */
+.string-cell.state-comparing { border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
+.string-cell.state-comparing .cell-char { color: #f59e0b; }
+.string-cell.state-swapping { border-color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+.string-cell.state-swapping .cell-char { color: #ef4444; }
+.string-cell.state-sorted { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); }
+.string-cell.state-sorted .cell-char { color: #22c55e; }
+
+/* String input toolbar */
+.string-input-group {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0.75rem; background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: 8px; font-size: 0.8rem;
+}
+
+.string-input-group input[type="text"] {
+  padding: 0.3rem 0.5rem; background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border); border-radius: 4px;
+  color: var(--color-text); font-family: 'Fira Code', monospace; font-size: 0.8rem;
+  min-width: 120px;
+}
+
+@media (max-width: 1024px) {
+  .strings-workspace { grid-template-columns: 1fr; }
+}

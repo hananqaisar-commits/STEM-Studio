@@ -1,41 +1,35 @@
 import React from 'react';
-import { BarChart2, Layers, GitCommit, GitPullRequest, Search, Share2, X } from 'lucide-react';
+import { BookOpen, Cpu, Monitor, X } from 'lucide-react';
+import { MODULES } from '../../data/categories';
 import './Layout.css';
 
-interface TopicItem {
-  id: string;
-  name: string;
-  category: string;
-  icon: React.ReactNode;
-}
-
-const TOPICS: TopicItem[] = [
-  { id: 'sorting', name: 'Sorting Algorithms', category: 'Arrays & Sorting', icon: <BarChart2 size={18} /> },
-  { id: 'stackQueue', name: 'Stack & Queue', category: 'Linear Structures', icon: <Layers size={18} /> },
-  { id: 'linkedList', name: 'Linked List', category: 'Linear Structures', icon: <GitCommit size={18} /> },
-  { id: 'bst', name: 'Binary Search Tree', category: 'Trees & Hierarchies', icon: <GitPullRequest size={18} /> },
-  { id: 'binarySearch', name: 'Binary Search', category: 'Searching', icon: <Search size={18} /> },
-  { id: 'graph', name: 'Graph Algorithms', category: 'Graphs & Networks', icon: <Share2 size={18} /> },
-];
-
 interface TopicMenuProps {
-  activeTopic: string;
-  onSelectTopic: (topicId: string) => void;
+  activeModule: string;
+  onSelectModule: (moduleId: string) => void;
   isOpen?: boolean;
   onClose?: () => void;
 }
 
+const MODULE_ICONS: Record<string, React.ReactNode> = {
+  dsa: <BookOpen size={18} />,
+  dld: <Cpu size={18} />,
+  os: <Monitor size={18} />,
+};
+
 export const TopicMenu: React.FC<TopicMenuProps> = ({
-  activeTopic,
-  onSelectTopic,
+  activeModule: _activeModule,
+  onSelectModule,
   isOpen = false,
   onClose,
 }) => {
-  const handleTopicClick = (topicId: string) => {
-    onSelectTopic(topicId);
-    // Auto-close drawer on mobile after selection
+  const handleClick = (moduleId: string, available: boolean) => {
+    if (!available) return;
+    onSelectModule(moduleId);
     if (onClose) onClose();
   };
+
+  // DSA module is always active when viewing any category page
+  const isDsaActive = true; // DSA module is always active when dashboard is open
 
   return (
     <>
@@ -48,7 +42,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
 
       <aside className={`topic-sidebar ${isOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
-          <span className="sidebar-title">ALGORITHM MODULES</span>
+          <span className="sidebar-title">MODULES</span>
           <button
             className="sidebar-close-btn"
             onClick={onClose}
@@ -59,19 +53,26 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
         </div>
 
         <nav className="topic-list">
-          {TOPICS.map((topic) => (
-            <button
-              key={topic.id}
-              className={`topic-card ${activeTopic === topic.id ? 'active' : ''}`}
-              onClick={() => handleTopicClick(topic.id)}
-            >
-              <div className="topic-icon">{topic.icon}</div>
-              <div className="topic-info">
-                <span className="topic-name">{topic.name}</span>
-                <span className="topic-category">{topic.category}</span>
-              </div>
-            </button>
-          ))}
+          {MODULES.map((mod) => {
+            const isActive = mod.id === 'dsa' && isDsaActive;
+            return (
+              <button
+                key={mod.id}
+                className={`topic-card module-card ${isActive ? 'active' : ''} ${!mod.available ? 'module-card-disabled' : ''}`}
+                onClick={() => handleClick(mod.id, mod.available)}
+                disabled={!mod.available}
+              >
+                <div className="topic-icon">{MODULE_ICONS[mod.id]}</div>
+                <div className="topic-info">
+                  <span className="topic-name">{mod.name}</span>
+                  <span className="topic-category">{mod.description}</span>
+                </div>
+                {!mod.available && (
+                  <span className="module-soon-badge">Soon</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </aside>
     </>
