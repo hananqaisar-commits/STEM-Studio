@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Link2,
   Plus,
@@ -13,6 +13,11 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { QuizDock } from '../../components/quiz/QuizDock';
+import { useQuizSession } from '../../hooks/useQuizSession';
+import { maskNarration } from '../../components/quiz/quizMask';
+import { buildLinkedListCheckpoints } from './quizAdapter';
+import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   createInitialNodes,
   generateInsertHeadSteps,
@@ -28,7 +33,6 @@ import {
 } from './linkedListEngine';
 import { LinkedListRenderer } from './LinkedListRenderer';
 import { LinkedListCodePanel } from './LinkedListCodePanel';
-import { LinkedListPredictionQuiz } from './LinkedListPredictionQuiz';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -58,7 +62,8 @@ export const LinkedListPage: React.FC = () => {
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Interactive & Quiz Modes
-  const [isPredictMode, setIsPredictMode] = useState<boolean>(false);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
   // Active step dataset
@@ -82,10 +87,29 @@ export const LinkedListPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer<LinkedListStep>({ steps: activeSteps });
 
+  // Build quiz checkpoints from the current active steps
+  const quizCheckpoints = useMemo(
+    () => buildLinkedListCheckpoints(activeSteps, category),
+    [activeSteps, category]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'linkedList',
+    algorithmId: category,
+  });
+
   // Handle Category Switching
   const handleSelectCategory = (cat: LinkedListCategory) => {
     setCategory(cat);
     reset();
+    quizSession.resetSession();
 
     if (cat === 'doubly') {
       const dNodes = createInitialNodes([15, 25, 35, 45], 'doubly');
@@ -266,7 +290,7 @@ export const LinkedListPage: React.FC = () => {
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
-        <input type="checkbox" checked={isPredictMode} onChange={(e) => setIsPredictMode(e.target.checked)} />
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
   );
@@ -363,8 +387,8 @@ export const LinkedListPage: React.FC = () => {
         {/* Mode Toggles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button
-            className={`ll-btn ${isPredictMode ? 'll-btn-primary' : 'll-btn-secondary'}`}
-            onClick={() => setIsPredictMode(!isPredictMode)}
+            className={`ll-btn ${quizEnabled ? 'll-btn-primary' : 'll-btn-secondary'}`}
+            onClick={() => setQuizEnabled(!quizEnabled)}
           >
             <HelpCircle size={14} />
             <span>Quiz Mode</span>
@@ -383,10 +407,6 @@ export const LinkedListPage: React.FC = () => {
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
       <div className="ll-workspace">
         <div className="renderer-section">
-          {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-            <LinkedListPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
-          )}
-
           <div className="ll-canvas-card">
             <div className="ll-canvas-header">
               <div className="ll-canvas-title">
@@ -412,6 +432,8 @@ export const LinkedListPage: React.FC = () => {
 
         {/* Right Column: Code & Explanation */}
         <div className="explanation-section">
+          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
           <LinkedListCodePanel
             snippetKey={snippetKey}
             activeLine={currentStep?.codeLine}
@@ -420,7 +442,7 @@ export const LinkedListPage: React.FC = () => {
           />
 
           <ExplanationPanel
-            description={currentStep?.explanation || 'Run an operation to observe step-by-step execution.'}
+            description={maskNarration(currentStep?.explanation || 'Run an operation to observe step-by-step execution.', quizSession.phase)}
           />
         </div>
       </div>
@@ -434,9 +456,6 @@ export const LinkedListPage: React.FC = () => {
         toolbarControls={renderFloatingControls()}
         playbackControls={renderPlayerControls()}
       >
-        {isPredictMode && currentStep?.isQuizPoint && currentStep.quizData && (
-          <LinkedListPredictionQuiz quizData={currentStep.quizData} onCorrectAnswer={() => stepForward()} />
-        )}
         <LinkedListRenderer step={currentStep} nodes={baseNodes} />
       </FullScreenCanvasModal>
     </div>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
-import { PredictionQuiz } from './PredictionQuiz';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
@@ -10,6 +9,11 @@ import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { QuizDock } from '../../components/quiz/QuizDock';
+import { useQuizSession } from '../../hooks/useQuizSession';
+import { maskNarration } from '../../components/quiz/quizMask';
+import { buildBSTCheckpoints } from './quizAdapter';
+import type { QuizCadence } from '../../engine/types/Quiz';
 
 import {
   generateBSTInsertSteps,
@@ -56,10 +60,10 @@ export const BSTPage: React.FC = () => {
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
   const [inputValue, setInputValue] = useState<string>('45');
   const [wordValue, setWordValue] = useState<string>('cat');
-  const [isPredictMode, setIsPredictMode] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
-  const [breakpoints, setBreakpoints] = useState<number[]>([]);
 
   // Category State Stores
   const [bstTree, setBstTree] = useState<BSTTreeStructure | undefined>(DEFAULT_BST_TREE);
@@ -107,11 +111,24 @@ export const BSTPage: React.FC = () => {
   } = useStepPlayer({ steps: activeOperationSteps });
 
   const bstStep = currentStep as BSTStep | null;
-  const activePrediction = isPredictMode && bstStep?.predictionPoint ? bstStep.predictionPoint : null;
 
-  useEffect(() => {
-    if (activePrediction && isPlaying) pause();
-  }, [activePrediction, isPlaying, pause]);
+  // Build quiz checkpoints from the current operation steps
+  const quizCheckpoints = React.useMemo(
+    () => buildBSTCheckpoints(activeOperationSteps),
+    [activeOperationSteps]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'bst',
+    algorithmId: treeCategory,
+  });
 
   // Operations for BST
   const handleBSTInsert = () => {
@@ -121,7 +138,8 @@ export const BSTPage: React.FC = () => {
     setBstTree(newTree);
     setActiveOperationSteps(steps);
     reset();
-    if (!isPredictMode) play();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
   };
 
   const handleBSTSearch = () => {
@@ -130,7 +148,8 @@ export const BSTPage: React.FC = () => {
     const steps = generateBSTSearchSteps(bstTree, num);
     setActiveOperationSteps(steps);
     reset();
-    if (!isPredictMode) play();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
   };
 
   // Operations for AVL
@@ -141,6 +160,7 @@ export const BSTPage: React.FC = () => {
     setAvlTree(newTree);
     setActiveOperationSteps(steps);
     reset();
+    quizSession.resetSession();
     play();
   };
 
@@ -152,6 +172,7 @@ export const BSTPage: React.FC = () => {
     setHeapArray(newHeap);
     setActiveOperationSteps(steps);
     reset();
+    quizSession.resetSession();
     play();
   };
 
@@ -160,6 +181,7 @@ export const BSTPage: React.FC = () => {
     setHeapArray(newHeap);
     setActiveOperationSteps(steps);
     reset();
+    quizSession.resetSession();
     play();
   };
 
@@ -170,6 +192,7 @@ export const BSTPage: React.FC = () => {
     setTrieRoot(newRoot);
     setActiveOperationSteps(steps);
     reset();
+    quizSession.resetSession();
     play();
   };
 
@@ -178,6 +201,7 @@ export const BSTPage: React.FC = () => {
     const steps = generateTrieSearchSteps(trieRoot, wordValue.trim());
     setActiveOperationSteps(steps);
     reset();
+    quizSession.resetSession();
     play();
   };
 
@@ -189,6 +213,7 @@ export const BSTPage: React.FC = () => {
     if (treeCategory === 'trie') setTrieRoot(createTrieRoot());
     setActiveOperationSteps([]);
     reset();
+    quizSession.resetSession();
   };
 
   const handleSampleTree = () => {
@@ -219,6 +244,7 @@ export const BSTPage: React.FC = () => {
       setActiveOperationSteps(generateTrieInsertSteps(root, 'cat').steps);
     }
     reset();
+    quizSession.resetSession();
   };
 
   const handleRandomTree = () => {
@@ -255,11 +281,6 @@ export const BSTPage: React.FC = () => {
     reset();
   };
 
-  const handleToggleBreakpoint = (lineNumber: number) => {
-    setBreakpoints((prev) =>
-      prev.includes(lineNumber) ? prev.filter((line) => line !== lineNumber) : [...prev, lineNumber]
-    );
-  };
 
   // Shared Floating Header Controls for FullScreen Modal
   const renderFloatingControls = () => (
@@ -353,8 +374,8 @@ export const BSTPage: React.FC = () => {
         <span>Predict Mode</span>
         <input
           type="checkbox"
-          checked={isPredictMode}
-          onChange={(e) => setIsPredictMode(e.target.checked)}
+          checked={quizEnabled}
+          onChange={(e) => setQuizEnabled(e.target.checked)}
         />
       </label>
     </div>
@@ -478,15 +499,15 @@ export const BSTPage: React.FC = () => {
                 <span>Search</span>
               </button>
               <div className="traversal-btn-group">
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <ListOrdered size={14} />
                   <span>Inorder</span>
                 </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <GitCommit size={14} />
                   <span>Preorder</span>
                 </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <CornerDownRight size={14} />
                   <span>Postorder</span>
                 </button>
@@ -561,8 +582,8 @@ export const BSTPage: React.FC = () => {
               <span>Predict & Learn Mode</span>
               <input
                 type="checkbox"
-                checked={isPredictMode}
-                onChange={(e) => setIsPredictMode(e.target.checked)}
+                checked={quizEnabled}
+                onChange={(e) => setQuizEnabled(e.target.checked)}
               />
             </label>
           </div>
@@ -572,13 +593,6 @@ export const BSTPage: React.FC = () => {
       {/* Main Learning Workspace */}
       <div className="sorting-workspace">
         <div className="renderer-section">
-          {activePrediction && (
-            <PredictionQuiz
-              predictionPoint={activePrediction}
-              onCorrectAnswer={() => stepForward()}
-            />
-          )}
-
           <BSTRenderer
             currentStep={bstStep}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
@@ -601,11 +615,13 @@ export const BSTPage: React.FC = () => {
 
         {/* Right Column: Multi-Language Debugger & Explanation */}
         <div className="explanation-section">
+          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
           <MultiLanguageCodePanel
             algorithmKey={treeCategory}
             activeLine={bstStep?.codeLine}
-            breakpoints={breakpoints}
-            onToggleBreakpoint={handleToggleBreakpoint}
+            breakpoints={[]}
+            onToggleBreakpoint={() => {}}
             variables={bstStep?.variables}
             onCustomCodeRun={(arraySteps) => {
               const bstSteps: BSTStep[] = arraySteps.map((step) => ({
@@ -622,7 +638,7 @@ export const BSTPage: React.FC = () => {
           />
 
           <ExplanationPanel
-            description={bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.'}
+            description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)}
             timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
             spaceComplexity="O(H)"
           />
@@ -638,12 +654,6 @@ export const BSTPage: React.FC = () => {
         toolbarControls={renderFloatingControls()}
         playbackControls={renderPlayerControls()}
       >
-        {activePrediction && (
-          <PredictionQuiz
-            predictionPoint={activePrediction}
-            onCorrectAnswer={() => stepForward()}
-          />
-        )}
         <BSTRenderer currentStep={bstStep} />
       </FullScreenCanvasModal>
     </div>
