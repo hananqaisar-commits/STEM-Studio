@@ -1,38 +1,6 @@
 /* ── Backtracking Category Styles ─────────────────────────────────── */
 
 /* ── Page Layout ──────────────────────────────────────────────────── */
-.bt-page-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
-  height: 100%;
-  min-height: 0;
-}
-
-.bt-workspace {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 1rem;
-  flex: 1;
-  min-height: 0;
-}
-
-.bt-renderer-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-height: 0;
-}
-
-.bt-explanation-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-height: 0;
-  overflow-y: auto;
-}
-
 /* ── Main Renderer ────────────────────────────────────────────────── */
 .bt-renderer {
   display: flex;
@@ -458,9 +426,6 @@
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  .bt-workspace {
-    grid-template-columns: 1fr;
-  }
   .bt-tree-sidebar {
     width: 160px;
   }
