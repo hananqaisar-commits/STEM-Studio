@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
+import type { CategoryTopics } from '../../data/categoryTopics';
 
 export interface VisualizerSearchItem {
   /** Stable key, and the value handed back to `onSelect`. */
@@ -19,6 +20,12 @@ interface VisualizerHeaderProps {
   activeId?: string;
   onSelect: (id: string) => void;
   placeholder?: string;
+  /** Enable two-level dropdown mode (category + topic) instead of search bar */
+  categories?: CategoryTopics[];
+  /** Currently selected category ID in dropdown mode */
+  activeCategoryId?: string;
+  /** Callback when a category is selected in dropdown mode */
+  onSelectCategory?: (categoryId: string) => void;
 }
 
 /**
@@ -36,6 +43,9 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
   activeId,
   onSelect,
   placeholder = 'Search algorithms...',
+  categories,
+  activeCategoryId,
+  onSelectCategory,
 }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -94,43 +104,95 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
         </div>
       </div>
 
-      <div className="viz-search-wrapper" ref={containerRef}>
-        <div className="viz-search-input-box" onClick={() => setIsOpen(true)}>
-          <Search size={15} />
-          <input
-            ref={inputRef}
-            type="text"
-            className="viz-search-input"
-            placeholder={placeholder}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setIsOpen(true)}
-          />
-          <kbd className="viz-shortcut-badge">⌘K</kbd>
+      {/* Dropdown mode: two-level category + topic selector */}
+      {categories && categories.length > 0 ? (
+        <div className="viz-dropdown-group">
+          {/* Category dropdown */}
+          <div className="viz-dropdown-wrapper">
+            <select
+              className="viz-dropdown-select"
+              value={activeCategoryId || ''}
+              onChange={(e) => {
+                const catId = e.target.value;
+                onSelectCategory?.(catId);
+                // Auto-select first topic of new category
+                const cat = categories.find((c) => c.categoryId === catId);
+                if (cat && cat.topics.length > 0) {
+                  onSelect(cat.topics[0].id);
+                }
+              }}
+            >
+              {categories.map((cat) => (
+                <option key={cat.categoryId} value={cat.categoryId}>
+                  {cat.categoryName}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="viz-dropdown-chevron" />
+          </div>
+    
+          {/* Topic dropdown */}
+          <div className="viz-dropdown-wrapper">
+            <select
+              className="viz-dropdown-select"
+              value={activeId || ''}
+              onChange={(e) => onSelect(e.target.value)}
+            >
+              {(() => {
+                const activeCat = categories.find((c) => c.categoryId === activeCategoryId);
+                const topics = activeCat ? activeCat.topics : [];
+                return topics.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.group ? `[${t.group}] ` : ''}{t.name}
+                  </option>
+                ));
+              })()}
+            </select>
+            <ChevronDown size={14} className="viz-dropdown-chevron" />
+          </div>
         </div>
-
-        {isOpen && (
-          <div className="viz-search-dropdown">
-            {filtered.length === 0 ? (
-              <div className="viz-search-empty">No algorithm matches “{query}”</div>
-            ) : (
-              filtered.map((item) => (
-                <div
-                  key={item.id}
-                  className={`viz-search-item ${activeId === item.id ? 'active' : ''}`}
-                  onClick={() => handlePick(item.id)}
-                >
-                  <div className="viz-item-body">
-                    <div className="viz-item-name">{item.name}</div>
-                    {item.description && <div className="viz-item-desc">{item.description}</div>}
-                  </div>
-                  {item.group && <span className="viz-shortcut-badge">{item.group}</span>}
-                </div>
-              ))
+      ) : (
+        /* Search mode: existing command palette */
+        <>
+          <div className="viz-search-wrapper" ref={containerRef}>
+            <div className="viz-search-input-box" onClick={() => setIsOpen(true)}>
+              <Search size={15} />
+              <input
+                ref={inputRef}
+                type="text"
+                className="viz-search-input"
+                placeholder={placeholder}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setIsOpen(true)}
+              />
+              <kbd className="viz-shortcut-badge">⌘K</kbd>
+            </div>
+    
+            {isOpen && (
+              <div className="viz-search-dropdown">
+                {filtered.length === 0 ? (
+                  <div className="viz-search-empty">No algorithm matches "{query}"</div>
+                ) : (
+                  filtered.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`viz-search-item ${activeId === item.id ? 'active' : ''}`}
+                      onClick={() => handlePick(item.id)}
+                    >
+                      <div className="viz-item-body">
+                        <div className="viz-item-name">{item.name}</div>
+                        {item.description && <div className="viz-item-desc">{item.description}</div>}
+                      </div>
+                      {item.group && <span className="viz-shortcut-badge">{item.group}</span>}
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </header>
   );
 };
