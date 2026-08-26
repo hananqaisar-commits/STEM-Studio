@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check, Palette, ChevronRight } from 'lucide-react';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getCategoryById } from '../../data/categories';
+import { getCategoryById, MODULES } from '../../data/categories';
 import './Layout.css';
 
 interface NavbarProps {
@@ -37,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   // Derive breadcrumb from current path
   const pathSegment = location.pathname.split('/')[2] || '';
   const currentCategory = pathSegment ? getCategoryById(pathSegment) : null;
+  const currentModule = pathSegment ? MODULES.find(m => m.id === pathSegment) : null;
 
   const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] = [
     { value: 'grayscale-light', label: 'Greyscale', icon: <Sun size={14} /> },
@@ -68,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
         </Link>
       </div>
 
-      {/* Breadcrumb — shows current category context */}
+      {/* Breadcrumb / section links */}
       <nav className="navbar-center">
         {isOnDashboard ? (
           <div className="nav-section-links">
@@ -77,9 +78,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             <a href="#reviews" className="nav-section-link">Reviews</a>
             <a href="#faqs" className="nav-section-link">FAQs</a>
           </div>
+        ) : currentModule ? (
+          <div className="nav-breadcrumb">
+            <Link to="/dashboard" className="nav-crumb-link">Dashboard</Link>
+            <ChevronRight size={14} className="nav-crumb-sep" />
+            <span className="nav-crumb-current">{currentModule.name}</span>
+          </div>
         ) : currentCategory ? (
           <div className="nav-breadcrumb">
-            <Link to="/dashboard" className="nav-crumb-link">DSA</Link>
+            <Link to="/dashboard" className="nav-crumb-link">Dashboard</Link>
+            <ChevronRight size={14} className="nav-crumb-sep" />
+            <Link to="/dashboard/dsa" className="nav-crumb-link">DSA</Link>
             <ChevronRight size={14} className="nav-crumb-sep" />
             <span className="nav-crumb-current">{currentCategory.name}</span>
           </div>
