@@ -71,16 +71,20 @@ const DashboardLayout = () => {
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
 
+  const isOnDashboard = location.pathname === '/dashboard';
+
   return (
     <div className="dashboard-shell">
       <Navbar onToggleSidebar={toggleSidebar} />
-      <div className="dashboard-body">
-        <TopicMenu
-          activeModule={pathSegment}
-          onSelectModule={handleSelectModule}
-          isOpen={isSidebarOpen}
-          onClose={closeSidebar}
-        />
+      <div className={`dashboard-body${isOnDashboard ? ' no-sidebar' : ''}`}>
+        {!isOnDashboard && (
+          <TopicMenu
+            activeModule={pathSegment}
+            onSelectModule={handleSelectModule}
+            isOpen={isSidebarOpen}
+            onClose={closeSidebar}
+          />
+        )}
         <main className="dashboard-main">
           <Routes>
             <Route index element={<DSAHub />} />

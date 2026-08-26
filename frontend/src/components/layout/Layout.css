@@ -774,3 +774,37 @@
   background-color: var(--color-surface-elevated);
   color: var(--color-text-muted);
 }
+
+/* ── Nav section links (dashboard landing page) ──────────────── */
+.nav-section-links {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.nav-section-link {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.nav-section-link:hover {
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+}
+
+@media (max-width: 768px) {
+  .nav-section-links {
+    display: none;
+  }
+}
+
+/* When sidebar is hidden (dashboard landing page) */
+.dashboard-body.no-sidebar .dashboard-main {
+  margin-left: 0;
+  max-width: 100%;
+}

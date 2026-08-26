@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import type { QuizCheckpoint, QuizQuestion } from '../../engine/types/Quiz';
+import type { QuizCheckpoint, QuizQuestion , QuizRevisionData } from '../../engine/types/Quiz';
 import { buildOptions } from '../../engine/types/Quiz';
 
 type DPAlgorithmKey = 'fibonacciDP' | 'coinChange' | 'houseRobber' | 'knapsack01' | 'lcs' | 'lis' | 'editDistance' | 'uniquePaths';
@@ -371,4 +371,69 @@ export function buildDPCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
+  fibonacciDP: {
+    description: 'Compute Fibonacci numbers using dynamic programming',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'Store previously computed values to avoid redundant recalculation',
+    watchFor: ['Recurrence relation', 'Base cases', 'Space optimization'],
+    quickTip: 'Only need dp[i-1] and dp[i-2]—can optimize space to O(1) with two variables',
+  },
+  coinChange: {
+    description: 'Find minimum coins needed to make a target amount',
+    complexity: 'O(amount × coins) time, O(amount) space',
+    keyIdea: 'dp[i] = min(dp[i - coin] + 1) for all coin denominations',
+    watchFor: ['State definition', 'Transition', 'Unreachable amount handling'],
+    quickTip: 'Initialize dp array with infinity—dp[0] = 0; if dp[amount] stays infinity, it is impossible',
+  },
+  houseRobber: {
+    description: 'Maximize robbed value without robbing adjacent houses',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'dp[i] = max(dp[i-1], dp[i-2] + house[i])—skip current or take it',
+    watchFor: ['State transition', 'Non-adjacency constraint', 'Space optimization'],
+    quickTip: 'At each house, choose: skip it (keep dp[i-1]) or rob it (dp[i-2] + house[i])',
+  },
+  knapsack01: {
+    description: 'Maximize value in a knapsack with 0/1 item choices',
+    complexity: 'O(n × capacity) time, O(n × capacity) space',
+    keyIdea: 'dp[i][w] = max(dp[i-1][w], dp[i-1][w-weight[i]] + value[i])',
+    watchFor: ['2D state', 'Item inclusion decision', 'Space optimization to 1D'],
+    quickTip: 'Process items one by one—for each, decide: skip (take above cell) or take (add value to cell at reduced weight)',
+  },
+  lcs: {
+    description: 'Find the longest common subsequence of two strings',
+    complexity: 'O(m × n) time, O(m × n) space',
+    keyIdea: 'If characters match, extend LCS; otherwise take the best of skipping one character from either string',
+    watchFor: ['Match vs mismatch', 'Diagonal vs adjacent cells', 'Reconstruction'],
+    quickTip: 'Match: dp[i][j] = dp[i-1][j-1] + 1; mismatch: dp[i][j] = max(dp[i-1][j], dp[i][j-1])',
+  },
+  lis: {
+    description: 'Find the length of the longest increasing subsequence',
+    complexity: 'O(n²) time, O(n) space',
+    keyIdea: 'dp[i] = length of LIS ending at index i; check all j < i where arr[j] < arr[i]',
+    watchFor: ['O(n²) DP vs O(n log n) patience sort', 'Extension condition', 'Max over all dp[i]'],
+    quickTip: 'Answer is max(dp[i]) over all i—not necessarily dp[n-1]',
+  },
+  editDistance: {
+    description: 'Find minimum edits to transform one string into another',
+    complexity: 'O(m × n) time, O(m × n) space',
+    keyIdea: 'Match costs 0; mismatch costs 1 + min(insert, delete, replace)',
+    watchFor: ['Three operations', 'Match shortcut', 'Base cases (empty strings)'],
+    quickTip: 'If chars match, dp[i][j] = dp[i-1][j-1]; else dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])',
+  },
+  uniquePaths: {
+    description: 'Count unique paths from top-left to bottom-right in a grid',
+    complexity: 'O(m × n) time, O(m × n) space',
+    keyIdea: 'dp[i][j] = dp[i-1][j] + dp[i][j-1]—paths come from above or left',
+    watchFor: ['Recurrence', 'Base cases (first row/col)', 'Space optimization'],
+    quickTip: 'First row and first column all have 1 path—every other cell sums paths from above and left',
+  },
+};
+
+export function buildRevisionData(key: DPAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }

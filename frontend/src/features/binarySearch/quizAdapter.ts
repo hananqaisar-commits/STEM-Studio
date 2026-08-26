@@ -1,6 +1,6 @@
 import type { BinarySearchStep, BinarySearchQuizData } from './binarySearchEngine';
 import type { BinarySearchCategory } from './binarySearchEngine';
-import { buildOptions, type QuizCheckpoint, type QuizWeight } from '../../engine/types/Quiz';
+import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionData } from '../../engine/types/Quiz';
 
 /* ── Binary Search quiz adapter ────────────────────────────────────────
    Binary search steps already carry `quizData?: BinarySearchQuizData`
@@ -77,4 +77,55 @@ export function buildBinarySearchCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
+  binarySearch: {
+    description: 'Find target in sorted array by repeatedly halving search space',
+    complexity: 'O(log n) time, O(1) space',
+    keyIdea: 'Compare target with middle element, eliminate half that cannot contain target',
+    watchFor: ['Mid calculation', 'Loop condition', 'Boundary updates'],
+    quickTip: 'Use left <= right for inclusive bounds; mid = left + (right - left) / 2 avoids overflow',
+  },
+  lowerBound: {
+    description: 'Find first position where value is >= target',
+    complexity: 'O(log n) time, O(1) space',
+    keyIdea: 'Maintain invariant: answer is in [left, right+1]—narrow until left > right',
+    watchFor: ['Comparison operator (>=)', 'Return value (left index)', 'Out-of-bounds case'],
+    quickTip: 'If arr[mid] < target, move left = mid + 1; otherwise right = mid - 1; return left',
+  },
+  upperBound: {
+    description: 'Find first position where value is > target',
+    complexity: 'O(log n) time, O(1) space',
+    keyIdea: 'Like lower bound but with strict inequality—finds insertion point after all equals',
+    watchFor: ['Comparison operator (>)', 'Difference from lower bound', 'Equal element handling'],
+    quickTip: 'If arr[mid] <= target, move left = mid + 1; otherwise right = mid - 1; return left',
+  },
+  searchRotatedArray: {
+    description: 'Search in a sorted array that has been rotated at some pivot',
+    complexity: 'O(log n) time, O(1) space',
+    keyIdea: 'One half is always sorted—determine which half, then check if target is in it',
+    watchFor: ['Sorted half identification', 'Pivot detection', 'Target range check'],
+    quickTip: 'If arr[left] <= arr[mid], left half is sorted; check if target is in that range',
+  },
+  findPeakElement: {
+    description: 'Find an element greater than its neighbors',
+    complexity: 'O(log n) time, O(1) space',
+    keyIdea: 'If arr[mid] < arr[mid+1], a peak exists to the right; otherwise to the left',
+    watchFor: ['Slope direction', 'Boundary handling', 'Multiple peaks'],
+    quickTip: 'Follow the upward slope—binary search on the gradient, not the value',
+  },
+  firstLastPosition: {
+    description: 'Find the first and last occurrence of a target in a sorted array',
+    complexity: 'O(log n) time, O(1) space',
+    keyIdea: 'Run binary search twice—once for lower bound, once for upper bound minus one',
+    watchFor: ['Two separate searches', 'Lower vs upper bound logic', 'Target not found case'],
+    quickTip: 'Use lower_bound for first position and upper_bound - 1 for last position',
+  },
+};
+
+export function buildRevisionData(key: BinarySearchCategory): QuizRevisionData {
+  return REVISION_DATA[key];
 }

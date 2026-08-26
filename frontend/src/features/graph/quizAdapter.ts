@@ -1,5 +1,5 @@
 import type { GraphCategory, GraphEdge, GraphStep } from './graphEngine';
-import { buildOptions, type QuizCheckpoint, type QuizWeight } from '../../engine/types/Quiz';
+import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionData } from '../../engine/types/Quiz';
 
 /* ── Graph quiz adapter ────────────────────────────────────────────────
    Graph shipped exactly two authored questions — one on BFS step 0
@@ -713,4 +713,55 @@ export function buildGraphCheckpoints(
     ...anchorCandidate(steps, category),
     ...derived,
   ]);
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<GraphCategory, QuizRevisionData> = {
+  bfs: {
+    description: 'Explore graph level by level using a queue',
+    complexity: 'O(V + E) time, O(V) space',
+    keyIdea: 'A queue (FIFO) ensures vertices are explored in order of discovery distance',
+    watchFor: ['Queue operations', 'Visited marking', 'Level-by-level exploration'],
+    quickTip: 'BFS finds shortest path in unweighted graphs—each level is one edge further',
+  },
+  dfs: {
+    description: 'Explore as deep as possible before backtracking using a stack',
+    complexity: 'O(V + E) time, O(V) space',
+    keyIdea: 'A stack (LIFO) or recursion explores one path fully before trying alternatives',
+    watchFor: ['Stack/recursion depth', 'Backtracking trigger', 'Visited set management'],
+    quickTip: 'DFS backtracks when a vertex has no unvisited neighbors left',
+  },
+  dijkstra: {
+    description: 'Find shortest paths from source to all vertices in a weighted graph',
+    complexity: 'O((V + E) log V) time, O(V) space',
+    keyIdea: 'Greedily finalize the nearest unfinalized vertex—its distance is then optimal',
+    watchFor: ['Priority queue usage', 'Relaxation condition', 'Non-negative weight requirement'],
+    quickTip: 'Only works with non-negative weights—negative edges break the greedy assumption',
+  },
+  prim: {
+    description: 'Build minimum spanning tree by growing one tree from a start vertex',
+    complexity: 'O((V + E) log V) time, O(V) space',
+    keyIdea: 'Always add the lightest edge crossing the cut between tree and non-tree vertices',
+    watchFor: ['Cut property', 'Edge selection', 'Difference from Kruskal'],
+    quickTip: 'Prim maintains a single connected tree; Kruskal may have multiple components',
+  },
+  kruskal: {
+    description: 'Build minimum spanning tree by adding edges in weight order',
+    complexity: 'O(E log E) time, O(V) space',
+    keyIdea: 'Sort edges by weight, add each if it does not create a cycle',
+    watchFor: ['Union-Find for cycle detection', 'Edge sorting', 'Sparse vs dense graphs'],
+    quickTip: 'Kruskal is often faster for sparse graphs due to simpler data structures',
+  },
+  topoSort: {
+    description: 'Linear ordering of vertices respecting edge directions in a DAG',
+    complexity: 'O(V + E) time, O(V) space',
+    keyIdea: "Kahn's algorithm: repeatedly emit vertices with in-degree 0",
+    watchFor: ['In-degree tracking', 'Ready queue', 'Cycle detection (not all emitted)'],
+    quickTip: 'If the topological sort has fewer than V vertices, the graph has a cycle',
+  },
+};
+
+export function buildRevisionData(key: GraphCategory): QuizRevisionData {
+  return REVISION_DATA[key];
 }

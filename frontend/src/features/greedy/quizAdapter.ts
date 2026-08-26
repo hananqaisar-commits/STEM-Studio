@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import type { QuizCheckpoint, QuizQuestion } from '../../engine/types/Quiz';
+import type { QuizCheckpoint, QuizQuestion , QuizRevisionData } from '../../engine/types/Quiz';
 import { buildOptions } from '../../engine/types/Quiz';
 
 export type GreedyAlgorithmKey = 'activitySelection' | 'fractionalKnapsack' | 'jobScheduling' | 'huffmanCoding';
@@ -249,4 +249,41 @@ export function buildGreedyCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<GreedyAlgorithmKey, QuizRevisionData> = {
+  activitySelection: {
+    description: 'Select maximum number of non-overlapping activities',
+    complexity: 'O(n log n) time, O(n) space',
+    keyIdea: 'Greedy choice: always pick the activity that finishes earliest',
+    watchFor: ['Sort by finish time', 'Overlap check', 'Greedy choice property'],
+    quickTip: 'Sort by finish time, then greedily include each activity that starts after the last selected finishes',
+  },
+  fractionalKnapsack: {
+    description: 'Maximize value in a knapsack allowing fractional items',
+    complexity: 'O(n log n) time, O(n) space',
+    keyIdea: 'Greedily take items with highest value-to-weight ratio first',
+    watchFor: ['Ratio sorting', 'Whole vs fractional take', 'Capacity tracking'],
+    quickTip: 'Sort by v/w ratio descending—take whole items until one does not fit, then take a fraction',
+  },
+  jobScheduling: {
+    description: 'Schedule jobs with deadlines and profits to maximize total profit',
+    complexity: 'O(n²) time, O(n) space',
+    keyIdea: 'Sort by profit descending, assign each job to the latest available slot before its deadline',
+    watchFor: ['Profit sorting', 'Slot assignment', 'Deadline handling'],
+    quickTip: 'High-profit jobs get priority—place each in the latest valid slot to preserve earlier slots',
+  },
+  huffmanCoding: {
+    description: 'Build optimal prefix-free binary codes for data compression',
+    complexity: 'O(n log n) time, O(n) space',
+    keyIdea: 'Greedily merge the two lowest-frequency nodes into a parent with combined frequency',
+    watchFor: ['Priority queue usage', 'Tree construction', 'Code assignment'],
+    quickTip: 'Use a min-heap—repeatedly extract two minimums, merge them, and insert the combined node back',
+  },
+};
+
+export function buildRevisionData(key: GreedyAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }

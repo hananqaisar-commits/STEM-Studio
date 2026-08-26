@@ -101,16 +101,67 @@ export function filterByCadence(
 }
 
 export const CADENCE_LABELS: Record<QuizCadence, string> = {
-  light: 'Light',
-  normal: 'Normal',
-  intensive: 'Intensive',
+  light: 'Concept',
+  normal: 'Guided',
+  intensive: 'Challenge',
 };
 
 export const CADENCE_HINTS: Record<QuizCadence, string> = {
-  light: 'Only the defining decision of the algorithm',
-  normal: 'Key decisions, reinforced a few times',
-  intensive: 'Every decision point, including fine detail',
+  light: 'Why does this algorithm work? Core concepts only.',
+  normal: 'Can you follow the algorithm? Step-by-step predictions.',
+  intensive: 'Can you think like the algorithm? Every decision, timed.',
 };
+
+/** One-line identity tagline per mode, shown on the mode selector card. */
+export const CADENCE_IDENTITIES: Record<QuizCadence, string> = {
+  light: 'Build understanding',
+  normal: 'Follow the flow',
+  intensive: 'Master every decision',
+};
+
+/** Longer description shown when a mode is selected. */
+export const CADENCE_DESCRIPTIONS: Record<QuizCadence, string> = {
+  light: 'Conceptual anchors only \u2014 no time pressure. Each answer includes a Key Idea insight to reinforce the core principle.',
+  normal: 'Anchors plus step-prediction questions. Hints on wrong attempts, full explanations after reveal, and a progress bar to track your position.',
+  intensive: 'All checkpoints including fine detail. 15-second timer per question, streak multipliers (x2/x3), and thinking tips before each question.',
+};
+
+/** Lucide icon names per mode (resolved by QuizDock). */
+export const CADENCE_ICONS: Record<QuizCadence, string> = {
+  light: 'BookOpen',
+  normal: 'Compass',
+  intensive: 'Zap',
+};
+
+/* ── Revision data ──────────────────────────────────────────────────────
+   Shown before the first question fires. Adapters provide this per
+   algorithm; the UI renders it as a revision card the student can
+   dismiss to begin the quiz.
+   ─────────────────────────────────────────────────────────────────── */
+
+export interface QuizRevisionData {
+  /** One-line description of the algorithm. */
+  description: string;
+  /** Time and space complexity, e.g. "O(n log n) time, O(1) space". */
+  complexity: string;
+  /** The core invariant the algorithm is built on. */
+  keyIdea: string;
+  /** 2-3 things the quiz will test. */
+  watchFor: string[];
+  /** Practical insight for solving quiz questions. */
+  quickTip: string;
+}
+
+/* ── Per-question result tracking ───────────────────────────────────────
+   Collected during the quiz for the post-quiz performance report.
+   ─────────────────────────────────────────────────────────────────── */
+
+export interface QuestionResult {
+  questionId: string;
+  concept: string;
+  wasCorrect: boolean;
+  wasFirstAttempt: boolean;
+}
 
 /* ── Option assembly ───────────────────────────────────────────────────
    Every question the old implementation authored put the right answer

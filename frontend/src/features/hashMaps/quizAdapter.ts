@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import type { QuizCheckpoint, QuizQuestion } from '../../engine/types/Quiz';
+import type { QuizCheckpoint, QuizQuestion , QuizRevisionData } from '../../engine/types/Quiz';
 import { buildOptions } from '../../engine/types/Quiz';
 
 export type HashMapsAlgorithmKey = 'twoSum' | 'duplicateDetect' | 'frequencyMap' | 'subarraySum';
@@ -264,4 +264,41 @@ export function buildHashMapsCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<HashMapsAlgorithmKey, QuizRevisionData> = {
+  twoSum: {
+    description: 'Find two numbers in an array that sum to a target',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'Store each seen value in a hash map; check if complement (target - current) exists',
+    watchFor: ['Complement lookup', 'Map stores value→index', 'Single-pass optimization'],
+    quickTip: 'For each element, check if (target - element) is in the map before adding current element',
+  },
+  duplicateDetect: {
+    description: 'Detect if an array contains duplicate values',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'Use a hash set—insertion fails (or returns false) when the element already exists',
+    watchFor: ['Set vs map choice', 'Early termination', 'Space trade-off'],
+    quickTip: 'A hash set gives O(1) average lookup—stop as soon as you find the first duplicate',
+  },
+  frequencyMap: {
+    description: 'Count occurrences of each element in an array',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'Use a hash map to track how many times each value has appeared',
+    watchFor: ['Key initialization', 'Increment logic', 'Iteration over entries'],
+    quickTip: 'Use map.getOrDefault(key, 0) + 1 or the ?? 0 pattern to handle first occurrence cleanly',
+  },
+  subarraySum: {
+    description: 'Find a contiguous subarray that sums to a target',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'If runningSum - target exists in the prefix sum map, a valid subarray is found',
+    watchFor: ['Prefix sum map', 'Complement check', 'Index tracking'],
+    quickTip: 'Store each prefix sum with its index—when (currentSum - target) is in the map, the subarray is between those indices',
+  },
+};
+
+export function buildRevisionData(key: HashMapsAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }
