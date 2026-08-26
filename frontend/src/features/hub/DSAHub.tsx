@@ -1,34 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
-  GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
   MessageSquare, ChevronDown, ExternalLink, Send, Heart, Sparkles,
-  ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon,
+  ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
 import { apiClient } from '../../api/apiClient';
 import './DSAHub.css';
 
-const ICON_MAP: Record<string, LucideIcon> = {
-  Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
-  GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-};
-
 const MODULE_ICON_MAP: Record<string, LucideIcon> = {
   BookOpen, Cpu, Monitor,
 };
 
-/* ── Bubble positions for dynamic category circles ────────────────── */
+/* ── Bubble positions for subject modules around the hero image ──────
+   Positions are kept close to the image so the visual feels connected
+   and compact rather than scattered. */
 const BUBBLE_POSITIONS = [
-  { top: '5%', left: '-10%' },
-  { top: '-5%', right: '10%' },
-  { top: '40%', left: '-15%' },
-  { bottom: '10%', left: '-8%' },
-  { bottom: '0%', right: '5%' },
-  { top: '20%', right: '-12%' },
+  { top: '8%', left: '-5%' },
+  { top: '4%', right: '-2%' },
+  { bottom: '8%', left: '18%' },
 ];
 
 /* ── Features data ────────────────────────────────────────────────── */
@@ -123,19 +115,24 @@ export const DSAHub: React.FC = () => {
   /* ── FAQ question form ──────────────────────────────────────────── */
   const [faqQuestion, setFaqQuestion] = useState('');
 
-  useEffect(() => {
-    // Fetch public platform stats
+  const fetchStats = () => {
     apiClient<PlatformStats>('/api/stats/platform')
       .then(setStats)
       .catch(() => {
         // Fallback to local counts if backend is unavailable
         setStats({ active_learners: 0, total_reviews: 0, average_rating: 0 });
       });
+  };
 
-    // Fetch latest approved reviews
+  const fetchReviews = () => {
     apiClient<ReviewItem[]>('/api/stats/reviews?limit=10')
       .then(setReviews)
       .catch(() => setReviews([]));
+  };
+
+  useEffect(() => {
+    fetchStats();
+    fetchReviews();
   }, []);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -157,6 +154,8 @@ export const DSAHub: React.FC = () => {
       setReviewName('');
       setReviewRole('');
       setReviewText('');
+      fetchReviews();
+      fetchStats();
     } catch {
       setReviewStatus('error');
     }
@@ -175,8 +174,8 @@ export const DSAHub: React.FC = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  /* ── Dynamic bubbles — pick 6 available categories ──────────────── */
-  const bubbleCategories = DSA_CATEGORIES.filter(c => c.available).slice(0, 6);
+  /* ── Subject module bubbles are rendered directly from MODULES ───── */
+  // (kept close to the hero image for a premium, compact visual)
 
   return (
     <div className="dsa-hub">
@@ -240,27 +239,30 @@ export const DSAHub: React.FC = () => {
         </div>
         <div className="hero-visual">
           <img
-            src="/images/hero-students.png"
-            alt="Students learning DSA"
+            src="/images/hero-students.jpeg"
+            alt="Students learning STEM subjects"
             className="hero-image"
           />
           <div className="hero-bubbles">
-            {bubbleCategories.map((cat, i) => {
-              const Icon = ICON_MAP[cat.iconName] ?? Activity;
+            {MODULES.map((mod, i) => {
+              const Icon = MODULE_ICON_MAP[mod.iconName] ?? BookOpen;
               const pos = BUBBLE_POSITIONS[i] || BUBBLE_POSITIONS[0];
               return (
                 <button
-                  key={cat.id}
-                  className="hero-bubble"
+                  key={mod.id}
+                  className={`hero-bubble ${!mod.available ? 'hero-bubble-soon' : ''}`}
                   style={{
                     ...pos,
                     animationDelay: `${i * 0.5}s`,
                   } as React.CSSProperties}
-                  onClick={() => navigate('/dashboard/dsa')}
-                  title={cat.name}
+                  onClick={() => mod.available && navigate(`/dashboard/${mod.id}`)}
+                  title={mod.available ? mod.name : `${mod.name} — Coming Soon`}
+                  disabled={!mod.available}
+                  type="button"
                 >
                   <Icon size={18} />
-                  <span className="hero-bubble-label">{cat.name.split(' ')[0]}</span>
+                  <span className="hero-bubble-label">{mod.name.split(' ')[0]}</span>
+                  {!mod.available && <span className="hero-bubble-soon-badge">Soon</span>}
                 </button>
               );
             })}
