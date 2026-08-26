@@ -240,10 +240,13 @@ export const RecursionPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <label className="predict-toggle-label ml-2">
-        <HelpCircle size={16} /><span>Predict Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
-      </label>
+      <button
+        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
+        onClick={() => setQuizEnabled((prev) => !prev)}
+        title="Toggle Quiz Mode"
+      >
+        <HelpCircle size={16} /><span>Quiz Mode</span>
+      </button>
     </div>
   );
 
@@ -299,10 +302,13 @@ export const RecursionPage: React.FC = () => {
           </div>
         </div>
         <div className="bst-toolbar-right">
-          <label className="predict-toggle-label">
-            <HelpCircle size={16} /><span>Predict Mode</span>
-            <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
-          </label>
+          <button
+            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
+            onClick={() => setQuizEnabled((prev) => !prev)}
+            title="Toggle Quiz Mode"
+          >
+            <HelpCircle size={16} /><span>Quiz Mode</span>
+          </button>
           <button className="bst-btn btn-fullscreen"
             onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
             <Maximize2 size={14} />

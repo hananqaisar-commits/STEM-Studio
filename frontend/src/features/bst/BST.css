@@ -206,15 +206,11 @@
   font-weight: 700;
 }
 
-/* Prediction Mode Toggle */
+/* Prediction Mode Toggle → Quiz Mode Button */
 .predict-mode-group {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  padding: 0.35rem 0.75rem;
-  border-radius: 20px;
 }
 
 .predict-toggle-label {
@@ -225,6 +221,38 @@
   font-weight: 700;
   color: #f59e0b;
   cursor: pointer;
+}
+
+/* Quiz Mode Button — replaces the old checkbox toggle */
+.quiz-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.08);
+  color: #f59e0b;
+  font-size: 0.775rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.quiz-mode-btn:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+.quiz-mode-btn.is-active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
 }
 
 /* BST Canvas */

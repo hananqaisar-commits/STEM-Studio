@@ -318,11 +318,15 @@ export const BinarySearchPage: React.FC = () => {
         </button>
       </div>
 
-      <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
+      <button
+        className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
+        onClick={() => setQuizEnabled((prev) => !prev)}
+        title="Toggle Quiz Mode"
+        style={{ marginLeft: '0.5rem' }}
+      >
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
-      </label>
+      </button>
     </div>
   );
 
