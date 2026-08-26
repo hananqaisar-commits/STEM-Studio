@@ -260,6 +260,7 @@ const REVISION_DATA: Record<GreedyAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Greedy choice: always pick the activity that finishes earliest',
     watchFor: ['Sort by finish time', 'Overlap check', 'Greedy choice property'],
     quickTip: 'Sort by finish time, then greedily include each activity that starts after the last selected finishes',
+    example: 'Activities [(1,4),(3,5),(5,7),(6,9)]: sorted by finish→pick (1,4), skip (3,5) overlaps, pick (5,7), skip (6,9) overlaps → 2 activities.',
   },
   fractionalKnapsack: {
     description: 'Maximize value in a knapsack allowing fractional items',
@@ -267,6 +268,7 @@ const REVISION_DATA: Record<GreedyAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Greedily take items with highest value-to-weight ratio first',
     watchFor: ['Ratio sorting', 'Whole vs fractional take', 'Capacity tracking'],
     quickTip: 'Sort by v/w ratio descending—take whole items until one does not fit, then take a fraction',
+    example: 'Items [(v=60,w=10),(v=100,w=20),(v=120,w=30)], capacity=50: ratios [6,5,4]. Take 10+20+20/30 of last → value=60+100+80=240.',
   },
   jobScheduling: {
     description: 'Schedule jobs with deadlines and profits to maximize total profit',
@@ -274,6 +276,7 @@ const REVISION_DATA: Record<GreedyAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Sort by profit descending, assign each job to the latest available slot before its deadline',
     watchFor: ['Profit sorting', 'Slot assignment', 'Deadline handling'],
     quickTip: 'High-profit jobs get priority—place each in the latest valid slot to preserve earlier slots',
+    example: 'Jobs [(d=2,p=100),(d=1,p=50),(d=2,p=10)]: sort by profit→(2,100),(1,50),(2,10). Place 100 at slot 2, 50 at slot 1, skip 10. Total=150.',
   },
   huffmanCoding: {
     description: 'Build optimal prefix-free binary codes for data compression',
@@ -281,6 +284,7 @@ const REVISION_DATA: Record<GreedyAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Greedily merge the two lowest-frequency nodes into a parent with combined frequency',
     watchFor: ['Priority queue usage', 'Tree construction', 'Code assignment'],
     quickTip: 'Use a min-heap—repeatedly extract two minimums, merge them, and insert the combined node back',
+    example: 'Chars {a:5,b:9,c:12}: merge a(5)+b(9)→ab(14); merge c(12)+ab(14)→root(26). Codes: a=10, b=11, c=0.',
   },
 };
 

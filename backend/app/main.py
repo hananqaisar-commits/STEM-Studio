@@ -5,16 +5,19 @@ from contextlib import asynccontextmanager
 # Ensure backend directory is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 try:
     from backend.app.api.routes.auth import router as auth_router
     from backend.app.api.routes.progress import router as progress_router
+    from backend.app.api.routes.stats import router as stats_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
     from app.api.routes.progress import router as progress_router
+    from app.api.routes.stats import router as stats_router
     from app.core.config import get_settings
 
 
@@ -53,7 +56,7 @@ def init_db_tables():
         expected = {"users", "user_sessions", "email_verifications", "password_resets",
                     "roles", "permissions", "user_roles", "role_permissions",
                     "login_attempts", "quiz_attempts", "module_progress",
-                    "user_streaks", "saved_sessions"}
+                    "user_streaks", "saved_sessions", "reviews"}
         missing = expected - set(table_names)
         if missing:
             print(f"⚠️  Missing tables after create_all: {missing}")
@@ -87,17 +90,45 @@ app = FastAPI(
 )
 
 # ─── CORS Middleware ─────────────────────────────────────────────────
+# Origins are restricted to the configured frontend URL(s). Wildcards are not
+# used together with credentials, which mitigates reflective CSRF / XSS risks.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    expose_headers=["X-Request-Id"],
+    max_age=600,
 )
+
+
+# ─── Security Headers Middleware ─────────────────────────────────────
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Add defence-in-depth HTTP response headers."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["X-XSS-Protection"] = "0"  # Disabled in favour of CSP / framework escaping
+    return response
+
+
+# ─── Global Exception Handler ────────────────────────────────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Prevent raw tracebacks from leaking to clients in production."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 # ─── Register Routers ───────────────────────────────────────────────
 app.include_router(auth_router)
 app.include_router(progress_router)
+app.include_router(stats_router)
 
 
 
@@ -153,7 +184,6 @@ def db_check():
         return {
             "status": "database_error",
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": "Unable to connect to database",
         }, 500
 

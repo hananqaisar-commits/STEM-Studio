@@ -27,8 +27,8 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   {
     id: 'complexity',
     name: 'Complexity Analysis',
-    description: 'Big O, Ω, Θ — Time & Space complexity, Best/Average/Worst case, Recurrence relations',
-    topicCount: 6,
+    description: 'Big O, Ω, Θ — Time & Space complexity, loops, recursion, amortized analysis, and reference tables',
+    topicCount: 12,
     difficulty: 'Beginner',
     available: true,
     iconName: 'Activity',

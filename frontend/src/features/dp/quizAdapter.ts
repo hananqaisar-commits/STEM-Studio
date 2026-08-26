@@ -382,6 +382,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Store previously computed values to avoid redundant recalculation',
     watchFor: ['Recurrence relation', 'Base cases', 'Space optimization'],
     quickTip: 'Only need dp[i-1] and dp[i-2]—can optimize space to O(1) with two variables',
+    example: 'dp[0]=0, dp[1]=1, dp[2]=1, dp[3]=2, dp[4]=3, dp[5]=5. Each value is the sum of the two before it.',
   },
   coinChange: {
     description: 'Find minimum coins needed to make a target amount',
@@ -389,6 +390,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'dp[i] = min(dp[i - coin] + 1) for all coin denominations',
     watchFor: ['State definition', 'Transition', 'Unreachable amount handling'],
     quickTip: 'Initialize dp array with infinity—dp[0] = 0; if dp[amount] stays infinity, it is impossible',
+    example: 'Coins [1,5,10], amount=12: dp[12] = min(dp[11]+1, dp[7]+1, dp[2]+1) = min(11+1, 2+1, 2+1) = 3 coins (10+1+1 or 5+5+1+1... no, 10+1+1).',
   },
   houseRobber: {
     description: 'Maximize robbed value without robbing adjacent houses',
@@ -396,6 +398,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'dp[i] = max(dp[i-1], dp[i-2] + house[i])—skip current or take it',
     watchFor: ['State transition', 'Non-adjacency constraint', 'Space optimization'],
     quickTip: 'At each house, choose: skip it (keep dp[i-1]) or rob it (dp[i-2] + house[i])',
+    example: 'Houses [2,7,9,3,1]: dp=[2,7,11,11,12]. At house 2 (val=9): max(dp[1]=7, dp[0]+9=11) = 11. Answer: 12.',
   },
   knapsack01: {
     description: 'Maximize value in a knapsack with 0/1 item choices',
@@ -403,6 +406,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'dp[i][w] = max(dp[i-1][w], dp[i-1][w-weight[i]] + value[i])',
     watchFor: ['2D state', 'Item inclusion decision', 'Space optimization to 1D'],
     quickTip: 'Process items one by one—for each, decide: skip (take above cell) or take (add value to cell at reduced weight)',
+    example: 'Items [(w=2,v=3),(w=3,v=4),(w=4,v=5)], capacity=5: best is items 1+2 with weight 5, value 7.',
   },
   lcs: {
     description: 'Find the longest common subsequence of two strings',
@@ -410,6 +414,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'If characters match, extend LCS; otherwise take the best of skipping one character from either string',
     watchFor: ['Match vs mismatch', 'Diagonal vs adjacent cells', 'Reconstruction'],
     quickTip: 'Match: dp[i][j] = dp[i-1][j-1] + 1; mismatch: dp[i][j] = max(dp[i-1][j], dp[i][j-1])',
+    example: 's1="ABCBDAB", s2="BDCAB": LCS is "BCAB" (length 4). Match at B,C,A,B positions.',
   },
   lis: {
     description: 'Find the length of the longest increasing subsequence',
@@ -417,6 +422,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'dp[i] = length of LIS ending at index i; check all j < i where arr[j] < arr[i]',
     watchFor: ['O(n²) DP vs O(n log n) patience sort', 'Extension condition', 'Max over all dp[i]'],
     quickTip: 'Answer is max(dp[i]) over all i—not necessarily dp[n-1]',
+    example: 'Array [10,9,2,5,3,7,101,18]: dp=[1,1,1,2,2,3,4,4]. LIS length is 4 (e.g. [2,5,7,101]).',
   },
   editDistance: {
     description: 'Find minimum edits to transform one string into another',
@@ -424,6 +430,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Match costs 0; mismatch costs 1 + min(insert, delete, replace)',
     watchFor: ['Three operations', 'Match shortcut', 'Base cases (empty strings)'],
     quickTip: 'If chars match, dp[i][j] = dp[i-1][j-1]; else dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])',
+    example: 's1="kitten", s2="sitting": edit distance = 3 (replace k→s, replace e→i, insert g).',
   },
   uniquePaths: {
     description: 'Count unique paths from top-left to bottom-right in a grid',
@@ -431,6 +438,7 @@ const REVISION_DATA: Record<DPAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'dp[i][j] = dp[i-1][j] + dp[i][j-1]—paths come from above or left',
     watchFor: ['Recurrence', 'Base cases (first row/col)', 'Space optimization'],
     quickTip: 'First row and first column all have 1 path—every other cell sums paths from above and left',
+    example: '3×3 grid: dp=[[1,1,1],[1,2,3],[1,3,6]]. Answer = 6 paths from top-left to bottom-right.',
   },
 };
 

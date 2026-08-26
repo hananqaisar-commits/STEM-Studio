@@ -88,6 +88,7 @@ const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
     keyIdea: 'Compare target with middle element, eliminate half that cannot contain target',
     watchFor: ['Mid calculation', 'Loop condition', 'Boundary updates'],
     quickTip: 'Use left <= right for inclusive bounds; mid = left + (right - left) / 2 avoids overflow',
+    example: 'Array [1,3,5,7,9,11], target=7: mid=5(11)>7→right=4; mid=2(5)<7→left=3; mid=3(7)=7 → found at index 3.',
   },
   lowerBound: {
     description: 'Find first position where value is >= target',
@@ -95,6 +96,7 @@ const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
     keyIdea: 'Maintain invariant: answer is in [left, right+1]—narrow until left > right',
     watchFor: ['Comparison operator (>=)', 'Return value (left index)', 'Out-of-bounds case'],
     quickTip: 'If arr[mid] < target, move left = mid + 1; otherwise right = mid - 1; return left',
+    example: 'Array [1,2,4,4,6], target=4: lower bound returns index 2 (first 4).',
   },
   upperBound: {
     description: 'Find first position where value is > target',
@@ -102,6 +104,7 @@ const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
     keyIdea: 'Like lower bound but with strict inequality—finds insertion point after all equals',
     watchFor: ['Comparison operator (>)', 'Difference from lower bound', 'Equal element handling'],
     quickTip: 'If arr[mid] <= target, move left = mid + 1; otherwise right = mid - 1; return left',
+    example: 'Array [1,2,4,4,6], target=4: upper bound returns index 4 (value 6, first >4).',
   },
   searchRotatedArray: {
     description: 'Search in a sorted array that has been rotated at some pivot',
@@ -109,6 +112,7 @@ const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
     keyIdea: 'One half is always sorted—determine which half, then check if target is in it',
     watchFor: ['Sorted half identification', 'Pivot detection', 'Target range check'],
     quickTip: 'If arr[left] <= arr[mid], left half is sorted; check if target is in that range',
+    example: 'Array [4,5,6,7,0,1,2], target=0: mid=3(7), left half [4,5,6,7] sorted but 0 not in range→search right half→found at index 4.',
   },
   findPeakElement: {
     description: 'Find an element greater than its neighbors',
@@ -116,6 +120,7 @@ const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
     keyIdea: 'If arr[mid] < arr[mid+1], a peak exists to the right; otherwise to the left',
     watchFor: ['Slope direction', 'Boundary handling', 'Multiple peaks'],
     quickTip: 'Follow the upward slope—binary search on the gradient, not the value',
+    example: 'Array [1,3,5,4,2]: mid=2(5), arr[2]>arr[3]→peak at or left of mid → index 2 (value 5) is a peak.',
   },
   firstLastPosition: {
     description: 'Find the first and last occurrence of a target in a sorted array',
@@ -123,6 +128,7 @@ const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
     keyIdea: 'Run binary search twice—once for lower bound, once for upper bound minus one',
     watchFor: ['Two separate searches', 'Lower vs upper bound logic', 'Target not found case'],
     quickTip: 'Use lower_bound for first position and upper_bound - 1 for last position',
+    example: 'Array [1,2,2,2,3,4], target=2: lower_bound=1, upper_bound-1=3 → result [1, 3].',
   },
 };
 

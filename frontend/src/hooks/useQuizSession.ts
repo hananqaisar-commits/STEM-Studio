@@ -107,7 +107,9 @@ export function useQuizSession({
 }: UseQuizSessionArgs): QuizSessionState {
   const { isAuthenticated } = useAuth();
 
-  const [phase, setPhase] = useState<QuizPhase>('idle');
+  const [phase, setPhase] = useState<QuizPhase>(() =>
+    enabled && externalRevisionData ? 'revision' : 'idle'
+  );
   const [openCheckpoint, setOpenCheckpoint] = useState<QuizCheckpoint | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [wasCorrect, setWasCorrect] = useState(false);
@@ -128,6 +130,10 @@ export function useQuizSession({
   /** Step indices already asked, so a checkpoint never re-fires when the
    *  student steps back and forth across it. */
   const consumedRef = useRef<Set<number>>(new Set());
+
+  /** Whether the revision card has already been auto-shown for the
+   *  current revision content. */
+  const revisionAutoShown = useRef(false);
 
   const active = useMemo(
     () => (enabled ? filterByCadence(checkpoints, cadence) : []),
@@ -161,6 +167,25 @@ export function useQuizSession({
     setQuestionResults([]);
     dismiss();
   }, [activeSignature, dismiss]);
+
+  /* Reset the auto-shown flag whenever the revision content changes. */
+  useEffect(() => {
+    revisionAutoShown.current = false;
+  }, [externalRevisionData]);
+
+  /* When quiz mode is on and revision notes exist, show them once before
+     the first checkpoint fires. */
+  useEffect(() => {
+    if (
+      enabled &&
+      externalRevisionData &&
+      phase === 'idle' &&
+      !revisionAutoShown.current
+    ) {
+      revisionAutoShown.current = true;
+      setPhase('revision');
+    }
+  }, [enabled, externalRevisionData, phase]);
 
   /* Fire a checkpoint when playback reaches one. Pausing here replaces
      the near-identical useEffect every page carried separately. */
@@ -352,6 +377,7 @@ export function useQuizSession({
     setCorrectCount(0);
     setAnsweredCount(0);
     setStreak(0);
+    revisionAutoShown.current = false;
   }, [dismiss]);
 
   const startRevision = useCallback(() => {

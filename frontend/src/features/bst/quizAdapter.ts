@@ -198,6 +198,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Follow the BST property: smaller values go left, larger values go right',
     watchFor: ['Comparison at each node', 'Traversal direction', 'Leaf insertion'],
     quickTip: 'Always insert as a leaf—traverse until you hit null, then create the node',
+    example: 'Insert 5 into BST [8,3,10,1,6]: 5<8 go left, 5>3 go right, 5<6 go left → insert 5 as left child of 6.',
   },
   search: {
     description: 'Find a target value in a binary search tree',
@@ -205,6 +206,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'At each node, the BST property tells you which subtree to search next',
     watchFor: ['Direction decision', 'Termination conditions', 'Worst case (skewed tree)'],
     quickTip: 'If target < node go left, if target > node go right, if equal you found it',
+    example: 'Search 6 in BST [8,3,10,1,6]: 6<8 go left, 6>3 go right, 6=6 → found.',
   },
   inorder: {
     description: 'Traverse the tree in left-node-right order',
@@ -212,6 +214,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Inorder traversal of a BST visits nodes in ascending sorted order',
     watchFor: ['Visit order (L-N-R)', 'Stack/recursion depth', 'Sorted output property'],
     quickTip: 'Inorder on a BST always produces elements in sorted order—useful for validation',
+    example: 'BST [8,3,10,1,6]: inorder visits 1,3,6,8,10 — sorted ascending.',
   },
   preorder: {
     description: 'Traverse the tree in node-left-right order',
@@ -219,6 +222,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Visit the node before its children—useful for copying the tree structure',
     watchFor: ['Visit order (N-L-R)', 'Root-first property', 'Serialization use'],
     quickTip: 'Preorder is useful for creating a copy of the tree or serialization',
+    example: 'BST [8,3,10,1,6]: preorder visits 8,3,1,6,10 — root first, then left subtree, then right.',
   },
   postorder: {
     description: 'Traverse the tree in left-right-node order',
@@ -226,6 +230,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Visit children before the node—useful for deletion (children before parent)',
     watchFor: ['Visit order (L-R-N)', 'Bottom-up processing', 'Deletion use case'],
     quickTip: 'Postorder processes all descendants before their parent—ideal for safe deletion',
+    example: 'BST [8,3,10,1,6]: postorder visits 1,6,3,10,8 — children before parent.',
   },
 };
 

@@ -120,3 +120,31 @@ class SavedSessionResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+# ─── Public Platform Stats ───────────────────────────────────────────
+
+class PlatformStatsResponse(BaseModel):
+    active_learners: int
+    total_reviews: int
+    average_rating: float
+
+
+# ─── Review Schemas ──────────────────────────────────────────────────
+
+class ReviewCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    role: str = Field(..., min_length=2, max_length=100)
+    rating: int = Field(..., ge=1, le=5)
+    text: str = Field(..., min_length=10, max_length=2000)
+
+
+class ReviewResponse(BaseModel):
+    review_id: int
+    name: str
+    role: str
+    rating: int
+    text: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
