@@ -369,15 +369,14 @@ export const BSTPage: React.FC = () => {
         </button>
       </div>
 
-      <label className="predict-toggle-label ml-2">
+      <button
+        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
+        onClick={() => setQuizEnabled((prev) => !prev)}
+        title="Toggle Quiz Mode"
+      >
         <HelpCircle size={14} />
-        <span>Predict Mode</span>
-        <input
-          type="checkbox"
-          checked={quizEnabled}
-          onChange={(e) => setQuizEnabled(e.target.checked)}
-        />
-      </label>
+        <span>Quiz Mode</span>
+      </button>
     </div>
   );
 
@@ -576,17 +575,14 @@ export const BSTPage: React.FC = () => {
         </div>
 
         <div className="bst-toolbar-right">
-          <div className="predict-mode-group">
-            <label className="predict-toggle-label">
-              <HelpCircle size={16} />
-              <span>Predict & Learn Mode</span>
-              <input
-                type="checkbox"
-                checked={quizEnabled}
-                onChange={(e) => setQuizEnabled(e.target.checked)}
-              />
-            </label>
-          </div>
+          <button
+            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
+            onClick={() => setQuizEnabled((prev) => !prev)}
+            title="Toggle Quiz Mode"
+          >
+            <HelpCircle size={16} />
+            <span>Quiz Mode</span>
+          </button>
         </div>
       </div>
 
