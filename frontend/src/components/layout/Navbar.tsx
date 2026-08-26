@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, Monitor, LogOut, User, Sparkles, Menu, ChevronDown, Check, Palette, ChevronRight } from 'lucide-react';
+import { Sun, Moon, Droplets, LogOut, User, Sparkles, Menu, ChevronDown, Check, Palette, ChevronRight } from 'lucide-react';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCategoryById, MODULES } from '../../data/categories';
@@ -40,11 +40,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const currentModule = pathSegment ? MODULES.find(m => m.id === pathSegment) : null;
 
   const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] = [
-    { value: 'grayscale-light', label: 'Greyscale', icon: <Sun size={14} /> },
+    { value: 'grayscale-light', label: 'Grayscale Light', icon: <Sun size={14} /> },
     { value: 'warm-light', label: 'Warm Light', icon: <Sun size={14} /> },
     { value: 'dark', label: 'Dark', icon: <Moon size={14} /> },
-    { value: 'warm-neutral', label: 'Warm Beige', icon: <Sun size={14} /> },
-    { value: 'system', label: 'System', icon: <Monitor size={14} /> },
+    { value: 'warm-neutral', label: 'Warm Neutral', icon: <Sun size={14} /> },
+    { value: 'blue', label: 'Blue', icon: <Droplets size={14} /> },
   ];
 
   const isOnDashboard = location.pathname === '/dashboard';

@@ -73,10 +73,12 @@ const DashboardLayout = () => {
 
   const isOnLanding = location.pathname === '/dashboard';
 
-  // Determine active module and category from path
+  // Determine active module and category from path.
+  // On a category page the "module" context becomes the category itself so the
+  // sidebar renders only that category's topics instead of every DSA category.
   const isModulePage = MODULES.some(m => m.id === pathSegment);
   const isCategoryPage = !isOnLanding && !isModulePage && !!pathSegment;
-  const activeModuleId = isModulePage ? pathSegment : (isCategoryPage ? 'dsa' : '');
+  const activeModuleId = isModulePage ? pathSegment : (isCategoryPage ? pathSegment : '');
   const activeCategoryId = isCategoryPage ? pathSegment : '';
 
   return (

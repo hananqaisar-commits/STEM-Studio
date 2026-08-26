@@ -5,7 +5,8 @@ import {
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
   Home, type LucideIcon,
 } from 'lucide-react';
-import { MODULES, DSA_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { MODULES, DSA_CATEGORIES, getCategoryById, type CategoryDef } from '../../data/categories';
+import { CATEGORY_TOPICS, type TopicEntry } from '../../data/categoryTopics';
 import './Layout.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
@@ -30,6 +31,14 @@ function getCategoriesForModule(moduleId: string): CategoryDef[] {
   return [];
 }
 
+/**
+ * Resolve which topics belong to a given DSA category.
+ */
+function getTopicsForCategory(categoryId: string): TopicEntry[] {
+  const entry = CATEGORY_TOPICS.find((c) => c.categoryId === categoryId);
+  return entry ? entry.topics : [];
+}
+
 export const TopicMenu: React.FC<TopicMenuProps> = ({
   activeModule,
   onSelectModule,
@@ -39,9 +48,13 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Determine if we have a selected module to show categories
+  // A "module" here can be either a real top-level module (e.g. 'dsa') or a
+  // DSA category used as the current module context (e.g. 'sorting').
   const selectedModule = MODULES.find(m => m.id === activeModule);
+  const selectedCategory = getCategoryById(activeModule);
+
   const categories = selectedModule ? getCategoriesForModule(activeModule) : [];
+  const categoryTopics = selectedCategory ? getTopicsForCategory(activeModule) : [];
 
   const handleDashboardClick = () => {
     navigate('/dashboard');
@@ -51,6 +64,15 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   const handleCategoryClick = (cat: CategoryDef) => {
     if (!cat.available) return;
     navigate(`/dashboard/${cat.id}`);
+    if (onClose) onClose();
+  };
+
+  const handleTopicClick = (topic: TopicEntry) => {
+    // If the topic has a corresponding section on the current page, scroll to it.
+    const element = document.getElementById(topic.id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
     if (onClose) onClose();
   };
 
@@ -72,10 +94,14 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
           </button>
         </div>
 
-        {/* Module header */}
+        {/* Module / category header */}
         <div className="sidebar-header">
           <span className="sidebar-title">
-            {selectedModule ? `${selectedModule.name.toUpperCase()}` : 'MODULES'}
+            {selectedModule
+              ? `${selectedModule.name.toUpperCase()}`
+              : selectedCategory
+              ? `${selectedCategory.name.toUpperCase()}`
+              : 'MODULES'}
           </span>
           <button
             className="sidebar-close-btn"
@@ -87,7 +113,21 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
         </div>
 
         <nav className="topic-list">
-          {categories.length > 0 ? (
+          {categoryTopics.length > 0 ? (
+            /* Show topics for the selected category */
+            categoryTopics.map((topic) => (
+              <button
+                key={topic.id}
+                className="topic-card topic-card-compact"
+                onClick={() => handleTopicClick(topic)}
+              >
+                <div className="topic-info">
+                  <span className="topic-name">{topic.name}</span>
+                  {topic.group && <span className="topic-category">{topic.group}</span>}
+                </div>
+              </button>
+            ))
+          ) : categories.length > 0 ? (
             /* Show categories for the selected module */
             categories.map((cat) => {
               const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;
