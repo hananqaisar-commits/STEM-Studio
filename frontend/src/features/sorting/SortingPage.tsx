@@ -267,7 +267,7 @@ export const SortingPage: React.FC = () => {
 
       <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} />
-        <span>Predict Mode</span>
+        <span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
@@ -380,7 +380,7 @@ export const SortingPage: React.FC = () => {
           <div className="predict-mode-group flex items-center gap-2">
             <label className="predict-toggle-label">
               <HelpCircle size={16} />
-              <span>Predict Mode</span>
+              <span>Quiz Mode</span>
               <input
                 type="checkbox"
                 checked={quizEnabled}
@@ -418,9 +418,8 @@ export const SortingPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
+            title="Sorting Algorithm"
             activeLine={currentStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={currentStep?.variables}
             callStack={currentStep?.callStack}
             onCustomCodeRun={handleCustomCodeRun}

@@ -371,7 +371,7 @@ export const BSTPage: React.FC = () => {
 
       <label className="predict-toggle-label ml-2">
         <HelpCircle size={14} />
-        <span>Predict Mode</span>
+        <span>Quiz Mode</span>
         <input
           type="checkbox"
           checked={quizEnabled}
@@ -579,7 +579,7 @@ export const BSTPage: React.FC = () => {
           <div className="predict-mode-group">
             <label className="predict-toggle-label">
               <HelpCircle size={16} />
-              <span>Predict & Learn Mode</span>
+              <span>Quiz Mode</span>
               <input
                 type="checkbox"
                 checked={quizEnabled}
@@ -619,9 +619,8 @@ export const BSTPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={treeCategory}
+            title="Tree Operations"
             activeLine={bstStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={bstStep?.variables}
             onCustomCodeRun={(arraySteps) => {
               const bstSteps: BSTStep[] = arraySteps.map((step) => ({

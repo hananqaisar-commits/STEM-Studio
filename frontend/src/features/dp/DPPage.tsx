@@ -266,7 +266,7 @@ export const DPPage: React.FC = () => {
         </button>
       </div>
       <label className="predict-toggle-label ml-2">
-        <HelpCircle size={16} /><span>Predict Mode</span>
+        <HelpCircle size={16} /><span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
@@ -470,7 +470,7 @@ export const DPPage: React.FC = () => {
         <div className="bst-toolbar-right">
           <div className="predict-mode-group flex items-center gap-2">
             <label className="predict-toggle-label">
-              <HelpCircle size={16} /><span>Predict Mode</span>
+              <HelpCircle size={16} /><span>Quiz Mode</span>
               <input type="checkbox" checked={quizEnabled}
                 onChange={(e) => setQuizEnabled(e.target.checked)} />
             </label>
@@ -493,9 +493,8 @@ export const DPPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
+            title="Dynamic Programming"
             activeLine={currentStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={currentStep?.variables}
             callStack={currentStep?.callStack}
             currentArray={[]}

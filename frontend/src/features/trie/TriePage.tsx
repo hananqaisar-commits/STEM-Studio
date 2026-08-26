@@ -200,7 +200,7 @@ export const TriePage: React.FC = () => {
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random"><Sparkles size={13} className="text-emerald-400" /><span>Random</span></button>
       </div>
       <label className="predict-toggle-label ml-2">
-        <HelpCircle size={14} /><span>Predict Mode</span>
+        <HelpCircle size={14} /><span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
@@ -294,7 +294,7 @@ export const TriePage: React.FC = () => {
         <div className="bst-toolbar-right">
           <div className="predict-mode-group flex items-center gap-2">
             <label className="predict-toggle-label">
-              <HelpCircle size={16} /><span>Predict Mode</span>
+              <HelpCircle size={16} /><span>Quiz Mode</span>
               <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
             </label>
             <button className="bst-btn btn-fullscreen" onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
@@ -318,9 +318,8 @@ export const TriePage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
+            title="Trie"
             activeLine={trieStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={trieStep?.variables}
             onCustomCodeRun={(arraySteps) => {
               const trieSteps: TrieStep[] = arraySteps.map(s => ({

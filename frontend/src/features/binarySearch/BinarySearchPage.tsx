@@ -28,7 +28,7 @@ import {
   type BinarySearchStep,
 } from './binarySearchEngine';
 import { BinarySearchRenderer } from './BinarySearchRenderer';
-import { BinarySearchCodePanel } from './BinarySearchCodePanel';
+import { BINARY_SEARCH_SNIPPETS } from './binarySearchSnippets';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -481,20 +481,17 @@ export const BinarySearchPage: React.FC = () => {
         <div className="explanation-section">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
 
-          <BinarySearchCodePanel
-            snippetKey={snippetKey}
-            activeLine={currentStep?.codeLine}
-            left={currentStep?.left}
-            mid={currentStep?.mid}
-            right={currentStep?.right}
-            target={currentTarget}
-          />
-
           <MultiLanguageCodePanel
             algorithmKey={category}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            currentArray={array}
+            title="Binary Search"
+            snippets={BINARY_SEARCH_SNIPPETS[snippetKey]}
+            activeLine={currentStep?.codeLine}
+            variables={{
+              target: currentTarget,
+              left: currentStep?.left ?? null,
+              mid: currentStep?.mid ?? null,
+              right: currentStep?.right ?? null,
+            }}
           />
 
           <ExplanationPanel

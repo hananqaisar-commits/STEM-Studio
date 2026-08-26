@@ -33,7 +33,7 @@ import {
   type LinkedListStep,
 } from './linkedListEngine';
 import { LinkedListRenderer } from './LinkedListRenderer';
-import { LinkedListCodePanel } from './LinkedListCodePanel';
+import { LINKED_LIST_SNIPPETS } from './linkedListSnippets';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -478,18 +478,15 @@ export const LinkedListPage: React.FC = () => {
         <div className="explanation-section">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
 
-          <LinkedListCodePanel
-            snippetKey={snippetKey}
-            activeLine={currentStep?.codeLine}
-            pointers={currentStep?.pointers}
-            nodesCount={currentStep ? currentStep.nodes.length : baseNodes.length}
-          />
-
           <MultiLanguageCodePanel
             algorithmKey={category}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            currentArray={baseNodes.map((n) => n.value as number)}
+            title="Linked List"
+            snippets={LINKED_LIST_SNIPPETS[snippetKey]}
+            activeLine={currentStep?.codeLine}
+            variables={{
+              nodes_count: currentStep ? currentStep.nodes.length : baseNodes.length,
+              ...(currentStep?.pointers ?? {}),
+            }}
           />
 
           <ExplanationPanel

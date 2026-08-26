@@ -34,7 +34,6 @@ import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
-import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
@@ -554,7 +553,7 @@ export const StackQueuePage: React.FC = () => {
 
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
-        <span>Predict Mode</span>
+        <span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
@@ -699,7 +698,7 @@ export const StackQueuePage: React.FC = () => {
           <div className="predict-mode-group flex items-center gap-2">
             <label className="predict-toggle-label">
               <HelpCircle size={16} />
-              <span>Predict Mode</span>
+              <span>Quiz Mode</span>
               <input
                 type="checkbox"
                 checked={quizEnabled}
@@ -756,12 +755,6 @@ export const StackQueuePage: React.FC = () => {
         {showDebugger && (
           <div className="explanation-section">
             <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-            <MultiLanguageCodePanel
-              algorithmKey={category}
-              breakpoints={[]}
-              onToggleBreakpoint={() => {}}
-            />
 
             <StackQueueCodePanel
               category={category}

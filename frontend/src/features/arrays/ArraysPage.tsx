@@ -271,7 +271,7 @@ export const ArraysPage: React.FC = () => {
 
       <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} />
-        <span>Predict Mode</span>
+        <span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
@@ -471,7 +471,7 @@ export const ArraysPage: React.FC = () => {
           <div className="predict-mode-group flex items-center gap-2">
             <label className="predict-toggle-label">
               <HelpCircle size={16} />
-              <span>Predict Mode</span>
+              <span>Quiz Mode</span>
               <input
                 type="checkbox"
                 checked={quizEnabled}
@@ -509,8 +509,7 @@ export const ArraysPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
+            title="Array Technique"
             currentArray={initialArray}
           />
 

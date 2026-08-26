@@ -241,7 +241,7 @@ export const RecursionPage: React.FC = () => {
         </button>
       </div>
       <label className="predict-toggle-label ml-2">
-        <HelpCircle size={16} /><span>Predict Mode</span>
+        <HelpCircle size={16} /><span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
       </label>
     </div>
@@ -300,7 +300,7 @@ export const RecursionPage: React.FC = () => {
         </div>
         <div className="bst-toolbar-right">
           <label className="predict-toggle-label">
-            <HelpCircle size={16} /><span>Predict Mode</span>
+            <HelpCircle size={16} /><span>Quiz Mode</span>
             <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
           </label>
           <button className="bst-btn btn-fullscreen"
@@ -324,9 +324,8 @@ export const RecursionPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
+            title="Recursion"
             activeLine={currentStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={currentStep?.variables}
             callStack={currentStep?.callStack}
             currentArray={[]}
