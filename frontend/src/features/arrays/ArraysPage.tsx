@@ -7,6 +7,7 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
@@ -505,6 +506,13 @@ export const ArraysPage: React.FC = () => {
         {/* Right Column: Quiz & Explanation */}
         <div className="explanation-section">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+
+          <MultiLanguageCodePanel
+            algorithmKey={selectedAlg}
+            breakpoints={[]}
+            onToggleBreakpoint={() => {}}
+            currentArray={initialArray}
+          />
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}

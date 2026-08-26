@@ -155,7 +155,7 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     description: '1D/2D DP, Knapsack, LCS, LIS, Edit Distance, Coin Change, DP on Trees & Grids',
     topicCount: 14,
     difficulty: 'Advanced',
-    available: false,
+    available: true,
     iconName: 'Grid3x3',
   },
   {
@@ -164,7 +164,7 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     description: 'Construction, Insert/Search, Prefix Search, Word Dictionary, Autocomplete, XOR Trie',
     topicCount: 6,
     difficulty: 'Advanced',
-    available: false,
+    available: true,
     iconName: 'Binary',
   },
 ];
