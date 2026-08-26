@@ -74,7 +74,7 @@ export const LinkedListPage: React.FC = () => {
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Interactive & Quiz Modes
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 

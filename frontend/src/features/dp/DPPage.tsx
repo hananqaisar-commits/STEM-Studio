@@ -64,7 +64,7 @@ export const DPPage: React.FC = () => {
   }, [searchParams]);
 
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [showCustomEditor, setShowCustomEditor] = useState(false);
 
