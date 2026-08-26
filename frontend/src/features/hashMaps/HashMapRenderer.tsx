@@ -38,6 +38,16 @@ export const HashMapRenderer: React.FC<HashMapRendererProps> = ({
   onElementClick,
   onToggleFullscreen,
 }) => {
+  const variables = currentStep?.variables ?? {};
+  const mapEntriesStr = typeof variables.mapEntries === 'string' ? variables.mapEntries : '';
+  const mapHighlight = typeof variables.mapHighlight === 'string' ? variables.mapHighlight : '';
+  const mapNew = typeof variables.mapNew === 'string' ? variables.mapNew : '';
+
+  const mapEntries = useMemo(
+    () => parseMapEntries(mapEntriesStr, mapHighlight, mapNew),
+    [mapEntriesStr, mapHighlight, mapNew]
+  );
+
   if (!currentStep) {
     return (
       <div className="sorting-canvas-empty">
@@ -56,19 +66,9 @@ export const HashMapRenderer: React.FC<HashMapRendererProps> = ({
     swappingIndices = [],
     sortedIndices = [],
     pivotIndex,
-    variables = {},
   } = currentStep;
 
   const max = Math.max(...array, 1);
-
-  const mapEntriesStr = typeof variables.mapEntries === 'string' ? variables.mapEntries : '';
-  const mapHighlight = typeof variables.mapHighlight === 'string' ? variables.mapHighlight : '';
-  const mapNew = typeof variables.mapNew === 'string' ? variables.mapNew : '';
-
-  const mapEntries = useMemo(
-    () => parseMapEntries(mapEntriesStr, mapHighlight, mapNew),
-    [mapEntriesStr, mapHighlight, mapNew]
-  );
 
   const getElementState = (index: number): ElementState => {
     if (swappingIndices.includes(index)) return 'swapping';

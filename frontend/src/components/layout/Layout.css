@@ -30,7 +30,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #ffffff;
+  color: var(--color-text-on-primary);
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
 }
 
@@ -133,6 +133,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  color: var(--color-text-on-primary);
 }
 
 .user-dropdown-menu {
@@ -310,8 +311,17 @@
 
 .topic-card.active .topic-icon {
   background-color: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-text-on-primary);
   border-color: var(--color-primary);
+}
+
+/* Compact topic card variant used for module-specific topic navigation */
+.topic-card.topic-card-compact {
+  padding: 0.65rem 0.875rem;
+}
+
+.topic-card.topic-card-compact .topic-name {
+  font-size: 0.82rem;
 }
 
 .topic-info {
