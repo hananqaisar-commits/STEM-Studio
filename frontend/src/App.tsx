@@ -10,6 +10,8 @@ import { LoadingScreen } from './components/common/LoadingScreen';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
+import { ModuleHub } from './features/hub/ModuleHub';
+import { getCategoryById, MODULES } from './data/categories';
 import { ComplexityPage } from './features/complexity/ComplexityPage';
 import { SortingPage } from './features/sorting/SortingPage';
 import { BSTPage } from './features/bst/BSTPage';
@@ -63,23 +65,28 @@ const DashboardLayout = () => {
   const pathSegment = location.pathname.split('/')[2] || '';
 
   const handleSelectModule = (moduleId: string) => {
-    if (moduleId === 'dsa') {
-      navigate('/dashboard');
-    }
+    navigate(`/dashboard/${moduleId}`);
   };
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
 
-  const isOnDashboard = location.pathname === '/dashboard';
+  const isOnLanding = location.pathname === '/dashboard';
+
+  // Determine active module and category from path
+  const isModulePage = MODULES.some(m => m.id === pathSegment);
+  const isCategoryPage = !isOnLanding && !isModulePage && !!pathSegment;
+  const activeModuleId = isModulePage ? pathSegment : (isCategoryPage ? 'dsa' : '');
+  const activeCategoryId = isCategoryPage ? pathSegment : '';
 
   return (
     <div className="dashboard-shell">
       <Navbar onToggleSidebar={toggleSidebar} />
-      <div className={`dashboard-body${isOnDashboard ? ' no-sidebar' : ''}`}>
-        {!isOnDashboard && (
+      <div className={`dashboard-body${isOnLanding ? ' no-sidebar' : ''}`}>
+        {!isOnLanding && (
           <TopicMenu
-            activeModule={pathSegment}
+            activeModule={activeModuleId}
+            activeCategory={activeCategoryId}
             onSelectModule={handleSelectModule}
             isOpen={isSidebarOpen}
             onClose={closeSidebar}
@@ -88,6 +95,7 @@ const DashboardLayout = () => {
         <main className="dashboard-main">
           <Routes>
             <Route index element={<DSAHub />} />
+            <Route path="dsa" element={<ModuleHub moduleId="dsa" />} />
             <Route path="complexity" element={<ComplexityPage />} />
             <Route path="sorting" element={<SortingPage />} />
             <Route path="stackQueue" element={<StackQueuePage />} />

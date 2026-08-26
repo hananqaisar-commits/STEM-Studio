@@ -177,6 +177,10 @@ export interface ModuleDef {
   name: string;
   description: string;
   available: boolean;
+  /** Lucide icon name — resolved at render time */
+  iconName: string;
+  /** Number of categories in this module */
+  categoryCount: number;
 }
 
 export const MODULES: ModuleDef[] = [
@@ -185,18 +189,24 @@ export const MODULES: ModuleDef[] = [
     name: 'Data Structures & Algorithms',
     description: 'Core DSA concepts, visualizers, and quizzes',
     available: true,
+    iconName: 'BookOpen',
+    categoryCount: 15,
   },
   {
     id: 'dld',
     name: 'Digital Logic Design',
     description: 'Boolean algebra, gates, combinational & sequential circuits',
     available: false,
+    iconName: 'Cpu',
+    categoryCount: 0,
   },
   {
     id: 'os',
     name: 'Operating Systems',
     description: 'Processes, scheduling, memory management, file systems',
     available: false,
+    iconName: 'Monitor',
+    categoryCount: 0,
   },
 ];
 
