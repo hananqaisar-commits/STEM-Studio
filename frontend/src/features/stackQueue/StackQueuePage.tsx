@@ -551,12 +551,7 @@ export const StackQueuePage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-        style={{ marginLeft: '0.5rem' }}
-      >
+      <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
@@ -711,21 +706,22 @@ export const StackQueuePage: React.FC = () => {
               />
             </label>
 
-          <button
-            className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
+            <button
+              className="bst-btn btn-fullscreen"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+            </button>
 
-          <button
-            className={`bst-btn ${showDebugger ? 'active' : ''}`}
-            onClick={() => setShowDebugger(!showDebugger)}
-          >
-            <Code size={14} />
-            <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
-          </button>
+            <button
+              className={`bst-btn ${showDebugger ? 'active' : ''}`}
+              onClick={() => setShowDebugger(!showDebugger)}
+            >
+              <Code size={14} />
+              <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
+            </button>
+          </div>
         </div>
       </div>
 

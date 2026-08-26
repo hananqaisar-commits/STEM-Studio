@@ -369,11 +369,7 @@ export const BSTPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
+      <label className="predict-toggle-label ml-2">
         <HelpCircle size={14} />
         <span>Quiz Mode</span>
         <input

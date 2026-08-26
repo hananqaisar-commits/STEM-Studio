@@ -270,11 +270,7 @@ export const GreedyPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
+      <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
         <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
@@ -453,13 +449,14 @@ export const GreedyPage: React.FC = () => {
               />
             </label>
 
-          <button
-            className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
+            <button
+              className="bst-btn btn-fullscreen"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
