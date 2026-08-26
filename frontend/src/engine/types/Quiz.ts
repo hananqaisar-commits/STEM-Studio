@@ -23,7 +23,9 @@ export type QuizModule =
   | 'recursion'
   | 'greedy'
   | 'hashMaps'
-  | 'backtracking';
+  | 'backtracking'
+  | 'dp'
+  | 'trie';
 
 /**
  * How essential a checkpoint is.

@@ -1,0 +1,198 @@
+/* DP Page Styles — extends common visualizer patterns */
+
+/* ── Recurrence formula bar (1D problems) ─────────────────────────────── */
+.dp-recurrence-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 8px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fbbf24;
+  margin-bottom: 0.5rem;
+}
+
+/* ── 1D Bar Row ───────────────────────────────────────────────────────── */
+.dp-bar-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 0.75rem 0.5rem 0.25rem;
+  flex: 1;
+  min-height: 120px;
+}
+
+.dp-bar-cell {
+  flex: 1;
+  min-width: 28px;
+  max-width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  border-radius: 6px 6px 2px 2px;
+  transition: all 0.25s ease;
+  position: relative;
+  cursor: default;
+}
+
+.dp-bar-value {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.dp-bar-index {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.62rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* ── 2D Grid ──────────────────────────────────────────────────────────── */
+.dp-grid-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.5rem;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.dp-grid-col-labels {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.dp-col-label,
+.dp-corner-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 2px 0;
+  min-height: 20px;
+}
+
+.dp-grid-body {
+  display: grid;
+  gap: 2px;
+}
+
+.dp-row-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  min-width: 36px;
+}
+
+.dp-grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.dp-grid-value {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f8fafc;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Cell States (shared) ─────────────────────────────────────────────── */
+.dp-cell-active {
+  background: rgba(251, 191, 36, 0.35) !important;
+  border: 2px solid #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+.dp-cell-active .dp-bar-value,
+.dp-cell-active .dp-grid-value {
+  color: #fbbf24;
+}
+
+.dp-cell-computed {
+  background: rgba(34, 197, 94, 0.25);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.dp-cell-computed .dp-bar-value,
+.dp-cell-computed .dp-grid-value {
+  color: #86efac;
+}
+
+.dp-cell-pending {
+  background: rgba(100, 116, 139, 0.15);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+.dp-cell-pending .dp-bar-value,
+.dp-cell-pending .dp-grid-value {
+  color: #64748b;
+}
+
+/* ── DP-specific toolbar inputs ───────────────────────────────────────── */
+.dp-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.dp-input-group input {
+  width: 70px;
+  padding: 0.2rem 0.4rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.dp-input-group input[type="text"] {
+  width: 110px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .dp-bar-row {
+    min-height: 80px;
+  }
+  .dp-grid-cell {
+    min-width: 26px;
+    min-height: 26px;
+  }
+  .dp-grid-value {
+    font-size: 0.65rem;
+  }
+}

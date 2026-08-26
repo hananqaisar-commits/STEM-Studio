@@ -23,6 +23,8 @@ import { RecursionPage } from './features/recursion/RecursionPage';
 import { GreedyPage } from './features/greedy/GreedyPage';
 import { HashMapsPage } from './features/hashMaps/HashMapsPage';
 import { BacktrackingPage } from './features/backtracking/BacktrackingPage';
+import { DPPage } from './features/dp/DPPage';
+import { TriePage } from './features/trie/TriePage';
 
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
@@ -95,6 +97,8 @@ const DashboardLayout = () => {
             <Route path="greedy" element={<GreedyPage />} />
             <Route path="hashMaps" element={<HashMapsPage />} />
             <Route path="backtracking" element={<BacktrackingPage />} />
+            <Route path="dp" element={<DPPage />} />
+            <Route path="trie" element={<TriePage />} />
           </Routes>
         </main>
       </div>

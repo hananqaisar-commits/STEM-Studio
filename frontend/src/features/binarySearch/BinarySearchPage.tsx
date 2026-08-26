@@ -9,6 +9,8 @@ import {
   Play,
   TrendingUp,
   Compass,
+  Trash2,
+  Layers,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
@@ -33,6 +35,7 @@ import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './BinarySearch.css';
 
 interface AlgorithmMeta {
@@ -225,6 +228,18 @@ export const BinarySearchPage: React.FC = () => {
     handleSelectCategory(category);
   };
 
+  const handleEmpty = () => {
+    setArray([]);
+    setCustomArrayInput('');
+    setActiveSteps([]);
+    reset();
+    quizSession.resetSession();
+  };
+
+  const handleSample = () => {
+    handleSelectCategory(category);
+  };
+
   const snippetKey =
     category === 'lowerBound'
       ? 'lowerBound'
@@ -289,6 +304,19 @@ export const BinarySearchPage: React.FC = () => {
         <RotateCcw size={14} />
         <span>Reset</span>
       </button>
+
+      {/* dataset-mode-selector */}
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+        </button>
+      </div>
 
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
@@ -387,6 +415,19 @@ export const BinarySearchPage: React.FC = () => {
             <RotateCcw size={14} />
             <span>Reset</span>
           </button>
+
+          {/* dataset-mode-selector */}
+          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
+            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+            </button>
+          </div>
         </div>
 
         {/* Mode Toggles */}
@@ -447,6 +488,13 @@ export const BinarySearchPage: React.FC = () => {
             mid={currentStep?.mid}
             right={currentStep?.right}
             target={currentTarget}
+          />
+
+          <MultiLanguageCodePanel
+            algorithmKey={category}
+            breakpoints={[]}
+            onToggleBreakpoint={() => {}}
+            currentArray={array}
           />
 
           <ExplanationPanel
