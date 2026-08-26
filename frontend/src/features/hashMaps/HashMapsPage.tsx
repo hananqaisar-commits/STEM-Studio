@@ -220,11 +220,14 @@ export const HashMapsPage: React.FC = () => {
         </button>
       </div>
 
-      <label className="predict-toggle-label ml-2">
+      <button
+        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
+        onClick={() => setQuizEnabled((prev) => !prev)}
+        title="Toggle Quiz Mode"
+      >
         <HelpCircle size={16} />
-        <span>Predict Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
-      </label>
+        <span>Quiz Mode</span>
+      </button>
     </div>
   );
 
@@ -351,25 +354,22 @@ export const HashMapsPage: React.FC = () => {
         </div>
 
         <div className="bst-toolbar-right">
-          <div className="predict-mode-group flex items-center gap-2">
-            <label className="predict-toggle-label">
-              <HelpCircle size={16} />
-              <span>Predict Mode</span>
-              <input
-                type="checkbox"
-                checked={quizEnabled}
-                onChange={(e) => setQuizEnabled(e.target.checked)}
-              />
-            </label>
+          <button
+            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
+            onClick={() => setQuizEnabled((prev) => !prev)}
+            title="Toggle Quiz Mode"
+          >
+            <HelpCircle size={16} />
+            <span>Quiz Mode</span>
+          </button>
 
-            <button
-              className="bst-btn btn-fullscreen"
-              onClick={() => setIsFullScreenOpen(true)}
-              title="Full Screen Canvas View"
-            >
-              <Maximize2 size={14} />
-            </button>
-          </div>
+          <button
+            className="bst-btn btn-fullscreen"
+            onClick={() => setIsFullScreenOpen(true)}
+            title="Full Screen Canvas View"
+          >
+            <Maximize2 size={14} />
+          </button>
         </div>
       </div>
 
