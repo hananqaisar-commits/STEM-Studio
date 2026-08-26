@@ -10,6 +10,8 @@ import {
   Waypoints,
   Network,
   GitMerge,
+  Trash2,
+  Layers,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
@@ -37,6 +39,7 @@ import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './Graph.css';
 
 interface AlgorithmMeta {
@@ -164,6 +167,23 @@ export const GraphPage: React.FC = () => {
     handleSelectCategory(category);
   };
 
+  const handleEmpty = () => {
+    const preset = getPresetGraph(category === 'topoSort' ? 'dag' : 'standard');
+    const minimalNodes = preset.nodes.slice(0, 2);
+    const minimalEdges = preset.edges.filter(
+      (e) => minimalNodes.some((n) => n.id === e.from) && minimalNodes.some((n) => n.id === e.to)
+    );
+    setNodes(minimalNodes);
+    setEdges(minimalEdges);
+    setActiveSteps([]);
+    reset();
+    quizSession.resetSession();
+  };
+
+  const handleSample = () => {
+    handleSelectCategory(category);
+  };
+
   const snippetKey = category;
 
   const renderPlayerControls = () => (
@@ -230,6 +250,19 @@ export const GraphPage: React.FC = () => {
         <RotateCcw size={14} />
         <span>Reset</span>
       </button>
+
+      {/* dataset-mode-selector */}
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleReset} title="Random">
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+        </button>
+      </div>
 
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
@@ -321,6 +354,19 @@ export const GraphPage: React.FC = () => {
             <RotateCcw size={14} />
             <span>Reset</span>
           </button>
+
+          {/* dataset-mode-selector */}
+          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
+            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleReset} title="Random">
+              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+            </button>
+          </div>
         </div>
 
         {/* Mode Toggles */}
@@ -381,6 +427,13 @@ export const GraphPage: React.FC = () => {
             currentNodeId={currentStep?.currentNodeId}
             visitedCount={currentStep?.visitedNodeIds.length || 0}
             queueSize={currentStep?.queueOrStack.length || 0}
+          />
+
+          <MultiLanguageCodePanel
+            algorithmKey={category}
+            breakpoints={[]}
+            onToggleBreakpoint={() => {}}
+            currentArray={nodes.map((n) => Number(n.id))}
           />
 
           <ExplanationPanel

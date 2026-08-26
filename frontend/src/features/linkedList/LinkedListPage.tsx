@@ -11,6 +11,7 @@ import {
   RefreshCw,
   GitCommit,
   GitBranch,
+  Layers,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
@@ -39,6 +40,7 @@ import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './LinkedList.css';
 
 interface AlgorithmMeta {
@@ -197,6 +199,22 @@ export const LinkedListPage: React.FC = () => {
     reset();
   };
 
+  const handleEmpty = () => {
+    const emptyNodes = createInitialNodes([0], category === 'doubly' ? 'doubly' : 'singly');
+    setBaseNodes(emptyNodes);
+    setActiveSteps([]);
+    reset();
+    quizSession.resetSession();
+  };
+
+  const handleSample = () => {
+    const sampleNodes = createInitialNodes([10, 20, 30, 40], category === 'doubly' ? 'doubly' : 'singly');
+    setBaseNodes(sampleNodes);
+    setActiveSteps([]);
+    reset();
+    quizSession.resetSession();
+  };
+
   const snippetKey =
     category === 'reverse'
       ? 'reverse'
@@ -286,6 +304,19 @@ export const LinkedListPage: React.FC = () => {
         <RotateCcw size={14} />
         <span>Reset</span>
       </button>
+
+      {/* dataset-mode-selector */}
+      <div className="dataset-mode-selector ml-1">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+        </button>
+      </div>
 
       <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
         <HelpCircle size={16} />
@@ -382,6 +413,19 @@ export const LinkedListPage: React.FC = () => {
             <RotateCcw size={14} />
             <span>Reset</span>
           </button>
+
+          {/* dataset-mode-selector */}
+          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
+            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+            </button>
+          </div>
         </div>
 
         {/* Mode Toggles */}
@@ -439,6 +483,13 @@ export const LinkedListPage: React.FC = () => {
             activeLine={currentStep?.codeLine}
             pointers={currentStep?.pointers}
             nodesCount={currentStep ? currentStep.nodes.length : baseNodes.length}
+          />
+
+          <MultiLanguageCodePanel
+            algorithmKey={category}
+            breakpoints={[]}
+            onToggleBreakpoint={() => {}}
+            currentArray={baseNodes.map((n) => n.value as number)}
           />
 
           <ExplanationPanel
