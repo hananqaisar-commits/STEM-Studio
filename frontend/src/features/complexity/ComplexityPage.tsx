@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { CATEGORY_TOPICS } from '../../data/categoryTopics';
 import './Complexity.css';
 
 const sections = [
@@ -13,6 +15,23 @@ const sections = [
 ];
 
 export const ComplexityPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [activeCategoryId, setActiveCategoryId] = useState('complexity');
+
+  const handleSelectCategory = (catId: string) => {
+    setActiveCategoryId(catId);
+    if (catId !== 'complexity') {
+      navigate(`/dashboard/${catId}`);
+    }
+  };
+
+  const handleSelectTopic = (topicId: string) => {
+    // If we're on a different category page, navigate first then scroll
+    if (activeCategoryId === 'complexity') {
+      document.getElementById(topicId)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="complexity-page">
       <VisualizerHeader
@@ -20,8 +39,12 @@ export const ComplexityPage: React.FC = () => {
         title="Complexity Analysis"
         subtitle="Understanding algorithmic efficiency through asymptotic notation and empirical analysis"
         items={sections}
-        onSelect={(id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
+        activeId={undefined}
+        onSelect={handleSelectTopic}
         placeholder="Search complexity topics..."
+        categories={CATEGORY_TOPICS}
+        activeCategoryId={activeCategoryId}
+        onSelectCategory={handleSelectCategory}
       />
 
       {/* Section 1: Asymptotic Notations */}
