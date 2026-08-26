@@ -736,6 +736,11 @@
   background: var(--quiz-accent-soft);
 }
 
+.quiz-revision-example {
+  font-family: 'JetBrains Mono', monospace;
+  white-space: pre-wrap;
+}
+
 .quiz-revision-list {
   margin: 0;
   padding: 0 0 0 1rem;

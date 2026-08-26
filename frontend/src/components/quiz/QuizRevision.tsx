@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Lightbulb, Eye, Target, ArrowRight } from 'lucide-react';
+import { BookOpen, Lightbulb, Eye, Target, ArrowRight, Code2 } from 'lucide-react';
 import type { QuizRevisionData } from '../../engine/types/Quiz';
 
 /* ── QuizRevision ──────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ export const QuizRevision: React.FC<QuizRevisionProps> = ({
   revisionData,
   onBegin,
 }) => {
-  const { description, complexity, keyIdea, watchFor, quickTip } = revisionData;
+  const { description, complexity, keyIdea, watchFor, quickTip, example } = revisionData;
 
   return (
     <section className="quiz-panel quiz-revision" aria-label="Revision card">
@@ -61,6 +61,17 @@ export const QuizRevision: React.FC<QuizRevisionProps> = ({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* ── Example ──────────────────────────────────────────────────── */}
+      {example && (
+        <div className="quiz-revision-section">
+          <div className="quiz-revision-section-head">
+            <Code2 size={15} />
+            <span className="quiz-revision-section-title">Example</span>
+          </div>
+          <p className="quiz-revision-section-body quiz-revision-example">{example}</p>
         </div>
       )}
 

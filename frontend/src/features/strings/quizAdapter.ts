@@ -252,6 +252,7 @@ const REVISION_DATA: Record<StringAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Compare characters from both ends moving inward—mismatch means not a palindrome',
     watchFor: ['Two-pointer technique', 'Early termination on mismatch', 'Case sensitivity'],
     quickTip: 'Stop at the first mismatch—no need to check the entire string',
+    example: '"racecar": compare r↔r ✓, a↔a ✓, c↔c ✓, e is middle → palindrome. "hello": h≠o → not a palindrome (stops in 1 comparison).',
   },
   anagram: {
     description: 'Check if two strings have the same character frequencies',
@@ -259,6 +260,7 @@ const REVISION_DATA: Record<StringAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Two strings are anagrams iff their character frequency maps are identical',
     watchFor: ['Frequency counting', 'Length check optimization', 'Character set size'],
     quickTip: 'Quick reject: if lengths differ, they cannot be anagrams',
+    example: '"listen" vs "silent": both have freq {e:1,i:1,l:1,n:1,s:1,t:1} → anagram. "hello" vs "world": h/w mismatch → not anagram.',
   },
   reverse: {
     description: 'Reverse a string in-place using two pointers',
@@ -266,6 +268,7 @@ const REVISION_DATA: Record<StringAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Swap characters at symmetric positions moving inward from both ends',
     watchFor: ['Number of swaps needed', 'Odd vs even length handling', 'In-place requirement'],
     quickTip: 'Exactly ⌊n/2⌋ swaps are needed—the middle character (if odd length) stays put',
+    example: '"abcd" (len 4): swap a↔d → "dbca", swap b↔c → "dcba". 2 swaps = ⌊4/2⌋.',
   },
   frequency: {
     description: 'Count occurrences of each character in a string',
@@ -273,6 +276,7 @@ const REVISION_DATA: Record<StringAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Use a hash map or array to track how many times each character appears',
     watchFor: ['Space complexity (alphabet size)', 'Hash map vs array choice', 'Case handling'],
     quickTip: 'For lowercase English letters, use an array of size 26 indexed by char - "a"',
+    example: '"abracadabra": freq = {a:5, b:2, r:2, c:1, d:1}. Most frequent char is "a" with count 5.',
   },
 };
 

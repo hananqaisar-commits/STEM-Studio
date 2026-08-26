@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, HelpCircle, Hash
 } from 'lucide-react';
@@ -15,7 +16,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildSortingCheckpoints } from './quizAdapter';
+import { buildSortingCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { generateBubbleSortSteps } from './algorithms/bubbleSort';
@@ -30,6 +31,7 @@ import { generateRadixSortSteps } from './algorithms/radixSort';
 import { generateBucketSortSteps } from './algorithms/bucketSort';
 
 import './Sorting.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell' | 'counting' | 'radix' | 'bucket';
 type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
@@ -78,6 +80,14 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 
 export const SortingPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as AlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [arraySize, setArraySize] = useState<number>(12);
   const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
@@ -149,6 +159,7 @@ export const SortingPage: React.FC = () => {
     stepForward,
     module: 'sorting',
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   // Clear custom steps when algorithm or array changes
@@ -433,6 +444,8 @@ export const SortingPage: React.FC = () => {
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="sorting" activeTopic={selectedAlg} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal

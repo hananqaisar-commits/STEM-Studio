@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Layers, Grid3X3, Target, Shuffle, Maximize2, HelpCircle, Sparkles, Trash2, Edit3,
 } from 'lucide-react';
@@ -15,7 +16,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildBacktrackingCheckpoints } from './quizAdapter';
+import { buildBacktrackingCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { runSubsets } from './algorithms/subsets';
@@ -25,6 +26,7 @@ import { runCombinationSum } from './algorithms/combinationSum';
 
 import '../sorting/Sorting.css';
 import './Backtracking.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type AlgorithmKey = 'subsets' | 'permutations' | 'nQueens' | 'combinationSum';
 
@@ -44,6 +46,14 @@ const ALGORITHMS: AlgMeta[] = [
 
 export const BacktrackingPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('subsets');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as AlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
@@ -101,6 +111,7 @@ export const BacktrackingPage: React.FC = () => {
     stepForward,
     module: 'backtracking' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   useEffect(() => {
@@ -448,6 +459,8 @@ export const BacktrackingPage: React.FC = () => {
           onClose={() => setShowCustomEditor(false)}
         />
       )}
+      <TheoryPanel categoryId="backtracking" activeTopic={selectedAlg} />
+
     </div>
   );
 };

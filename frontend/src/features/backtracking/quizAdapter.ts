@@ -255,6 +255,7 @@ const REVISION_DATA: Record<BacktrackingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Each element has two choices: include or exclude—forming a binary decision tree',
     watchFor: ['Include/exclude branching', 'Base case (all elements decided)', 'Subset recording'],
     quickTip: 'At each level decide one element—recurse with it included, then backtrack and recurse without it',
+    example: 'Set [1,2,3]: decision tree produces [], [3], [2], [2,3], [1], [1,3], [1,2], [1,2,3] — 8 subsets total.',
   },
   permutations: {
     description: 'Generate all permutations of an array',
@@ -262,6 +263,7 @@ const REVISION_DATA: Record<BacktrackingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Fix each position by trying every remaining element, then recurse to fix the next position',
     watchFor: ['Position fixing', 'Swap/restore pattern', 'Used array tracking'],
     quickTip: 'Use a boolean array to track which elements are used, or swap elements in place to avoid extra space',
+    example: 'Array [1,2,3]: fix pos 0→1, fix pos 1→2, fix pos 2→3 gives [1,2,3]; backtrack, swap pos 1→3 gives [1,3,2]; etc.',
   },
   nQueens: {
     description: 'Place n queens on an n×n board so no two attack each other',
@@ -269,6 +271,7 @@ const REVISION_DATA: Record<BacktrackingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Place one queen per row, checking column and diagonal conflicts with placed queens',
     watchFor: ['Conflict checking', 'Row-by-row placement', 'Backtrack on failure'],
     quickTip: 'Use sets to track occupied columns and both diagonals—row is implicit from recursion depth',
+    example: 'N=4: place Q at (0,1), (1,3), (2,0), (3,2) → one of 2 valid solutions for a 4×4 board.',
   },
   combinationSum: {
     description: 'Find all combinations that sum to a target',
@@ -276,6 +279,7 @@ const REVISION_DATA: Record<BacktrackingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Try each candidate, recurse with reduced remainder; prune when remainder goes negative',
     watchFor: ['Pruning condition', 'Reuse allowance', 'Remainder tracking'],
     quickTip: 'If candidates can be reused, recurse from the same index; otherwise advance to next index',
+    example: 'Candidates [2,3,6,7], target=7: valid combinations are [2,2,3] and [7]. Remainder tracks what is still needed.',
   },
 };
 

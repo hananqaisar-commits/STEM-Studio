@@ -150,6 +150,8 @@ export interface QuizRevisionData {
   watchFor: string[];
   /** Practical insight for solving quiz questions. */
   quickTip: string;
+  /** A tiny worked example that the student can reason through. */
+  example?: string;
 }
 
 /* ── Per-question result tracking ───────────────────────────────────────

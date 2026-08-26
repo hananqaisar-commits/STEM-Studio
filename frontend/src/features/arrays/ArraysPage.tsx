@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Edit3, Search, Zap, ArrowRightLeft, RotateCw, Hash, Maximize2, HelpCircle, Sparkles, Trash2, Layers
 } from 'lucide-react';
@@ -15,7 +16,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildArraysCheckpoints } from './quizAdapter';
+import { buildArraysCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { generateLinearSearchSteps } from './algorithms/linearSearch';
@@ -27,6 +28,7 @@ import { generatePrefixSumSteps } from './algorithms/prefixSum';
 
 import '../sorting/Sorting.css';
 import './Arrays.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type AlgorithmKey = 'linearSearch' | 'kadane' | 'twoPointer' | 'slidingWindow' | 'rotation' | 'prefixSum';
 type ArrayPattern = 'random' | 'sorted' | 'reversed';
@@ -64,6 +66,14 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 
 export const ArraysPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('linearSearch');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as AlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [arraySize, setArraySize] = useState<number>(10);
   const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(10, 'random'));
@@ -145,6 +155,7 @@ export const ArraysPage: React.FC = () => {
     stepForward,
     module: 'arrays' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   // Clear quiz when algorithm or array changes
@@ -520,6 +531,8 @@ export const ArraysPage: React.FC = () => {
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="arrays" activeTopic={selectedAlg} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal

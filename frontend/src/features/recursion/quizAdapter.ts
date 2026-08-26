@@ -208,6 +208,7 @@ const REVISION_DATA: Record<RecursionAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Base case: fact(0) = 1; recursive: fact(n) = n × fact(n-1)',
     watchFor: ['Base case', 'Recursive decomposition', 'Stack depth'],
     quickTip: 'The recursion depth equals n—each call waits for the one below it to return',
+    example: 'fact(4) = 4×fact(3) = 4×3×fact(2) = 4×3×2×fact(1) = 4×3×2×1×fact(0) = 24.',
   },
   fibonacci: {
     description: 'Compute nth Fibonacci number using recursion',
@@ -215,6 +216,7 @@ const REVISION_DATA: Record<RecursionAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'fib(n) = fib(n-1) + fib(n-2) with base cases fib(0)=0, fib(1)=1',
     watchFor: ['Exponential branching', 'Overlapping subproblems', 'Memoization opportunity'],
     quickTip: 'Naive recursion recomputes the same values many times—memoization reduces to O(n)',
+    example: 'fib(5) = fib(4)+fib(3) = (fib(3)+fib(2))+(fib(2)+fib(1)) = … = 5. Note fib(2) is computed 3 times.',
   },
   power: {
     description: 'Compute base^exp using recursion',
@@ -222,6 +224,7 @@ const REVISION_DATA: Record<RecursionAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Base case: power(b, 0) = 1; recursive: power(b, e) = b × power(b, e-1)',
     watchFor: ['Base case (exp=0)', 'Negative exponent handling', 'Optimization (fast power)'],
     quickTip: 'Fast exponentiation: power(b, e) = power(b, e/2)² × (b if e is odd) gives O(log e)',
+    example: 'power(2, 4) = 2×power(2,3) = 2×2×power(2,2) = … = 16. Fast power: 2^4 = (2^2)^2 = 4^2 = 16 in 2 calls.',
   },
   arraySum: {
     description: 'Sum array elements recursively',
@@ -229,6 +232,7 @@ const REVISION_DATA: Record<RecursionAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'sum(arr, i) = arr[i] + sum(arr, i+1) with base case i >= length returning 0',
     watchFor: ['Index progression', 'Base case (past end)', 'Accumulation pattern'],
     quickTip: 'Each recursive call handles one element—the rest is delegated to the next call',
+    example: 'Array [3,1,4]: sum(arr,0) = 3+sum(arr,1) = 3+1+sum(arr,2) = 3+1+4+sum(arr,3) = 3+1+4+0 = 8.',
   },
   towerOfHanoi: {
     description: 'Move n disks from source to destination using an auxiliary peg',
@@ -236,6 +240,7 @@ const REVISION_DATA: Record<RecursionAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Move n-1 disks aside, move largest disk, move n-1 disks on top—3 recursive steps',
     watchFor: ['Three-peg logic', 'Move count (2^n - 1)', 'Peg role swapping'],
     quickTip: 'The auxiliary peg in one call becomes the destination in another—roles rotate',
+    example: '3 disks: move 2 to aux (3 moves), move disk 3 to dest (1 move), move 2 to dest (3 moves) = 7 total moves.',
   },
 };
 
