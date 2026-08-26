@@ -250,6 +250,7 @@ const REVISION_DATA: Record<TrieAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Follow or create nodes for each character, mark end-of-word at the last node',
     watchFor: ['Node creation vs reuse', 'End-of-word marking', 'Path sharing'],
     quickTip: 'Only create new nodes when the character path does not exist—reuse existing nodes',
+    example: 'Insert "cat" then "car": "cat" creates c→a→t (3 new nodes). "car" reuses c→a, creates r as sibling of t. Total 4 nodes.',
   },
   trieSearch: {
     description: 'Search for an exact word in a Trie',
@@ -257,6 +258,7 @@ const REVISION_DATA: Record<TrieAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Follow the character path; word exists only if all nodes exist AND the last has end-of-word marker',
     watchFor: ['Path existence check', 'End-of-word verification', 'Prefix vs exact match'],
     quickTip: 'Finding all characters is not enough—the final node must have the end-of-word flag set',
+    example: 'Trie has "apple". search("app") returns false (no end-of-word at p). search("apple") returns true. search("apl") returns false (no node for l at depth 3).',
   },
   triePrefix: {
     description: 'Find all words in a Trie that start with a given prefix',
@@ -264,6 +266,7 @@ const REVISION_DATA: Record<TrieAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Navigate to the prefix node, then DFS to collect all words in its subtree',
     watchFor: ['Prefix navigation', 'DFS collection', 'Empty prefix handling'],
     quickTip: 'If the prefix path does not exist, return empty—otherwise collect all end-of-word nodes below',
+    example: 'Trie has "car","card","care". prefix("car") navigates to node r, DFS finds: "car","card","care" (3 words). prefix("b") returns [].',
   },
   wordDictionary: {
     description: 'Support word search with wildcard "." matching any character',
@@ -271,6 +274,7 @@ const REVISION_DATA: Record<TrieAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'On wildcard ".", branch to all children; on literal, follow only the matching child',
     watchFor: ['Wildcard branching', 'Recursion/backtracking', 'Early termination'],
     quickTip: 'Wildcards force exploration of all children—this is why worst case is exponential',
+    example: 'Trie has "bad","cad". search(".ad"): "." branches to both b and c at root. Both paths match "ad" → returns true. search("b.d") branches at a→only d→true.',
   },
   autocomplete: {
     description: 'Suggest words based on a typed prefix',
@@ -278,6 +282,7 @@ const REVISION_DATA: Record<TrieAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Navigate to prefix node, then DFS to collect complete words in the subtree',
     watchFor: ['Prefix matching', 'DFS word collection', 'Result limiting'],
     quickTip: 'Limit results by stopping DFS after collecting enough suggestions—useful for real-time UI',
+    example: 'Trie has "apple","app","apply","ape". Typing "app" navigates to node p, DFS finds: "app","apple","apply" (3 suggestions). Typing "z" returns 0 suggestions.',
   },
 };
 

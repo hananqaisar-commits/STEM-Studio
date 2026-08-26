@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
-  MessageSquare, ChevronDown, ExternalLink, AtSign, Send, Heart,
-  ArrowRight, BookOpen, Cpu, Monitor, type LucideIcon,
+  MessageSquare, ChevronDown, ExternalLink, Send, Heart, Sparkles,
+  ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon,
+  type LucideIcon,
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
+import { apiClient } from '../../api/apiClient';
 import './DSAHub.css';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -39,14 +41,6 @@ const FEATURES = [
   { icon: Edit3, title: 'Custom Input Editor', desc: 'Test any algorithm with your own custom data inputs' },
 ];
 
-/* ── Reviews data ─────────────────────────────────────────────────── */
-const REVIEWS = [
-  { stars: 5, text: 'The visualizations made recursion click for me. Seeing the call tree build up step by step was exactly what I needed to understand how recursive functions work.', name: 'Ayesha K.', role: 'CS Student' },
-  { stars: 4, text: 'Quiz mode in Challenge level is intense but incredibly rewarding. The 15-second timer really pushes you to think fast and build intuition.', name: 'Ahmed R.', role: 'Self-learner' },
-  { stars: 5, text: "Best DSA tool I've used. The multi-language debugger is a game changer — seeing the same algorithm in Python and C++ side by side really deepens understanding.", name: 'Fatima S.', role: 'CS Student' },
-  { stars: 5, text: "The Dynamic Programming section finally made 2D grid problems clear. The color-coded cells showing computed values step by step is brilliant.", name: 'Usman M.', role: 'Bootcamp Graduate' },
-];
-
 /* ── FAQs data ────────────────────────────────────────────────────── */
 const FAQS = [
   { q: 'What is STEM Studio?', a: 'STEM Studio is an interactive learning platform for Data Structures and Algorithms. It provides step-by-step visualizations, quiz-based learning, and multi-language code support for 14+ DSA categories.' },
@@ -57,30 +51,47 @@ const FAQS = [
   { q: 'What programming languages are supported?', a: 'The multi-language debugger supports Python, C++, Java, Go, and Pseudocode. You can switch between languages to see how the same algorithm is implemented differently.' },
 ];
 
-/* ── Contributors data ────────────────────────────────────────────── */
-const CONTRIBUTORS = [
-  {
-    name: 'Hanan Qaisar',
-    role: 'Lead Developer',
-    initials: 'HQ',
-    github: 'https://github.com/hananqaisar',
-    work: 'Database, API, Dashboard, all 14 DSA categories, Quiz mode system, overall architecture and project lead',
-  },
-  {
-    name: 'Muhammad Hassan',
-    role: 'UI Developer',
-    initials: 'MH',
-    github: 'https://github.com/muhammadhassan',
-    work: 'Theme system (4 themes), Fullscreen mode, UI alignments, visual improvements, and responsive design',
-  },
-  {
-    name: 'Muhammad Aftab',
-    role: 'Visualizer Developer',
-    initials: 'MA',
-    github: 'https://github.com/muhammadaftab',
-    work: 'Linked List, Trees, and Graph visualizers, Debugger UI components, and algorithm engine development',
-  },
+/* ── Footer social links ──────────────────────────────────────────── */
+const LinkedInIcon: React.FC = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect width="4" height="12" x="2" y="9" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+);
+
+const SOCIAL_LINKS = [
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: LinkedInIcon },
+  { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: ExternalLink },
+  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: ExternalLink },
 ];
+
+const AFTAB_LINKEDIN = 'https://www.linkedin.com/in/m-aftab-riaz-6468332b9/?skipRedirect=true';
+
+interface PlatformStats {
+  active_learners: number;
+  total_reviews: number;
+  average_rating: number;
+}
+
+interface ReviewItem {
+  review_id: number;
+  name: string;
+  role: string;
+  rating: number;
+  text: string;
+  created_at: string;
+}
 
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
@@ -92,20 +103,63 @@ export const DSAHub: React.FC = () => {
   /* ── FAQ accordion state ────────────────────────────────────────── */
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  /* ── Platform stats ─────────────────────────────────────────────── */
+  const [stats, setStats] = useState<PlatformStats>({
+    active_learners: 0,
+    total_reviews: 0,
+    average_rating: 0,
+  });
+
+  /* ── Reviews ────────────────────────────────────────────────────── */
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+
   /* ── Share experience form ──────────────────────────────────────── */
   const [reviewStars, setReviewStars] = useState(0);
   const [reviewName, setReviewName] = useState('');
-  const [reviewEmail, setReviewEmail] = useState('');
+  const [reviewRole, setReviewRole] = useState('');
   const [reviewText, setReviewText] = useState('');
+  const [reviewStatus, setReviewStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
   /* ── FAQ question form ──────────────────────────────────────────── */
   const [faqQuestion, setFaqQuestion] = useState('');
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Fetch public platform stats
+    apiClient<PlatformStats>('/api/stats/platform')
+      .then(setStats)
+      .catch(() => {
+        // Fallback to local counts if backend is unavailable
+        setStats({ active_learners: 0, total_reviews: 0, average_rating: 0 });
+      });
+
+    // Fetch latest approved reviews
+    apiClient<ReviewItem[]>('/api/stats/reviews?limit=10')
+      .then(setReviews)
+      .catch(() => setReviews([]));
+  }, []);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`Review from ${reviewName}`);
-    const body = encodeURIComponent(`Rating: ${reviewStars}/5\nName: ${reviewName}\nEmail: ${reviewEmail}\n\nReview:\n${reviewText}`);
-    window.open(`mailto:hananqaisar316@gmail.com?subject=${subject}&body=${body}`, '_blank');
+    if (reviewStars === 0) return;
+    setReviewStatus('submitting');
+    try {
+      await apiClient('/api/stats/reviews', {
+        method: 'POST',
+        body: {
+          name: reviewName,
+          role: reviewRole,
+          rating: reviewStars,
+          text: reviewText,
+        },
+      });
+      setReviewStatus('success');
+      setReviewStars(0);
+      setReviewName('');
+      setReviewRole('');
+      setReviewText('');
+    } catch {
+      setReviewStatus('error');
+    }
   };
 
   const handleFaqSubmit = (e: React.FormEvent) => {
@@ -145,6 +199,30 @@ export const DSAHub: React.FC = () => {
               Explore Features
             </button>
           </div>
+          <div className="hero-social-proof">
+            <div className="hero-avatar-stack">
+              {['A', 'S', 'R', 'M'].map((initial, i) => (
+                <div
+                  key={i}
+                  className="hero-avatar-chip"
+                  style={{ background: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6'][i] }}
+                >
+                  {initial}
+                </div>
+              ))}
+            </div>
+            <div className="hero-social-text">
+              <span className="hero-social-count">{stats.active_learners.toLocaleString()}</span>
+              <span> Active Learners</span>
+            </div>
+            {stats.total_reviews > 0 && (
+              <div className="hero-social-rating">
+                <Star size={14} fill="currentColor" />
+                <span>{stats.average_rating.toFixed(2)}/5</span>
+                <span className="hero-rating-count">({stats.total_reviews} Reviews)</span>
+              </div>
+            )}
+          </div>
           <div className="hero-stats">
             <div className="hero-stat">
               <span className="hero-stat-num">{availableModules}</span>
@@ -162,7 +240,7 @@ export const DSAHub: React.FC = () => {
         </div>
         <div className="hero-visual">
           <img
-            src="/images/hero-students.jpeg"
+            src="/images/hero-students.png"
             alt="Students learning DSA"
             className="hero-image"
           />
@@ -250,23 +328,29 @@ export const DSAHub: React.FC = () => {
         <h2 className="section-title">What Students Say</h2>
         <p className="section-subtitle">Real feedback from learners using STEM Studio</p>
         <div className="reviews-scroll">
-          {REVIEWS.map((r, i) => (
-            <div key={i} className="review-card">
-              <div className="review-stars">
-                {Array.from({ length: 5 }).map((_, si) => (
-                  <Star key={si} size={14} fill={si < r.stars ? 'currentColor' : 'none'} />
-                ))}
-              </div>
-              <p className="review-text">&ldquo;{r.text}&rdquo;</p>
-              <div className="review-author">
-                <div className="review-avatar"><User size={14} /></div>
-                <div>
-                  <span className="review-name">{r.name}</span>
-                  <span className="review-role">{r.role}</span>
+          {reviews.length > 0 ? (
+            reviews.map((r) => (
+              <div key={r.review_id} className="review-card">
+                <div className="review-stars">
+                  {Array.from({ length: 5 }).map((_, si) => (
+                    <Star key={si} size={14} fill={si < r.rating ? 'currentColor' : 'none'} />
+                  ))}
+                </div>
+                <p className="review-text">&ldquo;{r.text}&rdquo;</p>
+                <div className="review-author">
+                  <div className="review-avatar"><User size={14} /></div>
+                  <div>
+                    <span className="review-name">{r.name}</span>
+                    <span className="review-role">{r.role}</span>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="review-card review-card-placeholder">
+              <p className="review-text">No approved reviews yet. Be the first to share your experience!</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
@@ -341,13 +425,13 @@ export const DSAHub: React.FC = () => {
               />
             </div>
             <div className="review-form-field">
-              <label><Mail size={13} /> Email</label>
+              <label><Star size={13} /> Role</label>
               <input
-                type="email"
+                type="text"
                 className="form-input"
-                placeholder="your@email.com"
-                value={reviewEmail}
-                onChange={(e) => setReviewEmail(e.target.value)}
+                placeholder="e.g. CS Student"
+                value={reviewRole}
+                onChange={(e) => setReviewRole(e.target.value)}
                 required
               />
             </div>
@@ -361,74 +445,148 @@ export const DSAHub: React.FC = () => {
               onChange={(e) => setReviewText(e.target.value)}
               rows={4}
               required
+              minLength={10}
             />
           </div>
-          <button type="submit" className="review-submit-btn">
-            Submit Review <Send size={14} />
+          {reviewStatus === 'success' && (
+            <p className="review-status review-status-success">
+              Thank you! Your review has been submitted for approval.
+            </p>
+          )}
+          {reviewStatus === 'error' && (
+            <p className="review-status review-status-error">
+              Failed to submit review. Please try again later.
+            </p>
+          )}
+          <button
+            type="submit"
+            className="review-submit-btn"
+            disabled={reviewStatus === 'submitting' || reviewStars === 0}
+          >
+            {reviewStatus === 'submitting' ? 'Submitting...' : 'Submit Review'} <Send size={14} />
           </button>
         </form>
       </section>
 
-      {/* ── Footer / Contributors ──────────────────────────────────── */}
-      <footer id="contributors" className="landing-footer">
+      {/* ── Footer ───────────────────────────────────────────────────── */}
+      <footer id="footer" className="landing-footer">
         <div className="footer-grid">
-          {/* Contributors */}
+          {/* Brand */}
+          <div className="footer-col footer-brand-col">
+            <Link to="/dashboard" className="footer-brand">
+              <div className="footer-brand-logo">
+                <Sparkles size={20} />
+              </div>
+              <span className="footer-brand-title">STEM <span>Studio</span></span>
+            </Link>
+            <p className="footer-desc">
+              Interactive visualization tools for mastering data structures and algorithms.
+            </p>
+            <p className="footer-made-with">
+              <Heart size={13} fill="currentColor" /> Made with love by{' '}
+              <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer">
+                Ascentify Studio
+              </a>
+            </p>
+            <a href="mailto:hello@dsavisualizer.in" className="footer-email">
+              <Mail size={15} /> hello@dsavisualizer.in
+            </a>
+            <a
+              href="https://www.producthunt.com/products/stem-studio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="product-hunt-badge"
+            >
+              <span className="product-hunt-icon">P</span>
+              <span className="product-hunt-text">
+                <small>FIND US ON</small>
+                <strong>Product Hunt</strong>
+              </span>
+              <span className="product-hunt-votes">3</span>
+            </a>
+          </div>
+
+          {/* Navigation */}
           <div className="footer-col">
-            <h3 className="footer-heading">Contributors</h3>
-            <div className="contributor-list">
-              {CONTRIBUTORS.map((c) => (
-                <div key={c.name} className="contributor-card">
-                  <div className="contributor-avatar">{c.initials}</div>
-                  <div className="contributor-info">
-                    <div className="contributor-name-row">
-                      <span className="contributor-name">{c.name}</span>
-                      <span className="contributor-role">{c.role}</span>
-                    </div>
-                    <p className="contributor-work">{c.work}</p>
-                    <a href={c.github} target="_blank" rel="noopener noreferrer" className="contributor-github">
-                      <ExternalLink size={13} /> GitHub
-                    </a>
-                  </div>
-                </div>
-              ))}
+            <h3 className="footer-heading">Navigation</h3>
+            <div className="footer-links">
+              <button className="footer-link-btn" onClick={() => scrollToSection('hero')}>
+                <HomeIcon size={15} /> Home
+              </button>
+              <button className="footer-link-btn" onClick={() => scrollToSection('features')}>
+                <Zap size={15} /> Features
+              </button>
+              <button className="footer-link-btn" onClick={() => navigate('/dashboard/dsa')}>
+                <Eye size={15} /> Visualizer
+              </button>
+              <button className="footer-link-btn" onClick={() => scrollToSection('reviews')}>
+                <Star size={15} /> Reviews
+              </button>
+              <button className="footer-link-btn" onClick={() => scrollToSection('faqs')}>
+                <MessageSquare size={15} /> FAQs
+              </button>
             </div>
           </div>
 
-          {/* Contact */}
+          {/* Legal */}
           <div className="footer-col">
-            <h3 className="footer-heading">Contact</h3>
+            <h3 className="footer-heading">Legal</h3>
             <div className="footer-links">
-              <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer" className="footer-link">
-                <ExternalLink size={15} /> LinkedIn
-              </a>
-              <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer" className="footer-link">
-                <AtSign size={15} /> Instagram
-              </a>
-              <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer" className="footer-link">
-                <ExternalLink size={15} /> GitHub
-              </a>
-              <a href="mailto:hananqaisar316@gmail.com" className="footer-link">
-                <Mail size={15} /> hananqaisar316@gmail.com
-              </a>
+              <button className="footer-link-btn" onClick={() => navigate('/privacy')}>Privacy Policy</button>
+              <button className="footer-link-btn" onClick={() => navigate('/terms')}>Terms of Service</button>
+              <button className="footer-link-btn" onClick={() => navigate('/cookies')}>Cookies</button>
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Connect */}
           <div className="footer-col">
-            <h3 className="footer-heading">Quick Links</h3>
+            <h3 className="footer-heading">Connect</h3>
+            <div className="footer-social-row">
+              {SOCIAL_LINKS.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.name}
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer-social-btn"
+                    aria-label={social.name}
+                    title={social.name}
+                  >
+                    <Icon size={18} />
+                  </a>
+                );
+              })}
+            </div>
+            <h3 className="footer-heading footer-team-heading">Team</h3>
             <div className="footer-links">
-              <button className="footer-link-btn" onClick={() => scrollToSection('hero')}>Home</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('features')}>Features</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('reviews')}>Reviews</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('faqs')}>FAQs</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('modules')}>Modules</button>
+              <a
+                href={AFTAB_LINKEDIN}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-link"
+              >
+                <LinkedInIcon /> M. Aftab Riaz
+              </a>
+              <a
+                href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-link"
+              >
+                <LinkedInIcon /> Hanan Qaisar
+              </a>
             </div>
           </div>
         </div>
 
         <div className="footer-bottom">
-          <p>Built with <Heart size={13} fill="currentColor" /> by STEM Studio Team</p>
-          <p className="footer-copy">&copy; {new Date().getFullYear()} STEM Studio. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} STEM Studio. All rights reserved.</p>
+          <div className="footer-bottom-links">
+            <button onClick={() => navigate('/sitemap')}>Sitemap</button>
+            <button onClick={() => navigate('/contact')}>Contact</button>
+          </div>
         </div>
       </footer>
     </div>

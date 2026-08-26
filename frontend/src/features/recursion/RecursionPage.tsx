@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   GitBranch, Calculator, Binary, Sigma, Layers, HelpCircle, Maximize2, Sparkles, Trash2,
 } from 'lucide-react';
@@ -14,7 +15,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildRecursionCheckpoints } from './quizAdapter';
+import { buildRecursionCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { runFactorial } from './algorithms/factorial';
@@ -25,6 +26,7 @@ import { runTowerOfHanoi } from './algorithms/towerOfHanoi';
 
 import '../sorting/Sorting.css';
 import './Recursion.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type RecursionAlgorithmKey = 'factorial' | 'fibonacci' | 'power' | 'arraySum' | 'towerOfHanoi';
 
@@ -45,6 +47,14 @@ const ALGORITHMS: AlgMeta[] = [
 
 export const RecursionPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<RecursionAlgorithmKey>('fibonacci');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as RecursionAlgorithmKey);
+    }
+  }, [searchParams]);
+
 
   // Algorithm-specific inputs
   const [factorialN, setFactorialN] = useState<number>(5);
@@ -92,6 +102,7 @@ export const RecursionPage: React.FC = () => {
     stepForward,
     module: 'recursion' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   /* ── Controls ────────────────────────────────────────────────────── */
@@ -353,6 +364,8 @@ export const RecursionPage: React.FC = () => {
       >
         <RecursionTreeRenderer currentStep={currentStep} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="recursion" activeTopic={selectedAlg} />
+
     </div>
   );
 };

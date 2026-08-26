@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Clock, Package, Calendar, FileText, Maximize2, HelpCircle, Sparkles, Layers, Trash2
 } from 'lucide-react';
@@ -14,7 +15,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildGreedyCheckpoints } from './quizAdapter';
+import { buildGreedyCheckpoints, buildRevisionData } from './quizAdapter';
 import type { GreedyAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
@@ -25,6 +26,7 @@ import { runHuffmanCoding } from './algorithms/huffmanCoding';
 
 import '../sorting/Sorting.css';
 import './Greedy.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgMeta {
   key: GreedyAlgorithmKey;
@@ -82,6 +84,14 @@ function parseJobs(raw: string): Job[] {
 
 export const GreedyPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<GreedyAlgorithmKey>('activitySelection');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as GreedyAlgorithmKey);
+    }
+  }, [searchParams]);
+
 
   // Debugger & Modal & Quiz state
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
@@ -149,6 +159,7 @@ export const GreedyPage: React.FC = () => {
     stepForward,
     module: 'greedy' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   // Clear quiz when algorithm or inputs change
@@ -492,6 +503,8 @@ export const GreedyPage: React.FC = () => {
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="greedy" activeTopic={selectedAlg} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal

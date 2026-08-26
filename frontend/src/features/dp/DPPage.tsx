@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Edit3, Maximize2, HelpCircle, Sparkles, Trash2, Layers,
   Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins,
@@ -16,7 +17,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildDPCheckpoints } from './quizAdapter';
+import { buildDPCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { runFibonacciDP } from './algorithms/fibonacciDP';
@@ -30,6 +31,7 @@ import { runUniquePaths } from './algorithms/uniquePaths';
 
 import '../sorting/Sorting.css';
 import './DP.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type DPAlgorithmKey = 'fibonacciDP' | 'coinChange' | 'houseRobber' | 'knapsack01' | 'lcs' | 'lis' | 'editDistance' | 'uniquePaths';
 
@@ -53,6 +55,14 @@ const ALGORITHMS: AlgMeta[] = [
 
 export const DPPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<DPAlgorithmKey>('fibonacciDP');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as DPAlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
@@ -109,6 +119,7 @@ export const DPPage: React.FC = () => {
     stepForward,
     module: 'dp' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   useEffect(() => {
@@ -527,6 +538,8 @@ export const DPPage: React.FC = () => {
           onClose={() => setShowCustomEditor(false)}
         />
       )}
+      <TheoryPanel categoryId="dp" activeTopic={selectedAlg} />
+
     </div>
   );
 };

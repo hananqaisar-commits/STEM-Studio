@@ -1,5 +1,6 @@
+import secrets
 from typing import List, Union
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 import json
@@ -29,14 +30,19 @@ class Settings(BaseSettings):
 
 
     # JWT Configuration
-    JWT_SECRET_KEY: str = "change-this-to-a-secure-random-key"
+    # In production JWT_SECRET_KEY MUST be set via environment variables.
+    # A random default is used here so that local development does not run
+    # with a well-known secret, but tokens will not survive a server restart.
+    JWT_SECRET_KEY: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS & Frontend
-    CORS_ORIGINS: Union[List[str], str] = ["*"]
     FRONTEND_URL: str = "http://localhost:5173"
+    # By default only the configured frontend origin is allowed. Override with
+    # a comma-separated list or JSON array in production.
+    CORS_ORIGINS: Union[List[str], str] = [FRONTEND_URL]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -50,7 +56,16 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
-        return ["*"]
+        return [FRONTEND_URL]
+
+    @field_validator("JWT_ALGORITHM", mode="before")
+    @classmethod
+    def validate_jwt_algorithm(cls, v: str) -> str:
+        """Reject the insecure 'none' algorithm or any unknown algorithm."""
+        allowed = {"HS256", "HS384", "HS512"}
+        if v not in allowed:
+            raise ValueError(f"JWT_ALGORITHM must be one of {allowed}")
+        return v
 
 
     # SMTP Email Configuration
