@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import { buildOptions, type QuizCheckpoint, type QuizWeight } from '../../engine/types/Quiz';
+import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionData } from '../../engine/types/Quiz';
 
 /* ── Recursion quiz adapter ────────────────────────────────────────────
    Builds conceptual checkpoints for each recursion algorithm.
@@ -197,4 +197,48 @@ export function buildRecursionCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<RecursionAlgorithmKey, QuizRevisionData> = {
+  factorial: {
+    description: 'Compute n! by multiplying n × (n-1) × ... × 1',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'Base case: fact(0) = 1; recursive: fact(n) = n × fact(n-1)',
+    watchFor: ['Base case', 'Recursive decomposition', 'Stack depth'],
+    quickTip: 'The recursion depth equals n—each call waits for the one below it to return',
+  },
+  fibonacci: {
+    description: 'Compute nth Fibonacci number using recursion',
+    complexity: 'O(2^n) time, O(n) space',
+    keyIdea: 'fib(n) = fib(n-1) + fib(n-2) with base cases fib(0)=0, fib(1)=1',
+    watchFor: ['Exponential branching', 'Overlapping subproblems', 'Memoization opportunity'],
+    quickTip: 'Naive recursion recomputes the same values many times—memoization reduces to O(n)',
+  },
+  power: {
+    description: 'Compute base^exp using recursion',
+    complexity: 'O(exp) time, O(exp) space',
+    keyIdea: 'Base case: power(b, 0) = 1; recursive: power(b, e) = b × power(b, e-1)',
+    watchFor: ['Base case (exp=0)', 'Negative exponent handling', 'Optimization (fast power)'],
+    quickTip: 'Fast exponentiation: power(b, e) = power(b, e/2)² × (b if e is odd) gives O(log e)',
+  },
+  arraySum: {
+    description: 'Sum array elements recursively',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'sum(arr, i) = arr[i] + sum(arr, i+1) with base case i >= length returning 0',
+    watchFor: ['Index progression', 'Base case (past end)', 'Accumulation pattern'],
+    quickTip: 'Each recursive call handles one element—the rest is delegated to the next call',
+  },
+  towerOfHanoi: {
+    description: 'Move n disks from source to destination using an auxiliary peg',
+    complexity: 'O(2^n) time, O(n) space',
+    keyIdea: 'Move n-1 disks aside, move largest disk, move n-1 disks on top—3 recursive steps',
+    watchFor: ['Three-peg logic', 'Move count (2^n - 1)', 'Peg role swapping'],
+    quickTip: 'The auxiliary peg in one call becomes the destination in another—roles rotate',
+  },
+};
+
+export function buildRevisionData(key: RecursionAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }

@@ -46,6 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     { value: 'system', label: 'System', icon: <Monitor size={14} /> },
   ];
 
+  const isOnDashboard = location.pathname === '/dashboard';
+
   return (
     <header className="app-navbar">
       <div className="navbar-left">
@@ -68,7 +70,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
       {/* Breadcrumb — shows current category context */}
       <nav className="navbar-center">
-        {currentCategory ? (
+        {isOnDashboard ? (
+          <div className="nav-section-links">
+            <a href="#hero" className="nav-section-link">Home</a>
+            <a href="#features" className="nav-section-link">Features</a>
+            <a href="#reviews" className="nav-section-link">Reviews</a>
+            <a href="#faqs" className="nav-section-link">FAQs</a>
+          </div>
+        ) : currentCategory ? (
           <div className="nav-breadcrumb">
             <Link to="/dashboard" className="nav-crumb-link">DSA</Link>
             <ChevronRight size={14} className="nav-crumb-sep" />

@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import type { QuizCheckpoint, QuizQuestion } from '../../engine/types/Quiz';
+import type { QuizCheckpoint, QuizQuestion , QuizRevisionData } from '../../engine/types/Quiz';
 import { buildOptions } from '../../engine/types/Quiz';
 
 type ArrayAlgorithmKey = 'linearSearch' | 'kadane' | 'twoPointer' | 'slidingWindow' | 'rotation' | 'prefixSum';
@@ -330,4 +330,55 @@ export function buildArraysCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<ArrayAlgorithmKey, QuizRevisionData> = {
+  linearSearch: {
+    description: 'Scan through array elements one by one to find a target',
+    complexity: 'O(n) time, O(1) space',
+    keyIdea: 'Check each element sequentially until the target is found or array ends',
+    watchFor: ['Worst case scenario', 'Early termination', 'Comparison with binary search'],
+    quickTip: 'Linear search works on unsorted data but is slow for large arrays',
+  },
+  kadane: {
+    description: 'Find the contiguous subarray with the maximum sum',
+    complexity: 'O(n) time, O(1) space',
+    keyIdea: 'A negative running sum cannot help future elements—reset when sum < 0',
+    watchFor: ['Reset condition', 'Current sum vs max sum tracking', 'All negative case'],
+    quickTip: 'If current sum drops below zero, start fresh from the next element',
+  },
+  twoPointer: {
+    description: 'Use two pointers moving inward to find a pair summing to target',
+    complexity: 'O(n) time, O(1) space',
+    keyIdea: 'In a sorted array, moving left pointer right increases sum, moving right pointer left decreases it',
+    watchFor: ['Sorted array requirement', 'Pointer movement logic', 'When to stop'],
+    quickTip: 'Requires sorted input—if sum too small move left pointer right, if too large move right pointer left',
+  },
+  slidingWindow: {
+    description: 'Maintain a window of size k and slide it across the array',
+    complexity: 'O(n) time, O(1) space',
+    keyIdea: 'When window slides by 1, only one element enters and one leaves—update in O(1)',
+    watchFor: ['Window size', 'Element entering vs leaving', 'Initial window setup'],
+    quickTip: 'Compute the first window fully, then update by adding new element and removing old',
+  },
+  rotation: {
+    description: 'Rotate array elements by k positions',
+    complexity: 'O(n) time, O(1) space',
+    keyIdea: 'Rotation by k is equivalent to rotation by k mod n',
+    watchFor: ['Modulo arithmetic', 'Reversal technique', 'Direction of rotation'],
+    quickTip: 'Use the reversal algorithm: reverse all, reverse first k, reverse rest',
+  },
+  prefixSum: {
+    description: 'Build cumulative sum array for O(1) range sum queries',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'prefix[i] = arr[0] + arr[1] + ... + arr[i], enabling range queries',
+    watchFor: ['Prefix array construction', 'Range sum formula', 'Index off-by-one'],
+    quickTip: 'Range sum from L to R is prefix[R] - prefix[L-1] (handle L=0 specially)',
+  },
+};
+
+export function buildRevisionData(key: ArrayAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }

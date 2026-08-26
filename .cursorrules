@@ -356,3 +356,87 @@ architecture:system-studio/
 ├── .env.example
 └── README.md
 ```
+
+## Quiz Mode Standards
+
+### Architecture
+The quiz system has 6 phases: `idle → revision → asking → retrying → revealed → report`
+- **idle**: Mode selection cards (Concept/Guided/Challenge), score summary, optional revision/report buttons
+- **revision**: Pre-quiz last-minute review card (keyIdea, watchFor, quickTip, complexity)
+- **asking/retrying/revealed**: Active question with options, feedback, per-mode features
+- **report**: Post-quiz performance analysis (score, concept breakdown, weak points, advice, actions)
+
+### Three Quiz Modes (Cadence Levels)
+| Mode | Weight | Identity | Special Features |
+|------|--------|----------|-----------------|
+| Concept (light) | 1 only | Build understanding | Key Idea insight box after each answer, no timer |
+| Guided (normal) | 1-2 | Follow the flow | Progress bar, hints on wrong, full explanations |
+| Challenge (intensive) | 1-3 | Master every decision | 15s countdown timer, streak multipliers (x2 at 3+, x3 at 5+) |
+
+### QuizQuestion Contract
+- `prompt` must be answerable from the canvas/visualization alone
+- `options` must NOT contain the comparison/data that decides the answer (no leaks)
+- `correctIndex` is deterministically hashed from questionId for stable positioning
+- Use `buildOptions(questionId, correct, distractors)` for answer assembly
+
+### Adapter Pattern
+Each category has a `quizAdapter.ts` that exports:
+- `buildXxxCheckpoints(steps, algorithmKey) → QuizCheckpoint[]` — questions from step data
+- `buildRevisionData(algorithmKey) → QuizRevisionData` — pre-quiz review data
+
+Revision data must include: description, complexity (time+space), keyIdea, watchFor (2-3 items), quickTip
+
+### Dynamic Question Generation
+Use `components/quiz/quizQuestionBuilder.ts` shared utilities:
+- `compareStepQuestion(step, nextStep, stepIdx)` — "Will these elements be swapped?"
+- `valueAtQuestion(step, idx, label, stepIdx)` — "What value is at index X?"
+- `stateTransitionQuestion(step, nextStep, field, stepIdx, label)` — "What changes?"
+- `sortedCountQuestion(step, stepIdx)` — "How many are in final position?"
+- `nextActionQuestion(step, nextStep, stepIdx, name)` — "What does the algorithm do next?"
+
+Questions should derive from actual step data, NOT hard-coded prompts. The sorting adapter is the gold standard.
+
+### Post-Quiz Report Requirements
+- Score summary: X/Y correct, percentage, best streak
+- Concept breakdown: grouped by concept tag, sorted worst-first
+- Weak points: concepts with wrong answers + "What to review" advice
+- Contextual advice based on score percentage
+- Actions: Retry, Try Harder Mode (disabled if already Challenge), Back to Learning
+
+### UI Standards
+- All quiz UI lives in the `quiz-dock` slot (first card in right-hand rail)
+- Use CSS variables: `--quiz-accent` (#818cf8), `--quiz-ok-soft`, `--quiz-bad-soft`
+- Mode cards: icon + name + identity tagline, active card gets accent border
+- Timer bar: 4px height, accent color → red when ≤5s remaining
+- Progress bar: 3px height, accent color fill
+- Streak badge: yellow background with Zap icon, shown when multiplier > 1
+- Insight box: accent-tinted background with Lightbulb icon (Concept mode only)
+- Report card: score percentage (green ≥70%, amber ≥50%, red <50%), concept bars, weak points
+
+### Page Integration Pattern
+```tsx
+<QuizDock
+  session={quizSession}
+  cadence={cadence}
+  onCadenceChange={setCadence}
+  algorithmName={selectedAlgorithmName}
+  onRetry={() => quizSession.resetSession()}
+  onHarderMode={() => {
+    const next = cadence === 'light' ? 'normal' : 'intensive';
+    setCadence(next);
+  }}
+/>
+```
+Use `maskNarration(step.description, quizSession.phase)` to prevent step narration from spoiling answers.
+
+### Testing Checklist
+- [ ] Revision card shows before first question when revisionData exists
+- [ ] Mode cards render with correct icons and identities
+- [ ] Timer starts in Challenge mode, auto-reveals at 0
+- [ ] Progress bar shows in Guided mode
+- [ ] Streak multiplier badge appears at 3+ streak
+- [ ] Key Idea insight box shows in Concept mode after reveal
+- [ ] Report card shows after last checkpoint with score, concepts, weak points
+- [ ] Retry resets session, Harder Mode bumps cadence
+- [ ] Same behavior across all 14 categories
+- [ ] Works in all 5 themes

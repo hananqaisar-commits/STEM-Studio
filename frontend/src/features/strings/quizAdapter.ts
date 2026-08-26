@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import { buildOptions, type QuizCheckpoint, type QuizWeight } from '../../engine/types/Quiz';
+import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionData } from '../../engine/types/Quiz';
 
 export type StringAlgorithmKey = 'palindrome' | 'anagram' | 'reverse' | 'frequency';
 
@@ -241,4 +241,41 @@ export function buildStringsCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<StringAlgorithmKey, QuizRevisionData> = {
+  palindrome: {
+    description: 'Check if a string reads the same forwards and backwards',
+    complexity: 'O(n) time, O(1) space',
+    keyIdea: 'Compare characters from both ends moving inward—mismatch means not a palindrome',
+    watchFor: ['Two-pointer technique', 'Early termination on mismatch', 'Case sensitivity'],
+    quickTip: 'Stop at the first mismatch—no need to check the entire string',
+  },
+  anagram: {
+    description: 'Check if two strings have the same character frequencies',
+    complexity: 'O(n) time, O(k) space',
+    keyIdea: 'Two strings are anagrams iff their character frequency maps are identical',
+    watchFor: ['Frequency counting', 'Length check optimization', 'Character set size'],
+    quickTip: 'Quick reject: if lengths differ, they cannot be anagrams',
+  },
+  reverse: {
+    description: 'Reverse a string in-place using two pointers',
+    complexity: 'O(n) time, O(1) space',
+    keyIdea: 'Swap characters at symmetric positions moving inward from both ends',
+    watchFor: ['Number of swaps needed', 'Odd vs even length handling', 'In-place requirement'],
+    quickTip: 'Exactly ⌊n/2⌋ swaps are needed—the middle character (if odd length) stays put',
+  },
+  frequency: {
+    description: 'Count occurrences of each character in a string',
+    complexity: 'O(n) time, O(k) space',
+    keyIdea: 'Use a hash map or array to track how many times each character appears',
+    watchFor: ['Space complexity (alphabet size)', 'Hash map vs array choice', 'Case handling'],
+    quickTip: 'For lowercase English letters, use an array of size 26 indexed by char - "a"',
+  },
+};
+
+export function buildRevisionData(key: StringAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }

@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import { buildOptions, type QuizCheckpoint, type QuizWeight } from '../../engine/types/Quiz';
+import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionData } from '../../engine/types/Quiz';
 
 /* ── Sorting quiz adapter ──────────────────────────────────────────────
    Sorting had no quiz data of any kind: SortingPage derived one
@@ -678,4 +678,83 @@ export function buildSortingCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
+  bubble: {
+    description: 'Repeatedly swap adjacent elements if they are in wrong order',
+    complexity: 'O(n²) time, O(1) space',
+    keyIdea: 'After each pass, the largest unsorted element bubbles to its correct position',
+    watchFor: ['Number of passes needed', 'When swaps occur', 'Early termination condition'],
+    quickTip: 'Track the last swap position to skip already-sorted tail elements',
+  },
+  selection: {
+    description: 'Find the minimum element and place it at the current position',
+    complexity: 'O(n²) time, O(1) space',
+    keyIdea: 'The array is divided into sorted (left) and unsorted (right) regions',
+    watchFor: ['Minimum finding process', 'Swap count', 'Comparison with bubble sort'],
+    quickTip: 'Selection sort always makes exactly n-1 swaps regardless of input',
+  },
+  insertion: {
+    description: 'Build sorted array one element at a time by inserting each into correct position',
+    complexity: 'O(n²) time, O(1) space',
+    keyIdea: 'Maintain a sorted prefix; insert each new element by shifting larger elements right',
+    watchFor: ['Shift operations', 'Best case (already sorted)', 'Comparison with selection sort'],
+    quickTip: 'Best case is O(n) when array is already sorted—no shifts needed',
+  },
+  merge: {
+    description: 'Divide array in half, recursively sort, then merge the sorted halves',
+    complexity: 'O(n log n) time, O(n) space',
+    keyIdea: 'Two sorted arrays can be merged in linear time by comparing front elements',
+    watchFor: ['Divide step', 'Merge process', 'Space complexity reason'],
+    quickTip: 'Merge sort needs O(n) extra space for the merge operation',
+  },
+  quick: {
+    description: 'Pick a pivot, partition around it, recursively sort subarrays',
+    complexity: 'O(n log n) avg time, O(log n) space',
+    keyIdea: 'After partitioning, the pivot is in its final sorted position',
+    watchFor: ['Pivot selection', 'Partition logic', 'Worst case scenario'],
+    quickTip: 'Worst case O(n²) occurs with poor pivot choice (e.g., always picking min/max)',
+  },
+  heap: {
+    description: 'Build a max heap, then repeatedly extract the maximum to sort',
+    complexity: 'O(n log n) time, O(1) space',
+    keyIdea: 'A max heap keeps the largest element at the root for O(1) access',
+    watchFor: ['Heapify process', 'Heap property maintenance', 'In-place sorting'],
+    quickTip: 'Heap sort is in-place but not stable—equal elements may change relative order',
+  },
+  shell: {
+    description: 'Insertion sort with decreasing gap sequences for faster convergence',
+    complexity: 'O(n log²n) time, O(1) space',
+    keyIdea: 'Sorting with large gaps first allows elements to move far in few swaps',
+    watchFor: ['Gap sequence', 'Comparison with insertion sort', 'Why gaps help'],
+    quickTip: 'Shell sort is insertion sort applied to widely spaced elements first',
+  },
+  counting: {
+    description: 'Count occurrences of each value, then reconstruct sorted array',
+    complexity: 'O(n + k) time, O(k) space',
+    keyIdea: 'If values are in a small range k, we can count them directly',
+    watchFor: ['Count array construction', 'Stable reconstruction', 'Range limitation'],
+    quickTip: 'Only works when the range k of values is not much larger than n',
+  },
+  radix: {
+    description: 'Sort by each digit position from least to most significant',
+    complexity: 'O(d·(n + k)) time, O(n + k) space',
+    keyIdea: 'Stable sorting by each digit preserves order from previous passes',
+    watchFor: ['Digit extraction', 'Stability requirement', 'Number of passes'],
+    quickTip: 'Radix sort requires a stable subroutine like counting sort per digit',
+  },
+  bucket: {
+    description: 'Distribute elements into buckets, sort each bucket, concatenate',
+    complexity: 'O(n + k) avg time, O(n) space',
+    keyIdea: 'Uniformly distributed data means each bucket has O(1) elements',
+    watchFor: ['Bucket distribution', 'Sorting within buckets', 'When it degrades'],
+    quickTip: 'Works best when input is uniformly distributed across a known range',
+  },
+};
+
+export function buildRevisionData(key: SortingAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }
