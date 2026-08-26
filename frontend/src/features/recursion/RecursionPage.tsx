@@ -240,13 +240,10 @@ export const RecursionPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
+      <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} /><span>Quiz Mode</span>
-      </button>
+        <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
+      </label>
     </div>
   );
 
@@ -302,13 +299,10 @@ export const RecursionPage: React.FC = () => {
           </div>
         </div>
         <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
+          <label className="predict-toggle-label">
             <HelpCircle size={16} /><span>Quiz Mode</span>
-          </button>
+            <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
+          </label>
           <button className="bst-btn btn-fullscreen"
             onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
             <Maximize2 size={14} />
@@ -330,9 +324,8 @@ export const RecursionPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
+            title="Recursion"
             activeLine={currentStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={currentStep?.variables}
             callStack={currentStep?.callStack}
             currentArray={[]}
