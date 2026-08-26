@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Minimize2, Sun, Moon } from 'lucide-react';
+import { Minimize2 } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 import './FullScreenCanvasModal.css';
 
 interface FullScreenCanvasModalProps {
@@ -22,7 +23,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   playbackControls,
   children,
 }) => {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const { actualTheme } = useTheme();
 
   // Trigger native browser fullscreen
   useEffect(() => {
@@ -51,7 +52,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={`fs-modal-overlay theme-${theme} animate-fade-in`}>
+    <div className={`fs-modal-overlay theme-${actualTheme} animate-fade-in`}>
       {/* Top Floating Glassmorphic Header Toolbar */}
       <header className="fs-modal-header">
         <div className="fs-header-branding">
@@ -67,16 +68,6 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
         )}
 
         <div className="fs-header-actions">
-          {/* Light / Dark Mode Toggle */}
-          <button
-            className="fs-icon-btn theme-toggle-btn"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-          >
-            {theme === 'dark' ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-indigo-400" />}
-            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-          </button>
-
           {/* Exit Fullscreen Button */}
           <button className="fs-icon-btn exit-fs-btn" onClick={onClose} title="Exit Fullscreen Mode">
             <Minimize2 size={15} />

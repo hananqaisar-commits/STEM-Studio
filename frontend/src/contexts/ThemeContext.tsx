@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type Theme = 'grayscale-light' | 'warm-light' | 'dark' | 'warm-neutral' | 'system';
+export type Theme = 'grayscale-light' | 'warm-light' | 'dark' | 'warm-neutral' | 'blue' | 'system';
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  actualTheme: 'grayscale-light' | 'warm-light' | 'dark' | 'warm-neutral';
+  actualTheme: 'grayscale-light' | 'warm-light' | 'dark' | 'warm-neutral' | 'blue';
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -16,7 +16,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return savedTheme || 'grayscale-light';
   });
 
-  const [actualTheme, setActualTheme] = useState<'grayscale-light' | 'warm-light' | 'dark' | 'warm-neutral'>('grayscale-light');
+  const [actualTheme, setActualTheme] = useState<'grayscale-light' | 'warm-light' | 'dark' | 'warm-neutral' | 'blue'>('grayscale-light');
 
   useEffect(() => {
     localStorage.setItem('app-theme', theme);
@@ -28,7 +28,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const resolved = systemPrefersDark ? 'dark' : 'grayscale-light';
         root.setAttribute('data-theme', resolved);
-        setActualTheme(resolved);
+        setActualTheme(resolved as 'grayscale-light' | 'warm-light' | 'dark' | 'warm-neutral' | 'blue');
       } else {
         root.setAttribute('data-theme', t);
         setActualTheme(t);
