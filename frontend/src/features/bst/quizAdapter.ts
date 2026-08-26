@@ -1,5 +1,5 @@
 import type { BSTStep, PredictionPoint } from './bstEngine';
-import { buildOptions, type QuizCheckpoint, type QuizWeight } from '../../engine/types/Quiz';
+import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionData } from '../../engine/types/Quiz';
 
 /* ── BST quiz adapter ──────────────────────────────────────────────────
    BST already carried prediction data (`PredictionPoint` on insert and
@@ -185,4 +185,50 @@ export function buildBSTCheckpoints(steps: BSTStep[]): QuizCheckpoint[] {
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+type BSTAlgorithmKey = 'insert' | 'search' | 'inorder' | 'preorder' | 'postorder';
+
+const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
+  insert: {
+    description: 'Insert a new value into a binary search tree',
+    complexity: 'O(h) time, O(h) space',
+    keyIdea: 'Follow the BST property: smaller values go left, larger values go right',
+    watchFor: ['Comparison at each node', 'Traversal direction', 'Leaf insertion'],
+    quickTip: 'Always insert as a leaf—traverse until you hit null, then create the node',
+  },
+  search: {
+    description: 'Find a target value in a binary search tree',
+    complexity: 'O(h) time, O(h) space',
+    keyIdea: 'At each node, the BST property tells you which subtree to search next',
+    watchFor: ['Direction decision', 'Termination conditions', 'Worst case (skewed tree)'],
+    quickTip: 'If target < node go left, if target > node go right, if equal you found it',
+  },
+  inorder: {
+    description: 'Traverse the tree in left-node-right order',
+    complexity: 'O(n) time, O(h) space',
+    keyIdea: 'Inorder traversal of a BST visits nodes in ascending sorted order',
+    watchFor: ['Visit order (L-N-R)', 'Stack/recursion depth', 'Sorted output property'],
+    quickTip: 'Inorder on a BST always produces elements in sorted order—useful for validation',
+  },
+  preorder: {
+    description: 'Traverse the tree in node-left-right order',
+    complexity: 'O(n) time, O(h) space',
+    keyIdea: 'Visit the node before its children—useful for copying the tree structure',
+    watchFor: ['Visit order (N-L-R)', 'Root-first property', 'Serialization use'],
+    quickTip: 'Preorder is useful for creating a copy of the tree or serialization',
+  },
+  postorder: {
+    description: 'Traverse the tree in left-right-node order',
+    complexity: 'O(n) time, O(h) space',
+    keyIdea: 'Visit children before the node—useful for deletion (children before parent)',
+    watchFor: ['Visit order (L-R-N)', 'Bottom-up processing', 'Deletion use case'],
+    quickTip: 'Postorder processes all descendants before their parent—ideal for safe deletion',
+  },
+};
+
+export function buildRevisionData(key: BSTAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }

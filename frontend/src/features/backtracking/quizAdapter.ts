@@ -1,5 +1,5 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import type { QuizCheckpoint, QuizQuestion } from '../../engine/types/Quiz';
+import type { QuizCheckpoint, QuizQuestion , QuizRevisionData } from '../../engine/types/Quiz';
 import { buildOptions } from '../../engine/types/Quiz';
 
 type BacktrackingAlgorithmKey = 'subsets' | 'permutations' | 'nQueens' | 'combinationSum';
@@ -244,4 +244,41 @@ export function buildBacktrackingCheckpoints(
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<BacktrackingAlgorithmKey, QuizRevisionData> = {
+  subsets: {
+    description: 'Generate all subsets of a given set',
+    complexity: 'O(2^n · n) time, O(n) space',
+    keyIdea: 'Each element has two choices: include or exclude—forming a binary decision tree',
+    watchFor: ['Include/exclude branching', 'Base case (all elements decided)', 'Subset recording'],
+    quickTip: 'At each level decide one element—recurse with it included, then backtrack and recurse without it',
+  },
+  permutations: {
+    description: 'Generate all permutations of an array',
+    complexity: 'O(n! · n) time, O(n) space',
+    keyIdea: 'Fix each position by trying every remaining element, then recurse to fix the next position',
+    watchFor: ['Position fixing', 'Swap/restore pattern', 'Used array tracking'],
+    quickTip: 'Use a boolean array to track which elements are used, or swap elements in place to avoid extra space',
+  },
+  nQueens: {
+    description: 'Place n queens on an n×n board so no two attack each other',
+    complexity: 'O(n!) time, O(n²) space',
+    keyIdea: 'Place one queen per row, checking column and diagonal conflicts with placed queens',
+    watchFor: ['Conflict checking', 'Row-by-row placement', 'Backtrack on failure'],
+    quickTip: 'Use sets to track occupied columns and both diagonals—row is implicit from recursion depth',
+  },
+  combinationSum: {
+    description: 'Find all combinations that sum to a target',
+    complexity: 'O(2^t) time, O(t) space',
+    keyIdea: 'Try each candidate, recurse with reduced remainder; prune when remainder goes negative',
+    watchFor: ['Pruning condition', 'Reuse allowance', 'Remainder tracking'],
+    quickTip: 'If candidates can be reused, recurse from the same index; otherwise advance to next index',
+  },
+};
+
+export function buildRevisionData(key: BacktrackingAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }

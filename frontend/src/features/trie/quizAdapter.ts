@@ -1,5 +1,5 @@
 import type { TrieStep } from './algorithms/trieTypes';
-import type { QuizCheckpoint, QuizQuestion } from '../../engine/types/Quiz';
+import type { QuizCheckpoint, QuizQuestion , QuizRevisionData } from '../../engine/types/Quiz';
 import { buildOptions } from '../../engine/types/Quiz';
 
 export type TrieAlgorithmKey = 'trieInsert' | 'trieSearch' | 'triePrefix' | 'wordDictionary' | 'autocomplete';
@@ -239,4 +239,48 @@ export function buildTrieCheckpoints(steps: TrieStep[], algorithm: TrieAlgorithm
   }
 
   return checkpoints;
+}
+
+/* ── Revision data ─────────────────────────────────────────────────── */
+
+const REVISION_DATA: Record<TrieAlgorithmKey, QuizRevisionData> = {
+  trieInsert: {
+    description: 'Insert a word into a Trie character by character',
+    complexity: 'O(m) time, O(m) space',
+    keyIdea: 'Follow or create nodes for each character, mark end-of-word at the last node',
+    watchFor: ['Node creation vs reuse', 'End-of-word marking', 'Path sharing'],
+    quickTip: 'Only create new nodes when the character path does not exist—reuse existing nodes',
+  },
+  trieSearch: {
+    description: 'Search for an exact word in a Trie',
+    complexity: 'O(m) time, O(1) space',
+    keyIdea: 'Follow the character path; word exists only if all nodes exist AND the last has end-of-word marker',
+    watchFor: ['Path existence check', 'End-of-word verification', 'Prefix vs exact match'],
+    quickTip: 'Finding all characters is not enough—the final node must have the end-of-word flag set',
+  },
+  triePrefix: {
+    description: 'Find all words in a Trie that start with a given prefix',
+    complexity: 'O(p + k) time, O(k) space',
+    keyIdea: 'Navigate to the prefix node, then DFS to collect all words in its subtree',
+    watchFor: ['Prefix navigation', 'DFS collection', 'Empty prefix handling'],
+    quickTip: 'If the prefix path does not exist, return empty—otherwise collect all end-of-word nodes below',
+  },
+  wordDictionary: {
+    description: 'Support word search with wildcard "." matching any character',
+    complexity: 'O(m) time for exact, O(26^m) worst case',
+    keyIdea: 'On wildcard ".", branch to all children; on literal, follow only the matching child',
+    watchFor: ['Wildcard branching', 'Recursion/backtracking', 'Early termination'],
+    quickTip: 'Wildcards force exploration of all children—this is why worst case is exponential',
+  },
+  autocomplete: {
+    description: 'Suggest words based on a typed prefix',
+    complexity: 'O(p + k) time, O(k) space',
+    keyIdea: 'Navigate to prefix node, then DFS to collect complete words in the subtree',
+    watchFor: ['Prefix matching', 'DFS word collection', 'Result limiting'],
+    quickTip: 'Limit results by stopping DFS after collecting enough suggestions—useful for real-time UI',
+  },
+};
+
+export function buildRevisionData(key: TrieAlgorithmKey): QuizRevisionData {
+  return REVISION_DATA[key];
 }
