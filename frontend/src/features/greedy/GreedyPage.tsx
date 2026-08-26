@@ -95,7 +95,7 @@ export const GreedyPage: React.FC = () => {
 
   // Debugger & Modal & Quiz state
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Algorithm-specific parameters

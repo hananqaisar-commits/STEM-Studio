@@ -65,7 +65,7 @@ export const RecursionPage: React.FC = () => {
   const [hanoiN, setHanoiN]         = useState<number>(3);
 
   // Quiz state
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
 

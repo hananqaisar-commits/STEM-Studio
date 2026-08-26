@@ -75,7 +75,7 @@ export const GraphPage: React.FC = () => {
   const [edges, setEdges] = useState<GraphEdge[]>(() => getPresetGraph('standard').edges);
 
   // Modes & Modals
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = React.useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
