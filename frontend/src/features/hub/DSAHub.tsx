@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-  Sparkles, X, Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
+  Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
   MessageSquare, ChevronDown, ExternalLink, AtSign, Send, Heart,
-  ArrowRight, type LucideIcon,
+  ArrowRight, BookOpen, Cpu, Monitor, type LucideIcon,
 } from 'lucide-react';
-import { DSA_CATEGORIES } from '../../data/categories';
+import { DSA_CATEGORIES, MODULES } from '../../data/categories';
 import './DSAHub.css';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
+};
+
+const MODULE_ICON_MAP: Record<string, LucideIcon> = {
+  BookOpen, Cpu, Monitor,
 };
 
 /* ── Bubble positions for dynamic category circles ────────────────── */
@@ -81,35 +85,9 @@ const CONTRIBUTORS = [
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
 
-  const totalCategories = DSA_CATEGORIES.length;
+  const availableModules = MODULES.filter(m => m.available).length;
+  const totalCategories = MODULES.reduce((sum, m) => sum + m.categoryCount, 0);
   const totalTopics = DSA_CATEGORIES.reduce((sum, c) => sum + c.topicCount, 0);
-
-  /* ── New feature detection ──────────────────────────────────────── */
-  const [newFeatures, setNewFeatures] = useState<string[]>([]);
-  const [dismissedNew, setDismissedNew] = useState(false);
-
-  useEffect(() => {
-    const STORAGE_KEY = 'stem-studio-known-categories';
-    const currentIds = DSA_CATEGORIES.filter(c => c.available).map(c => c.id);
-    const stored = localStorage.getItem(STORAGE_KEY);
-
-    if (stored) {
-      const knownIds: string[] = JSON.parse(stored);
-      const newOnes = currentIds.filter(id => !knownIds.includes(id));
-      if (newOnes.length > 0) {
-        setNewFeatures(newOnes);
-      }
-    } else {
-      // First visit — store all current
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentIds));
-    }
-  }, []);
-
-  const dismissNewFeatures = useCallback(() => {
-    const currentIds = DSA_CATEGORIES.filter(c => c.available).map(c => c.id);
-    localStorage.setItem('stem-studio-known-categories', JSON.stringify(currentIds));
-    setDismissedNew(true);
-  }, []);
 
   /* ── FAQ accordion state ────────────────────────────────────────── */
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -160,7 +138,7 @@ export const DSAHub: React.FC = () => {
             step-by-step execution, quiz-based learning, and multi-language code support.
           </p>
           <div className="hero-cta">
-            <button className="hero-btn hero-btn-primary" onClick={() => scrollToSection('categories')}>
+            <button className="hero-btn hero-btn-primary" onClick={() => navigate('/dashboard/dsa')}>
               Start Learning <ArrowRight size={16} />
             </button>
             <button className="hero-btn hero-btn-secondary" onClick={() => scrollToSection('features')}>
@@ -169,16 +147,16 @@ export const DSAHub: React.FC = () => {
           </div>
           <div className="hero-stats">
             <div className="hero-stat">
+              <span className="hero-stat-num">{availableModules}</span>
+              <span className="hero-stat-label">Modules</span>
+            </div>
+            <div className="hero-stat">
               <span className="hero-stat-num">{totalCategories}</span>
               <span className="hero-stat-label">Categories</span>
             </div>
             <div className="hero-stat">
               <span className="hero-stat-num">{totalTopics}+</span>
               <span className="hero-stat-label">Topics</span>
-            </div>
-            <div className="hero-stat">
-              <span className="hero-stat-num">3</span>
-              <span className="hero-stat-label">Quiz Modes</span>
             </div>
           </div>
         </div>
@@ -200,7 +178,7 @@ export const DSAHub: React.FC = () => {
                     ...pos,
                     animationDelay: `${i * 0.5}s`,
                   } as React.CSSProperties}
-                  onClick={() => navigate(`/dashboard/${cat.id}`)}
+                  onClick={() => navigate('/dashboard/dsa')}
                   title={cat.name}
                 >
                   <Icon size={18} />
@@ -212,63 +190,43 @@ export const DSAHub: React.FC = () => {
         </div>
       </section>
 
-      {/* ── New Feature Card ───────────────────────────────────────── */}
-      {newFeatures.length > 0 && !dismissedNew && (
-        <div className="new-feature-banner">
-          <div className="new-feature-content">
-            <Sparkles size={18} className="new-feature-icon" />
-            <div>
-              <strong>What&apos;s New!</strong>
-              {newFeatures.map(id => {
-                const cat = DSA_CATEGORIES.find(c => c.id === id);
-                return cat ? (
-                  <span key={id} className="new-feature-chip" onClick={() => navigate(`/dashboard/${cat.id}`)}>
-                    {cat.name} — {cat.topicCount} topics
-                  </span>
-                ) : null;
-              })}
-            </div>
-          </div>
-          <button className="new-feature-dismiss" onClick={dismissNewFeatures}>
-            <X size={16} />
-          </button>
-        </div>
-      )}
 
-      {/* ── Category Grid (existing) ──────────────────────────────── */}
-      <section id="categories" className="hub-categories-section">
+      {/* ── Module Grid ──────────────────────────────────────────────── */}
+      <section id="modules" className="hub-modules-section">
         <header className="hub-header">
-          <h2>All Categories</h2>
-          <p>Choose a category to start learning with interactive visualizations and quizzes.</p>
+          <h2>All Modules</h2>
+          <p>Choose a module to explore its categories, visualizers, and quizzes.</p>
         </header>
-        <div className="hub-grid">
-          {DSA_CATEGORIES.map((cat) => {
-            const Icon = ICON_MAP[cat.iconName] ?? Activity;
+        <div className="module-grid">
+          {MODULES.map((mod) => {
+            const Icon = MODULE_ICON_MAP[mod.iconName] ?? BookOpen;
             return (
               <div
-                key={cat.id}
-                className={`hub-card ${!cat.available ? 'hub-card-disabled' : ''}`}
-                onClick={() => cat.available && navigate(`/dashboard/${cat.id}`)}
+                key={mod.id}
+                className={`module-card ${!mod.available ? 'module-card-disabled' : ''}`}
+                onClick={() => mod.available && navigate(`/dashboard/${mod.id}`)}
               >
-                <div className="hub-card-icon">
-                  <Icon size={22} />
+                <div className="module-card-icon">
+                  <Icon size={28} />
                 </div>
-                <div className="hub-card-body">
-                  <h3>{cat.name}</h3>
-                  <p>{cat.description}</p>
+                <div className="module-card-body">
+                  <h3>{mod.name}</h3>
+                  <p>{mod.description}</p>
                 </div>
-                <div className="hub-card-footer">
-                  <span className="hub-card-topics">{cat.topicCount} topics</span>
-                  <span className={`hub-card-difficulty diff-${cat.difficulty.toLowerCase()}`}>
-                    {cat.difficulty}
-                  </span>
-                  {!cat.available && <span className="hub-card-soon">Coming Soon</span>}
+                <div className="module-card-footer">
+                  {mod.available ? (
+                    <span className="module-card-count">{mod.categoryCount} categories</span>
+                  ) : (
+                    <span className="module-card-soon">Coming Soon</span>
+                  )}
+                  <ArrowRight size={16} className="module-card-arrow" />
                 </div>
               </div>
             );
           })}
         </div>
       </section>
+
 
       {/* ── Features Section ───────────────────────────────────────── */}
       <section id="features" className="landing-section">
@@ -463,7 +421,7 @@ export const DSAHub: React.FC = () => {
               <button className="footer-link-btn" onClick={() => scrollToSection('features')}>Features</button>
               <button className="footer-link-btn" onClick={() => scrollToSection('reviews')}>Reviews</button>
               <button className="footer-link-btn" onClick={() => scrollToSection('faqs')}>FAQs</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('categories')}>Categories</button>
+              <button className="footer-link-btn" onClick={() => scrollToSection('modules')}>Modules</button>
             </div>
           </div>
         </div>
