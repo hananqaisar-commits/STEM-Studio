@@ -220,14 +220,11 @@ export const StringsPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
+      <label className="predict-toggle-label ml-2">
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
-      </button>
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
+      </label>
     </div>
   );
 
@@ -305,22 +302,25 @@ export const StringsPage: React.FC = () => {
         </div>
 
         <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} />
-            <span>Quiz Mode</span>
-          </button>
+          <div className="predict-mode-group flex items-center gap-2">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Quiz Mode</span>
+              <input
+                type="checkbox"
+                checked={quizEnabled}
+                onChange={(e) => setQuizEnabled(e.target.checked)}
+              />
+            </label>
 
-          <button
-            className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
+            <button
+              className="bst-btn btn-fullscreen"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -343,8 +343,7 @@ export const StringsPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
+            title="String Algorithm"
           />
 
           <ExplanationPanel

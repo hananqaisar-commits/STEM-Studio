@@ -1,6 +1,11 @@
 export type CodeLanguage = 'python' | 'cpp' | 'java' | 'go' | 'pseudocode';
 
 export interface MultiLanguageSnippets {
+  /** Indexable by language key, matching the Graph/BinarySearch/LinkedList
+   *  snippet interfaces, so these values flow into MultiLanguageCodePanel's
+   *  SnippetSet (Partial<Record<string, string[]>>). The named members below
+   *  stay required to guarantee the core languages are always present. */
+  [language: string]: string[];
   python: string[];
   cpp: string[];
   java: string[];

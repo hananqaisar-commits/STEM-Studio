@@ -369,14 +369,15 @@ export const BSTPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
+      <label className="predict-toggle-label ml-2">
         <HelpCircle size={14} />
         <span>Quiz Mode</span>
-      </button>
+        <input
+          type="checkbox"
+          checked={quizEnabled}
+          onChange={(e) => setQuizEnabled(e.target.checked)}
+        />
+      </label>
     </div>
   );
 
@@ -575,14 +576,17 @@ export const BSTPage: React.FC = () => {
         </div>
 
         <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} />
-            <span>Quiz Mode</span>
-          </button>
+          <div className="predict-mode-group">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Quiz Mode</span>
+              <input
+                type="checkbox"
+                checked={quizEnabled}
+                onChange={(e) => setQuizEnabled(e.target.checked)}
+              />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -615,9 +619,8 @@ export const BSTPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={treeCategory}
+            title="Tree Operations"
             activeLine={bstStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={bstStep?.variables}
             onCustomCodeRun={(arraySteps) => {
               const bstSteps: BSTStep[] = arraySteps.map((step) => ({
