@@ -185,6 +185,62 @@
   .viz-search-wrapper {
     min-width: 100%;
   }
+  .viz-dropdown-group {
+    min-width: 100%;
+  }
+}
+
+/* ── Two-level dropdown selectors (category + topic) ─────────── */
+.viz-dropdown-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 0 1 auto;
+}
+
+.viz-dropdown-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.viz-dropdown-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  padding: 0.45rem 2rem 0.45rem 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  min-width: 140px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viz-dropdown-select:hover {
+  border-color: rgba(129, 140, 248, 0.5);
+}
+
+.viz-dropdown-select:focus {
+  outline: none;
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
+
+.viz-dropdown-chevron {
+  position: absolute;
+  right: 0.7rem;
+  pointer-events: none;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 /* ─── 1. WORKSPACE GRID ────────────────────────────────────────────
