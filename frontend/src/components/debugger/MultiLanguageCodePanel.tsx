@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Code, Play, Layers, Terminal, Cpu, Code2, Binary, FileText, RotateCcw, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Play, Layers, Terminal, Cpu, Code2, Binary, FileText, RotateCcw,
+  AlertTriangle, ChevronDown, Check, Copy, CopyCheck, Bug, FileCode2,
+} from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
-import type { CodeLanguage } from '../../features/sorting/data/codeSnippets';
 import { getStarterTemplate, type CustomLanguage } from '../../engine/customCodeTemplates';
 import { executeCustomSortingCode } from '../../engine/codeExecutionEngine';
 import type { ArrayStep } from '../../engine/types/Step';
@@ -9,26 +11,39 @@ import './Debugger.css';
 
 type CodeMode = 'default' | 'custom';
 
+/** A language-keyed set of code lines. Accepts any subset of languages so
+ *  per-feature snippet files (which add e.g. javascript) drop in cleanly. */
+type SnippetSet = Partial<Record<string, string[]>>;
+
 interface MultiLanguageCodePanelProps {
   algorithmKey: string;
   activeLine?: number;
-  breakpoints: number[];
-  onToggleBreakpoint: (lineNumber: number) => void;
+  breakpoints?: number[];
+  onToggleBreakpoint?: (lineNumber: number) => void;
   variables?: Record<string, string | number | boolean | null>;
   callStack?: string[];
-  /** Called when user runs custom code — parent receives the generated steps */
+  /** Called when user runs custom code — parent receives the generated steps.
+   *  Custom mode is only offered when this is provided (sorting playground). */
   onCustomCodeRun?: (steps: ArrayStep[]) => void;
   /** Current input array from the parent page (for custom code execution) */
   currentArray?: number[];
+  /** Correct code for THIS algorithm. When omitted we fall back to the
+   *  sorting snippet table (keeps Sorting/DP working) and otherwise show a
+   *  graceful placeholder instead of unrelated code. */
+  snippets?: SnippetSet;
+  /** Header label, e.g. "BINARY SEARCH". */
+  title?: string;
 }
 
-const LANGUAGES: { id: CodeLanguage; label: string; icon: React.ReactNode }[] = [
-  { id: 'python', label: 'Python', icon: <Terminal size={14} /> },
-  { id: 'cpp', label: 'C++', icon: <Cpu size={14} /> },
-  { id: 'java', label: 'Java', icon: <Code2 size={14} /> },
-  { id: 'go', label: 'Go', icon: <Binary size={14} /> },
-  { id: 'pseudocode', label: 'Pseudocode', icon: <FileText size={14} /> },
-];
+const LANG_META: Record<string, { label: string; icon: React.ReactNode }> = {
+  pseudocode: { label: 'Pseudocode', icon: <FileText size={14} /> },
+  python: { label: 'Python', icon: <Terminal size={14} /> },
+  cpp: { label: 'C++', icon: <Cpu size={14} /> },
+  java: { label: 'Java', icon: <Code2 size={14} /> },
+  javascript: { label: 'JavaScript', icon: <FileCode2 size={14} /> },
+  go: { label: 'Go', icon: <Binary size={14} /> },
+};
+const LANG_ORDER = ['python', 'cpp', 'java', 'javascript', 'go', 'pseudocode'];
 
 const CUSTOM_LANGUAGES: { id: CustomLanguage; label: string }[] = [
   { id: 'javascript', label: 'JavaScript' },
@@ -44,46 +59,83 @@ const CUSTOM_LANGUAGES: { id: CustomLanguage; label: string }[] = [
 export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   algorithmKey,
   activeLine,
-  breakpoints,
+  breakpoints = [],
   onToggleBreakpoint,
   variables = {},
   callStack = [],
   onCustomCodeRun,
   currentArray,
+  snippets,
+  title = 'Source Code',
 }) => {
-  const [selectedLang, setSelectedLang] = useState<CodeLanguage>('python');
+  // Resolve which snippet set to show: explicit prop → sorting table → none.
+  const resolvedSnippets: SnippetSet | undefined = useMemo(
+    () => snippets ?? SORTING_CODE_SNIPPETS[algorithmKey],
+    [snippets, algorithmKey],
+  );
+
+  const availableLangs = useMemo(
+    () => LANG_ORDER.filter((l) => (resolvedSnippets?.[l]?.length ?? 0) > 0),
+    [resolvedSnippets],
+  );
+
+  const [selectedLang, setSelectedLang] = useState<string>('python');
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
   const [customLang, setCustomLang] = useState<CustomLanguage>('javascript');
   const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey, 'javascript'));
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [scopeOpen, setScopeOpen] = useState(true);
+  const [stackOpen, setStackOpen] = useState(true);
 
-  // Sync template when algorithm or custom language changes
-  React.useEffect(() => {
+  const canRunCustom = typeof onCustomCodeRun === 'function';
+  const activeLineRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep the selected language valid as the available set changes per algorithm.
+  useEffect(() => {
+    if (availableLangs.length === 0) return;
+    if (!availableLangs.includes(selectedLang)) {
+      setSelectedLang(availableLangs.includes('python') ? 'python' : availableLangs[0]);
+    }
+  }, [availableLangs, selectedLang]);
+
+  // Sync custom-code template when algorithm or custom language changes.
+  useEffect(() => {
     setCustomCode(getStarterTemplate(algorithmKey, customLang));
     setExecutionError(null);
   }, [algorithmKey, customLang]);
 
-  const algorithmSnippets = SORTING_CODE_SNIPPETS[algorithmKey] || SORTING_CODE_SNIPPETS.bubble;
-  const currentCodeLines = algorithmSnippets[selectedLang] || algorithmSnippets.pseudocode;
+  // Auto-scroll the executing line into view.
+  useEffect(() => {
+    if (codeMode === 'default' && activeLine != null) {
+      activeLineRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [activeLine, codeMode, selectedLang]);
 
+  const currentCodeLines = resolvedSnippets?.[selectedLang] ?? [];
+  const hasCode = currentCodeLines.length > 0;
   const variableEntries = Object.entries(variables);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(currentCodeLines.join('\n'));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      /* clipboard blocked — silently ignore, copy is a convenience */
+    }
+  };
 
   const handleRunCustomCode = () => {
     if (!currentArray || currentArray.length === 0) {
       setExecutionError('No input array available. Generate or enter values first.');
       return;
     }
-
     setExecutionError(null);
     const result = executeCustomSortingCode(customCode, currentArray, customLang);
-
-    if (result.error) {
-      setExecutionError(result.error.message);
-    }
-
-    if (onCustomCodeRun) {
-      onCustomCodeRun(result.steps);
-    }
+    if (result.error) setExecutionError(result.error.message);
+    onCustomCodeRun?.(result.steps);
   };
 
   const handleResetTemplate = () => {
@@ -93,57 +145,101 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
   return (
     <div className="multi-lang-code-panel">
-      {/* Panel Header */}
+      {/* ── Header ─────────────────────────────────────────────── */}
       <div className="code-panel-header">
         <div className="header-title-group">
-          <Code size={16} className="text-accent" />
-          <span>SOURCE CODE</span>
+          <Bug size={15} className="text-accent" />
+          <span>{title}</span>
+          <span className="debugger-tag">Debugger</span>
         </div>
 
-        {/* Mode Toggle: Default / Custom */}
-        <div className="code-mode-toggle">
-          <button
-            className={`mode-btn ${codeMode === 'default' ? 'active' : ''}`}
-            onClick={() => { setCodeMode('default'); setExecutionError(null); }}
-          >
-            Default
-          </button>
-          <button
-            className={`mode-btn ${codeMode === 'custom' ? 'active' : ''}`}
-            onClick={() => setCodeMode('custom')}
-          >
-            Custom
-          </button>
-        </div>
-
-        {/* Language tabs (only in default mode) */}
-        {codeMode === 'default' && (
-          <div className="language-tabs">
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang.id}
-                className={`lang-tab ${selectedLang === lang.id ? 'active' : ''}`}
-                onClick={() => setSelectedLang(lang.id)}
-              >
-                <span className="lang-icon">{lang.icon}</span>
-                <span className="lang-label">{lang.label}</span>
-              </button>
-            ))}
+        {canRunCustom && (
+          <div className="code-mode-toggle" role="tablist" aria-label="Code source">
+            <button
+              role="tab"
+              aria-selected={codeMode === 'default'}
+              className={`mode-btn ${codeMode === 'default' ? 'active' : ''}`}
+              onClick={() => { setCodeMode('default'); setExecutionError(null); }}
+            >
+              Default
+            </button>
+            <button
+              role="tab"
+              aria-selected={codeMode === 'custom'}
+              className={`mode-btn ${codeMode === 'custom' ? 'active' : ''}`}
+              onClick={() => setCodeMode('custom')}
+            >
+              Custom
+            </button>
           </div>
         )}
       </div>
 
-      {/* CUSTOM MODE: Multi-Language Bar */}
-      {codeMode === 'custom' && (
-        <div className="custom-lang-bar flex flex-wrap gap-1 p-2 bg-slate-900/60 border-b border-slate-800">
+      {/* ── Default mode toolbar: language dropdown + copy + status ─ */}
+      {codeMode === 'default' && (
+        <div className="code-toolbar">
+          <div className="lang-dropdown">
+            <button
+              type="button"
+              className="lang-dropdown-trigger"
+              aria-haspopup="listbox"
+              aria-expanded={langMenuOpen}
+              disabled={availableLangs.length === 0}
+              onClick={() => setLangMenuOpen((o) => !o)}
+            >
+              <span className="lang-dropdown-icon">{LANG_META[selectedLang]?.icon}</span>
+              <span className="lang-dropdown-label">{LANG_META[selectedLang]?.label ?? '—'}</span>
+              <ChevronDown size={14} className={`lang-chevron ${langMenuOpen ? 'open' : ''}`} />
+            </button>
+
+            {langMenuOpen && (
+              <>
+                <div className="lang-dropdown-backdrop" onClick={() => setLangMenuOpen(false)} />
+                <ul className="lang-dropdown-menu" role="listbox">
+                  {availableLangs.map((lang) => (
+                    <li key={lang} role="option" aria-selected={lang === selectedLang}>
+                      <button
+                        type="button"
+                        className={`lang-dropdown-item ${lang === selectedLang ? 'active' : ''}`}
+                        onClick={() => { setSelectedLang(lang); setLangMenuOpen(false); }}
+                      >
+                        <span className="lang-dropdown-icon">{LANG_META[lang]?.icon}</span>
+                        <span>{LANG_META[lang]?.label}</span>
+                        {lang === selectedLang && <Check size={14} className="lang-check" />}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+
+          {activeLine != null && hasCode && (
+            <span className="active-line-chip" title="Currently executing line">
+              <Play size={10} /> line {activeLine}
+            </span>
+          )}
+
+          <button
+            type="button"
+            className="copy-code-btn"
+            onClick={handleCopy}
+            disabled={!hasCode}
+            title="Copy code to clipboard"
+          >
+            {copied ? <CopyCheck size={14} /> : <Copy size={14} />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Custom mode language bar ────────────────────────────── */}
+      {codeMode === 'custom' && canRunCustom && (
+        <div className="custom-lang-bar">
           {CUSTOM_LANGUAGES.map((lang) => (
             <button
               key={lang.id}
-              className={`px-2 py-0.5 text-xs rounded transition-all ${
-                customLang === lang.id
-                  ? 'bg-blue-600 text-white font-bold shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
+              className={`custom-lang-chip ${customLang === lang.id ? 'active' : ''}`}
               onClick={() => setCustomLang(lang.id)}
             >
               {lang.label}
@@ -152,42 +248,52 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         </div>
       )}
 
-      {/* DEFAULT MODE: Read-only code viewer (existing behavior) */}
+      {/* ── Default mode: read-only viewer with gutter + highlight ─ */}
       {codeMode === 'default' && (
         <div className="code-editor-container">
-          {currentCodeLines.map((line, idx) => {
-            const lineNumber = idx + 1;
-            const isCurrentLine = activeLine === lineNumber;
-            const hasBreakpoint = breakpoints.includes(lineNumber);
-
-            return (
-              <div
-                key={idx}
-                className={`code-editor-line ${isCurrentLine ? 'active-execution-line' : ''}`}
-              >
-                {/* Breakpoint Gutter */}
+          {hasCode ? (
+            currentCodeLines.map((line, idx) => {
+              const lineNumber = idx + 1;
+              const isCurrentLine = activeLine === lineNumber;
+              const hasBreakpoint = breakpoints.includes(lineNumber);
+              return (
                 <div
-                  className="line-gutter"
-                  onClick={() => onToggleBreakpoint(lineNumber)}
-                  title={hasBreakpoint ? `Remove Breakpoint line ${lineNumber}` : `Set Breakpoint line ${lineNumber}`}
+                  key={idx}
+                  ref={isCurrentLine ? activeLineRef : null}
+                  className={`code-editor-line ${isCurrentLine ? 'active-execution-line' : ''}`}
                 >
-                  {hasBreakpoint && <div className="red-breakpoint-dot" />}
-                  {isCurrentLine && <Play size={10} className="current-line-arrow" />}
-                  <span className="line-number">{lineNumber}</span>
+                  <div
+                    className={`line-gutter ${onToggleBreakpoint ? 'clickable' : ''}`}
+                    onClick={() => onToggleBreakpoint?.(lineNumber)}
+                    title={
+                      onToggleBreakpoint
+                        ? (hasBreakpoint ? `Remove breakpoint (line ${lineNumber})` : `Set breakpoint (line ${lineNumber})`)
+                        : undefined
+                    }
+                  >
+                    {hasBreakpoint && <span className="red-breakpoint-dot" />}
+                    {isCurrentLine && <Play size={10} className="current-line-arrow" />}
+                    <span className="line-number">{lineNumber}</span>
+                  </div>
+                  <div className="line-text"><code>{line}</code></div>
                 </div>
-
-                {/* Code Line Content */}
-                <div className="line-text">
-                  <code>{line}</code>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="code-empty-state">
+              <FileCode2 size={22} />
+              <p className="code-empty-title">Reference code coming soon</p>
+              <p className="code-empty-sub">
+                A multi-language implementation for <code>{algorithmKey}</code> hasn&apos;t been added yet.
+                The live variables and step trace below stay fully active.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* CUSTOM MODE: Editable code editor + Run button */}
-      {codeMode === 'custom' && (
+      {/* ── Custom mode: editable editor + run/reset ────────────── */}
+      {codeMode === 'custom' && canRunCustom && (
         <>
           <div className="custom-code-editor">
             <div className="custom-editor-gutter">
@@ -200,11 +306,10 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               value={customCode}
               onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); }}
               spellCheck={false}
-              placeholder="Write your JavaScript sorting code here..."
+              placeholder="Write your sorting code here…"
             />
           </div>
 
-          {/* Error Banner */}
           {executionError && (
             <div className="code-error-banner">
               <AlertTriangle size={14} />
@@ -212,7 +317,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             </div>
           )}
 
-          {/* Run / Reset Bar */}
           <div className="code-run-bar">
             <button className="run-code-btn" onClick={handleRunCustomCode}>
               <Play size={14} />
@@ -226,38 +330,60 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         </>
       )}
 
-      {/* Integrated Scope Variables & Call Stack Section */}
+      {/* ── Scope variables ─────────────────────────────────────── */}
       <div className="integrated-scope-section">
         <div className="scope-box">
-          <div className="scope-header">
-            <span>SCOPE VARIABLES</span>
+          <button
+            type="button"
+            className="scope-header"
+            onClick={() => setScopeOpen((o) => !o)}
+            aria-expanded={scopeOpen}
+          >
+            <ChevronDown size={13} className={`scope-caret ${scopeOpen ? '' : 'collapsed'}`} />
+            <span>Scope Variables</span>
             <span className="scope-badge">{variableEntries.length} active</span>
-          </div>
-          <div className="scope-pills-container">
-            {variableEntries.length === 0 ? (
-              <span className="scope-empty">Press Play to inspect variables</span>
-            ) : (
-              variableEntries.map(([key, val]) => (
-                <div key={key} className="scope-pill">
-                  <span className="pill-name">{key}:</span>
-                  <span className={`pill-val val-type-${typeof val}`}>
-                    {val === null ? 'null' : String(val)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
+          </button>
+          {scopeOpen && (
+            <div className="scope-pills-container">
+              {variableEntries.length === 0 ? (
+                <span className="scope-empty">Press Play to inspect variables</span>
+              ) : (
+                variableEntries.map(([key, val]) => (
+                  <div key={key} className="scope-pill">
+                    <span className="pill-name">{key}</span>
+                    <span className={`pill-val val-type-${typeof val}`}>
+                      {val === null ? 'null' : String(val)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {callStack.length > 0 && (
           <div className="stack-box">
-            <div className="stack-header">
+            <button
+              type="button"
+              className="stack-header"
+              onClick={() => setStackOpen((o) => !o)}
+              aria-expanded={stackOpen}
+            >
+              <ChevronDown size={13} className={`scope-caret ${stackOpen ? '' : 'collapsed'}`} />
               <Layers size={12} />
-              <span>STACK</span>
-            </div>
-            <div className="stack-pill">
-              {callStack[callStack.length - 1]}
-            </div>
+              <span>Call Stack</span>
+              <span className="scope-badge">{callStack.length}</span>
+            </button>
+            {stackOpen && (
+              <div className="stack-frames">
+                {callStack.slice().reverse().map((frame, i) => (
+                  <div key={i} className={`stack-pill ${i === 0 ? 'top-frame' : ''}`}>
+                    <span className="stack-depth">{callStack.length - 1 - i}</span>
+                    <span className="stack-frame-label">{frame}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

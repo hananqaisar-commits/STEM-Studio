@@ -227,7 +227,8 @@ export const StringsPage: React.FC = () => {
       >
         <HelpCircle size={16} />
         <span>Quiz Mode</span>
-      </button>
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
+      </label>
     </div>
   );
 
@@ -305,14 +306,16 @@ export const StringsPage: React.FC = () => {
         </div>
 
         <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} />
-            <span>Quiz Mode</span>
-          </button>
+          <div className="predict-mode-group flex items-center gap-2">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} />
+              <span>Quiz Mode</span>
+              <input
+                type="checkbox"
+                checked={quizEnabled}
+                onChange={(e) => setQuizEnabled(e.target.checked)}
+              />
+            </label>
 
           <button
             className="bst-btn btn-fullscreen"
@@ -343,8 +346,7 @@ export const StringsPage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
+            title="String Algorithm"
           />
 
           <ExplanationPanel

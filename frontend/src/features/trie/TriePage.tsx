@@ -199,13 +199,10 @@ export const TriePage: React.FC = () => {
         <button className="bst-btn btn-mode" onClick={handleSample} title="Sample"><Layers size={13} className="text-amber-400" /><span>Sample</span></button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random"><Sparkles size={13} className="text-emerald-400" /><span>Random</span></button>
       </div>
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
+      <label className="predict-toggle-label ml-2">
         <HelpCircle size={14} /><span>Quiz Mode</span>
-      </button>
+        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
+      </label>
     </div>
   );
 
@@ -295,16 +292,15 @@ export const TriePage: React.FC = () => {
         </div>
 
         <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} /><span>Quiz Mode</span>
-          </button>
-          <button className="bst-btn btn-fullscreen" onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
-            <Maximize2 size={14} />
-          </button>
+          <div className="predict-mode-group flex items-center gap-2">
+            <label className="predict-toggle-label">
+              <HelpCircle size={16} /><span>Quiz Mode</span>
+              <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
+            </label>
+            <button className="bst-btn btn-fullscreen" onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
+              <Maximize2 size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -322,9 +318,8 @@ export const TriePage: React.FC = () => {
 
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
+            title="Trie"
             activeLine={trieStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
             variables={trieStep?.variables}
             onCustomCodeRun={(arraySteps) => {
               const trieSteps: TrieStep[] = arraySteps.map(s => ({

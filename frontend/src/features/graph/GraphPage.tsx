@@ -32,7 +32,7 @@ import {
   type GraphEdge,
 } from './graphEngine';
 import { GraphRenderer } from './GraphRenderer';
-import { GraphCodePanel } from './GraphCodePanel';
+import { GRAPH_SNIPPETS } from './graphSnippets';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
@@ -425,19 +425,16 @@ export const GraphPage: React.FC = () => {
         <div className="explanation-section">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
 
-          <GraphCodePanel
-            snippetKey={snippetKey}
-            activeLine={currentStep?.codeLine}
-            currentNodeId={currentStep?.currentNodeId}
-            visitedCount={currentStep?.visitedNodeIds.length || 0}
-            queueSize={currentStep?.queueOrStack.length || 0}
-          />
-
           <MultiLanguageCodePanel
             algorithmKey={category}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            currentArray={nodes.map((n) => Number(n.id))}
+            title="Graph Traversal"
+            snippets={GRAPH_SNIPPETS[snippetKey]}
+            activeLine={currentStep?.codeLine}
+            variables={{
+              curr_vertex: currentStep?.currentNodeId ?? null,
+              visited_count: currentStep?.visitedNodeIds.length ?? 0,
+              frontier_size: currentStep?.queueOrStack.length ?? 0,
+            }}
           />
 
           <ExplanationPanel
