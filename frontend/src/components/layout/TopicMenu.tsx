@@ -5,7 +5,7 @@ import {
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
   Home, type LucideIcon,
 } from 'lucide-react';
-import { MODULES, DSA_CATEGORIES, type CategoryDef, type ModuleDef } from '../../data/categories';
+import { MODULES, DSA_CATEGORIES, type CategoryDef } from '../../data/categories';
 import './Layout.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {

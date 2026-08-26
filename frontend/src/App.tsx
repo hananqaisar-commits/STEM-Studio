@@ -11,7 +11,7 @@ import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
 import { ModuleHub } from './features/hub/ModuleHub';
-import { getCategoryById, MODULES } from './data/categories';
+import { MODULES } from './data/categories';
 import { ComplexityPage } from './features/complexity/ComplexityPage';
 import { SortingPage } from './features/sorting/SortingPage';
 import { BSTPage } from './features/bst/BSTPage';
