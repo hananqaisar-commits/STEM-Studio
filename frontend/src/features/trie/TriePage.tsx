@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Binary, Search, GitBranch, BookOpen, MessageSquare, Maximize2, HelpCircle, Sparkles, Trash2, Layers
 } from 'lucide-react';
@@ -14,7 +15,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildTrieCheckpoints } from './quizAdapter';
+import { buildTrieCheckpoints, buildRevisionData } from './quizAdapter';
 import type { TrieAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
@@ -28,6 +29,7 @@ import type { TrieStep } from './algorithms/trieTypes';
 import '../sorting/Sorting.css';
 import '../bst/BST.css';
 import './Trie.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgMeta {
   key: TrieAlgorithmKey;
@@ -66,10 +68,18 @@ function pickRandomWords(count: number): string[] {
 
 export const TriePage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<TrieAlgorithmKey>('trieInsert');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as TrieAlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [wordsInput, setWordsInput] = useState<string>(DEFAULT_PARAMS.trieInsert.words);
   const [queryInput, setQueryInput] = useState<string>(DEFAULT_PARAMS.trieSearch.query);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState(true);
+  const [quizEnabled, setQuizEnabled] = useState(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
@@ -112,6 +122,7 @@ export const TriePage: React.FC = () => {
     stepForward,
     module: 'trie' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   useEffect(() => {
@@ -359,6 +370,8 @@ export const TriePage: React.FC = () => {
       >
         <TrieRenderer currentStep={trieStep} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="trie" activeTopic={selectedAlg} />
+
     </div>
   );
 };

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Link2,
   Plus,
@@ -17,7 +18,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildLinkedListCheckpoints } from './quizAdapter';
+import { buildLinkedListCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   createInitialNodes,
@@ -42,6 +43,7 @@ import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './LinkedList.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgorithmMeta {
   id: LinkedListCategory;
@@ -61,10 +63,18 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const LinkedListPage: React.FC = () => {
   const [category, setCategory] = useState<LinkedListCategory>('singly');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS_LIST.some((a) => a.id === topic)) {
+      setCategory(topic as LinkedListCategory);
+    }
+  }, [searchParams]);
+
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Interactive & Quiz Modes
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -105,6 +115,7 @@ export const LinkedListPage: React.FC = () => {
     stepForward,
     module: 'linkedList',
     algorithmId: category,
+    revisionData: buildRevisionData(category),
   });
 
   // Handle Category Switching
@@ -513,6 +524,8 @@ export const LinkedListPage: React.FC = () => {
       >
         <LinkedListRenderer step={currentStep} nodes={baseNodes} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="linkedList" activeTopic={category} />
+
     </div>
   );
 };

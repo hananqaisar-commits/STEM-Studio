@@ -183,3 +183,15 @@ class SavedSession(Base):
 
     user: Mapped["User"] = relationship(back_populates="saved_sessions")
 
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    review_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    role: Mapped[str] = mapped_column(String(100))
+    rating: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(String(2000))
+    approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+

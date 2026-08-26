@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Edit3, Search, Hash, Maximize2, HelpCircle, Sparkles, Trash2, Layers, Copy, Map
 } from 'lucide-react';
@@ -15,7 +16,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildHashMapsCheckpoints } from './quizAdapter';
+import { buildHashMapsCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import type { HashMapsAlgorithmKey } from './quizAdapter';
 
@@ -26,6 +27,7 @@ import { runSubarraySum } from './algorithms/subarraySum';
 
 import '../sorting/Sorting.css';
 import './HashMaps.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgMeta {
   key: HashMapsAlgorithmKey;
@@ -51,6 +53,14 @@ const DEFAULT_INPUTS: Record<HashMapsAlgorithmKey, { arr: number[]; target?: num
 
 export const HashMapsPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<HashMapsAlgorithmKey>('twoSum');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as HashMapsAlgorithmKey);
+    }
+  }, [searchParams]);
+
 
   // Custom input state
   const [inputArr, setInputArr] = useState<number[]>(DEFAULT_INPUTS.twoSum.arr);
@@ -59,7 +69,7 @@ export const HashMapsPage: React.FC = () => {
   // UI state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Sync inputs when algorithm changes
@@ -115,6 +125,7 @@ export const HashMapsPage: React.FC = () => {
     stepForward,
     module: 'hashMaps' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   // Clear quiz when algorithm or array changes
@@ -407,6 +418,8 @@ export const HashMapsPage: React.FC = () => {
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="hashMaps" activeTopic={selectedAlg} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal

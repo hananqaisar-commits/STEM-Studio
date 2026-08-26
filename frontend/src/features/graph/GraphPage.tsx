@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Share2,
   RotateCcw,
@@ -17,7 +18,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildGraphCheckpoints } from './quizAdapter';
+import { buildGraphCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   getPresetGraph,
@@ -41,6 +42,7 @@ import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './Graph.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgorithmMeta {
   id: GraphCategory;
@@ -59,13 +61,21 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const GraphPage: React.FC = () => {
   const [category, setCategory] = useState<GraphCategory>('bfs');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS_LIST.some((a) => a.id === topic)) {
+      setCategory(topic as GraphCategory);
+    }
+  }, [searchParams]);
+
 
   const [startNode, setStartNode] = useState<string>('A');
   const [nodes, setNodes] = useState<GraphNode[]>(() => getPresetGraph('standard').nodes);
   const [edges, setEdges] = useState<GraphEdge[]>(() => getPresetGraph('standard').edges);
 
   // Modes & Modals
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = React.useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -103,6 +113,7 @@ export const GraphPage: React.FC = () => {
     stepForward,
     module: 'graph',
     algorithmId: category,
+    revisionData: buildRevisionData(category),
   });
 
   // Handle Category Switching
@@ -457,6 +468,8 @@ export const GraphPage: React.FC = () => {
       >
         <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="graph" activeTopic={category} />
+
     </div>
   );
 };

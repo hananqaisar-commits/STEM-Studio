@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Type, Repeat, ArrowLeftRight, BarChart3, Maximize2, HelpCircle, Sparkles, Trash2, Layers
 } from 'lucide-react';
@@ -14,7 +15,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildStringsCheckpoints, type StringAlgorithmKey } from './quizAdapter';
+import { buildStringsCheckpoints, buildRevisionData, type StringAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { generatePalindromeSteps } from './algorithms/palindrome';
@@ -24,6 +25,7 @@ import { generateFrequencyCountSteps } from './algorithms/frequencyCount';
 
 import '../sorting/Sorting.css';
 import './Strings.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgMeta {
   key: StringAlgorithmKey;
@@ -48,11 +50,19 @@ const SAMPLE_STRINGS: Record<StringAlgorithmKey, { primary: string; secondary: s
 
 export const StringsPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<StringAlgorithmKey>('palindrome');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as StringAlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [inputStr, setInputStr] = useState<string>('racecar');
   const [secondStr, setSecondStr] = useState<string>('silent');
 
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
@@ -100,6 +110,7 @@ export const StringsPage: React.FC = () => {
     stepForward,
     module: 'strings',
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   useEffect(() => {
@@ -369,6 +380,8 @@ export const StringsPage: React.FC = () => {
           originalString={inputStr}
         />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="strings" activeTopic={selectedAlg} />
+
     </div>
   );
 };

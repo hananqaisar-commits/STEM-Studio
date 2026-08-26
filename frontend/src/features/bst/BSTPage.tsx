@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -12,7 +13,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildBSTCheckpoints } from './quizAdapter';
+import { buildBSTCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import {
@@ -33,6 +34,7 @@ import { generateTrieInsertSteps, generateTrieSearchSteps, createTrieRoot } from
 import type { TrieNodeStructure } from './trieEngine';
 
 import './BST.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie';
 
@@ -58,9 +60,17 @@ const RANDOM_WORD_POOL = ['apple', 'app', 'code', 'coder', 'tree', 'trie', 'data
 
 export const BSTPage: React.FC = () => {
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ['bst', 'avl', 'heap', 'trie'].includes(topic)) {
+      setTreeCategory(topic as TreeCategory);
+    }
+  }, [searchParams]);
+
   const [inputValue, setInputValue] = useState<string>('45');
   const [wordValue, setWordValue] = useState<string>('cat');
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
@@ -128,6 +138,7 @@ export const BSTPage: React.FC = () => {
     stepForward,
     module: 'bst',
     algorithmId: treeCategory,
+    revisionData: buildRevisionData('insert'),
   });
 
   // Operations for BST
@@ -640,6 +651,8 @@ export const BSTPage: React.FC = () => {
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="bst" activeTopic={treeCategory} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal

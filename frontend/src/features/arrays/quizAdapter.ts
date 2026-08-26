@@ -341,6 +341,7 @@ const REVISION_DATA: Record<ArrayAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Check each element sequentially until the target is found or array ends',
     watchFor: ['Worst case scenario', 'Early termination', 'Comparison with binary search'],
     quickTip: 'Linear search works on unsorted data but is slow for large arrays',
+    example: 'Array [4,2,7,1,9], target=7: check 4≠7, 2≠7, 7=7 → found at index 2.',
   },
   kadane: {
     description: 'Find the contiguous subarray with the maximum sum',
@@ -348,6 +349,7 @@ const REVISION_DATA: Record<ArrayAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'A negative running sum cannot help future elements—reset when sum < 0',
     watchFor: ['Reset condition', 'Current sum vs max sum tracking', 'All negative case'],
     quickTip: 'If current sum drops below zero, start fresh from the next element',
+    example: 'Array [-2,1,-3,4,-1,2,1,-5,4]: currentSum resets at -2, grows to 6 from subarray [4,-1,2,1], which is the max.',
   },
   twoPointer: {
     description: 'Use two pointers moving inward to find a pair summing to target',
@@ -355,6 +357,7 @@ const REVISION_DATA: Record<ArrayAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'In a sorted array, moving left pointer right increases sum, moving right pointer left decreases it',
     watchFor: ['Sorted array requirement', 'Pointer movement logic', 'When to stop'],
     quickTip: 'Requires sorted input—if sum too small move left pointer right, if too large move right pointer left',
+    example: 'Sorted [1,3,5,8,11], target=13: left=0(1)+right=4(11)=12<13→move left; left=1(3)+right=4(11)=14>13→move right; left=1(3)+right=3(8)=11<13→move left; left=2(5)+right=3(8)=13 ✓.',
   },
   slidingWindow: {
     description: 'Maintain a window of size k and slide it across the array',
@@ -362,6 +365,7 @@ const REVISION_DATA: Record<ArrayAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'When window slides by 1, only one element enters and one leaves—update in O(1)',
     watchFor: ['Window size', 'Element entering vs leaving', 'Initial window setup'],
     quickTip: 'Compute the first window fully, then update by adding new element and removing old',
+    example: 'Array [2,1,5,3,6], k=3: window[0]=2+1+5=8; slide: 8-2+3=9; slide: 9-1+6=14. Max window sum is 14.',
   },
   rotation: {
     description: 'Rotate array elements by k positions',
@@ -369,6 +373,7 @@ const REVISION_DATA: Record<ArrayAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Rotation by k is equivalent to rotation by k mod n',
     watchFor: ['Modulo arithmetic', 'Reversal technique', 'Direction of rotation'],
     quickTip: 'Use the reversal algorithm: reverse all, reverse first k, reverse rest',
+    example: 'Array [1,2,3,4,5], k=2: reverse all→[5,4,3,2,1]; reverse first 2→[4,5,3,2,1]; reverse rest→[4,5,1,2,3].',
   },
   prefixSum: {
     description: 'Build cumulative sum array for O(1) range sum queries',
@@ -376,6 +381,7 @@ const REVISION_DATA: Record<ArrayAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'prefix[i] = arr[0] + arr[1] + ... + arr[i], enabling range queries',
     watchFor: ['Prefix array construction', 'Range sum formula', 'Index off-by-one'],
     quickTip: 'Range sum from L to R is prefix[R] - prefix[L-1] (handle L=0 specially)',
+    example: 'Array [3,1,4,1,5]: prefix=[3,4,8,9,14]. Sum of indices 1..3 = prefix[3]-prefix[0] = 9-3 = 6 (i.e. 1+4+1).',
   },
 };
 

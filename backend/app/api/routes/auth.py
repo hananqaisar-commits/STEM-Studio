@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -15,6 +17,7 @@ from backend.app.api.schemas import (
     UserResponse,
 )
 from backend.app.core.config import get_settings
+from backend.app.core.rate_limit import rate_limit, standard, strict
 from backend.app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -36,11 +39,31 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 settings = get_settings()
 
 
+_PASSWORD_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$")
+
+
+def _validate_password_strength(password: str) -> None:
+    """Ensure passwords meet a minimum complexity bar."""
+    if not _PASSWORD_REGEX.match(password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters and contain one uppercase letter, one lowercase letter, and one digit.",
+        )
+
+
 # ─── POST /api/auth/signup ───────────────────────────────────────────
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
+def signup(
+    payload: SignUpRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
     """Register a new user account."""
+
+    # Enforce password complexity before any DB work
+    _validate_password_strength(payload.password)
 
     # Check if email already exists
     existing_email = db.query(User).filter(User.email == payload.email).first()
@@ -76,7 +99,12 @@ def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
 # ─── POST /api/auth/login ───────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
+def login(
+    payload: LoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
     """Authenticate a user and return access + refresh tokens."""
 
     # Get client IP for login attempt logging
@@ -140,7 +168,12 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
 # ─── POST /api/auth/refresh ─────────────────────────────────────────
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
+def refresh_token(
+    payload: RefreshTokenRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(rate_limit(10, 60)),
+):
     """Use a valid refresh token to get a new access token pair."""
 
     # Decode the refresh token
@@ -237,11 +270,17 @@ def logout(
 
 
 from backend.app.core.email import send_password_reset_email
+from backend.app.core.rate_limit import rate_limit
 
 # ─── POST /api/auth/forgot-password ─────────────────────────────────
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
     """Generate a password reset token and dispatch email via SMTP."""
 
     user = db.query(User).filter(User.email == payload.email).first()
@@ -273,7 +312,12 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
 # ─── POST /api/auth/reset-password ──────────────────────────────────
 
 @router.post("/reset-password", response_model=MessageResponse)
-def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+def reset_password(
+    payload: ResetPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
     """Validate the reset token and update the password."""
 
     token_hash = hash_token(payload.token)
@@ -299,6 +343,9 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reset token has expired",
         )
+
+    # Enforce password complexity on the new password
+    _validate_password_strength(payload.new_password)
 
     # Update password
     user = db.query(User).filter(User.user_id == reset.user_id).first()
@@ -327,6 +374,9 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
 # ─── GET /api/auth/me ────────────────────────────────────────────────
 
 @router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(
+    current_user: User = Depends(get_current_user),
+    _rate: None = Depends(standard),
+):
     """Return the current authenticated user's profile."""
     return current_user

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   RotateCcw,
@@ -16,7 +17,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildBinarySearchCheckpoints } from './quizAdapter';
+import { buildBinarySearchCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateBinarySearchSteps,
@@ -37,6 +38,7 @@ import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './BinarySearch.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgorithmMeta {
   id: BinarySearchCategory;
@@ -55,13 +57,21 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const BinarySearchPage: React.FC = () => {
   const [category, setCategory] = useState<BinarySearchCategory>('binarySearch');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS_LIST.some((a) => a.id === topic)) {
+      setCategory(topic as BinarySearchCategory);
+    }
+  }, [searchParams]);
+
 
   const [array, setArray] = useState<number[]>([4, 8, 15, 23, 42, 56, 77, 89, 94]);
   const [targetInput, setTargetInput] = useState<string>('42');
   const [customArrayInput, setCustomArrayInput] = useState<string>('4, 8, 15, 23, 42, 56, 77, 89, 94');
 
   // Modes & Modals
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -99,6 +109,7 @@ export const BinarySearchPage: React.FC = () => {
     stepForward,
     module: 'binarySearch',
     algorithmId: category,
+    revisionData: buildRevisionData(category),
   });
 
   // Handle Category Switching
@@ -518,6 +529,8 @@ export const BinarySearchPage: React.FC = () => {
       >
         <BinarySearchRenderer step={currentStep} array={array} target={currentTarget} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="binarySearch" activeTopic={category} />
+
     </div>
   );
 };

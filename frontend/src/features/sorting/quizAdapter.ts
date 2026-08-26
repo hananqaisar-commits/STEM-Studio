@@ -689,6 +689,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'After each pass, the largest unsorted element bubbles to its correct position',
     watchFor: ['Number of passes needed', 'When swaps occur', 'Early termination condition'],
     quickTip: 'Track the last swap position to skip already-sorted tail elements',
+    example: 'Input [5,3,8,1]: Pass 1 swaps (5,3)→[3,5,8,1], no swap (5,8), swaps (8,1)→[3,5,1,8]. Value 8 is now locked at the end.',
   },
   selection: {
     description: 'Find the minimum element and place it at the current position',
@@ -696,6 +697,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'The array is divided into sorted (left) and unsorted (right) regions',
     watchFor: ['Minimum finding process', 'Swap count', 'Comparison with bubble sort'],
     quickTip: 'Selection sort always makes exactly n-1 swaps regardless of input',
+    example: 'Input [7,3,5,2]: Pass 1 scans all, finds min=2 at index 3, swaps with index 0→[2,3,5,7]. One write per pass.',
   },
   insertion: {
     description: 'Build sorted array one element at a time by inserting each into correct position',
@@ -703,6 +705,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Maintain a sorted prefix; insert each new element by shifting larger elements right',
     watchFor: ['Shift operations', 'Best case (already sorted)', 'Comparison with selection sort'],
     quickTip: 'Best case is O(n) when array is already sorted—no shifts needed',
+    example: 'Input [4,2,7,1]: key=2 shifts 4 right→[2,4,7,1]; key=7 no shift; key=1 shifts 7,4,2 right→[1,2,4,7].',
   },
   merge: {
     description: 'Divide array in half, recursively sort, then merge the sorted halves',
@@ -710,6 +713,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Two sorted arrays can be merged in linear time by comparing front elements',
     watchFor: ['Divide step', 'Merge process', 'Space complexity reason'],
     quickTip: 'Merge sort needs O(n) extra space for the merge operation',
+    example: 'Input [38,27,43,3]: split [38,27]→[38],[27]→merge [27,38]; split [43,3]→[43],[3]→merge [3,43]; final merge→[3,27,38,43].',
   },
   quick: {
     description: 'Pick a pivot, partition around it, recursively sort subarrays',
@@ -717,6 +721,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'After partitioning, the pivot is in its final sorted position',
     watchFor: ['Pivot selection', 'Partition logic', 'Worst case scenario'],
     quickTip: 'Worst case O(n²) occurs with poor pivot choice (e.g., always picking min/max)',
+    example: 'Input [8,3,1,7,0,10,2], pivot=2: partition puts smaller left, larger right→[0,1,2,7,3,10,8]. Pivot 2 is now at its final index 2.',
   },
   heap: {
     description: 'Build a max heap, then repeatedly extract the maximum to sort',
@@ -724,6 +729,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'A max heap keeps the largest element at the root for O(1) access',
     watchFor: ['Heapify process', 'Heap property maintenance', 'In-place sorting'],
     quickTip: 'Heap sort is in-place but not stable—equal elements may change relative order',
+    example: 'Input [4,10,3,5,1]: build max-heap→[10,5,3,4,1]; swap root 10 with last→[1,5,3,4,10]; heapify→[5,4,3,1,10]; repeat until sorted.',
   },
   shell: {
     description: 'Insertion sort with decreasing gap sequences for faster convergence',
@@ -731,6 +737,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Sorting with large gaps first allows elements to move far in few swaps',
     watchFor: ['Gap sequence', 'Comparison with insertion sort', 'Why gaps help'],
     quickTip: 'Shell sort is insertion sort applied to widely spaced elements first',
+    example: 'Input [35,33,42,10,14,19,27,44], gap=4: sort sub-sequences → gap=2: sort → gap=1: final insertion sort on nearly-sorted array.',
   },
   counting: {
     description: 'Count occurrences of each value, then reconstruct sorted array',
@@ -738,6 +745,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'If values are in a small range k, we can count them directly',
     watchFor: ['Count array construction', 'Stable reconstruction', 'Range limitation'],
     quickTip: 'Only works when the range k of values is not much larger than n',
+    example: 'Input [4,2,2,8,3,3,1]: count=[0,1,2,2,1,0,0,0,1]; prefix sum gives positions; place each value→[1,2,2,3,3,4,8].',
   },
   radix: {
     description: 'Sort by each digit position from least to most significant',
@@ -745,6 +753,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Stable sorting by each digit preserves order from previous passes',
     watchFor: ['Digit extraction', 'Stability requirement', 'Number of passes'],
     quickTip: 'Radix sort requires a stable subroutine like counting sort per digit',
+    example: 'Input [170,45,75,90,802,24,2,66]: sort by ones→[170,90,802,2,24,45,75,66]; sort by tens→[802,2,24,45,66,170,75,90]; sort by hundreds→[2,24,45,66,75,90,170,802].',
   },
   bucket: {
     description: 'Distribute elements into buckets, sort each bucket, concatenate',
@@ -752,6 +761,7 @@ const REVISION_DATA: Record<SortingAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Uniformly distributed data means each bucket has O(1) elements',
     watchFor: ['Bucket distribution', 'Sorting within buckets', 'When it degrades'],
     quickTip: 'Works best when input is uniformly distributed across a known range',
+    example: 'Input [0.42,0.32,0.82,0.12,0.52]: distribute into 5 buckets by range→bucket[0]=[0.12], bucket[1]=[0.22], …; sort each bucket; concatenate.',
   },
 };
 

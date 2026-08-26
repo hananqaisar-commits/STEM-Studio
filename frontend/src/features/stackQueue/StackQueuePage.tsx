@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Layers, Plus, Trash2, Code, CheckCircle2, Filter, HelpCircle, Maximize2, Sparkles
 } from 'lucide-react';
@@ -6,7 +7,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildStackQueueCheckpoints } from './quizAdapter';
+import { buildStackQueueCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateStackPushSteps,
@@ -38,6 +39,7 @@ import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageC
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface ProblemMeta {
   id: StackQueueCategory;
@@ -78,10 +80,18 @@ const PROBLEMS_LIST: ProblemMeta[] = [
 
 export const StackQueuePage: React.FC = () => {
   const [category, setCategory] = useState<StackQueueCategory>('stack');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && PROBLEMS_LIST.some((a) => a.id === topic)) {
+      setCategory(topic as StackQueueCategory);
+    }
+  }, [searchParams]);
+
   const [inputValue, setInputValue] = useState<string>('42');
 
   // Modes & Modals matching BST
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -136,6 +146,7 @@ export const StackQueuePage: React.FC = () => {
     stepForward,
     module: 'stackQueue',
     algorithmId: category,
+    revisionData: buildRevisionData(category),
   });
 
   // ─── ACTION HANDLERS ─────────────────────────────────────────────
@@ -787,6 +798,8 @@ export const StackQueuePage: React.FC = () => {
       >
         {renderCanvas()}
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="stackQueue" activeTopic={category} />
+
     </div>
   );
 };
