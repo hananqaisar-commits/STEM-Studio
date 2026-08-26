@@ -79,7 +79,7 @@ export const TriePage: React.FC = () => {
   const [wordsInput, setWordsInput] = useState<string>(DEFAULT_PARAMS.trieInsert.words);
   const [queryInput, setQueryInput] = useState<string>(DEFAULT_PARAMS.trieSearch.query);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState(true);
+  const [quizEnabled, setQuizEnabled] = useState(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
