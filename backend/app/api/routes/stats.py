@@ -56,7 +56,7 @@ def submit_review(
         role=payload.role,
         rating=payload.rating,
         text=payload.text,
-        approved=False,
+        approved=True,
     )
     db.add(review)
     db.commit()
