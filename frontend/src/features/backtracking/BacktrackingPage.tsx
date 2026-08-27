@@ -422,9 +422,14 @@ export const BacktrackingPage: React.FC = () => {
           />
         </div>
 
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
 
+
+        </div>
+
+
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             title="Backtracking"
@@ -452,6 +457,22 @@ export const BacktrackingPage: React.FC = () => {
         subtitle="Decision Tree Inspector"
         toolbarControls={renderFloatingControls()}
         playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <BacktrackingRenderer
           currentStep={currentStep}

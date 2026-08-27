@@ -420,6 +420,13 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* In the two-row scene layout the explanation card sits in the bottom rail
+   and must scroll internally when its content is taller than the row. */
+.bottom-row > .explanation-panel {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
 .panel-section {
   display: flex;
   flex-direction: column;

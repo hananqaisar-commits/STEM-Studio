@@ -489,9 +489,10 @@ export const GreedyPage: React.FC = () => {
         </div>
 
         {/* Right Column: Quiz & Explanation */}
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
+        </div>
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             title="Greedy Algorithm"
@@ -521,6 +522,22 @@ export const GreedyPage: React.FC = () => {
         subtitle="Greedy Choice Visualizer"
         toolbarControls={renderFloatingControls()}
         playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <ArrayRenderer currentStep={currentStep} />
       </FullScreenCanvasModal>

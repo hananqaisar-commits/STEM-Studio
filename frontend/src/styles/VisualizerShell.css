@@ -260,6 +260,10 @@
 .scene-workspace {
   display: grid;
   grid-template-columns: 1fr var(--viz-side-col, 380px);
+  grid-template-rows: 1fr minmax(200px, 320px);
+  grid-template-areas:
+    "canvas  quiz"
+    "bottom  bottom";
   gap: 1.25rem;
   align-items: start;
   max-height: calc(100vh - var(--navbar-height) - 180px);
@@ -270,6 +274,33 @@
   position: relative;
 }
 
+.quiz-rail {
+  grid-area: quiz;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  max-height: calc(100vh - var(--navbar-height) - 180px);
+  overflow: hidden;
+}
+
+.bottom-row {
+  grid-area: bottom;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bottom-row > .multi-lang-code-panel,
+.bottom-row > .explanation-panel,
+.bottom-row > .stack-queue-code-panel {
+  min-width: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
 @media (max-width: 1100px) {
   .sorting-workspace,
   .ll-workspace,
@@ -277,7 +308,23 @@
   .bs-workspace,
   .scene-workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "canvas"
+      "quiz"
+      "bottom";
     gap: 1rem;
+    max-height: none;
+  }
+
+  .bottom-row {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-rail,
+  .bottom-row > .multi-lang-code-panel,
+  .bottom-row > .explanation-panel,
+  .bottom-row > .stack-queue-code-panel {
     max-height: none;
   }
 }
@@ -289,6 +336,7 @@
    column had no gap or alignment of its own. Defined here. */
 
 .renderer-section {
+  grid-area: canvas;
   display: flex;
   flex-direction: column;
   gap: 1rem;
