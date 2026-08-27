@@ -10,6 +10,26 @@
   box-shadow: var(--shadow-md);
 }
 
+/* In the two-row scene layout the debugger fills the bottom rail and its
+   code editor absorbs the available vertical space. */
+.bottom-row > .multi-lang-code-panel {
+  max-height: 100%;
+}
+
+.bottom-row > .multi-lang-code-panel .code-editor-container,
+.bottom-row > .multi-lang-code-panel .custom-code-editor {
+  max-height: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.bottom-row > .multi-lang-code-panel .integrated-scope-section {
+  flex-shrink: 0;
+  max-height: 45%;
+  overflow-y: auto;
+}
+
 .code-panel-header {
   display: flex;
   align-items: center;
