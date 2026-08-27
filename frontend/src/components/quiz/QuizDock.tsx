@@ -3,6 +3,8 @@ import { Target, BookOpen, Compass, Zap, RotateCcw, Eye } from 'lucide-react';
 import { QuizPanel } from './QuizPanel';
 import { QuizRevision } from './QuizRevision';
 import { QuizReport } from './QuizReport';
+import { Octa } from '../mascot';
+import '../mascot/Mascot.css';
 import {
   CADENCE_LABELS,
   CADENCE_IDENTITIES,
@@ -67,6 +69,9 @@ export const QuizDock: React.FC<QuizDockProps> = ({
   if (phase === 'revision' && session.revisionData) {
     return (
       <div className="quiz-dock">
+        <div className="quiz-dock-mascot">
+          <Octa expression="reading" size="tiny" interactive={false} />
+        </div>
         <QuizRevision
           algorithmName={algorithmName}
           revisionData={session.revisionData}
@@ -80,6 +85,9 @@ export const QuizDock: React.FC<QuizDockProps> = ({
   if (phase === 'report') {
     return (
       <div className="quiz-dock">
+        <div className="quiz-dock-mascot">
+          <Octa expression="excited" size="tiny" interactive={false} />
+        </div>
         <QuizReport
           correctCount={session.correctCount}
           answeredCount={session.answeredCount}
@@ -133,6 +141,9 @@ export const QuizDock: React.FC<QuizDockProps> = ({
 
   return (
     <div className="quiz-dock">
+      <div className="quiz-dock-mascot">
+        <Octa expression="reading" size="tiny" interactive={false} />
+      </div>
       <section className="quiz-panel" aria-label="Quiz mode">
         <header className="quiz-head">
           <div className="quiz-head-text">

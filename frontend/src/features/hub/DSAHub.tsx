@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
@@ -8,6 +9,8 @@ import {
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
 import { apiClient } from '../../api/apiClient';
+import { Octa, useMascot } from '../../components/mascot';
+import '../../components/mascot/Mascot.css';
 import './DSAHub.css';
 
 const MODULE_ICON_MAP: Record<string, LucideIcon> = {
@@ -18,9 +21,9 @@ const MODULE_ICON_MAP: Record<string, LucideIcon> = {
    Positions are kept close to the image so the visual feels connected
    and compact rather than scattered. */
 const BUBBLE_POSITIONS = [
-  { top: '8%', left: '-5%' },
-  { top: '4%', right: '-2%' },
-  { bottom: '8%', left: '18%' },
+  { top: '18%', left: '18%' },
+  { top: '14%', right: '18%' },
+  { bottom: '16%', left: '26%' },
 ];
 
 /* ── Features data ────────────────────────────────────────────────── */
@@ -87,6 +90,11 @@ interface ReviewItem {
 
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
+  const { state: mascotState, setExpression, setContext } = useMascot();
+
+  useEffect(() => {
+    setContext('dashboard');
+  }, [setContext]);
 
   const availableModules = MODULES.filter(m => m.available).length;
   const totalCategories = MODULES.reduce((sum, m) => sum + m.categoryCount, 0);
@@ -139,6 +147,7 @@ export const DSAHub: React.FC = () => {
     e.preventDefault();
     if (reviewStars === 0) return;
     setReviewStatus('submitting');
+    setExpression('focused');
     try {
       await apiClient('/api/stats/reviews', {
         method: 'POST',
@@ -150,6 +159,7 @@ export const DSAHub: React.FC = () => {
         },
       });
       setReviewStatus('success');
+      setExpression('happy', { temporary: true, durationMs: 1500 });
       setReviewStars(0);
       setReviewName('');
       setReviewRole('');
@@ -158,6 +168,7 @@ export const DSAHub: React.FC = () => {
       fetchStats();
     } catch {
       setReviewStatus('error');
+      setExpression('sad', { temporary: true, durationMs: 2000 });
     }
   };
 
@@ -237,12 +248,10 @@ export const DSAHub: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="hero-visual">
-          <img
-            src="/images/hero-students.jpeg"
-            alt="Students learning STEM subjects"
-            className="hero-image"
-          />
+        <div className="hero-visual mascot-hero">
+          <div className="mascot-hero-center">
+            <Octa expression={mascotState.expression} size="xl" />
+          </div>
           <div className="hero-bubbles">
             {MODULES.map((mod, i) => {
               const Icon = MODULE_ICON_MAP[mod.iconName] ?? BookOpen;
@@ -255,7 +264,12 @@ export const DSAHub: React.FC = () => {
                     ...pos,
                     animationDelay: `${i * 0.5}s`,
                   } as React.CSSProperties}
-                  onClick={() => mod.available && navigate(`/dashboard/${mod.id}`)}
+                  onMouseEnter={() => setExpression('focused', { temporary: true, durationMs: 800 })}
+                  onClick={() => {
+                    if (!mod.available) return;
+                    setExpression('focused', { temporary: true, durationMs: 500 });
+                    navigate(`/dashboard/${mod.id}`);
+                  }}
                   title={mod.available ? mod.name : `${mod.name} — Coming Soon`}
                   disabled={!mod.available}
                   type="button"
@@ -396,7 +410,17 @@ export const DSAHub: React.FC = () => {
       <section id="share-experience" className="landing-section">
         <h2 className="section-title">Share Your Experience</h2>
         <p className="section-subtitle">Tell us how STEM Studio helped you learn DSA</p>
-        <form className="review-form" onSubmit={handleReviewSubmit}>
+        <div className="review-mascot-wrap">
+          <div className="review-mascot">
+            <Octa
+              expression={reviewStatus === 'success' ? 'happy' : reviewStatus === 'error' ? 'sad' : 'neutral'}
+              size="medium"
+            />
+            {reviewStatus === 'success' && (
+              <span className="mascot-speech-bubble">Thanks!</span>
+            )}
+          </div>
+          <form className="review-form" onSubmit={handleReviewSubmit}>
           <div className="review-form-row">
             <div className="review-form-field">
               <label>Your Rating</label>
@@ -406,6 +430,10 @@ export const DSAHub: React.FC = () => {
                     key={s}
                     type="button"
                     className={`star-btn${s <= reviewStars ? ' is-active' : ''}`}
+                    onMouseEnter={() => {
+                      if (s <= 2) setExpression('thinking', { temporary: true, durationMs: 600 });
+                      else if (s >= 4) setExpression('happy', { temporary: true, durationMs: 600 });
+                    }}
                     onClick={() => setReviewStars(s)}
                   >
                     <Star size={20} fill={s <= reviewStars ? 'currentColor' : 'none'} />
@@ -467,7 +495,8 @@ export const DSAHub: React.FC = () => {
           >
             {reviewStatus === 'submitting' ? 'Submitting...' : 'Submit Review'} <Send size={14} />
           </button>
-        </form>
+          </form>
+        </div>
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────────── */}

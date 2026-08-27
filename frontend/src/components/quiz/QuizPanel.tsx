@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap } from 'lucide-react';
 import type { QuizQuestion, QuizCadence } from '../../engine/types/Quiz';
+import { Octa } from '../mascot';
+import '../mascot/Mascot.css';
 
 /* ── Quiz panel ────────────────────────────────────────────────────────
    The question card, shared by all categories.
@@ -149,6 +151,19 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
         <div className="quiz-head-text">
           <span className="quiz-eyebrow">{eyebrow}</span>
           <h3 className="quiz-title">Predict the next step</h3>
+        </div>
+        <div className="quiz-head-mascot">
+          <Octa
+            expression={
+              phase === 'revealed'
+                ? wasCorrect
+                  ? 'happy'
+                  : 'confused'
+                : 'focused'
+            }
+            size="tiny"
+            interactive={false}
+          />
         </div>
         <div className="quiz-head-right">
           <span className="quiz-concept">{question.concept}</span>

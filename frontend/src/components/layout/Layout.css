@@ -426,6 +426,11 @@
   color: var(--color-text-muted);
 }
 
+.explanation-mascot {
+  margin-left: auto;
+  opacity: 0.9;
+}
+
 .explanation-text {
   font-size: 0.95rem;
   color: var(--color-text);
