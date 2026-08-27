@@ -5,9 +5,8 @@ import {
 } from 'lucide-react';
 import { TrieRenderer } from './TrieRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
@@ -102,7 +101,7 @@ export const TriePage: React.FC = () => {
 
   const {
     currentStepIndex, currentStep, totalSteps, isPlaying,
-    speed, play, pause, stepForward, stepBack, reset, setSpeed,
+    play, pause, stepForward, stepBack, reset,
   } = useStepPlayer({ steps: executionData.steps });
 
   const trieStep = currentStep as TrieStep | null;
@@ -158,27 +157,33 @@ export const TriePage: React.FC = () => {
     setQueryInput(d.query);
   };
 
-  const renderPlayerControls = () => (
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+      onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
+
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
       <div className="player-center">
         <div className="step-progress-bar">
-          <div className="step-progress-fill" style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -315,13 +320,25 @@ export const TriePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
           <TrieRenderer
             currentStep={trieStep}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         <div className="explanation-section">
@@ -349,6 +366,8 @@ export const TriePage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)}
+            steps={executionData.steps}
+            currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
@@ -361,7 +380,7 @@ export const TriePage: React.FC = () => {
         title={`Trie Studio | ${selectedAlg.toUpperCase()}`}
         subtitle="Prefix Tree Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
       >
         <TrieRenderer currentStep={trieStep} />
       </FullScreenCanvasModal>

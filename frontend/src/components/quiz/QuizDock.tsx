@@ -69,9 +69,6 @@ export const QuizDock: React.FC<QuizDockProps> = ({
   if (phase === 'revision' && session.revisionData) {
     return (
       <div className="quiz-dock">
-        <div className="quiz-dock-mascot">
-          <Octa expression="reading" size="tiny" interactive={false} />
-        </div>
         <QuizRevision
           algorithmName={algorithmName}
           revisionData={session.revisionData}
@@ -86,7 +83,7 @@ export const QuizDock: React.FC<QuizDockProps> = ({
     return (
       <div className="quiz-dock">
         <div className="quiz-dock-mascot">
-          <Octa expression="excited" size="tiny" interactive={false} />
+          <Octa expression="excited" size="small" interactive={false} className="octa-wiggle" />
         </div>
         <QuizReport
           correctCount={session.correctCount}
@@ -142,7 +139,7 @@ export const QuizDock: React.FC<QuizDockProps> = ({
   return (
     <div className="quiz-dock">
       <div className="quiz-dock-mascot">
-        <Octa expression="reading" size="tiny" interactive={false} />
+        <Octa expression="focused" size="small" interactive={false} />
       </div>
       <section className="quiz-panel" aria-label="Quiz mode">
         <header className="quiz-head">
