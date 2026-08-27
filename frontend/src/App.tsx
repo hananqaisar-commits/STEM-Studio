@@ -12,7 +12,7 @@ import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
 import { ModuleHub } from './features/hub/ModuleHub';
-import { MODULES } from './data/categories';
+import { MODULES, DSA_CATEGORIES } from './data/categories';
 import { ComplexityPage } from './features/complexity/ComplexityPage';
 import { SortingPage } from './features/sorting/SortingPage';
 import { BSTPage } from './features/bst/BSTPage';
@@ -75,12 +75,13 @@ const DashboardLayout = () => {
   const isOnLanding = location.pathname === '/dashboard';
 
   // Determine active module and category from path.
-  // On a category page the "module" context becomes the category itself so the
-  // sidebar renders only that category's topics instead of every DSA category.
+  // If we are on a DSA category page (e.g. /dashboard/complexity), 
+  // the active module must be 'dsa' so the sidebar correctly shows all DSA categories.
   const isModulePage = MODULES.some(m => m.id === pathSegment);
-  const isCategoryPage = !isOnLanding && !isModulePage && !!pathSegment;
-  const activeModuleId = isModulePage ? pathSegment : (isCategoryPage ? pathSegment : '');
-  const activeCategoryId = isCategoryPage ? pathSegment : '';
+  const isDsaCategory = DSA_CATEGORIES.some(c => c.id === pathSegment);
+  
+  const activeModuleId = isModulePage ? pathSegment : (isDsaCategory ? 'dsa' : '');
+  const activeCategoryId = isDsaCategory ? pathSegment : '';
 
   return (
     <div className="dashboard-shell">
