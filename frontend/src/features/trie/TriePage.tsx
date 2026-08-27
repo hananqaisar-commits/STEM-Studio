@@ -341,9 +341,14 @@ export const TriePage: React.FC = () => {
           />
         </div>
 
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
 
+
+        </div>
+
+
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             title="Trie"
@@ -381,6 +386,22 @@ export const TriePage: React.FC = () => {
         subtitle="Prefix Tree Inspector"
         toolbarControls={renderFloatingControls()}
         playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <TrieRenderer currentStep={trieStep} />
       </FullScreenCanvasModal>
