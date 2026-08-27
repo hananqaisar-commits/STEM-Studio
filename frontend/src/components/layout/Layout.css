@@ -48,8 +48,8 @@
 }
 
 .brand-logo-glow {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   display: flex;
@@ -57,6 +57,16 @@
   align-items: center;
   color: #ffffff;
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+  overflow: hidden;
+}
+
+.brand-mascot .octa-img {
+  filter: brightness(1.1) contrast(1.05);
+  transition: transform 0.3s ease;
+}
+
+.brand-logo-glow:hover .brand-mascot {
+  transform: scale(1.1);
 }
 
 .brand-title {
@@ -436,6 +446,80 @@
   color: var(--color-text);
   line-height: 1.5;
   margin: 0;
+}
+
+/* Cumulative step history */
+.explanation-history-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  max-height: 220px;
+}
+
+.history-box-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.explanation-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow-y: auto;
+  max-height: 170px;
+  padding-right: 0.25rem;
+}
+
+.history-bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.history-bullet.is-past {
+  opacity: 0.85;
+}
+
+.history-bullet.is-active {
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid var(--color-primary);
+  color: var(--color-text);
+}
+
+.history-bullet-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  margin-top: 0.35rem;
+  flex-shrink: 0;
+}
+
+.history-bullet.is-active .history-bullet-dot {
+  background: var(--color-primary);
+}
+
+.history-bullet-text {
+  flex: 1;
 }
 
 /* Complexity Cards */

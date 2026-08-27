@@ -40,11 +40,15 @@
 
 .quiz-dock-mascot {
   position: absolute;
-  top: -0.6rem;
+  top: -1rem;
   right: 0.6rem;
   z-index: 5;
   opacity: 0.95;
   pointer-events: none;
+}
+
+[data-theme='dark'] .quiz-dock-mascot .octa-img {
+  filter: brightness(1.05);
 }
 
 [data-theme='dark'] .quiz-dock {

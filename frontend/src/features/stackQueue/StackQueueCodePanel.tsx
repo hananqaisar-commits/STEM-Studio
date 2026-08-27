@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Code, Terminal, Cpu, Code2, Play, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Code, Terminal, Cpu, Code2, Play, RotateCcw, AlertTriangle, Eye, Pencil } from 'lucide-react';
 import { STACK_SNIPPETS, QUEUE_SNIPPETS, PARENTHESES_SNIPPETS, POSTFIX_SNIPPETS, QVS_SNIPPETS, DAILY_TEMP_SNIPPETS, type LanguageKey } from './stackQueueSnippets';
 import type { StackQueueCategory } from './stackQueueEngine';
 import type { CustomLanguage } from '../../engine/customCodeTemplates';
@@ -98,6 +98,11 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
 
   const handleRunCustomCode = () => {
     setExecutionError(null);
+    const trimmed = customCode.trim();
+    if (!trimmed) {
+      setExecutionError('Paste a function to visualize. Empty code is not allowed.');
+      return;
+    }
     if (onCustomCodeRun) {
       onCustomCodeRun(customCode, customLang);
     }
@@ -123,13 +128,15 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
             className={`mode-btn ${codeMode === 'default' ? 'active' : ''}`}
             onClick={() => { setCodeMode('default'); setExecutionError(null); }}
           >
-            Default
+            <Eye size={12} />
+            <span>Reference</span>
           </button>
           <button
             className={`mode-btn ${codeMode === 'custom' ? 'active' : ''}`}
             onClick={() => setCodeMode('custom')}
           >
-            Custom
+            <Pencil size={12} />
+            <span>Paste code</span>
           </button>
         </div>
 
@@ -208,7 +215,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
               value={customCode}
               onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); }}
               spellCheck={false}
-              placeholder={`Write your ${customLang.toUpperCase()} code here...`}
+              placeholder={`Paste your ${customLang.toUpperCase()} function here. Only one function is allowed — no top-level variables or statements.`}
             />
           </div>
 

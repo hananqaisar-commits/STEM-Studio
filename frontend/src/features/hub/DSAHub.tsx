@@ -413,11 +413,17 @@ export const DSAHub: React.FC = () => {
         <div className="review-mascot-wrap">
           <div className="review-mascot">
             <Octa
-              expression={reviewStatus === 'success' ? 'happy' : reviewStatus === 'error' ? 'sad' : 'neutral'}
+              expression={reviewStatus === 'success' ? 'happy' : reviewStatus === 'error' ? 'sad' : 'review'}
               size="medium"
+              className={reviewStatus === 'submitting' ? 'octa-nod' : ''}
             />
             {reviewStatus === 'success' && (
-              <span className="mascot-speech-bubble">Thanks!</span>
+              <span className="mascot-speech-bubble animate-fade-in">Thanks!</span>
+            )}
+            {reviewStatus === 'success' && (
+              <svg className="paper-plane-fly" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             )}
           </div>
           <form className="review-form" onSubmit={handleReviewSubmit}>
