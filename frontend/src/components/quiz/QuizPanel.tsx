@@ -159,9 +159,11 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
                 ? wasCorrect
                   ? 'happy'
                   : 'confused'
-                : 'focused'
+                : phase === 'retrying'
+                  ? 'thinking'
+                  : 'focused'
             }
-            size="tiny"
+            size="small"
             interactive={false}
           />
         </div>

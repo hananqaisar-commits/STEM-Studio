@@ -1,6 +1,8 @@
 import React from 'react';
 import { BookOpen, Lightbulb, Eye, Target, ArrowRight, Code2 } from 'lucide-react';
 import type { QuizRevisionData } from '../../engine/types/Quiz';
+import { Octa } from '../mascot';
+import '../mascot/Mascot.css';
 
 /* ── QuizRevision ──────────────────────────────────────────────────────
    A revision card shown BEFORE quiz questions start. Gives the student
@@ -28,10 +30,13 @@ export const QuizRevision: React.FC<QuizRevisionProps> = ({
         <div className="quiz-head-text">
           <span className="quiz-eyebrow">
             <Target size={13} />
-            Revision
+            Last-Minute Revision
           </span>
           <h3 className="quiz-title quiz-revision-title">{algorithmName}</h3>
           <p className="quiz-revision-desc">{description}</p>
+        </div>
+        <div className="quiz-head-mascot">
+          <Octa expression="reading" size="small" className="octa-nod" />
         </div>
         <span className="quiz-revision-complexity">{complexity}</span>
       </header>
