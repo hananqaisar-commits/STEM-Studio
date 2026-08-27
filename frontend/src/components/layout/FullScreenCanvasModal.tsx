@@ -71,6 +71,9 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
         )}
 
         <div className="fs-header-actions">
+          <span className="fs-quiz-disabled-hint" title="Quiz mode is disabled while in fullscreen">
+            Quiz mode unavailable
+          </span>
           {/* Exit Fullscreen Button */}
           <button className="fs-icon-btn exit-fs-btn" onClick={onClose} title="Exit Fullscreen Mode">
             <Minimize2 size={15} />

@@ -5,6 +5,7 @@ import {
   Pencil, Eye,
 } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
+import { FALLBACK_SNIPPETS } from '../../features/debugger/data/fallbackSnippets';
 import { getStarterTemplate, type CustomLanguage } from '../../engine/customCodeTemplates';
 import { executeCustomSortingCode } from '../../engine/codeExecutionEngine';
 import type { ArrayStep } from '../../engine/types/Step';
@@ -129,9 +130,9 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   snippets,
   title = 'Source Code',
 }) => {
-  // Resolve which snippet set to show: explicit prop → sorting table → none.
+  // Resolve which snippet set to show: explicit prop → sorting table → fallback map.
   const resolvedSnippets: SnippetSet | undefined = useMemo(
-    () => snippets ?? SORTING_CODE_SNIPPETS[algorithmKey],
+    () => snippets ?? SORTING_CODE_SNIPPETS[algorithmKey] ?? FALLBACK_SNIPPETS[algorithmKey],
     [snippets, algorithmKey]
   );
 
