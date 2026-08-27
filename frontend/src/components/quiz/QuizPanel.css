@@ -32,9 +32,19 @@
 
   /* Reserved so the cards below in the same rail hold still when a
      checkpoint opens and closes. */
+  position: relative;
   min-height: 268px;
   display: flex;
   flex-direction: column;
+}
+
+.quiz-dock-mascot {
+  position: absolute;
+  top: -0.6rem;
+  right: 0.6rem;
+  z-index: 5;
+  opacity: 0.95;
+  pointer-events: none;
 }
 
 [data-theme='dark'] .quiz-dock {
@@ -69,6 +79,12 @@
 
 .quiz-head-text {
   min-width: 0;
+}
+
+.quiz-head-mascot {
+  margin-left: auto;
+  margin-right: 0.4rem;
+  opacity: 0.95;
 }
 
 .quiz-eyebrow {

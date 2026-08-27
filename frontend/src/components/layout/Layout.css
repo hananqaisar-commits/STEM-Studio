@@ -426,6 +426,11 @@
   color: var(--color-text-muted);
 }
 
+.explanation-mascot {
+  margin-left: auto;
+  opacity: 0.9;
+}
+
 .explanation-text {
   font-size: 0.95rem;
   color: var(--color-text);
@@ -950,9 +955,7 @@
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .category-count {
@@ -1038,9 +1041,7 @@
 .topic-item-name {
   font-size: 0.8rem;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 /* ─── Theory Panel ─────────────────────────────────────────────────── */

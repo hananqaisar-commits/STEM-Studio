@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { Octa, useMascot } from '../../components/mascot';
+import '../../components/mascot/Mascot.css';
 import './Auth.css';
 
 export const SignIn: React.FC = () => {
@@ -13,17 +15,26 @@ export const SignIn: React.FC = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { state: mascotState, setExpression, setContext } = useMascot();
+
+  useEffect(() => {
+    setContext('signin');
+  }, [setContext]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+    setExpression('focused');
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      setExpression('happy', { temporary: true, durationMs: 900 });
+      setTimeout(() => navigate('/dashboard'), 300);
     } catch (err: any) {
-      setError(err?.message || 'Something went wrong. Please try again.');
+      const message = err?.message || 'Something went wrong. Please try again.';
+      setError(message);
+      setExpression('confused', { temporary: true, durationMs: 1500, message: 'Oops.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -31,7 +42,13 @@ export const SignIn: React.FC = () => {
 
   return (
     <div className="auth-page-container">
-      <div className="auth-card animate-fade-in">
+      <div className="auth-card animate-fade-in auth-card-with-mascot">
+        <div className="mascot-auth-jump">
+          <Octa expression={mascotState.expression} size="medium" />
+          {mascotState.message && (
+            <span className="mascot-speech-bubble">{mascotState.message}</span>
+          )}
+        </div>
         <div className="auth-header">
           <img src="/logo.png" alt="STEM Studio" className="auth-logo" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
           <h1 className="auth-title">Welcome back</h1>
@@ -57,6 +74,7 @@ export const SignIn: React.FC = () => {
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
                 required
                 disabled={isSubmitting}
               />
@@ -74,6 +92,7 @@ export const SignIn: React.FC = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
                 required
                 disabled={isSubmitting}
               />

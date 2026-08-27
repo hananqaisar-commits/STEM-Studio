@@ -1,0 +1,314 @@
+/* ─── Octa Mascot Styles ─────────────────────────────────────────────
+   Clean SVG-based mascot system. Animations are subtle and contextual.
+   ─────────────────────────────────────────────────────────────────── */
+
+/* ── Octa wrapper ──────────────────────────────────────────────────── */
+.octa-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.octa-wrapper .octa-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+/* Interactive mascot gets idle breathing animation */
+.octa-interactive {
+  animation: octa-breathe 4s ease-in-out infinite;
+}
+
+.octa-interactive:hover {
+  transform: scale(1.05);
+  animation-play-state: paused;
+}
+
+/* ── Breathing (subtle scale pulse) ────────────────────────────────── */
+@keyframes octa-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.02); }
+}
+
+/* ── Floating (for hero/dashboard) ─────────────────────────────────── */
+.octa-floating {
+  animation: octa-float 6s ease-in-out infinite;
+}
+
+@keyframes octa-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ── Jump-in entrance (auth card) ──────────────────────────────────── */
+.octa-jump-in {
+  animation: octa-jump 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes octa-jump {
+  0% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.6) rotate(-10deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.05) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+/* ── Entrance fade (generic) ───────────────────────────────────────── */
+.octa-fade-in {
+  animation: octa-fade-in 0.4s ease-out forwards;
+}
+
+@keyframes octa-fade-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Wiggle (success/happy) ────────────────────────────────────────── */
+.octa-wiggle {
+  animation: octa-wiggle 0.5s ease-in-out;
+}
+
+@keyframes octa-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+/* ── Nod (thinking) ────────────────────────────────────────────────── */
+.octa-nod {
+  animation: octa-nod 1.5s ease-in-out infinite;
+}
+
+@keyframes octa-nod {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(3deg); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LOADING SCREEN — Octa drags STEM letters
+   ══════════════════════════════════════════════════════════════════ */
+
+.mascot-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  background: var(--bg-primary, #0f0f14);
+  transition: opacity 0.5s ease;
+}
+
+.mascot-loading-fadeout {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mascot-loading-scene {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 160px;
+}
+
+/* Dragger: Octa moves from left to letters */
+.mascot-loading-dragger {
+  animation: octa-drag 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes octa-drag {
+  0% {
+    transform: translateX(-120px) scale(0.8);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(-60px) scale(1);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Letters: slide in from left, staggered */
+.mascot-loading-letters {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.mascot-letter {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  transform: translateX(-80px);
+  animation: letter-reveal 0.6s ease-out forwards;
+}
+
+.mascot-letter-s { color: #10b981; animation-delay: 0.3s; }
+.mascot-letter-t { color: #06b6d4; animation-delay: 0.5s; }
+.mascot-letter-e { color: #f59e0b; animation-delay: 0.7s; }
+.mascot-letter-m { color: #ec4899; animation-delay: 0.9s; }
+
+@keyframes letter-reveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-80px) scale(0.5);
+  }
+  70% {
+    transform: translateX(4px) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Settled phase: subtle pulse on letters */
+.mascot-loading-settled .mascot-letter {
+  animation: letter-settled 2s ease-in-out infinite;
+}
+
+.mascot-loading-settled .mascot-letter-s { animation-delay: 0s; }
+.mascot-loading-settled .mascot-letter-t { animation-delay: 0.15s; }
+.mascot-loading-settled .mascot-letter-e { animation-delay: 0.3s; }
+.mascot-loading-settled .mascot-letter-m { animation-delay: 0.45s; }
+
+@keyframes letter-settled {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.mascot-loading-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary, #a1a1aa);
+  letter-spacing: 0.02em;
+}
+
+/* Progress bar */
+.mascot-loading-progress {
+  width: 200px;
+  height: 4px;
+  background: var(--border-color, #27272a);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mascot-loading-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #06b6d4 33%, #f59e0b 66%, #ec4899 100%);
+  border-radius: 2px;
+  animation: loading-progress 2s ease-out forwards;
+}
+
+@keyframes loading-progress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   AUTH CARD MASCOT — sits on top-left of card with jump-in
+   ══════════════════════════════════════════════════════════════════ */
+
+.mascot-auth-jump {
+  position: absolute;
+  top: -20px;
+  left: -10px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DASHBOARD HERO
+   ══════════════════════════════════════════════════════════════════ */
+
+.mascot-hero-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.mascot-hero-center .octa-interactive {
+  animation: octa-float 6s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   EXPLANATION PANEL — reading mascot
+   ══════════════════════════════════════════════════════════════════ */
+
+.explanation-mascot {
+  display: inline-flex;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   REDUCED MOTION — respect user preferences
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .octa-interactive,
+  .octa-floating,
+  .octa-jump-in,
+  .octa-fade-in,
+  .octa-wiggle,
+  .octa-nod,
+  .mascot-loading-dragger,
+  .mascot-letter,
+  .mascot-loading-bar {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .mascot-loading-dragger {
+    opacity: 1;
+    transform: none;
+  }
+
+  .mascot-letter {
+    opacity: 1;
+    transform: none;
+  }
+
+  .mascot-loading-bar {
+    width: 100%;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   RESPONSIVE — scale down on small screens
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .mascot-loading-scene {
+    transform: scale(0.8);
+  }
+
+  .mascot-letter {
+    font-size: 2.2rem;
+  }
+
+  .mascot-loading-progress {
+    width: 160px;
+  }
+}

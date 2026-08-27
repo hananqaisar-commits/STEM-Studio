@@ -815,12 +815,41 @@ html {
    SHARE EXPERIENCE SECTION
    ═══════════════════════════════════════════════════════════════════ */
 
-.review-form {
-  max-width: 600px;
+.review-mascot-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1.5rem;
+  max-width: 760px;
   margin: 0 auto;
+}
+
+.review-mascot {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 1.5rem;
+}
+
+.review-form {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .review-mascot-wrap {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .review-mascot {
+    padding-top: 0;
+  }
 }
 
 .review-form-row {
