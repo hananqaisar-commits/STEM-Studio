@@ -1,5 +1,7 @@
 import React from 'react';
 import { Code, Info, Clock, HardDrive } from 'lucide-react';
+import { Octa } from '../mascot';
+import '../mascot/Mascot.css';
 import './Layout.css';
 
 interface TimeComplexity {
@@ -42,6 +44,9 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
         <div className="section-title">
           <Info size={16} />
           <span>{headerText}</span>
+          <div className="explanation-mascot">
+            <Octa expression="reading" size="tiny" interactive={false} />
+          </div>
         </div>
         <p className="explanation-text">{textToShow}</p>
       </div>

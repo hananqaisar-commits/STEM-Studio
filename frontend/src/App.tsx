@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { MascotProvider } from './components/mascot';
 import { SignIn } from './features/auth/SignIn';
 import { SignUp } from './features/auth/SignUp';
 import { ForgotPassword } from './features/auth/ForgotPassword';
@@ -148,9 +149,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <MascotProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </MascotProvider>
       </AuthProvider>
     </ThemeProvider>
   );

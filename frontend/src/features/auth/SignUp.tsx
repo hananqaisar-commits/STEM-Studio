@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, UserPlus, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { Octa, useMascot } from '../../components/mascot';
+import '../../components/mascot/Mascot.css';
 import './Auth.css';
 
 export const SignUp: React.FC = () => {
@@ -19,6 +21,11 @@ export const SignUp: React.FC = () => {
 
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const { state: mascotState, setExpression, setContext } = useMascot();
+
+  useEffect(() => {
+    setContext('signup');
+  }, [setContext]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,13 +39,17 @@ export const SignUp: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setExpression('focused');
 
     try {
       await signup(username, email, password, firstName, lastName);
       setSuccess('Account created successfully! Redirecting to login...');
+      setExpression('happy', { temporary: true, durationMs: 2000 });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      setError(err?.message || 'Something went wrong. Please try again.');
+      const message = err?.message || 'Something went wrong. Please try again.';
+      setError(message);
+      setExpression('confused', { temporary: true, durationMs: 1500, message: 'Oops.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -46,7 +57,13 @@ export const SignUp: React.FC = () => {
 
   return (
     <div className="auth-page-container">
-      <div className="auth-card animate-fade-in">
+      <div className="auth-card animate-fade-in auth-card-with-mascot">
+        <div className="mascot-auth-jump">
+          <Octa expression={mascotState.expression} size="medium" />
+          {mascotState.message && (
+            <span className="mascot-speech-bubble">{mascotState.message}</span>
+          )}
+        </div>
         <div className="auth-header">
           <img src="/logo.png" alt="STEM Studio" className="auth-logo" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
           <h1 className="auth-title">Create an account</h1>
@@ -80,6 +97,7 @@ export const SignUp: React.FC = () => {
                   placeholder="John"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
                   required
                   maxLength={50}
                   disabled={isSubmitting}
@@ -98,6 +116,7 @@ export const SignUp: React.FC = () => {
                   placeholder="Doe"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
                   required
                   maxLength={50}
                   disabled={isSubmitting}
@@ -117,6 +136,7 @@ export const SignUp: React.FC = () => {
                 placeholder="johndoe"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
                 required
                 minLength={3}
                 maxLength={50}
@@ -136,6 +156,7 @@ export const SignUp: React.FC = () => {
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
                 required
                 disabled={isSubmitting}
               />
@@ -153,6 +174,7 @@ export const SignUp: React.FC = () => {
                 placeholder="Create a strong password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
                 required
                 minLength={8}
                 maxLength={128}
@@ -180,6 +202,7 @@ export const SignUp: React.FC = () => {
                 placeholder="Re-enter your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
                 required
                 minLength={8}
                 maxLength={128}
