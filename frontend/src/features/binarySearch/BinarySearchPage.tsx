@@ -511,6 +511,8 @@ export const BinarySearchPage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)}
+            stepNumber={currentStepIndex + 1}
+            totalSteps={totalSteps}
           />
         </div>
       </div>

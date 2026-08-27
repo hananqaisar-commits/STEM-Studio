@@ -498,6 +498,8 @@ export const GreedyPage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step greedy execution.', quizSession.phase)}
+            stepNumber={currentStepIndex + 1}
+            totalSteps={totalSteps}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />

@@ -42,9 +42,6 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
 
   const activeTopic = searchParams.get('topic') || '';
 
-  // Determine if we have a selected module to show categories
-  const selectedModule = MODULES.find((m) => m.id === activeModule);
-  const categories = selectedModule ? DSA_CATEGORIES : [];
 
   // Which categories are expanded? First one by default; active category also open.
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {

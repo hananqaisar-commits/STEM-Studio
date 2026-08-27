@@ -349,6 +349,8 @@ export const TriePage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)}
+            stepNumber={currentStepIndex + 1}
+            totalSteps={totalSteps}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />

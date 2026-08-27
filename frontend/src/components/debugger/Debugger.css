@@ -109,6 +109,7 @@
   background-color: #0b0f19;
   max-height: 320px;
   overflow-y: auto;
+  overflow-x: auto;
   font-family: 'Fira Code', 'JetBrains Mono', monospace;
   font-size: 0.82rem;
   line-height: 1.6;

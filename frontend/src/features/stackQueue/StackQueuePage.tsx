@@ -774,6 +774,8 @@ export const StackQueuePage: React.FC = () => {
 
             <ExplanationPanel
               description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
+              stepNumber={currentStepIndex + 1}
+              totalSteps={totalSteps}
             />
           </div>
         )}
