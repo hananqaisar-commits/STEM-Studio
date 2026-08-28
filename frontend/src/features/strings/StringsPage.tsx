@@ -242,11 +242,10 @@ export const StringsPage: React.FC = () => {
           id: alg.key,
           name: alg.name,
           description: `Step-by-step ${alg.name} execution over character arrays`,
-          group: alg.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => handleAlgorithmChange(id as StringAlgorithmKey)}
-        placeholder="Search string algorithm or complexity..."
+        placeholder="Search string algorithm..."
       />
 
       {/* Category Tabs Bar */}
@@ -260,7 +259,6 @@ export const StringsPage: React.FC = () => {
             >
               {alg.icon}
               <span>{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>

@@ -438,7 +438,6 @@ export const DPPage: React.FC = () => {
           id: alg.key,
           name: alg.name,
           description: `Step-by-step ${alg.name} DP execution with table fill`,
-          group: alg.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => { setSelectedAlg(id as DPAlgorithmKey); reset(); quizSession.resetSession(); }}
@@ -456,7 +455,6 @@ export const DPPage: React.FC = () => {
             >
               {alg.icon}
               <span>{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>

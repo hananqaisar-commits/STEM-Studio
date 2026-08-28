@@ -351,11 +351,11 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             })
           ) : (
             <div className="code-empty-state">
-              <FileCode2 size={22} />
-              <p className="code-empty-title">Reference code coming soon</p>
-              <p className="code-empty-sub">
-                A multi-language implementation for <code>{algorithmKey}</code> hasn&apos;t been added yet.
-                The live variables and step trace below stay fully active.
+              <FileCode2 size={22} style={{ color: 'var(--color-primary, #38bdf8)' }} />
+              <p className="code-empty-title">Algorithm Code Engine</p>
+              <p className="code-empty-sub" style={{ opacity: 0.85 }}>
+                The code implementation for <code>{algorithmKey}</code> is currently being fine-tuned. 
+                Please explore the interactive execution trace below.
               </p>
             </div>
           )}

@@ -98,131 +98,132 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   LOADING SCREEN — Octa drags STEM letters
+   LOADING SCREEN — premium branded splash
+   Vector wordmark anchor + Octa surprised→happy crossfade.
+   Lifecycle is controlled by real app state; no fake timers/progress.
    ══════════════════════════════════════════════════════════════════ */
 
 .mascot-loading {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2rem;
-  background: var(--bg-primary, #0f0f14);
-  transition: opacity 0.5s ease;
+  display: grid;
+  place-items: center;
+  background-color: var(--color-app-bg);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.6s;
 }
 
-.mascot-loading-fadeout {
+.mascot-loading--exit {
   opacity: 0;
+  transform: scale(1.015);
+  visibility: hidden;
   pointer-events: none;
 }
 
-.mascot-loading-scene {
-  position: relative;
+.mascot-loading-stage {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  min-height: 160px;
+  gap: clamp(1.1rem, 3vh, 1.7rem);
+  padding: 1.5rem;
+  transform: translateY(-2vh); /* optical centering */
 }
 
-/* Dragger: Octa moves from left to letters */
-.mascot-loading-dragger {
-  animation: octa-drag 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+/* ── Octa crossfade: surprised (loading) → happy (complete) ────────── */
+
+.mascot-loading-mascot {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  animation: splash-mascot-float 4.2s ease-in-out 1.2s infinite;
 }
 
-@keyframes octa-drag {
-  0% {
-    transform: translateX(-120px) scale(0.8);
-    opacity: 0;
-  }
-  30% {
-    opacity: 1;
-    transform: translateX(-60px) scale(1);
-  }
-  100% {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-  }
+.mascot-layer {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  transition: opacity 0.45s ease;
 }
 
-/* Letters: slide in from left, staggered */
-.mascot-loading-letters {
-  display: flex;
-  gap: 0.3rem;
+.mascot-layer--surprised { opacity: 1; }
+.mascot-layer--happy { opacity: 0; }
+
+.mascot-loading--complete .mascot-layer--surprised { opacity: 0; }
+
+.mascot-loading--complete .mascot-layer--happy {
+  opacity: 1;
+  animation: splash-mascot-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.mascot-letter {
-  font-size: 3rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  opacity: 0;
-  transform: translateX(-80px);
-  animation: letter-reveal 0.6s ease-out forwards;
-}
-
-.mascot-letter-s { color: #10b981; animation-delay: 0.3s; }
-.mascot-letter-t { color: #06b6d4; animation-delay: 0.5s; }
-.mascot-letter-e { color: #f59e0b; animation-delay: 0.7s; }
-.mascot-letter-m { color: #ec4899; animation-delay: 0.9s; }
-
-@keyframes letter-reveal {
-  0% {
-    opacity: 0;
-    transform: translateX(-80px) scale(0.5);
-  }
-  70% {
-    transform: translateX(4px) scale(1.1);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-/* Settled phase: subtle pulse on letters */
-.mascot-loading-settled .mascot-letter {
-  animation: letter-settled 2s ease-in-out infinite;
-}
-
-.mascot-loading-settled .mascot-letter-s { animation-delay: 0s; }
-.mascot-loading-settled .mascot-letter-t { animation-delay: 0.15s; }
-.mascot-loading-settled .mascot-letter-e { animation-delay: 0.3s; }
-.mascot-loading-settled .mascot-letter-m { animation-delay: 0.45s; }
-
-@keyframes letter-settled {
+@keyframes splash-mascot-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-3px); }
 }
 
-.mascot-loading-text {
-  margin: 0;
-  font-size: 0.95rem;
-  color: var(--text-secondary, #a1a1aa);
+@keyframes splash-mascot-pop {
+  0% { transform: scale(0.92); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* ── Status line (crossfades with phase) ───────────────────────────── */
+
+.splash-status {
+  display: grid;
+  place-items: center;
+  min-height: 1.4rem;
+  animation: octa-fade-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.85s both;
+}
+
+.splash-status__label {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.86rem;
+  font-weight: 500;
   letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Progress bar */
-.mascot-loading-progress {
-  width: 200px;
+.splash-status__label--loading { opacity: 1; }
+.splash-status__label--done { opacity: 0; transform: translateY(5px); }
+
+.mascot-loading--complete .splash-status__label--loading {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+.mascot-loading--complete .splash-status__label--done {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.splash-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.splash-dots i {
+  width: 4px;
   height: 4px;
-  background: var(--border-color, #27272a);
-  border-radius: 2px;
-  overflow: hidden;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  animation: dot-pulse 1.3s ease-in-out infinite;
 }
 
-.mascot-loading-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #06b6d4 33%, #f59e0b 66%, #ec4899 100%);
-  border-radius: 2px;
-  animation: loading-progress 2s ease-out forwards;
-}
+.splash-dots i:nth-child(2) { animation-delay: 0.18s; }
+.splash-dots i:nth-child(3) { animation-delay: 0.36s; }
 
-@keyframes loading-progress {
-  0% { width: 0%; }
-  100% { width: 100%; }
+@keyframes dot-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50% { opacity: 0.8; transform: scale(1); }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -331,25 +332,20 @@
   .octa-fade-in,
   .octa-wiggle,
   .octa-nod,
-  .mascot-loading-dragger,
-  .mascot-letter,
-  .mascot-loading-bar {
+  .mascot-loading,
+  .mascot-loading-mascot,
+  .mascot-layer,
+  .mascot-layer--happy,
+  .splash-status,
+  .splash-status__label,
+  .splash-dots i {
     animation: none !important;
     transition: none !important;
   }
 
-  .mascot-loading-dragger {
+  /* Splash fades instantly; entrance animations start visible */
+  .splash-status {
     opacity: 1;
-    transform: none;
-  }
-
-  .mascot-letter {
-    opacity: 1;
-    transform: none;
-  }
-
-  .mascot-loading-bar {
-    width: 100%;
   }
 
   .paper-plane-fly {
@@ -359,19 +355,12 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   RESPONSIVE — scale down on small screens
+   RESPONSIVE — tighten splash on small screens
    ══════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 640px) {
-  .mascot-loading-scene {
-    transform: scale(0.8);
-  }
-
-  .mascot-letter {
-    font-size: 2.2rem;
-  }
-
-  .mascot-loading-progress {
-    width: 160px;
+  .mascot-loading-stage {
+    gap: 1rem;
+    padding: 1rem;
   }
 }

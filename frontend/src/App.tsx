@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -8,6 +8,7 @@ import { SignUp } from './features/auth/SignUp';
 import { ForgotPassword } from './features/auth/ForgotPassword';
 import { ResetPassword } from './features/auth/ResetPassword';
 import { LoadingScreen } from './components/common/LoadingScreen';
+import { BootSplash } from './components/common/BootSplash';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
@@ -72,7 +73,7 @@ const DashboardLayout = () => {
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
 
-  const isOnLanding = location.pathname === '/dashboard';
+
 
   // Determine active module and category from path.
   // If we are on a DSA category page (e.g. /dashboard/complexity), 
@@ -86,16 +87,14 @@ const DashboardLayout = () => {
   return (
     <div className="dashboard-shell">
       <Navbar onToggleSidebar={toggleSidebar} />
-      <div className={`dashboard-body${isOnLanding ? ' no-sidebar' : ''}`}>
-        {!isOnLanding && (
-          <TopicMenu
-            activeModule={activeModuleId}
-            activeCategory={activeCategoryId}
-            onSelectModule={handleSelectModule}
-            isOpen={isSidebarOpen}
-            onClose={closeSidebar}
-          />
-        )}
+      <div className="dashboard-body">
+        <TopicMenu
+          activeModule={activeModuleId}
+          activeCategory={activeCategoryId}
+          onSelectModule={handleSelectModule}
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+        />
         <main className="dashboard-main">
           <Routes>
             <Route index element={<DSAHub />} />
@@ -123,26 +122,24 @@ const DashboardLayout = () => {
 };
 
 const AppContent = () => {
-  const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (showSplash) {
-    return <LoadingScreen />;
-  }
+  const { isLoading } = useAuth();
+  const [splashExited, setSplashExited] = useState(false);
+  const handleSplashExited = useCallback(() => setSplashExited(true), []);
 
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
-      <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
-      <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-      <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
-      <Route path="/dashboard/*" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
+        <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
+        <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+        <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
+        <Route path="/dashboard/*" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>} />
+      </Routes>
+      {!splashExited && (
+        <BootSplash loading={isLoading} onExited={handleSplashExited} />
+      )}
+    </>
   );
 };
 

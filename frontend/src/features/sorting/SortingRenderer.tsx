@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Bar } from '../../components/primitives/Bar';
 import { TreeRenderer } from './TreeRenderer';
 import { Maximize2 } from 'lucide-react';
@@ -22,15 +22,6 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
   onElementClick,
   onToggleFullscreen,
 }) => {
-  const [hoveredInfo, setHoveredInfo] = useState<{
-    index: number;
-    value: number;
-    state: ElementState;
-    pointer?: string;
-    x: number;
-    y: number;
-  } | null>(null);
-
   if (!currentStep) {
     return (
       <div className="sorting-canvas-empty">
@@ -79,18 +70,6 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
     return labels.length > 0 ? labels.join(', ') : undefined;
   };
 
-  const handleBarMouseMove = (e: React.MouseEvent, index: number, value: number, state: ElementState) => {
-    const pointer = getPointerLabel(index);
-    setHoveredInfo({
-      index,
-      value,
-      state,
-      pointer,
-      x: e.clientX,
-      y: e.clientY - 40,
-    });
-  };
-
   const sortedCount = sortedIndices.length;
 
   return (
@@ -123,8 +102,6 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
             <div
               key={index}
               className="interactive-bar-wrapper"
-              onMouseMove={(e) => handleBarMouseMove(e, index, value, state)}
-              onMouseLeave={() => setHoveredInfo(null)}
               onClick={() => onElementClick && onElementClick(index, value)}
               title="Click to edit value"
             >
@@ -143,24 +120,6 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
         })}
       </div>
 
-      {/* Memory Hover Tooltip Card */}
-      {hoveredInfo && (
-        <div
-          className="canvas-memory-inspect-card animate-fade-in"
-          style={{ left: `${hoveredInfo.x}px`, top: `${hoveredInfo.y}px` }}
-        >
-          <div className="inspect-header">
-            <span>INDEX [{hoveredInfo.index}]</span>
-            <span className={`inspect-state state-${hoveredInfo.state}`}>{hoveredInfo.state.toUpperCase()}</span>
-          </div>
-          <div className="inspect-body">
-            <span>VALUE: <strong>{hoveredInfo.value}</strong></span>
-            {hoveredInfo.pointer && (
-              <span>POINTER: <strong className="pointer-highlight">{hoveredInfo.pointer}</strong></span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

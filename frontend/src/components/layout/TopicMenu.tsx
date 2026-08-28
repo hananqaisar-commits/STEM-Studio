@@ -42,9 +42,6 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
 
   const activeTopic = searchParams.get('topic') || '';
 
-  // Determine if we have a selected module to show categories
-  const selectedModule = MODULES.find((m) => m.id === activeModule);
-  const categories = selectedModule ? DSA_CATEGORIES : [];
 
   // Which categories are expanded? First one by default; active category also open.
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
@@ -85,8 +82,6 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   const handleCategoryHeaderClick = (cat: CategoryDef) => {
     if (!cat.available) return;
     toggleCategory(cat.id);
-    navigate(`/dashboard/${cat.id}`);
-    if (onClose) onClose();
   };
 
   const handleTopicClick = (cat: CategoryDef, topicId: string) => {
@@ -116,9 +111,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
 
         {/* Module header */}
         <div className="sidebar-header">
-          <span className="sidebar-title">
-            {selectedModule ? `${selectedModule.name.toUpperCase()}` : 'MODULES'}
-          </span>
+          <span className="sidebar-title">MODULES</span>
           <button
             className="sidebar-close-btn"
             onClick={onClose}
@@ -129,73 +122,17 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
         </div>
 
         <nav className="topic-list">
-          {categories.length > 0 ? (
-            /* Accordion categories for the selected module */
-            categories.map((cat) => {
-              const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;
-              const isCategoryActive = cat.id === activeCategory;
-              const isExpanded = expandedCategories.has(cat.id);
-              const topics = TOPICS_BY_CATEGORY.get(cat.id) ?? [];
-
-              return (
-                <div
-                  key={cat.id}
-                  className={`category-accordion ${isCategoryActive ? 'active' : ''} ${!cat.available ? 'disabled' : ''}`}
-                >
-                  <button
-                    className="category-header"
-                    onClick={() => handleCategoryHeaderClick(cat)}
-                    disabled={!cat.available}
-                    aria-expanded={isExpanded}
-                  >
-                    <div className="category-header-left">
-                      <div className="category-icon">
-                        <Icon size={16} />
-                      </div>
-                      <div className="category-meta">
-                        <span className="category-name">{cat.name}</span>
-                        <span className="category-count">{cat.topicCount} topics</span>
-                      </div>
-                    </div>
-                    <div className={`category-chevron ${isExpanded ? 'rotated' : ''}`}>
-                      <ChevronDown size={16} />
-                    </div>
-                  </button>
-
-                  <div className={`category-topics ${isExpanded ? 'open' : ''}`}>
-                    <ul className="category-topics-list">
-                      {topics.map((topic) => {
-                        const isTopicActive = isCategoryActive && topic.id === activeTopic;
-                        return (
-                          <li key={topic.id}>
-                            <button
-                              className={`topic-item ${isTopicActive ? 'active' : ''}`}
-                              onClick={() => handleTopicClick(cat, topic.id)}
-                              disabled={!cat.available}
-                            >
-                              <span className="topic-dot" />
-                              <span className="topic-item-name">{topic.name}</span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            /* Fallback: show modules list */
-            MODULES.map((mod) => {
-              const isActive = mod.id === activeModule;
-              return (
+          {MODULES.map((mod) => {
+            const isModuleActive = mod.id === activeModule;
+            const moduleCategories = isModuleActive ? DSA_CATEGORIES : [];
+            
+            return (
+              <div key={mod.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <button
-                  key={mod.id}
-                  className={`topic-card module-card ${isActive ? 'active' : ''} ${!mod.available ? 'module-card-disabled' : ''}`}
+                  className={`topic-card module-card ${isModuleActive ? 'active' : ''} ${!mod.available ? 'module-card-disabled' : ''}`}
                   onClick={() => {
                     if (!mod.available) return;
                     onSelectModule(mod.id);
-                    if (onClose) onClose();
                   }}
                   disabled={!mod.available}
                 >
@@ -210,9 +147,67 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                     <span className="module-soon-badge">Soon</span>
                   )}
                 </button>
-              );
-            })
-          )}
+
+                {isModuleActive && moduleCategories.length > 0 && (
+                  <div className="module-categories-container" style={{ paddingLeft: '0.75rem', marginTop: '0.25rem', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {moduleCategories.map((cat, index) => {
+                      const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;
+                      const isCategoryActive = cat.id === activeCategory;
+                      const isExpanded = expandedCategories.has(cat.id);
+                      const topics = TOPICS_BY_CATEGORY.get(cat.id) ?? [];
+
+                      return (
+                        <div
+                          key={cat.id}
+                          className={`category-accordion ${isCategoryActive ? 'active' : ''} ${!cat.available ? 'disabled' : ''}`}
+                        >
+                          <button
+                            className="category-header"
+                            onClick={() => handleCategoryHeaderClick(cat)}
+                            disabled={!cat.available}
+                            aria-expanded={isExpanded}
+                          >
+                            <div className="category-header-left">
+                              <div className="category-icon">
+                                <Icon size={16} />
+                              </div>
+                              <div className="category-meta">
+                                <span className="category-name">{index + 1}. {cat.name}</span>
+                                <span className="category-count">{cat.topicCount} topics</span>
+                              </div>
+                            </div>
+                            <div className={`category-chevron ${isExpanded ? 'rotated' : ''}`}>
+                              <ChevronDown size={16} />
+                            </div>
+                          </button>
+
+                          <div className={`category-topics ${isExpanded ? 'open' : ''}`}>
+                            <ul className="category-topics-list">
+                              {topics.map((topic) => {
+                                const isTopicActive = isCategoryActive && topic.id === activeTopic;
+                                return (
+                                  <li key={topic.id}>
+                                    <button
+                                      className={`topic-item ${isTopicActive ? 'active' : ''}`}
+                                      onClick={() => handleTopicClick(cat, topic.id)}
+                                      disabled={!cat.available}
+                                    >
+                                      <span className="topic-dot" />
+                                      <span className="topic-item-name">{topic.name}</span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
       </aside>
     </>

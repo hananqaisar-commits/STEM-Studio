@@ -132,6 +132,7 @@
   background-color: var(--color-surface-elevated, var(--color-surface));
   max-height: 260px;
   overflow-y: auto;
+  overflow-x: auto;
   font-family: 'Fira Code', 'JetBrains Mono', monospace;
   font-size: 0.82rem;
   line-height: 1.6;
