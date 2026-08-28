@@ -10,17 +10,17 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 
 :root, [data-theme="light"] {
-  /* Blue Light Palette (Default) */
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-200: #bfdbfe;
-  --blue-300: #93c5fd;
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-800: #1e40af;
-  --blue-900: #1e3a8a;
+  /* Purple Light Palette (Default) */
+  --purple-50: #faf5ff;
+  --purple-100: #f3e8ff;
+  --purple-200: #e9d5ff;
+  --purple-300: #d8b4fe;
+  --purple-400: #c084fc;
+  --purple-500: #a855f7;
+  --purple-600: #9333ea;
+  --purple-700: #7e22ce;
+  --purple-800: #6b21a8;
+  --purple-900: #581c87;
 
   --slate-50: #f8fafc;
   --slate-100: #f1f5f9;
@@ -33,35 +33,35 @@
   --slate-800: #1e293b;
   --slate-900: #0f172a;
 
-  --color-app-bg: var(--blue-50);
+  --color-app-bg: var(--purple-50);
   --color-surface: #ffffff;
   --color-surface-elevated: var(--slate-100);
-  --color-surface-muted: var(--blue-100);
-  --color-border: var(--blue-200);
-  --color-border-strong: var(--blue-300);
+  --color-surface-muted: var(--purple-100);
+  --color-border: var(--purple-200);
+  --color-border-strong: var(--purple-300);
 
   --color-text: var(--slate-900);
   --color-text-secondary: var(--slate-700);
   --color-text-muted: var(--slate-500);
   --color-text-on-primary: #ffffff;
 
-  --color-primary: var(--blue-600);
-  --color-primary-hover: var(--blue-700);
-  --color-primary-active: var(--blue-800);
+  --color-primary: var(--purple-600);
+  --color-primary-hover: var(--purple-700);
+  --color-primary-active: var(--purple-800);
 
-  --color-nav-active: var(--blue-700);
+  --color-nav-active: var(--purple-700);
   --color-control-bg: var(--slate-100);
-  --color-control-hover: var(--blue-100);
-  --color-control-selected: var(--blue-200);
-  --color-focus: var(--blue-500);
+  --color-control-hover: var(--purple-100);
+  --color-control-selected: var(--purple-200);
+  --color-focus: var(--purple-500);
 
-  --color-shadow: rgba(30, 58, 138, 0.08);
+  --color-shadow: rgba(88, 28, 135, 0.08);
 
   --error-color: #ef4444;
   --success-color: #22c55e;
-  --shadow-sm: 0 1px 2px 0 rgba(30, 58, 138, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(30, 58, 138, 0.08), 0 2px 4px -2px rgba(30, 58, 138, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(30, 58, 138, 0.12), 0 4px 6px -4px rgba(30, 58, 138, 0.08);
+  --shadow-sm: 0 1px 2px 0 rgba(88, 28, 135, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(88, 28, 135, 0.08), 0 2px 4px -2px rgba(88, 28, 135, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(88, 28, 135, 0.12), 0 4px 6px -4px rgba(88, 28, 135, 0.08);
 
   --space-page: clamp(0.75rem, 2vw, 1.5rem);
   --space-section: clamp(0.75rem, 1.5vw, 1.25rem);
@@ -79,9 +79,9 @@
   --dark-400: #94a3b8;
   --dark-300: #cbd5e1;
 
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
+  --purple-400: #c084fc;
+  --purple-500: #a855f7;
+  --purple-600: #9333ea;
 
   --color-app-bg: var(--dark-950);
   --color-surface: var(--dark-900);
@@ -95,15 +95,15 @@
   --color-text-muted: var(--dark-400);
   --color-text-on-primary: #ffffff;
 
-  --color-primary: var(--blue-500);
-  --color-primary-hover: var(--blue-400);
-  --color-primary-active: #1d4ed8;
+  --color-primary: var(--purple-500);
+  --color-primary-hover: var(--purple-400);
+  --color-primary-active: #7e22ce;
 
-  --color-nav-active: var(--blue-400);
+  --color-nav-active: var(--purple-400);
   --color-control-bg: var(--dark-800);
   --color-control-hover: var(--dark-700);
   --color-control-selected: var(--dark-600);
-  --color-focus: var(--blue-500);
+  --color-focus: var(--purple-500);
 
   --color-shadow: rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);

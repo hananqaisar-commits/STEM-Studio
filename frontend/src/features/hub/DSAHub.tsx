@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
-  MessageSquare, ChevronDown, ExternalLink, Send, Heart, Sparkles,
+  MessageSquare, ChevronDown, ExternalLink, Send, Sparkles,
   ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
   type LucideIcon,
 } from 'lucide-react';
@@ -519,28 +519,16 @@ export const DSAHub: React.FC = () => {
             <p className="footer-desc">
               Interactive visualization tools for mastering data structures and algorithms.
             </p>
-            <p className="footer-made-with">
-              <Heart size={13} fill="currentColor" /> Made with love by{' '}
-              <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer">
-                Ascentify Studio
-              </a>
+            <p className="footer-made-with" style={{ fontWeight: 600, letterSpacing: '0.5px' }}>
+              <Sparkles size={13} style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'text-bottom' }} /> Crafted by{' '}
+              <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
+                Octa Team
+              </span>
             </p>
             <a href="mailto:hello@dsavisualizer.in" className="footer-email">
               <Mail size={15} /> hello@dsavisualizer.in
             </a>
-            <a
-              href="https://www.producthunt.com/products/stem-studio"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="product-hunt-badge"
-            >
-              <span className="product-hunt-icon">P</span>
-              <span className="product-hunt-text">
-                <small>FIND US ON</small>
-                <strong>Product Hunt</strong>
-              </span>
-              <span className="product-hunt-votes">3</span>
-            </a>
+
           </div>
 
           {/* Navigation */}

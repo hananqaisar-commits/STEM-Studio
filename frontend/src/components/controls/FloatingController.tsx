@@ -6,9 +6,8 @@ import {
   SkipForward,
   RotateCcw,
   Square,
-  Zap,
+  PlayCircle,
 } from 'lucide-react';
-import { Octa } from '../mascot';
 import './Controls.css';
 
 export interface FloatingControllerProps {
@@ -65,7 +64,10 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
     initialTop: 0,
   });
 
-  const [position, setPosition] = useState<Position>({ x: 24, y: 24 });
+  const [position, setPosition] = useState<Position>({
+    x: typeof window !== 'undefined' ? window.innerWidth / 2 - 160 : 24,
+    y: 24
+  });
   const [isDragging, setIsDragging] = useState(false);
 
   const handleTogglePlay = useCallback(() => {
@@ -83,6 +85,10 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (quizMode) return;
+    
+    const target = e.target as HTMLElement;
+    if (!target.closest('.floating-controller-grip')) return;
+
     const el = containerRef.current;
     if (!el) return;
 
@@ -168,7 +174,6 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
       aria-label="Playback controls"
     >
       <div className="floating-controller-grip" title="Drag to move">
-        <Octa expression="helping" size="tiny" interactive={false} />
         <span className="grip-dots" aria-hidden="true">
           <span />
           <span />
@@ -220,7 +225,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           onClick={handleResume}
           disabled={isPlaying}
         >
-          <Zap size={16} />
+          <PlayCircle size={16} />
         </ControlButton>
 
         <ControlButton
