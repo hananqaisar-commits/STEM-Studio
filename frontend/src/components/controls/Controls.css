@@ -97,15 +97,14 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.55rem;
+  gap: 0.25rem;
+  padding: 0.25rem 0.4rem;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--color-border);
   border-radius: 9999px;
   box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0, 0, 0, 0.02);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  cursor: grab;
   user-select: none;
   touch-action: none;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
@@ -125,9 +124,14 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding-right: 0.35rem;
+  padding: 0 0.25rem;
   border-right: 1px solid var(--color-border);
   color: var(--color-text-secondary);
+  cursor: grab;
+}
+
+.floating-controller.is-dragging .floating-controller-grip {
+  cursor: grabbing;
 }
 
 .grip-dots {

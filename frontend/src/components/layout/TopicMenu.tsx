@@ -46,9 +46,6 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   // Which categories are expanded? First one by default; active category also open.
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
     const initial = new Set<string>();
-    if (DSA_CATEGORIES.length > 0) {
-      initial.add(DSA_CATEGORIES[0].id);
-    }
     if (activeCategory && DSA_CATEGORIES.some((c) => c.id === activeCategory)) {
       initial.add(activeCategory);
     }
