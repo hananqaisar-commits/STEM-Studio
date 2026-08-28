@@ -271,7 +271,6 @@ export const RecursionPage: React.FC = () => {
           id: a.key,
           name: a.name,
           description: `Visualize the recursion call tree for ${a.name}`,
-          group: a.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={id => handleAlgChange(id as RecursionAlgorithmKey)}
@@ -287,9 +286,6 @@ export const RecursionPage: React.FC = () => {
               onClick={() => handleAlgChange(a.key)}>
               {a.icon}
               <span>{a.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">
-                {a.complexity}
-              </span>
             </button>
           ))}
         </div>
