@@ -80,7 +80,8 @@
 }
 
 .bst-input {
-  width: 90px;
+  min-width: 120px;
+  width: auto;
   background: none;
   border: none;
   color: var(--color-text);

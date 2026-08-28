@@ -3,8 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
-  MessageSquare, ChevronDown, ExternalLink, Send, Sparkles,
+  MessageSquare, ChevronDown, Send, Sparkles,
   ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
+
   type LucideIcon,
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
@@ -46,29 +47,22 @@ const FAQS = [
   { q: 'What programming languages are supported?', a: 'The multi-language debugger supports Python, C++, Java, Go, and Pseudocode. You can switch between languages to see how the same algorithm is implemented differently.' },
 ];
 
-/* ── Footer social links ──────────────────────────────────────────── */
-const LinkedInIcon: React.FC = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-    <rect width="4" height="12" x="2" y="9" />
-    <circle cx="4" cy="4" r="2" />
-  </svg>
+/* ── Inline SVG brand icons (not available in lucide-react v1.x) ── */
+const LinkedinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+);
+const InstagramIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+);
+const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
 );
 
+/* ── Footer social links ──────────────────────────────────────────── */
 const SOCIAL_LINKS = [
-  { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: LinkedInIcon },
-  { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: ExternalLink },
-  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: ExternalLink },
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: LinkedinIcon },
+  { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: InstagramIcon },
+  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: GithubIcon },
 ];
 
 const AFTAB_LINKEDIN = 'https://www.linkedin.com/in/m-aftab-riaz-6468332b9/?skipRedirect=true';
@@ -584,24 +578,31 @@ export const DSAHub: React.FC = () => {
                 );
               })}
             </div>
-            <h3 className="footer-heading footer-team-heading">Team</h3>
-            <div className="footer-links">
-              <a
-                href={AFTAB_LINKEDIN}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-link"
-              >
-                <LinkedInIcon /> M. Aftab Riaz
-              </a>
-              <a
-                href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-link"
-              >
-                <LinkedInIcon /> Hanan Qaisar
-              </a>
+            <h3 className="footer-heading footer-team-heading">Team / Contributors</h3>
+            <div className="footer-team-cards">
+              <div className="footer-team-card">
+                <span className="team-role">Lead</span>
+                <span className="team-name">Hanan</span>
+                <p className="team-desc">Architecture · API · Database · Core Features</p>
+                <div className="team-socials">
+                  <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
+                  <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer"><InstagramIcon size={14} /></a>
+                  <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer"><GithubIcon size={14} /></a>
+                </div>
+              </div>
+              <div className="footer-team-card">
+                <span className="team-role">UI / Frontend</span>
+                <span className="team-name">Hassan</span>
+                <p className="team-desc">Dashboard · Navigation · Visual Polish</p>
+              </div>
+              <div className="footer-team-card">
+                <span className="team-role">Algorithms</span>
+                <span className="team-name">Aftab</span>
+                <p className="team-desc">Animation · Creative Features</p>
+                <div className="team-socials">
+                  <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -617,3 +618,4 @@ export const DSAHub: React.FC = () => {
     </div>
   );
 };
+

@@ -34,6 +34,7 @@ import { generateBucketSortSteps } from './algorithms/bucketSort';
 
 import './Sorting.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList } from '../../utils/batchInputParser';
 
 type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell' | 'counting' | 'radix' | 'bucket';
 type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
@@ -93,6 +94,7 @@ export const SortingPage: React.FC = () => {
   const [arraySize, setArraySize] = useState<number>(12);
   const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
+  const [rawArrayInput, setRawArrayInput] = useState<string>(() => generateArray(12, 'random').join(', '));
 
   // Debugger & Modal & Predict state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
@@ -181,7 +183,9 @@ export const SortingPage: React.FC = () => {
   const handleRandomize = () => {
     reset();
     quizSession.resetSession();
-    setInitialArray(generateArray(arraySize, arrayPattern));
+    const arr = generateArray(arraySize, arrayPattern);
+    setInitialArray(arr);
+    setRawArrayInput(arr.join(', '));
   };
 
   const handleApplyCustomArray = (newArr: number[]) => {
@@ -189,6 +193,7 @@ export const SortingPage: React.FC = () => {
     quizSession.resetSession();
     setArraySize(newArr.length);
     setInitialArray(newArr);
+    setRawArrayInput(newArr.join(', '));
     setShowCustomEditor(false);
   };
 
@@ -358,9 +363,30 @@ export const SortingPage: React.FC = () => {
       {/* Operations Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
+          {/* Direct Batch Array Input */}
+          <div className="bst-input-group" title="Enter custom comma-separated numbers (e.g. 8, 3, 5, 1, 9, 2)">
+            <span style={{ fontWeight: 600 }}>Array:</span>
+            <input
+              type="text"
+              value={rawArrayInput}
+              onChange={(e) => {
+                setRawArrayInput(e.target.value);
+                const res = parseNumberList(e.target.value);
+                if (res.isValid && res.values.length >= 2) {
+                  setInitialArray(res.values);
+                  setCustomSteps(null);
+                  reset();
+                }
+              }}
+              className="bst-input"
+              placeholder="e.g. 8, 3, 5, 1, 9, 2"
+              style={{ minWidth: '150px' }}
+            />
+          </div>
+
           <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
             <Edit3 size={14} />
-            <span>Custom Values</span>
+            <span>Editor</span>
           </button>
 
           <div className="bst-input-group">
