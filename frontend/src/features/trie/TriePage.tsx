@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Binary, Search, GitBranch, BookOpen, MessageSquare, Maximize2, HelpCircle, Sparkles, Trash2, Layers
+  Binary, Search, GitBranch, BookOpen, MessageSquare, Maximize2, Sparkles, Trash2, Layers
 } from 'lucide-react';
 import { TrieRenderer } from './TrieRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -10,6 +10,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
@@ -79,6 +80,7 @@ export const TriePage: React.FC = () => {
   const [queryInput, setQueryInput] = useState<string>(DEFAULT_PARAMS.trieSearch.query);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState(false);
+  const [showDebugger, setShowDebugger] = useState(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
@@ -236,10 +238,12 @@ export const TriePage: React.FC = () => {
         <button className="bst-btn btn-mode" onClick={handleSample} title="Sample"><Layers size={13} className="text-amber-400" /><span>Sample</span></button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random"><Sparkles size={13} className="text-emerald-400" /><span>Random</span></button>
       </div>
-      <label className="predict-toggle-label ml-2">
-        <HelpCircle size={14} /><span>Quiz Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
-      </label>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -264,6 +268,24 @@ export const TriePage: React.FC = () => {
           quizSession.resetSession();
         }}
         placeholder="Search trie algorithm..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       <div className="tree-category-toolbar animate-fade-in">
@@ -325,18 +347,6 @@ export const TriePage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <div className="predict-mode-group flex items-center gap-2">
-            <label className="predict-toggle-label">
-              <HelpCircle size={16} /><span>Quiz Mode</span>
-              <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
-            </label>
-            <button className="bst-btn btn-fullscreen" onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
-              <Maximize2 size={14} />
-            </button>
-          </div>
-        </div>
       </div>
 
       <div className="sorting-workspace scene-workspace">
@@ -373,26 +383,28 @@ export const TriePage: React.FC = () => {
         </div>
 
 
-        <div className="bottom-row">
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            title="Trie"
-            activeLine={trieStep?.codeLine}
-            variables={trieStep?.variables}
-            onCustomCodeRun={(arraySteps) => {
-              const trieSteps: TrieStep[] = arraySteps.map(s => ({
-                trieNodes: [],
-                trieEdges: [],
-                description: s.description,
-                codeLine: s.codeLine,
-                variables: s.variables || {},
-                array: [],
-              }));
-              // eslint-disable-next-line no-console
-              console.log('Custom code run:', trieSteps.length, 'steps');
-            }}
-            currentArray={[]}
-          />
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={selectedAlg}
+              title="Trie"
+              activeLine={trieStep?.codeLine}
+              variables={trieStep?.variables}
+              onCustomCodeRun={(arraySteps) => {
+                const trieSteps: TrieStep[] = arraySteps.map(s => ({
+                  trieNodes: [],
+                  trieEdges: [],
+                  description: s.description,
+                  codeLine: s.codeLine,
+                  variables: s.variables || {},
+                  array: [],
+                }));
+                // eslint-disable-next-line no-console
+                console.log('Custom code run:', trieSteps.length, 'steps');
+              }}
+              currentArray={[]}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)}

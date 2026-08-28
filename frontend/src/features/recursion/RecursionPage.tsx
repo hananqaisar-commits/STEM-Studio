@@ -1,7 +1,7 @@
 import React, {useState, useMemo, useEffect} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  GitBranch, Calculator, Binary, Sigma, Layers, HelpCircle, Maximize2, Sparkles, Trash2,
+  GitBranch, Calculator, Binary, Sigma, Layers, Maximize2, Sparkles, Trash2,
 } from 'lucide-react';
 import { RecursionTreeRenderer } from './RecursionTreeRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -10,6 +10,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
@@ -65,6 +66,7 @@ export const RecursionPage: React.FC = () => {
 
   // Quiz state
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
 
@@ -276,10 +278,12 @@ export const RecursionPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <label className="predict-toggle-label ml-2">
-        <HelpCircle size={16} /><span>Quiz Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
-      </label>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -298,6 +302,24 @@ export const RecursionPage: React.FC = () => {
         activeId={selectedAlg}
         onSelect={id => handleAlgChange(id as RecursionAlgorithmKey)}
         placeholder="Search recursive algorithm..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs */}
@@ -329,16 +351,6 @@ export const RecursionPage: React.FC = () => {
               <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
             </button>
           </div>
-        </div>
-        <div className="bst-toolbar-right">
-          <label className="predict-toggle-label">
-            <HelpCircle size={16} /><span>Quiz Mode</span>
-            <input type="checkbox" checked={quizEnabled} onChange={e => setQuizEnabled(e.target.checked)} />
-          </label>
-          <button className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
-            <Maximize2 size={14} />
-          </button>
         </div>
       </div>
 
@@ -374,15 +386,17 @@ export const RecursionPage: React.FC = () => {
 
         </div>
 
-        <div className="bottom-row">
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            title="Recursion"
-            activeLine={currentStep?.codeLine}
-            variables={currentStep?.variables}
-            callStack={currentStep?.callStack}
-            currentArray={[]}
-          />
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={selectedAlg}
+              title="Recursion"
+              activeLine={currentStep?.codeLine}
+              variables={currentStep?.variables}
+              callStack={currentStep?.callStack}
+              currentArray={[]}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(

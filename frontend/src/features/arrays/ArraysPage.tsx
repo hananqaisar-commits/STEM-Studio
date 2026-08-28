@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Edit3, Search, Zap, ArrowRightLeft, RotateCw, Hash, Maximize2, HelpCircle, Sparkles, Trash2, Layers
+  Edit3, Search, Zap, ArrowRightLeft, RotateCw, Hash, Maximize2, Sparkles, Trash2, Layers
 } from 'lucide-react';
 import { ArrayRenderer } from './ArrayRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -11,6 +11,7 @@ import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageC
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
@@ -81,6 +82,7 @@ export const ArraysPage: React.FC = () => {
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Algorithm-specific parameters
@@ -294,11 +296,12 @@ export const ArraysPage: React.FC = () => {
         </button>
       </div>
 
-      <label className="predict-toggle-label ml-2">
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
-      </label>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -402,6 +405,24 @@ export const ArraysPage: React.FC = () => {
           quizSession.resetSession();
         }}
         placeholder="Search array algorithm or technique..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs Bar */}
@@ -489,28 +510,6 @@ export const ArraysPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <div className="predict-mode-group flex items-center gap-2">
-            <label className="predict-toggle-label">
-              <HelpCircle size={16} />
-              <span>Quiz Mode</span>
-              <input
-                type="checkbox"
-                checked={quizEnabled}
-                onChange={(e) => setQuizEnabled(e.target.checked)}
-              />
-            </label>
-
-            <button
-              className="bst-btn btn-fullscreen"
-              onClick={() => setIsFullScreenOpen(true)}
-              title="Full Screen Canvas View"
-            >
-              <Maximize2 size={14} />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Main Learning Workspace */}
@@ -548,12 +547,14 @@ export const ArraysPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className="bottom-row">
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            title="Array Technique"
-            currentArray={initialArray}
-          />
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={selectedAlg}
+              title="Array Technique"
+              currentArray={initialArray}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
