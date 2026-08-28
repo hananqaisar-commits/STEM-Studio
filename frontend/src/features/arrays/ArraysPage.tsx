@@ -373,7 +373,6 @@ export const ArraysPage: React.FC = () => {
           id: alg.key,
           name: alg.name,
           description: `Step-by-step ${alg.name} execution over a live array`,
-          group: alg.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => {
@@ -399,7 +398,6 @@ export const ArraysPage: React.FC = () => {
             >
               {alg.icon}
               <span>{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>

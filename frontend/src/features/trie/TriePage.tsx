@@ -232,7 +232,6 @@ export const TriePage: React.FC = () => {
           id: a.key,
           name: a.name,
           description: `Step-by-step ${a.name} visualization on a Trie`,
-          group: a.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => {
@@ -263,7 +262,6 @@ export const TriePage: React.FC = () => {
             >
               {alg.icon}
               <span>{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>
