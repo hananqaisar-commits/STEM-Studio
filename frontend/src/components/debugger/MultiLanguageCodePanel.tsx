@@ -123,7 +123,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   activeLine,
   breakpoints = [],
   onToggleBreakpoint,
-  variables = {},
+
   callStack = [],
   onCustomCodeRun,
   currentArray,
