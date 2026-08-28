@@ -148,7 +148,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey, 'javascript'));
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [scopeOpen, setScopeOpen] = useState(true);
   const [stackOpen, setStackOpen] = useState(true);
 
   const canRunCustom = typeof onCustomCodeRun === 'function';
@@ -177,7 +176,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
   const currentCodeLines = resolvedSnippets?.[selectedLang] ?? [];
   const hasCode = currentCodeLines.length > 0;
-  const variableEntries = Object.entries(variables);
+
 
   const handleCopy = async () => {
     try {
@@ -400,36 +399,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         </>
       )}
 
-      {/* ── Scope variables ─────────────────────────────────────── */}
+      {/* ── Call Stack ────────────────────────────────────────────── */}
       <div className="integrated-scope-section">
-        <div className="scope-box">
-          <button
-            type="button"
-            className="scope-header"
-            onClick={() => setScopeOpen((o) => !o)}
-            aria-expanded={scopeOpen}
-          >
-            <ChevronDown size={13} className={`scope-caret ${scopeOpen ? '' : 'collapsed'}`} />
-            <span>Scope Variables</span>
-            <span className="scope-badge">{variableEntries.length} active</span>
-          </button>
-          {scopeOpen && (
-            <div className="scope-pills-container">
-              {variableEntries.length === 0 ? (
-                <span className="scope-empty">Press Play to inspect variables</span>
-              ) : (
-                variableEntries.map(([key, val]) => (
-                  <div key={key} className="scope-pill">
-                    <span className="pill-name">{key}</span>
-                    <span className={`pill-val val-type-${typeof val}`}>
-                      {val === null ? 'null' : String(val)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
 
         {callStack.length > 0 && (
           <div className="stack-box">
@@ -439,10 +410,10 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               onClick={() => setStackOpen((o) => !o)}
               aria-expanded={stackOpen}
             >
-              <ChevronDown size={13} className={`scope-caret ${stackOpen ? '' : 'collapsed'}`} />
+              <ChevronDown size={13} className={`stack-caret ${stackOpen ? '' : 'collapsed'}`} />
               <Layers size={12} />
               <span>Call Stack</span>
-              <span className="scope-badge">{callStack.length}</span>
+              <span className="stack-badge">{callStack.length}</span>
             </button>
             {stackOpen && (
               <div className="stack-frames">

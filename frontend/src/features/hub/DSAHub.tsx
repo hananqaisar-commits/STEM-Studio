@@ -5,7 +5,7 @@ import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
   MessageSquare, ChevronDown, ExternalLink, Send, Sparkles,
   ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
-  type LucideIcon,
+  Linkedin, Instagram, Github, type LucideIcon,
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
 import { apiClient } from '../../api/apiClient';
@@ -47,28 +47,10 @@ const FAQS = [
 ];
 
 /* ── Footer social links ──────────────────────────────────────────── */
-const LinkedInIcon: React.FC = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-    <rect width="4" height="12" x="2" y="9" />
-    <circle cx="4" cy="4" r="2" />
-  </svg>
-);
-
 const SOCIAL_LINKS = [
-  { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: LinkedInIcon },
-  { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: ExternalLink },
-  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: ExternalLink },
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: Linkedin },
+  { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: Instagram },
+  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: Github },
 ];
 
 const AFTAB_LINKEDIN = 'https://www.linkedin.com/in/m-aftab-riaz-6468332b9/?skipRedirect=true';
@@ -584,24 +566,31 @@ export const DSAHub: React.FC = () => {
                 );
               })}
             </div>
-            <h3 className="footer-heading footer-team-heading">Team</h3>
-            <div className="footer-links">
-              <a
-                href={AFTAB_LINKEDIN}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-link"
-              >
-                <LinkedInIcon /> M. Aftab Riaz
-              </a>
-              <a
-                href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-link"
-              >
-                <LinkedInIcon /> Hanan Qaisar
-              </a>
+            <h3 className="footer-heading footer-team-heading">Team / Contributors</h3>
+            <div className="footer-team-cards">
+              <div className="footer-team-card">
+                <span className="team-role">Lead</span>
+                <span className="team-name">Hanan</span>
+                <p className="team-desc">Architecture · API · Database · Core Features</p>
+                <div className="team-socials">
+                  <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer"><Linkedin size={14} /></a>
+                  <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer"><Instagram size={14} /></a>
+                  <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer"><Github size={14} /></a>
+                </div>
+              </div>
+              <div className="footer-team-card">
+                <span className="team-role">UI / Frontend</span>
+                <span className="team-name">Hassan</span>
+                <p className="team-desc">Dashboard · Navigation · Visual Polish</p>
+              </div>
+              <div className="footer-team-card">
+                <span className="team-role">Algorithms</span>
+                <span className="team-name">Aftab</span>
+                <p className="team-desc">Animation · Creative Features</p>
+                <div className="team-socials">
+                  <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer"><Linkedin size={14} /></a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
