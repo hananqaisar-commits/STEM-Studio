@@ -83,13 +83,14 @@ export const RecursionPage: React.FC = () => {
   const {
     currentStepIndex, currentStep, totalSteps, isPlaying,
     play, pause, stepForward, stepBack, reset,
-  } = useStepPlayer({ steps: executionData.steps });
+  seekTo,
+    } = useStepPlayer({ steps: executionData.steps });
 
   usePlaybackShortcuts({
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
       onReset: reset,
-      onStepForward: stepForward,
+    onStepForward: stepForward,
       onStepBack: stepBack,
       onStop: () => { pause(); reset(); },
       onResume: play,
@@ -172,8 +173,21 @@ export const RecursionPage: React.FC = () => {
       </div>
       <div className="player-center">
         <div className="step-progress-bar">
-          <div className="step-progress-fill"
-            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
       </div>
       <div className="player-right" />
