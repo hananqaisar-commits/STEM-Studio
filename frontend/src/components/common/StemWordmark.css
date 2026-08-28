@@ -1,0 +1,134 @@
+/* ═══════════════════════════════════════════════════════════════════
+   STEM WORDMARK — vector brand lockup (real text + gradient clip)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Brand gradient tokens (theme-aware) */
+:root {
+  --splash-grad-1: #2f7bff;
+  --splash-grad-2: #5a4bff;
+  --splash-grad-3: #863bff;
+  --splash-ink: #16214a;
+}
+
+[data-theme='dark'] {
+  --splash-grad-1: #4da3ff;
+  --splash-grad-2: #7d6bff;
+  --splash-grad-3: #a26bff;
+  --splash-ink: #0e1633;
+}
+
+.stem-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  animation: wordmark-breathe 5s ease-in-out 1.6s infinite;
+}
+
+.stem-wordmark__letters {
+  display: flex;
+  line-height: 1;
+  font-weight: 800;
+  font-size: clamp(3.25rem, 11vw, 5rem);
+  letter-spacing: -0.045em;
+  user-select: none;
+}
+
+.stem-wordmark__letter {
+  display: inline-block;
+  background: linear-gradient(
+    140deg,
+    var(--splash-grad-1) 8%,
+    var(--splash-grad-2) 52%,
+    var(--splash-grad-3) 92%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  transform: translateY(0.45em) scale(0.98);
+  animation: letter-enter 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(140ms + var(--letter-index) * 85ms);
+  will-change: transform, opacity;
+}
+
+.stem-wordmark__sub {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.46em;
+  text-indent: 0.46em; /* optically balance the tracking */
+  color: var(--color-text-muted);
+  opacity: 0;
+  transform: translateY(6px);
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.62s forwards;
+}
+
+/* One-shot settle beat when loading completes */
+.stem-wordmark.is-settled .stem-wordmark__letters {
+  animation: wordmark-settle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Compact static variant (auth headers) */
+.stem-wordmark--compact {
+  animation: none;
+  gap: 0.35rem;
+  margin-bottom: 1.5rem;
+}
+
+.stem-wordmark--compact .stem-wordmark__letters {
+  font-size: clamp(1.9rem, 6vw, 2.4rem);
+}
+
+.stem-wordmark--compact .stem-wordmark__sub {
+  font-size: 0.58rem;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────── */
+
+@keyframes letter-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rise-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wordmark-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes wordmark-settle {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .stem-wordmark,
+  .stem-wordmark * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.15s !important;
+  }
+}

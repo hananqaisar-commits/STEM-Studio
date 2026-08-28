@@ -1,53 +1,75 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Octa } from './Octa';
+import { StemWordmark } from '../common/StemWordmark';
 import './Mascot.css';
+
+export type MascotLoadingPhase = 'loading' | 'complete';
 
 export interface MascotLoadingProps {
   message?: string;
+  /**
+   * Driven by the REAL application loading state (session restore / auth
+   * check) — never by a fake timer inside this component.
+   */
+  phase?: MascotLoadingPhase;
+  /** Plays the exit fade; the parent unmounts once it finishes. */
+  exiting?: boolean;
 }
 
 /**
- * Premium loading screen: Octa drags the STEM letters into place.
- * Each letter represents its field with a representative color:
- *   S = Science (green)  |  T = Technology (cyan)
- *   E = Engineering (amber)  |  M = Mathematics (pink)
+ * Premium branded loading experience.
+ *
+ * The vector STEM wordmark is the visual anchor; Octa waits below with a
+ * surprised expression and smoothly crossfades to happy when `phase` flips
+ * to "complete". No hardcoded durations, no fake progress — the parent
+ * (BootSplash / route guards) controls the lifecycle from real state.
  */
 export const MascotLoading: React.FC<MascotLoadingProps> = ({
-  message = 'Loading...',
+  message = 'Preparing your studio',
+  phase = 'loading',
+  exiting = false,
 }) => {
-  const [phase, setPhase] = useState<'dragging' | 'settled' | 'fadeout'>('dragging');
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase('settled'), 1800);
-    const t2 = setTimeout(() => setPhase('fadeout'), 2800);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
+  const done = phase === 'complete';
 
   return (
-    <div className={`mascot-loading mascot-loading-${phase}`} role="status" aria-live="polite">
-      <div className="mascot-loading-scene">
-        {/* Octa mascot dragging the letters */}
-        <div className="mascot-loading-dragger">
-          <Octa expression="helping" size="large" interactive={false} />
+    <div
+      className={[
+        'mascot-loading',
+        done ? 'mascot-loading--complete' : '',
+        exiting ? 'mascot-loading--exit' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      role="status"
+      aria-live="polite"
+      aria-busy={!done}
+    >
+      <div className="mascot-loading-stage">
+        <StemWordmark settled={done} />
+
+        {/* Octa: surprised while loading, happy once complete (crossfade) */}
+        <div className="mascot-loading-mascot">
+          <span className="mascot-layer mascot-layer--surprised" aria-hidden={done}>
+            <Octa expression="surprised" size={96} interactive={false} label="Octa, waiting" />
+          </span>
+          <span className="mascot-layer mascot-layer--happy" aria-hidden={!done}>
+            <Octa expression="happy" size={96} interactive={false} label="Octa, ready" />
+          </span>
         </div>
 
-        {/* STEM letters being dragged into place */}
-        <div className="mascot-loading-letters" aria-label="STEM Studio">
-          <span className="mascot-letter mascot-letter-s">S</span>
-          <span className="mascot-letter mascot-letter-t">T</span>
-          <span className="mascot-letter mascot-letter-e">E</span>
-          <span className="mascot-letter mascot-letter-m">M</span>
+        <div className="splash-status">
+          <span className="splash-status__label splash-status__label--loading">
+            {message}
+            <span className="splash-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </span>
+          <span className="splash-status__label splash-status__label--done">
+            Ready when you are
+          </span>
         </div>
-      </div>
-
-      <p className="mascot-loading-text">{message}</p>
-
-      {/* Progress bar with field colors */}
-      <div className="mascot-loading-progress">
-        <div className="mascot-loading-bar" />
       </div>
     </div>
   );
