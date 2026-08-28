@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, LogOut, User, Sparkles, Menu, ChevronDown, Check, Palette, ChevronRight } from 'lucide-react';
+import { Sun, Moon, LogOut, User, Menu, ChevronDown, Check, Palette, ChevronRight } from 'lucide-react';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCategoryById, MODULES } from '../../data/categories';
+import { Octa } from '../mascot';
+import '../mascot/Mascot.css';
 import './Layout.css';
 
 interface NavbarProps {
@@ -61,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
           <Link to="/dashboard" className="navbar-brand">
             <div className="brand-logo-glow">
-              <Sparkles size={20} className="brand-icon" />
+              <Octa expression="neutral" size={32} interactive={false} className="brand-mascot" />
             </div>
             <span className="brand-title">STEM <span className="brand-accent">Studio</span></span>
           </Link>

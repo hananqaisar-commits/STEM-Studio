@@ -11,6 +11,8 @@ interface FullScreenCanvasModalProps {
   subtitle?: string;
   toolbarControls?: React.ReactNode;
   playbackControls?: React.ReactNode;
+  /** Optional floating controller rendered inside the fullscreen body. */
+  floatingControls?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -21,6 +23,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   subtitle = 'Interactive DSA Inspector',
   toolbarControls,
   playbackControls,
+  floatingControls,
   children,
 }) => {
   const { actualTheme } = useTheme();
@@ -68,6 +71,9 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
         )}
 
         <div className="fs-header-actions">
+          <span className="fs-quiz-disabled-hint" title="Quiz mode is disabled while in fullscreen">
+            Quiz mode unavailable
+          </span>
           {/* Exit Fullscreen Button */}
           <button className="fs-icon-btn exit-fs-btn" onClick={onClose} title="Exit Fullscreen Mode">
             <Minimize2 size={15} />
@@ -78,6 +84,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
 
       {/* Main Canvas Scrollable Workspace */}
       <main className="fs-modal-body">
+        {floatingControls}
         <div className="fs-workspace-scrollable">
           {children}
         </div>

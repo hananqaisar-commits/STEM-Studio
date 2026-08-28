@@ -4,9 +4,8 @@ import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Spar
 import { BSTRenderer } from './BSTRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -111,16 +110,25 @@ export const BSTPage: React.FC = () => {
     currentStep,
     totalSteps,
     isPlaying,
-    speed,
     play,
     pause,
     stepForward,
     stepBack,
     reset,
-    setSpeed,
   } = useStepPlayer({ steps: activeOperationSteps });
 
   const bstStep = currentStep as BSTStep | null;
+
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+      onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
 
   // Build quiz checkpoints from the current operation steps
   const quizCheckpoints = React.useMemo(
@@ -392,28 +400,22 @@ export const BSTPage: React.FC = () => {
     </div>
   );
 
-  // Shared Player Controls
-  const renderPlayerControls = () => (
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
       <div className="player-center">
         <div className="step-progress-bar">
-          <div className="step-progress-fill" style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -602,7 +604,7 @@ export const BSTPage: React.FC = () => {
       </div>
 
       {/* Main Learning Workspace */}
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
           <BSTRenderer
             currentStep={bstStep}
@@ -621,13 +623,26 @@ export const BSTPage: React.FC = () => {
             </div>
           )}
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Multi-Language Debugger & Explanation */}
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
+        </div>
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={treeCategory}
             title="Tree Operations"
@@ -649,8 +664,8 @@ export const BSTPage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)}
-            stepNumber={currentStepIndex + 1}
-            totalSteps={totalSteps}
+            steps={activeOperationSteps}
+            currentStepIndex={currentStepIndex}
             timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
             spaceComplexity="O(H)"
           />
@@ -666,7 +681,23 @@ export const BSTPage: React.FC = () => {
         title={`Tree Studio | ${treeCategory.toUpperCase()}`}
         subtitle="Interactive Dynamic Tree Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <BSTRenderer currentStep={bstStep} />
       </FullScreenCanvasModal>

@@ -7,9 +7,8 @@ import {
 import { DPRenderer } from './DPRenderer';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
@@ -100,8 +99,8 @@ export const DPPage: React.FC = () => {
   }, [selectedAlg, fibN, coins, amount, houses, weights, values, capacity, lcsS1, lcsS2, lisArr, edS1, edS2, upM, upN]);
 
   const {
-    currentStepIndex, currentStep, totalSteps, isPlaying, speed,
-    play, pause, stepForward, stepBack, reset, setSpeed,
+    currentStepIndex, currentStep, totalSteps, isPlaying,
+    play, pause, stepForward, stepBack, reset,
   } = useStepPlayer({ steps: executionData.steps });
 
   const quizCheckpoints = useMemo(
@@ -242,24 +241,33 @@ export const DPPage: React.FC = () => {
     setShowCustomEditor(false);
   };
 
-  const renderPlayerControls = () => (
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+      onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
+
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack} onStepForward={stepForward} onReset={reset}
-          canStepBack={currentStepIndex > 0} canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
       <div className="player-center">
         <div className="step-progress-bar">
-          <div className="step-progress-fill" style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -493,15 +501,32 @@ export const DPPage: React.FC = () => {
       </div>
 
       {/* Main Learning Workspace */}
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
           <DPRenderer currentStep={currentStep} onToggleFullscreen={() => setIsFullScreenOpen(true)} />
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
 
+
+        </div>
+
+
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             title="Dynamic Programming"
@@ -513,8 +538,8 @@ export const DPPage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
-            stepNumber={currentStepIndex + 1}
-            totalSteps={totalSteps}
+            steps={executionData.steps}
+            currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
@@ -528,7 +553,23 @@ export const DPPage: React.FC = () => {
         title={`Dynamic Programming | ${selectedAlg.toUpperCase()}`}
         subtitle="DP Table Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <DPRenderer currentStep={currentStep} />
       </FullScreenCanvasModal>

@@ -33,11 +33,11 @@ const SVG_MAP: Record<MascotExpression, string> = {
 };
 
 const SIZE_PX: Record<MascotSize, number> = {
-  tiny: 48,
-  small: 72,
-  medium: 120,
-  large: 180,
-  xl: 280,
+  tiny: 56,
+  small: 84,
+  medium: 140,
+  large: 200,
+  xl: 340,
 };
 
 export interface OctaProps {

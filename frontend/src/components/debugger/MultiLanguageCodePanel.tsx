@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play, Layers, Terminal, Cpu, Code2, Binary, FileText, RotateCcw,
   AlertTriangle, ChevronDown, Check, Copy, CopyCheck, Bug, FileCode2,
+  Pencil, Eye,
 } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
+import { FALLBACK_SNIPPETS } from '../../features/debugger/data/fallbackSnippets';
 import { getStarterTemplate, type CustomLanguage } from '../../engine/customCodeTemplates';
 import { executeCustomSortingCode } from '../../engine/codeExecutionEngine';
 import type { ArrayStep } from '../../engine/types/Step';
@@ -56,6 +58,66 @@ const CUSTOM_LANGUAGES: { id: CustomLanguage; label: string }[] = [
   { id: 'rust', label: 'Rust' },
 ];
 
+/** Only allow a single function body; reject top-level variables or statements. */
+function validateCustomCode(code: string, lang: CustomLanguage): string | null {
+  const trimmed = code.trim();
+  if (!trimmed) return 'Paste a function to visualize. Empty code is not allowed.';
+
+  // Count function declarations in a language-agnostic way.
+  const functionPatterns: Record<string, RegExp> = {
+    javascript: /\bfunction\s+\w+\s*\(/g,
+    python: /\bdef\s+\w+\s*\(/g,
+    cpp: /\b\w+\s+\w+\s*\([^)]*\)\s*\{/g,
+    csharp: /\b\w+\s+\w+\s*\([^)]*\)\s*\{/g,
+    java: /\b\w+\s+\w+\s*\([^)]*\)\s*\{/g,
+    ruby: /\bdef\s+\w+/g,
+    go: /\bfunc\s+\w+\s*\(/g,
+    rust: /\bfn\s+\w+\s*\(/g,
+  };
+
+  const fnMatches = trimmed.match(functionPatterns[lang] || functionPatterns.javascript) || [];
+  if (fnMatches.length === 0) {
+    return 'Only a function can be visualized. Paste your algorithm inside a single function.';
+  }
+  if (fnMatches.length > 1) {
+    return 'Paste exactly one function. Multiple functions make the trace hard to follow.';
+  }
+
+  // Reject obvious top-level variable declarations / statements outside the function.
+  const lines = trimmed.split('\n');
+  let braceDepth = 0;
+  let parenDepth = 0;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('//') || line.startsWith('#')) continue;
+
+    for (const ch of line) {
+      if (ch === '{' || ch === '(') {
+        if (ch === '{') braceDepth++;
+        else parenDepth++;
+      } else if (ch === '}' || ch === ')') {
+        if (ch === '}') braceDepth = Math.max(0, braceDepth - 1);
+        else parenDepth = Math.max(0, parenDepth - 1);
+      }
+    }
+
+    if (braceDepth === 0 && parenDepth === 0) {
+      const banned = [
+        /^\s*(let|const|var|int|float|double|bool|char|string)\s+\w+\s*=/,
+        /^\s*\w+\s*\w+\s*=\s*.+;/,
+        /^\s*print\s*\(/,
+        /^\s*console\.log\s*\(/,
+        /^\s*System\.out\.println\s*\(/,
+      ];
+      if (banned.some((re) => re.test(line))) {
+        return 'Top-level variables and statements are not allowed. Put everything inside the function.';
+      }
+    }
+  }
+
+  return null;
+}
+
 export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   algorithmKey,
   activeLine,
@@ -68,15 +130,15 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   snippets,
   title = 'Source Code',
 }) => {
-  // Resolve which snippet set to show: explicit prop → sorting table → none.
+  // Resolve which snippet set to show: explicit prop → sorting table → fallback map.
   const resolvedSnippets: SnippetSet | undefined = useMemo(
-    () => snippets ?? SORTING_CODE_SNIPPETS[algorithmKey],
-    [snippets, algorithmKey],
+    () => snippets ?? SORTING_CODE_SNIPPETS[algorithmKey] ?? FALLBACK_SNIPPETS[algorithmKey],
+    [snippets, algorithmKey]
   );
 
   const availableLangs = useMemo(
     () => LANG_ORDER.filter((l) => (resolvedSnippets?.[l]?.length ?? 0) > 0),
-    [resolvedSnippets],
+    [resolvedSnippets]
   );
 
   const [selectedLang, setSelectedLang] = useState<string>('python');
@@ -128,6 +190,12 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   };
 
   const handleRunCustomCode = () => {
+    const validationError = validateCustomCode(customCode, customLang);
+    if (validationError) {
+      setExecutionError(validationError);
+      return;
+    }
+
     if (!currentArray || currentArray.length === 0) {
       setExecutionError('No input array available. Generate or enter values first.');
       return;
@@ -161,7 +229,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               className={`mode-btn ${codeMode === 'default' ? 'active' : ''}`}
               onClick={() => { setCodeMode('default'); setExecutionError(null); }}
             >
-              Default
+              <Eye size={12} />
+              <span>Reference</span>
             </button>
             <button
               role="tab"
@@ -169,7 +238,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               className={`mode-btn ${codeMode === 'custom' ? 'active' : ''}`}
               onClick={() => setCodeMode('custom')}
             >
-              Custom
+              <Pencil size={12} />
+              <span>Paste code</span>
             </button>
           </div>
         )}
@@ -306,7 +376,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               value={customCode}
               onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); }}
               spellCheck={false}
-              placeholder="Write your sorting code here…"
+              placeholder={`Paste your ${customLang.toUpperCase()} function here. Only one function is allowed — no top-level variables or statements.`}
             />
           </div>
 

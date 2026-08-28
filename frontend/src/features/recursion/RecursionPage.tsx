@@ -5,9 +5,8 @@ import {
 } from 'lucide-react';
 import { RecursionTreeRenderer } from './RecursionTreeRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
@@ -82,9 +81,20 @@ export const RecursionPage: React.FC = () => {
   }, [selectedAlg, factorialN, fibonacciN, powerBase, powerExp, arraySumArr, hanoiN]);
 
   const {
-    currentStepIndex, currentStep, totalSteps, isPlaying, speed,
-    play, pause, stepForward, stepBack, reset, setSpeed,
+    currentStepIndex, currentStep, totalSteps, isPlaying,
+    play, pause, stepForward, stepBack, reset,
   } = useStepPlayer({ steps: executionData.steps });
+
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+      onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
 
   /* ── Quiz ────────────────────────────────────────────────────────── */
   const quizCheckpoints = useMemo(
@@ -144,28 +154,20 @@ export const RecursionPage: React.FC = () => {
     setHanoiN(1);
   };
 
-  const renderPlayerControls = () => (
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
       <div className="player-center">
         <div className="step-progress-bar">
           <div className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -322,17 +324,32 @@ export const RecursionPage: React.FC = () => {
       </div>
 
       {/* Main Workspace */}
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
           <RecursionTreeRenderer
             currentStep={currentStep}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
 
+        </div>
+
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             title="Recursion"
@@ -351,6 +368,8 @@ export const RecursionPage: React.FC = () => {
             totalSteps={totalSteps}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
+            steps={executionData.steps}
+            currentStepIndex={currentStepIndex}
           />
         </div>
       </div>
@@ -362,7 +381,23 @@ export const RecursionPage: React.FC = () => {
         title={`Recursion | ${selectedAlg.toUpperCase()}`}
         subtitle="Call Tree Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <RecursionTreeRenderer currentStep={currentStep} />
       </FullScreenCanvasModal>

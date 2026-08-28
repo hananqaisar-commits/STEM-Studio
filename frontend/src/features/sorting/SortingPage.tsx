@@ -5,9 +5,11 @@ import {
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { FloatingController } from '../../components/controls/FloatingController';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
@@ -203,13 +205,24 @@ export const SortingPage: React.FC = () => {
 
 
 
-  const renderPlayerControls = () => (
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+      onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => {
+        pause();
+        reset();
+      },
+      onResume: play,
+    },
+  });
+
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton
-          isPlaying={isPlaying}
-          onToggle={isPlaying ? pause : play}
-        />
+        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
         <StepControls
           onStepBack={stepBack}
           onStepForward={stepForward}
@@ -218,7 +231,6 @@ export const SortingPage: React.FC = () => {
           canStepForward={currentStepIndex < totalSteps - 1}
         />
       </div>
-
       <div className="player-center">
         <div className="step-progress-bar">
           <div
@@ -226,14 +238,11 @@ export const SortingPage: React.FC = () => {
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
         </div>
-        <span className="step-counter">
-          Step {currentStepIndex + 1} / {totalSteps}
-        </span>
+        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-
       <div className="player-right">
         <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+        </div>
     </div>
   );
 
@@ -411,7 +420,7 @@ export const SortingPage: React.FC = () => {
       </div>
 
       {/* Main Learning Workspace */}
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         {/* Left Column: Visual Canvas & Interactive Controls */}
         <div className="renderer-section">
           <SortingRenderer
@@ -420,13 +429,26 @@ export const SortingPage: React.FC = () => {
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
+        </div>
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={selectedAlg}
             title="Sorting Algorithm"
@@ -439,8 +461,8 @@ export const SortingPage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
-            stepNumber={currentStepIndex + 1}
-            totalSteps={totalSteps}
+            steps={executionData.steps}
+            currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
@@ -456,7 +478,23 @@ export const SortingPage: React.FC = () => {
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <SortingRenderer
           currentStep={currentStep}

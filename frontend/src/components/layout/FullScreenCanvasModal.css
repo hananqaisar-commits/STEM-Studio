@@ -301,6 +301,22 @@
   white-space: nowrap !important;
 }
 
+.fs-quiz-disabled-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+}
+
+/* Hide quiz-mode toggles that pages render inside the fullscreen toolbar. */
+.fs-modal-toolbar .predict-toggle-label,
+.fs-modal-toolbar .quiz-mode-btn {
+  display: none !important;
+}
+
 .fs-icon-btn {
   position: relative !important;
   margin: 0 !important;

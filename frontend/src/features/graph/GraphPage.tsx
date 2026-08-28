@@ -34,9 +34,8 @@ import {
 } from './graphEngine';
 import { GraphRenderer } from './GraphRenderer';
 import { GRAPH_SNIPPETS } from './graphSnippets';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
@@ -88,13 +87,11 @@ export const GraphPage: React.FC = () => {
     currentStep,
     totalSteps,
     isPlaying,
-    speed,
     play,
     pause,
     stepForward,
     stepBack,
     reset,
-    setSpeed,
   } = useStepPlayer<GraphStep>({ steps: activeSteps });
 
   // Build quiz checkpoints from the current active steps
@@ -197,19 +194,13 @@ export const GraphPage: React.FC = () => {
 
   const snippetKey = category;
 
-  const renderPlayerControls = () => (
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
-
       <div className="player-center">
         <div className="step-progress-bar">
           <div
@@ -217,14 +208,21 @@ export const GraphPage: React.FC = () => {
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
+
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+      onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
 
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
@@ -406,7 +404,7 @@ export const GraphPage: React.FC = () => {
       </div>
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
-      <div className="graph-workspace">
+      <div className="graph-workspace scene-workspace">
         {/* Visualizer Canvas & Controls Card */}
         <div className="renderer-section">
           <div className="graph-canvas-card">
@@ -429,13 +427,26 @@ export const GraphPage: React.FC = () => {
             <GraphRenderer step={currentStep} nodes={nodes} edges={edges} onToggleFullscreen={() => setIsFullScreenOpen(true)} />
           </div>
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Code & Explanation */}
-        <div className="explanation-section">
+        <div className="quiz-rail">
           <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
+        </div>
+        <div className="bottom-row">
           <MultiLanguageCodePanel
             algorithmKey={category}
             title="Graph Traversal"
@@ -450,8 +461,8 @@ export const GraphPage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)}
-            stepNumber={currentStepIndex + 1}
-            totalSteps={totalSteps}
+            steps={activeSteps}
+            currentStepIndex={currentStepIndex}
           />
         </div>
       </div>
@@ -463,7 +474,23 @@ export const GraphPage: React.FC = () => {
         title={`Graph Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Network Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
       </FullScreenCanvasModal>
