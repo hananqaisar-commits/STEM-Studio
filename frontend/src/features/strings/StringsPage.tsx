@@ -157,6 +157,15 @@ export const StringsPage: React.FC = () => {
     setSecondStr(sample.secondary);
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     A fresh string from the pool, predicted cold. startChallenge() must
+     fire in the same handler as the input change so the armed challenge
+     survives the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
+  };
+
   usePlaybackShortcuts({
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
@@ -353,7 +362,13 @@ export const StringsPage: React.FC = () => {
 
         {/* Right Column: Quiz Dock & Explanation */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel

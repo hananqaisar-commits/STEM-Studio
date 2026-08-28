@@ -165,6 +165,15 @@ export const GreedyPage: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAlg, activitiesRaw, itemsRaw, capacity, jobsRaw, huffmanText]);
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh activities / items / jobs, predicted cold. startChallenge()
+     must fire in the same handler as the input change so the armed
+     challenge survives the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
+  };
+
   const handleRandomize = () => {
     reset();
     quizSession.resetSession();
@@ -488,7 +497,13 @@ export const GreedyPage: React.FC = () => {
 
         {/* Right Column: Quiz & Explanation */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel

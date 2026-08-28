@@ -132,6 +132,27 @@ export const FALLBACK_SNIPPETS: Record<string, FallbackSnippetSet> = {
     ],
   },
 
+  duplicateDetect: {
+    python: [
+      'def contains_duplicate(nums):',
+      '    seen = set()',
+      '    for x in nums:',
+      '        if x in seen:',
+      '            return True',
+      '        seen.add(x)',
+      '    return False',
+    ],
+  },
+  frequencyMap: {
+    python: [
+      'def frequency_map(items):',
+      '    freq = {}',
+      '    for x in items:',
+      '        freq[x] = freq.get(x, 0) + 1',
+      '    return freq',
+    ],
+  },
+
   /* ── Strings ──────────────────────────────────────────────────────── */
   anagram: {
     python: [
@@ -188,6 +209,28 @@ export const FALLBACK_SNIPPETS: Record<string, FallbackSnippetSet> = {
     ],
   },
 
+  frequency: {
+    python: [
+      'def char_frequency(s):',
+      '    freq = {}',
+      '    for ch in s:',
+      '        freq[ch] = freq.get(ch, 0) + 1',
+      '    return freq',
+    ],
+  },
+  reverse: {
+    python: [
+      'def reverse_string(s):',
+      '    chars = list(s)',
+      '    left, right = 0, len(s) - 1',
+      '    while left < right:',
+      '        chars[left], chars[right] = chars[right], chars[left]',
+      '        left += 1',
+      '        right -= 1',
+      '    return "".join(chars)',
+    ],
+  },
+
   /* ── Recursion ─────────────────────────────────────────────────────── */
   factorial: {
     python: [
@@ -224,6 +267,15 @@ export const FALLBACK_SNIPPETS: Record<string, FallbackSnippetSet> = {
       '    hanoi(n - 1, source, aux, target)',
       '    move_disk(source, target)',
       '    hanoi(n - 1, aux, target, source)',
+    ],
+  },
+
+  arraySum: {
+    python: [
+      'def array_sum(arr):',
+      '    if not arr:',
+      '        return 0',
+      '    return arr[0] + array_sum(arr[1:])',
     ],
   },
 
@@ -382,6 +434,45 @@ export const FALLBACK_SNIPPETS: Record<string, FallbackSnippetSet> = {
     ],
   },
 
+  houseRobber: {
+    python: [
+      'def rob(nums):',
+      '    prev, curr = 0, 0',
+      '    for x in nums:',
+      '        prev, curr = curr, max(curr, prev + x)',
+      '    return curr',
+    ],
+  },
+  editDistance: {
+    python: [
+      'def min_distance(a, b):',
+      '    m, n = len(a), len(b)',
+      '    dp = [[0] * (n + 1) for _ in range(m + 1)]',
+      '    for i in range(m + 1):',
+      '        dp[i][0] = i',
+      '    for j in range(n + 1):',
+      '        dp[0][j] = j',
+      '    for i in range(1, m + 1):',
+      '        for j in range(1, n + 1):',
+      '            if a[i - 1] == b[j - 1]:',
+      '                dp[i][j] = dp[i - 1][j - 1]',
+      '            else:',
+      '                dp[i][j] = 1 + min(dp[i - 1][j - 1],',
+      '                                   dp[i - 1][j], dp[i][j - 1])',
+      '    return dp[m][n]',
+    ],
+  },
+  uniquePaths: {
+    python: [
+      'def unique_paths(m, n):',
+      '    dp = [1] * n',
+      '    for _ in range(1, m):',
+      '        for j in range(1, n):',
+      '            dp[j] += dp[j - 1]',
+      '    return dp[-1]',
+    ],
+  },
+
   /* ── Greedy ────────────────────────────────────────────────────────── */
   activitySelection: {
     python: [
@@ -510,4 +601,47 @@ export const FALLBACK_SNIPPETS: Record<string, FallbackSnippetSet> = {
       '    return search_with_wildcard(node.children[ch], word, i + 1)',
     ],
   },
+  triePrefix: {
+    python: [
+      'def starts_with(root, prefix):',
+      '    node = root',
+      '    for ch in prefix:',
+      '        if ch not in node.children:',
+      '            return False',
+      '        node = node.children[ch]',
+      '    return True',
+    ],
+  },
+  autocomplete: {
+    python: [
+      'def autocomplete(root, prefix):',
+      '    node = root',
+      '    for ch in prefix:',
+      '        if ch not in node.children:',
+      '            return []',
+      '        node = node.children[ch]',
+      '    words = []',
+      '    def collect(node, path):',
+      '        if node.is_end:',
+      '            words.append(prefix + path)',
+      '        for ch, child in node.children.items():',
+      '            collect(child, path + ch)',
+      '    collect(node, "")',
+      '    return words',
+    ],
+  },
 };
+
+/**
+ * Key aliases — some category pages use different algorithm ids than the
+ * canonical snippet keys above. Alias them so the debugger code panel never
+ * falls back to the empty "Reference code coming soon" state.
+ */
+Object.assign(FALLBACK_SNIPPETS, {
+  rotation: FALLBACK_SNIPPETS.rotateArray,
+  fibonacciDP: FALLBACK_SNIPPETS.fibonacci_dp,
+  knapsack01: FALLBACK_SNIPPETS.knapsack,
+  huffmanCoding: FALLBACK_SNIPPETS.huffman,
+  jobScheduling: FALLBACK_SNIPPETS.jobSequencing,
+  trie: FALLBACK_SNIPPETS.trieInsert,
+});

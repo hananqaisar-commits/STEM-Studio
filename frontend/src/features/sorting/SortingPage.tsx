@@ -191,6 +191,16 @@ export const SortingPage: React.FC = () => {
     setShowCustomEditor(false);
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     A fresh, never-studied array becomes the execution the student must
+     predict cold. startChallenge() must fire in the same handler as the
+     input change so the armed challenge survives the checkpoint reset
+     the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
+  };
+
   const handleBarElementClick = (index: number, currentValue: number) => {
     const valStr = prompt(`Edit value at index [${index}]:`, currentValue.toString());
     if (valStr !== null) {
@@ -444,7 +454,13 @@ export const SortingPage: React.FC = () => {
 
         {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel
