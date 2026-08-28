@@ -216,7 +216,6 @@ export const ArraysPage: React.FC = () => {
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
       onReset: reset,
-      seekTo,
     onStepForward: stepForward,
       onStepBack: stepBack,
       onStop: () => { pause(); reset(); },
