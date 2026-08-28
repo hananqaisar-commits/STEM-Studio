@@ -1290,7 +1290,7 @@ export const StackQueuePage: React.FC = () => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 className="bst-input"
-                placeholder={categoryPlaceholder}
+                placeholder="e.g. 10, 20, 30, 40"
                 style={{ minWidth: '160px' }}
               />
             </div>
