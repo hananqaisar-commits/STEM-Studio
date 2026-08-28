@@ -93,7 +93,8 @@ export const GraphPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  } = useStepPlayer<GraphStep>({ steps: activeSteps });
+  seekTo,
+    } = useStepPlayer<GraphStep>({ steps: activeSteps });
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
@@ -233,6 +234,17 @@ export const GraphPage: React.FC = () => {
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
       </div>
       <div className="player-right" />
@@ -243,7 +255,8 @@ export const GraphPage: React.FC = () => {
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
       onReset: reset,
-      onStepForward: stepForward,
+      seekTo,
+    onStepForward: stepForward,
       onStepBack: stepBack,
       onStop: () => { pause(); reset(); },
       onResume: play,

@@ -117,7 +117,8 @@ export const BSTPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  } = useStepPlayer({ steps: activeOperationSteps });
+  seekTo,
+    } = useStepPlayer({ steps: activeOperationSteps });
 
   const bstStep = currentStep as BSTStep | null;
 
@@ -125,7 +126,8 @@ export const BSTPage: React.FC = () => {
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
       onReset: reset,
-      onStepForward: stepForward,
+      seekTo,
+    onStepForward: stepForward,
       onStepBack: stepBack,
       onStop: () => { pause(); reset(); },
       onResume: play,
@@ -432,6 +434,17 @@ export const BSTPage: React.FC = () => {
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
       </div>
       <div className="player-right" />

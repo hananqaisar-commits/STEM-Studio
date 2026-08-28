@@ -91,7 +91,8 @@ export const BacktrackingPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  } = useStepPlayer({ steps: executionData.steps });
+  seekTo,
+    } = useStepPlayer({ steps: executionData.steps });
 
   const quizCheckpoints = useMemo(
     () => buildBacktrackingCheckpoints(executionData.steps, selectedAlg),
@@ -178,7 +179,8 @@ export const BacktrackingPage: React.FC = () => {
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
       onReset: reset,
-      onStepForward: stepForward,
+      seekTo,
+    onStepForward: stepForward,
       onStepBack: stepBack,
       onStop: () => { pause(); reset(); },
       onResume: play,
@@ -198,6 +200,17 @@ export const BacktrackingPage: React.FC = () => {
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
       </div>
       <div className="player-right" />
