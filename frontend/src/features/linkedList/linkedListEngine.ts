@@ -123,7 +123,7 @@ export function generateInsertHeadSteps(
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
   const oldHeadId = nodes.length > 0 ? nodes[0].id : null;
-  const newId = `node-${Date.now() % 10000}`;
+  const newId = `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   // Step 1: Allocate new node
   const newNode: ListNodeItem = {
@@ -205,8 +205,7 @@ export function generateInsertTailSteps(
   }
 
   const steps: LinkedListStep[] = [];
-  const nodes = cloneNodes(currentNodes);
-  const newId = `node-${Date.now() % 10000}`;
+  const newId = `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
   const headId = nodes[0].id;
   const tailId = nodes[nodes.length - 1].id;
 
@@ -717,7 +716,7 @@ export function generateDoublyInsertHeadSteps(
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
   const oldHeadId = nodes.length > 0 ? nodes[0].id : null;
-  const newId = `node-${Date.now() % 10000}`;
+  const newId = `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   const newNode: ListNodeItem = {
     id: newId,

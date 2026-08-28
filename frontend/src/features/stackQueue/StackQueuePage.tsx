@@ -48,6 +48,7 @@ import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
+import { parseNumberList } from '../../utils/batchInputParser';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface ProblemMeta {
@@ -100,7 +101,7 @@ export const StackQueuePage: React.FC = () => {
     }
   }, [searchParams]);
 
-  const [inputValue, setInputValue] = useState<string>('42');
+  const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40, 50');
 
   // Modes & Modals matching BST
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -169,14 +170,26 @@ export const StackQueuePage: React.FC = () => {
     revisionData: buildRevisionData(category),
   });
 
-  // ─── ACTION HANDLERS ─────────────────────────────────────────────
+  // ─── ACTION HANDLERS (UNIVERSAL BATCH SEQUENTIAL EXECUTION) ─────────────────
 
   const handlePush = () => {
-    if (!inputValue.trim()) return;
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps = generateStackPushSteps(stackData, val);
-    setStackData([...stackData, val]);
-    setActiveSteps(steps);
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (rawValues.length === 0) return;
+
+    let current = [...stackData];
+    const allSteps: StackQueueStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps = generateStackPushSteps(current, val);
+      allSteps.push(...opSteps);
+      current = [...current, val];
+    }
+
+    setStackData(current);
+    setActiveSteps(allSteps);
     reset();
     play();
   };
@@ -190,11 +203,23 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleEnqueue = () => {
-    if (!inputValue.trim()) return;
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps = generateQueueEnqueueSteps(queueData, val);
-    setQueueData([...queueData, val]);
-    setActiveSteps(steps);
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (rawValues.length === 0) return;
+
+    let current = [...queueData];
+    const allSteps: StackQueueStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps = generateQueueEnqueueSteps(current, val);
+      allSteps.push(...opSteps);
+      current = [...current, val];
+    }
+
+    setQueueData(current);
+    setActiveSteps(allSteps);
     reset();
     play();
   };
@@ -208,13 +233,29 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleCircularEnqueue = () => {
-    if (!inputValue.trim()) return;
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const res = generateCircularQueueEnqueueSteps(cqElements, cqFront, cqRear, 6, val);
-    setCqElements(res.newElements);
-    setCqFront(res.newFront);
-    setCqRear(res.newRear);
-    setActiveSteps(res.steps);
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (rawValues.length === 0) return;
+
+    let currentElements = [...cqElements];
+    let currentFront = cqFront;
+    let currentRear = cqRear;
+    const allSteps: StackQueueStep[] = [];
+
+    for (const val of rawValues) {
+      const res = generateCircularQueueEnqueueSteps(currentElements, currentFront, currentRear, 6, val);
+      allSteps.push(...res.steps);
+      currentElements = res.newElements;
+      currentFront = res.newFront;
+      currentRear = res.newRear;
+    }
+
+    setCqElements(currentElements);
+    setCqFront(currentFront);
+    setCqRear(currentRear);
+    setActiveSteps(allSteps);
     reset();
     play();
   };
@@ -228,11 +269,70 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleMinStackPush = () => {
-    const num = Number(inputValue) || 1;
-    const res = generateMinStackPushSteps(minMainStack, minAuxStack, num);
-    setMinMainStack(res.newMain);
-    setMinAuxStack(res.newMin);
-    setActiveSteps(res.steps);
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) return;
+
+    let curMain = [...minMainStack];
+    let curMin = [...minAuxStack];
+    const allSteps: StackQueueStep[] = [];
+
+    for (const num of nums) {
+      const res = generateMinStackPushSteps(curMain, curMin, num);
+      allSteps.push(...res.steps);
+      curMain = res.newMain;
+      curMin = res.newMin;
+    }
+
+    setMinMainStack(curMain);
+    setMinAuxStack(curMin);
+    setActiveSteps(allSteps);
+    reset();
+    play();
+  };
+
+  const handleBuildBatchStackQueue = () => {
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : [10, 20, 30, 40, 50];
+
+    if (category === 'stack') {
+      let current: (number | string)[] = [];
+      const allSteps: StackQueueStep[] = [];
+      for (const val of rawValues) {
+        const opSteps = generateStackPushSteps(current, val);
+        allSteps.push(...opSteps);
+        current = [...current, val];
+      }
+      setStackData(current);
+      setActiveSteps(allSteps);
+    } else if (category === 'queue') {
+      let current: (number | string)[] = [];
+      const allSteps: StackQueueStep[] = [];
+      for (const val of rawValues) {
+        const opSteps = generateQueueEnqueueSteps(current, val);
+        allSteps.push(...opSteps);
+        current = [...current, val];
+      }
+      setQueueData(current);
+      setActiveSteps(allSteps);
+    } else if (category === 'minStack') {
+      let curMain: number[] = [];
+      let curMin: number[] = [];
+      const allSteps: StackQueueStep[] = [];
+      for (const val of rawValues.map(Number).filter((n) => !isNaN(n))) {
+        const res = generateMinStackPushSteps(curMain, curMin, val);
+        allSteps.push(...res.steps);
+        curMain = res.newMain;
+        curMin = res.newMin;
+      }
+      setMinMainStack(curMain);
+      setMinAuxStack(curMin);
+      setActiveSteps(allSteps);
+    }
     reset();
     play();
   };
@@ -796,7 +896,11 @@ export const StackQueuePage: React.FC = () => {
     <>
       {category === 'stack' && (
         <>
-          <button className="bst-btn btn-insert" onClick={handlePush}>
+          <button className="bst-btn btn-mode" onClick={handleBuildBatchStackQueue} title="Build stack sequentially">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Build Stack</span>
+          </button>
+          <button className="bst-btn btn-insert" onClick={handlePush} title="Push value(s) sequentially">
             <Plus size={14} />
             <span>Push</span>
           </button>
@@ -808,7 +912,11 @@ export const StackQueuePage: React.FC = () => {
 
       {category === 'queue' && (
         <>
-          <button className="bst-btn btn-insert" onClick={handleEnqueue}>
+          <button className="bst-btn btn-mode" onClick={handleBuildBatchStackQueue} title="Build queue sequentially">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Build Queue</span>
+          </button>
+          <button className="bst-btn btn-insert" onClick={handleEnqueue} title="Enqueue value(s) sequentially">
             <Plus size={14} />
             <span>Enqueue</span>
           </button>
@@ -1175,17 +1283,17 @@ export const StackQueuePage: React.FC = () => {
           </select>
 
           {/* Input Group Matching BST */}
-          <div className="bst-input-group">
-            <span>Value:</span>
-            <input
-              type="text"
-              className="bst-input"
-              style={{ width: '90px' }}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Val / Expr"
-            />
-          </div>
+            <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
+              <span style={{ fontWeight: 600 }}>Values:</span>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="bst-input"
+                placeholder={categoryPlaceholder}
+                style={{ minWidth: '160px' }}
+              />
+            </div>
 
           {/* Category Action Buttons */}
           {renderCategoryActions()}
