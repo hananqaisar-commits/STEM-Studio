@@ -183,7 +183,7 @@
 }
 
 .auth-button:hover {
-  background-color: var(--accent-hover);
+  background-color: var(--color-primary-hover);
 }
 
 .auth-button:active {

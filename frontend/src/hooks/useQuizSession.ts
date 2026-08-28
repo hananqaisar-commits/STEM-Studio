@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { submitQuizAttempt } from '../api/quizApi';
 import {
   filterByCadence,
+  TRANSFER_CHALLENGE_STEPS,
   type QuizCadence,
   type QuizCheckpoint,
   type QuizModule,
@@ -21,9 +22,15 @@ import {
               correct ────────────┼──────────────▶ revealed ──continue──▶ idle
                                   │                   ▲                  (or report)
               1st wrong ──▶ retrying                 │
-                                  └── 2nd wrong ──────┘  (answer shown)
+                                  └── 2nd wrong ──────┘  (answer shown,
+                                                           inspect the step)
 
-     After last checkpoint revealed ──▶ report
+     After last checkpoint revealed ──▶ report ──proveIt──▶ challenge
+                                                          (fresh input,
+                                                           first steps only)
+                                                          │
+                                            last challenge revealed ──▶ report
+                                                                       (transfer verdict)
 
    Three modes with differentiated features:
    - Concept (light): weight-1 only, insight boxes, no timer
@@ -73,12 +80,25 @@ export interface QuizSessionState {
   revisionData: QuizRevisionData | null;
   /** Per-question results collected for the post-quiz report. */
   questionResults: QuestionResult[];
+  /** Whether the question just answered needs the "inspect the step"
+   *  treatment: wrong on the final attempt, so Continue should advance
+   *  the canvas to the very step the student mispredicted. */
+  inspectPending: boolean;
+  /** True while the transfer challenge (fresh input, first steps only)
+   *  is in play. The report renders a transfer verdict instead of the
+   *  regular advice when set. */
+  challengeMode: boolean;
+  /** Whether this algorithm offers a transfer challenge: at least two
+   *  step-bound checkpoints exist that a fresh input would re-create. */
+  canChallenge: boolean;
   /** Seconds remaining on the timer (Challenge mode only); null otherwise. */
   timeRemaining: number | null;
   /** Streak multiplier: x1 base, x2 after 3 correct, x3 after 5 correct. */
   streakMultiplier: number;
   /** Whether the quiz has completed all checkpoints (for report trigger). */
   quizCompleted: boolean;
+  /** Master on/off mirrored back for the dock's Observation Mode card. */
+  enabled: boolean;
   answer: (index: number) => void;
   continueExecution: () => void;
   /** Clear tallies and re-arm every checkpoint. */
@@ -91,6 +111,10 @@ export interface QuizSessionState {
   showReport: () => void;
   /** Dismiss the report and return to idle. */
   dismissReport: () => void;
+  /** Arm the transfer challenge: the caller regenerates the input right
+   *  after this, and the first TRANSFER_CHALLENGE_STEPS step-bound
+   *  checkpoints of the new execution become the challenge questions. */
+  startChallenge: () => void;
 }
 
 export function useQuizSession({
@@ -113,6 +137,14 @@ export function useQuizSession({
   const [openCheckpoint, setOpenCheckpoint] = useState<QuizCheckpoint | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [wasCorrect, setWasCorrect] = useState(false);
+  const [inspectPending, setInspectPending] = useState(false);
+
+  /* Transfer challenge state. `challengeArmedRef` bridges the gap between
+   * the button click (which sets it) and the checkpoint array changing a
+   * render later (when the regenerated input lands): the signature reset
+   * must keep the armed challenge alive but clear any stale one. */
+  const [challengeMode, setChallengeMode] = useState(false);
+  const challengeArmedRef = useRef(false);
 
   const [correctCount, setCorrectCount] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
@@ -135,10 +167,15 @@ export function useQuizSession({
    *  current revision content. */
   const revisionAutoShown = useRef(false);
 
-  const active = useMemo(
-    () => (enabled ? filterByCadence(checkpoints, cadence) : []),
-    [enabled, checkpoints, cadence]
-  );
+  const active = useMemo(() => {
+    if (!enabled) return [];
+    /* The transfer challenge bypasses cadence on purpose: it always asks
+     * real step predictions, whatever level the student quizzed at. */
+    if (challengeMode) {
+      return checkpoints.filter((c) => c.stepIndex > 0).slice(0, TRANSFER_CHALLENGE_STEPS);
+    }
+    return filterByCadence(checkpoints, cadence);
+  }, [enabled, checkpoints, cadence, challengeMode]);
 
   /* Reset keys off the checkpoint positions, not the array identity: a
      caller that rebuilds its checkpoint array each render would
@@ -154,6 +191,7 @@ export function useQuizSession({
     setOpenCheckpoint(null);
     setSelectedIndex(null);
     setWasCorrect(false);
+    setInspectPending(false);
     setTimeRemaining(null);
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -161,8 +199,15 @@ export function useQuizSession({
     }
   }, []);
 
-  /* A new execution, algorithm, or cadence — start over. */
+  /* A new execution, algorithm, or cadence — start over. A challenge that
+   * was armed a moment ago survives (its regenerated input just landed);
+   * any other change ends a challenge in progress. */
   useEffect(() => {
+    if (challengeArmedRef.current) {
+      challengeArmedRef.current = false;
+    } else {
+      setChallengeMode(false);
+    }
     consumedRef.current = new Set();
     setQuestionResults([]);
     dismiss();
@@ -174,18 +219,20 @@ export function useQuizSession({
   }, [externalRevisionData]);
 
   /* When quiz mode is on and revision notes exist, show them once before
-     the first checkpoint fires. */
+     the first checkpoint fires — but never mid transfer challenge: the
+     student has just worked through the material it would review. */
   useEffect(() => {
     if (
       enabled &&
       externalRevisionData &&
       phase === 'idle' &&
-      !revisionAutoShown.current
+      !revisionAutoShown.current &&
+      !challengeMode
     ) {
       revisionAutoShown.current = true;
       setPhase('revision');
     }
-  }, [enabled, externalRevisionData, phase]);
+  }, [enabled, externalRevisionData, phase, challengeMode]);
 
   /* Fire a checkpoint when playback reaches one. Pausing here replaces
      the near-identical useEffect every page carried separately. */
@@ -229,6 +276,7 @@ export function useQuizSession({
             setPhase((currentPhase) => {
               if (currentPhase === 'asking') {
                 setWasCorrect(false);
+                setInspectPending(true);
                 setAnsweredCount((n) => n + 1);
                 setStreak(0);
                 return 'revealed';
@@ -344,15 +392,20 @@ export function useQuizSession({
 
       if (correct) {
         setWasCorrect(true);
+        setInspectPending(false);
         setPhase('revealed');
         return;
       }
 
-      /* Wrong. One retry with a hint, then reveal. */
+      /* Wrong. One retry with a hint, then reveal. On the final wrong
+       * attempt the reveal carries the "let's inspect this step" cue: the
+       * wrong answer is not the end of learning, it is the moment the
+       * visualization gets to prove the student's mental model wrong. */
       if (isFirstAttempt) {
         setPhase('retrying');
       } else {
         setWasCorrect(false);
+        setInspectPending(true);
         setPhase('revealed');
       }
     },
@@ -379,7 +432,6 @@ export function useQuizSession({
     setStreak(0);
     revisionAutoShown.current = false;
   }, [dismiss]);
-
   const startRevision = useCallback(() => {
     setPhase('revision');
   }, []);
@@ -393,14 +445,47 @@ export function useQuizSession({
   }, []);
 
   const dismissReport = useCallback(() => {
+    /* Leaving the report must not re-trigger the revision card: the
+     * student has just answered everything it would review. This also
+     * covers pages whose input-change effect resets the auto-shown
+     * flag while a challenge was in flight. */
+    revisionAutoShown.current = true;
+    /* Leaving the challenge report ends the challenge itself: the
+     * signature change that follows re-arms the regular checkpoints so
+     * the student can keep exploring the same input uninterrupted. */
+    setChallengeMode(false);
     setPhase('idle');
   }, []);
+
+  /* Arm the transfer challenge. The caller regenerates the page input
+   * immediately after this — the checkpoint array that lands next is the
+   * fresh execution the student must predict. */
+  const startChallenge = useCallback(() => {
+    challengeArmedRef.current = true;
+    setChallengeMode(true);
+    consumedRef.current = new Set();
+    setQuestionResults([]);
+    setCorrectCount(0);
+    setAnsweredCount(0);
+    setStreak(0);
+    /* No revision card mid-challenge — the student has just seen it. */
+    revisionAutoShown.current = true;
+    dismiss();
+  }, [dismiss]);
+
+  /* A transfer challenge needs real step checkpoints to exist beyond the
+   * step-0 concept anchor; two is the minimum worth proving with. */
+  const canChallenge = useMemo(
+    () => checkpoints.filter((c) => c.stepIndex > 0).length >= 2,
+    [checkpoints]
+  );
 
   return {
     phase,
     checkpoint: openCheckpoint,
     selectedIndex,
     wasCorrect,
+    inspectPending,
     checkpointNumber,
     totalCheckpoints: active.length,
     correctCount,
@@ -413,6 +498,9 @@ export function useQuizSession({
     timeRemaining,
     streakMultiplier,
     quizCompleted,
+    challengeMode,
+    canChallenge,
+    enabled,
     answer,
     continueExecution,
     resetSession,
@@ -420,5 +508,6 @@ export function useQuizSession({
     dismissRevision,
     showReport,
     dismissReport,
+    startChallenge,
   };
 }

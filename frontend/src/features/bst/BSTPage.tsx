@@ -12,7 +12,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildBSTCheckpoints, buildRevisionData } from './quizAdapter';
+import { buildBSTCheckpoints, buildRevisionData, type BSTAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import {
@@ -59,6 +59,8 @@ const RANDOM_WORD_POOL = ['apple', 'app', 'code', 'coder', 'tree', 'trie', 'data
 
 export const BSTPage: React.FC = () => {
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
+  // Tracks the last-run operation so the quiz revision card matches what is visualized.
+  const [revisionKey, setRevisionKey] = useState<BSTAlgorithmKey>('insert');
   const [searchParams] = useSearchParams();
   useEffect(() => {
     const topic = searchParams.get('topic');
@@ -146,13 +148,14 @@ export const BSTPage: React.FC = () => {
     stepForward,
     module: 'bst',
     algorithmId: treeCategory,
-    revisionData: buildRevisionData('insert'),
+    revisionData: buildRevisionData(revisionKey),
   });
 
   // Operations for BST
   const handleBSTInsert = () => {
     const num = Number(inputValue);
     if (isNaN(num)) return;
+    setRevisionKey('insert');
     const { steps, newTree } = generateBSTInsertSteps(bstTree, num);
     setBstTree(newTree);
     setActiveOperationSteps(steps);
@@ -164,6 +167,7 @@ export const BSTPage: React.FC = () => {
   const handleBSTSearch = () => {
     const num = Number(inputValue);
     if (isNaN(num)) return;
+    setRevisionKey('search');
     const steps = generateBSTSearchSteps(bstTree, num);
     setActiveOperationSteps(steps);
     reset();
@@ -175,6 +179,7 @@ export const BSTPage: React.FC = () => {
   const handleAVLInsert = () => {
     const num = Number(inputValue);
     if (isNaN(num)) return;
+    setRevisionKey('avlInsert');
     const { steps, newTree } = generateAVLInsertSteps(avlTree, num);
     setAvlTree(newTree);
     setActiveOperationSteps(steps);
@@ -187,6 +192,7 @@ export const BSTPage: React.FC = () => {
   const handleHeapInsert = () => {
     const num = Number(inputValue);
     if (isNaN(num)) return;
+    setRevisionKey('heapInsert');
     const { steps, newHeap } = generateHeapInsertSteps(heapArray, num, heapType);
     setHeapArray(newHeap);
     setActiveOperationSteps(steps);
@@ -196,6 +202,7 @@ export const BSTPage: React.FC = () => {
   };
 
   const handleHeapExtract = () => {
+    setRevisionKey('heapExtract');
     const { steps, newHeap } = generateHeapExtractSteps(heapArray, heapType);
     setHeapArray(newHeap);
     setActiveOperationSteps(steps);
@@ -207,6 +214,7 @@ export const BSTPage: React.FC = () => {
   // Operations for Trie
   const handleTrieInsert = () => {
     if (!wordValue.trim()) return;
+    setRevisionKey('trieInsert');
     const { steps, newRoot } = generateTrieInsertSteps(trieRoot, wordValue.trim());
     setTrieRoot(newRoot);
     setActiveOperationSteps(steps);
@@ -217,6 +225,7 @@ export const BSTPage: React.FC = () => {
 
   const handleTrieSearch = () => {
     if (!wordValue.trim()) return;
+    setRevisionKey('trieSearch');
     const steps = generateTrieSearchSteps(trieRoot, wordValue.trim());
     setActiveOperationSteps(steps);
     reset();
@@ -298,6 +307,16 @@ export const BSTPage: React.FC = () => {
       setActiveOperationSteps(generateTrieInsertSteps(root, shuffled[0]).steps);
     }
     reset();
+  };
+
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     A freshly generated tree + operation, predicted cold.
+     startChallenge() must fire in the same handler as the input change
+     so the armed challenge survives the checkpoint reset the new
+     execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomTree();
   };
 
 
@@ -512,15 +531,15 @@ export const BSTPage: React.FC = () => {
                 <span>Search</span>
               </button>
               <div className="traversal-btn-group">
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('inorder'); setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <ListOrdered size={14} />
                   <span>Inorder</span>
                 </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('preorder'); setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <GitCommit size={14} />
                   <span>Preorder</span>
                 </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('postorder'); setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <CornerDownRight size={14} />
                   <span>Postorder</span>
                 </button>
@@ -640,7 +659,13 @@ export const BSTPage: React.FC = () => {
 
         {/* Right Column: Multi-Language Debugger & Explanation */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel

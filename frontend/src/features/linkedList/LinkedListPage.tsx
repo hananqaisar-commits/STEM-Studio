@@ -234,6 +234,42 @@ export const LinkedListPage: React.FC = () => {
     quizSession.resetSession();
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh node values AND the operation steps generated immediately —
+     unlike handleRandomize, which empties the canvas until the student
+     runs an operation (that second input change would disarm the
+     challenge). */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    reset();
+    const randomVals = Array.from(
+      { length: category === 'middleNode' ? 5 : 4 },
+      () => Math.floor(Math.random() * 90) + 10
+    );
+    if (category === 'reverse') {
+      const nodes = createInitialNodes(randomVals, 'singly');
+      setBaseNodes(nodes);
+      setActiveSteps(generateReverseSteps(nodes));
+    } else if (category === 'middleNode') {
+      const nodes = createInitialNodes(randomVals, 'singly');
+      setBaseNodes(nodes);
+      setActiveSteps(generateMiddleNodeSteps(nodes));
+    } else if (category === 'detectCycle') {
+      const nodes = createInitialNodes(randomVals, 'singly', 2);
+      setBaseNodes(nodes);
+      setActiveSteps(generateCycleDetectionSteps(nodes, 2));
+    } else {
+      const kind = category === 'doubly' ? 'doubly' : category === 'circular' ? 'circular' : 'singly';
+      const nodes = createInitialNodes(randomVals, kind);
+      setBaseNodes(nodes);
+      setActiveSteps(
+        kind === 'doubly'
+          ? generateDoublyInsertHeadSteps(nodes, randomVals[0])
+          : generateInsertHeadSteps(nodes, randomVals[0])
+      );
+    }
+  };
+
   const snippetKey =
     category === 'reverse'
       ? 'reverse'
@@ -501,7 +537,13 @@ export const LinkedListPage: React.FC = () => {
 
         {/* Right Column: Code & Explanation */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Code, Terminal, Cpu, Code2, Play, RotateCcw, AlertTriangle, Eye, Pencil } from 'lucide-react';
-import { STACK_SNIPPETS, QUEUE_SNIPPETS, PARENTHESES_SNIPPETS, POSTFIX_SNIPPETS, QVS_SNIPPETS, DAILY_TEMP_SNIPPETS, type LanguageKey } from './stackQueueSnippets';
+import { getStackQueueSnippets, type LanguageKey } from './stackQueueSnippets';
 import type { StackQueueCategory } from './stackQueueEngine';
 import type { CustomLanguage } from '../../engine/customCodeTemplates';
 import '../../components/debugger/Debugger.css';
@@ -85,12 +85,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
     setExecutionError(null);
   }, [category, customLang]);
 
-  let snippetObj = STACK_SNIPPETS;
-  if (category === 'queue') snippetObj = QUEUE_SNIPPETS;
-  if (category === 'validParentheses') snippetObj = PARENTHESES_SNIPPETS;
-  if (category === 'postfixEval') snippetObj = POSTFIX_SNIPPETS;
-  if (category === 'queueViaStacks') snippetObj = QVS_SNIPPETS;
-  if (category === 'dailyTemperatures') snippetObj = DAILY_TEMP_SNIPPETS;
+  const snippetObj = getStackQueueSnippets(category);
 
   const currentSnippet = snippetObj[selectedLang] || snippetObj.javascript;
   const codeLines = currentSnippet.code.split('\n');

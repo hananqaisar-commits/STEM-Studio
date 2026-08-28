@@ -22,6 +22,7 @@ import { buildGraphCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   getPresetGraph,
+  getChallengeGraph,
   generateBFSSteps,
   generateDFSSteps,
   generateDijkstraSteps,
@@ -190,6 +191,31 @@ export const GraphPage: React.FC = () => {
 
   const handleSample = () => {
     handleSelectCategory(category);
+  };
+
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     The alternate challenge topology is a graph the student has never
+     traversed — same algorithm, unseen edges and weights, so every
+     prediction must come from the mental model, not memory. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    reset();
+    const preset = getChallengeGraph(category === 'topoSort' ? 'dag' : 'standard');
+    setNodes(preset.nodes);
+    setEdges(preset.edges);
+    let steps: GraphStep[] = [];
+    if (category === 'bfs') {
+      steps = generateBFSSteps(preset.nodes, preset.edges, 'A');
+    } else if (category === 'dfs') {
+      steps = generateDFSSteps(preset.nodes, preset.edges, 'A');
+    } else if (category === 'dijkstra') {
+      steps = generateDijkstraSteps(preset.nodes, preset.edges, 'A', 'F');
+    } else if (category === 'prim') {
+      steps = generatePrimsSteps(preset.nodes, preset.edges, 'A');
+    } else if (category === 'topoSort') {
+      steps = generateTopoSortSteps(preset.nodes, preset.edges);
+    }
+    setActiveSteps(steps);
   };
 
   const snippetKey = category;
@@ -444,7 +470,13 @@ export const GraphPage: React.FC = () => {
 
         {/* Right Column: Code & Explanation */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel

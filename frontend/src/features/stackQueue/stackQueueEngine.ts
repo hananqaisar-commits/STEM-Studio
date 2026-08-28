@@ -798,3 +798,913 @@ export function generateSlidingWindowSteps(nums: number[], k: number): StackQueu
 
 
 
+
+// ─── BASIC CALCULATOR (LEETCODE #224) ENGINE ─────────────────────
+
+export function generateBasicCalculatorSteps(expression: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const ctxStack: { res: number; sgn: number }[] = [];
+  let result = 0;
+  let sign = 1;
+  let num = 0;
+
+  const snap = (ci: number, desc: string, codeLine: number): void => {
+    steps.push({
+      stepIndex: steps.length,
+      description: desc,
+      codeLine,
+      elements: ctxStack.map((c, i) => ({
+        id: `ctx-${i}`,
+        value: `res=${c.res}, sgn=${c.sgn >= 0 ? '+' : '-'}`,
+        state: i === ctxStack.length - 1 ? 'active' as NodeState : 'default' as NodeState,
+      })),
+      auxElements: [{ id: 'run-0', value: `res=${result}`, state: 'highlight' as NodeState, auxValue: `sgn=${sign >= 0 ? '+' : '-'}` }],
+      auxLabel: 'RUNNING STATE',
+      inputString: expression,
+      currentInputIndex: ci,
+    });
+  };
+
+  snap(0, `Evaluate expression "${expression}" using a context stack for parentheses.`, 1);
+
+  for (let i = 0; i < expression.length; i++) {
+    const c = expression[i];
+    const isDigit = c >= '0' && c <= '9';
+
+    if (isDigit) {
+      num = num * 10 + Number(c);
+      snap(i, `Read digit '${c}', building number = ${num}.`, 3);
+    } else if (c === ' ') {
+      continue;
+    } else if (c === '+' || c === '-') {
+      result += sign * num;
+      snap(i, `Operator '${c}': flush number ${num} → result = ${result - sign * num} + (${sign >= 0 ? '+' : '-'}${num}) = ${result}.`, 4);
+      num = 0;
+      sign = c === '+' ? 1 : -1;
+    } else if (c === '(') {
+      ctxStack.push({ res: result, sgn: sign });
+      snap(i, `'(': Push (res=${result}, sign=${sign >= 0 ? '+' : '-'}) to context stack. Reset running result to 0.`, 5);
+      result = 0;
+      sign = 1;
+      num = 0;
+    } else if (c === ')') {
+      result += sign * num;
+      const inner = result;
+      const ctx = ctxStack.pop()!;
+      result = ctx.res + ctx.sgn * inner;
+      snap(i, `')': Inner = ${inner}. Pop context → res = ${ctx.res} + (${ctx.sgn >= 0 ? '+' : '-'}${inner}) = ${result}.`, 7);
+      num = 0;
+    }
+  }
+
+  result += sign * num;
+  steps.push({
+    stepIndex: steps.length,
+    description: `Evaluation complete. "${expression}" = ${result}`,
+    codeLine: 9,
+    elements: ctxStack.map((c, i) => ({ id: `ctx-${i}`, value: `res=${c.res}, sgn=${c.sgn >= 0 ? '+' : '-'}`, state: 'sorted' as NodeState })),
+    auxElements: [{ id: 'run-0', value: `${result}`, state: 'sorted' as NodeState }],
+    auxLabel: 'RUNNING STATE',
+    inputString: expression,
+    currentInputIndex: expression.length,
+  });
+
+  return steps;
+}
+
+// ─── DECODE STRING (LEETCODE #394) ENGINE ────────────────────────
+
+export function generateDecodeStringSteps(s: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const strStack: string[] = [];
+  const numStack: number[] = [];
+  let curStr = '';
+  let curNum = 0;
+
+  steps.push({
+    stepIndex: 0,
+    description: `Decode encoded string "${s}". Push (string, count) on '[', pop and repeat on ']'.`,
+    codeLine: 1,
+    elements: [],
+    auxElements: [],
+    auxLabel: 'COUNT STACK',
+    inputString: s,
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c >= '0' && c <= '9') {
+      curNum = curNum * 10 + Number(c);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Read digit '${c}', building repeat count = ${curNum}.`,
+        codeLine: 3,
+        elements: strStack.map((v, j) => ({ id: `str-${j}`, value: v || '(empty)', state: 'default' as NodeState })),
+        auxElements: numStack.map((v, j) => ({ id: `num-${j}`, value: v, state: 'default' as NodeState })),
+        auxLabel: 'COUNT STACK',
+        inputString: s,
+        currentInputIndex: i,
+      });
+    } else if (c === '[') {
+      strStack.push(curStr);
+      numStack.push(curNum);
+      steps.push({
+        stepIndex: steps.length,
+        description: `'[': Push current string "${curStr || '(empty)'}" and count ${curNum} to stacks. Reset for inner segment.`,
+        codeLine: 4,
+        elements: strStack.map((v, j) => ({ id: `str-${j}`, value: v || '(empty)', state: j === strStack.length - 1 ? 'pushed' as NodeState : 'default' as NodeState })),
+        auxElements: numStack.map((v, j) => ({ id: `num-${j}`, value: v, state: j === numStack.length - 1 ? 'pushed' as NodeState : 'default' as NodeState })),
+        auxLabel: 'COUNT STACK',
+        inputString: s,
+        currentInputIndex: i,
+      });
+      curStr = '';
+      curNum = 0;
+    } else if (c === ']') {
+      const prevStr = strStack.pop()!;
+      const repeatCount = numStack.pop()!;
+      const repeated = curStr.repeat(repeatCount);
+      curStr = prevStr + repeated;
+      steps.push({
+        stepIndex: steps.length,
+        description: `']': Pop count=${repeatCount}, prev="${prevStr || '(empty)'}". Build "${curStr}" × ${repeatCount} = "${repeated}", prepend prev → "${curStr}".`,
+        codeLine: 6,
+        elements: strStack.map((v, j) => ({ id: `str-${j}`, value: v || '(empty)', state: 'default' as NodeState })),
+        auxElements: numStack.map((v, j) => ({ id: `num-${j}`, value: v, state: 'default' as NodeState })),
+        auxLabel: 'COUNT STACK',
+        inputString: s,
+        currentInputIndex: i,
+      });
+    } else {
+      curStr += c;
+      steps.push({
+        stepIndex: steps.length,
+        description: `Read letter '${c}', current segment = "${curStr}".`,
+        codeLine: 5,
+        elements: strStack.map((v, j) => ({ id: `str-${j}`, value: v || '(empty)', state: 'default' as NodeState })),
+        auxElements: numStack.map((v, j) => ({ id: `num-${j}`, value: v, state: 'default' as NodeState })),
+        auxLabel: 'COUNT STACK',
+        inputString: s,
+        currentInputIndex: i,
+      });
+    }
+  }
+
+  steps.push({
+    stepIndex: steps.length,
+    description: `Decoded string: "${curStr}"`,
+    codeLine: 8,
+    elements: [{ id: 'ans-0', value: curStr, state: 'sorted' as NodeState }],
+    auxElements: [],
+    auxLabel: 'COUNT STACK',
+    inputString: s,
+    currentInputIndex: s.length,
+  });
+
+  return steps;
+}
+
+// ─── TRAPPING RAIN WATER (LEETCODE #42) ENGINE ──────────────────
+
+export function generateTrappingRainWaterSteps(heights: number[]): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const n = heights.length;
+  const stack: number[] = [];
+  const water = new Array(n).fill(0);
+  let totalWater = 0;
+
+  steps.push({
+    stepIndex: 0,
+    description: `Trapping Rain Water for [${heights.join(', ')}]. Monotonic decreasing stack of bar indices.`,
+    codeLine: 1,
+    elements: [],
+    auxElements: water.map((v: number, i: number) => ({ id: `w-${i}`, value: `i=${i}`, state: 'default' as NodeState, auxValue: v })),
+    auxLabel: 'WATER PER BAR',
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < n; i++) {
+    const h = heights[i];
+    steps.push({
+      stepIndex: steps.length,
+      description: `Bar ${i}: height = ${h}. Compare with stack top.`,
+      codeLine: 3,
+      elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${heights[idx]} (i=${idx})`, state: 'default' as NodeState })),
+      auxElements: water.map((v: number, j: number) => ({ id: `w-${j}`, value: `i=${j}`, state: j === i ? 'active' as NodeState : 'default' as NodeState, auxValue: v })),
+      auxLabel: 'WATER PER BAR',
+      currentInputIndex: i,
+    });
+
+    while (stack.length > 0 && heights[stack[stack.length - 1]] < h) {
+      const top = stack.pop()!;
+      const topH = heights[top];
+      if (stack.length === 0) {
+        steps.push({
+          stepIndex: steps.length,
+          description: `Pop bar ${top} (h=${topH}). No left boundary → no water trapped.`,
+          codeLine: 5,
+          elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${heights[idx]} (i=${idx})`, state: 'default' as NodeState })),
+          auxElements: water.map((v: number, j: number) => ({ id: `w-${j}`, value: `i=${j}`, state: 'default' as NodeState, auxValue: v })),
+          auxLabel: 'WATER PER BAR',
+          currentInputIndex: i,
+        });
+        break;
+      }
+      const left = stack[stack.length - 1];
+      const leftH = heights[left];
+      const boundedH = Math.min(leftH, h) - topH;
+      const width = i - left - 1;
+      const trapped = boundedH * width;
+      water[top] = trapped;
+      totalWater += trapped;
+      steps.push({
+        stepIndex: steps.length,
+        description: `Pop bar ${top} (h=${topH}). Left boundary = bar ${left} (h=${leftH}), right = bar ${i} (h=${h}). water += (min(${leftH},${h}) - ${topH}) × (${i}-${left}-1) = ${boundedH} × ${width} = ${trapped}. Total = ${totalWater}.`,
+        codeLine: 6,
+        elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${heights[idx]} (i=${idx})`, state: 'comparing' as NodeState })),
+        auxElements: water.map((v: number, j: number) => ({ id: `w-${j}`, value: `i=${j}`, state: j === top ? 'sorted' as NodeState : 'default' as NodeState, auxValue: v })),
+        auxLabel: 'WATER PER BAR',
+        currentInputIndex: i,
+      });
+    }
+
+    stack.push(i);
+    steps.push({
+      stepIndex: steps.length,
+      description: `Push bar ${i} (h=${h}) onto stack.`,
+      codeLine: 8,
+      elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${heights[idx]} (i=${idx})`, state: idx === i ? 'pushed' as NodeState : 'default' as NodeState })),
+      auxElements: water.map((v: number, j: number) => ({ id: `w-${j}`, value: `i=${j}`, state: 'default' as NodeState, auxValue: v })),
+      auxLabel: 'WATER PER BAR',
+      currentInputIndex: i,
+    });
+  }
+
+  steps.push({
+    stepIndex: steps.length,
+    description: `Trapping Rain Water complete. Total water trapped = ${totalWater} units.`,
+    codeLine: 10,
+    elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${heights[idx]} (i=${idx})`, state: 'sorted' as NodeState })),
+    auxElements: water.map((v: number, j: number) => ({ id: `w-${j}`, value: `i=${j}`, state: 'sorted' as NodeState, auxValue: v })),
+    auxLabel: 'WATER PER BAR',
+    currentInputIndex: n,
+  });
+
+  // Attach the bar heights so the renderer can draw the histogram
+  return steps.map((s) => ({ ...s, inputString: heights.join(' ') }));
+}
+
+// ─── LARGEST RECTANGLE IN HISTOGRAM (LEETCODE #84) ENGINE ─────────
+
+export function generateLargestRectangleSteps(heights: number[]): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const stack: number[] = [];
+  let bestArea = 0;
+  const ext = [...heights, 0];
+
+  steps.push({
+    stepIndex: 0,
+    description: `Largest Rectangle for [${heights.join(', ')}]. Monotonic increasing stack + sentinel 0.`,
+    codeLine: 1,
+    elements: [],
+    auxElements: [{ id: 'best-0', value: 'Best Area', state: 'default' as NodeState, auxValue: 0 }],
+    auxLabel: 'BEST AREA',
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < ext.length; i++) {
+    const h = ext[i];
+    const isSentinel = i === ext.length - 1;
+    steps.push({
+      stepIndex: steps.length,
+      description: isSentinel ? `Sentinel bar ${i}: h=0. Flush remaining stack entries.` : `Bar ${i}: h=${h}. Compare with stack top.`,
+      codeLine: 3,
+      elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${ext[idx]} (i=${idx})`, state: 'default' as NodeState })),
+      auxElements: [{ id: 'best-0', value: 'Best Area', state: 'active' as NodeState, auxValue: bestArea }],
+      auxLabel: 'BEST AREA',
+      currentInputIndex: i,
+    });
+
+    while (stack.length > 0 && ext[stack[stack.length - 1]] > h) {
+      const top = stack.pop()!;
+      const topH = ext[top];
+      const width = stack.length === 0 ? i : i - stack[stack.length - 1] - 1;
+      const area = topH * width;
+      if (area > bestArea) bestArea = area;
+      steps.push({
+        stepIndex: steps.length,
+        description: `Pop bar ${top} (h=${topH}). width=${width}, area = ${topH} × ${width} = ${area}. Best = ${bestArea}.`,
+        codeLine: 6,
+        elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${ext[idx]} (i=${idx})`, state: 'comparing' as NodeState })),
+        auxElements: [{ id: 'best-0', value: 'Best Area', state: area >= bestArea ? 'sorted' as NodeState : 'active' as NodeState, auxValue: bestArea }],
+        auxLabel: 'BEST AREA',
+        currentInputIndex: i,
+      });
+    }
+
+    stack.push(i);
+    steps.push({
+      stepIndex: steps.length,
+      description: isSentinel ? `Push sentinel bar ${i} (h=0).` : `Push bar ${i} (h=${h}) onto stack.`,
+      codeLine: 8,
+      elements: stack.map((idx) => ({ id: `st-${idx}`, value: `h=${ext[idx]} (i=${idx})`, state: idx === i ? 'pushed' as NodeState : 'default' as NodeState })),
+      auxElements: [{ id: 'best-0', value: 'Best Area', state: 'default' as NodeState, auxValue: bestArea }],
+      auxLabel: 'BEST AREA',
+      currentInputIndex: i,
+    });
+  }
+
+  steps.push({
+    stepIndex: steps.length,
+    description: `Largest Rectangle complete. Maximum area = ${bestArea}.`,
+    codeLine: 10,
+    elements: [],
+    auxElements: [{ id: 'best-0', value: 'Best Area', state: 'sorted' as NodeState, auxValue: bestArea }],
+    auxLabel: 'BEST AREA',
+    currentInputIndex: ext.length,
+  });
+
+  // Attach the bar heights so the renderer can draw the histogram
+  return steps.map((s) => ({ ...s, inputString: heights.join(' ') }));
+}
+
+// ─── STACK VIA TWO QUEUES (LEETCODE #225) ENGINE ─────────────────
+
+export function generateStackViaQueuesSteps(
+  mainQueue: (number | string)[],
+  auxQueue: (number | string)[],
+  operation: 'push' | 'pop',
+  newVal?: number | string
+): { steps: StackQueueStep[]; newMain: (number | string)[]; newAux: (number | string)[] } {
+  const steps: StackQueueStep[] = [];
+
+  if (operation === 'push' && newVal !== undefined) {
+    let main = [...mainQueue];
+    const aux: (number | string)[] = [newVal];
+
+    steps.push({
+      stepIndex: 0,
+      description: `Push '${newVal}': Enqueue into aux queue first.`,
+      codeLine: 2,
+      elements: main.map((v, i) => ({ id: `mq-${i}`, value: v, state: 'default' as NodeState })),
+      auxElements: [{ id: `aq-0`, value: newVal, state: 'pushed' as NodeState }],
+      auxLabel: 'AUX QUEUE',
+    });
+
+    const drainCount = main.length;
+    for (let k = 0; k < drainCount; k++) {
+      const item = main[0];
+      main = main.slice(1);
+      aux.push(item);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Drain: Dequeue '${item}' from main, enqueue into aux.`,
+        codeLine: 4,
+        elements: main.map((v, i) => ({ id: `mq-${i}`, value: v, state: 'popped' as NodeState })),
+        auxElements: aux.map((v, i) => ({ id: `aq-${i}`, value: v, state: i === aux.length - 1 ? 'pushed' as NodeState : 'default' as NodeState })),
+        auxLabel: 'AUX QUEUE',
+      });
+    }
+
+    steps.push({
+      stepIndex: steps.length,
+      description: `Swap queues. '${newVal}' is now at front of main queue (stack top).`,
+      codeLine: 6,
+      elements: aux.map((v, i) => ({ id: `mq-${i}`, value: v, state: i === 0 ? 'highlight' as NodeState : 'default' as NodeState })),
+      auxElements: [],
+      auxLabel: 'AUX QUEUE',
+    });
+
+    return { steps, newMain: aux, newAux: [] };
+  } else {
+    if (mainQueue.length === 0) {
+      steps.push({
+        stepIndex: 0,
+        description: `Underflow Warning: Cannot pop from empty main queue (stack is empty)!`,
+        codeLine: 1,
+        elements: [],
+        auxElements: auxQueue.map((v, i) => ({ id: `aq-${i}`, value: v, state: 'default' as NodeState })),
+        auxLabel: 'AUX QUEUE',
+      });
+      return { steps, newMain: mainQueue, newAux: auxQueue };
+    }
+
+    const frontVal = mainQueue[0];
+    const remaining = mainQueue.slice(1);
+
+    steps.push({
+      stepIndex: 0,
+      description: `Pop: Dequeue front element '${frontVal}' from main queue (stack top).`,
+      codeLine: 8,
+      elements: mainQueue.map((v, i) => ({ id: `mq-${i}`, value: v, state: i === 0 ? 'popped' as NodeState : 'default' as NodeState })),
+      auxElements: auxQueue.map((v, i) => ({ id: `aq-${i}`, value: v, state: 'default' as NodeState })),
+      auxLabel: 'AUX QUEUE',
+    });
+
+    steps.push({
+      stepIndex: 1,
+      description: `Popped '${frontVal}'. Stack size is now ${remaining.length}.`,
+      codeLine: 9,
+      elements: remaining.map((v, i) => ({ id: `mq-${i}`, value: v, state: 'default' as NodeState })),
+      auxElements: auxQueue.map((v, i) => ({ id: `aq-${i}`, value: v, state: 'default' as NodeState })),
+      auxLabel: 'AUX QUEUE',
+    });
+
+    return { steps, newMain: remaining, newAux: auxQueue };
+  }
+}
+
+// ─── CIRCULAR DEQUE (LEETCODE #641) ENGINE ──────────────────────
+
+export function generateCircularDequeSteps(
+  elements: (number | string | null)[],
+  front: number,
+  rear: number,
+  capacity: number,
+  operation: 'insertFront' | 'insertLast' | 'deleteFront' | 'deleteLast',
+  value?: number | string
+): { steps: StackQueueStep[]; newElements: (number | string | null)[]; newFront: number; newRear: number } {
+  const steps: StackQueueStep[] = [];
+  const count = elements.filter((e) => e !== null).length;
+  const isEmpty = count === 0;
+  const isFull = count === capacity;
+  const snap = (arr: (number | string | null)[], f: number, r: number, desc: string, hlIdx?: number, hlState?: NodeState): void => {
+    steps.push({
+      stepIndex: steps.length,
+      description: desc,
+      elements: arr.map((v, i) => ({ id: `dq-${i}`, value: v ?? '-', state: i === hlIdx && hlState ? hlState : 'default' as NodeState })),
+      capacity,
+      frontIndex: f,
+      rearIndex: r,
+    });
+  };
+
+  if ((operation === 'insertFront' || operation === 'insertLast') && isFull) {
+    snap(elements, front, rear, `Overflow: Deque is full (capacity=${capacity}). Cannot ${operation}.`, undefined, 'error');
+    return { steps, newElements: elements, newFront: front, newRear: rear };
+  }
+  if ((operation === 'deleteFront' || operation === 'deleteLast') && isEmpty) {
+    snap(elements, front, rear, `Underflow: Deque is empty. Cannot ${operation}.`, undefined, 'error');
+    return { steps, newElements: elements, newFront: front, newRear: rear };
+  }
+
+  const newArr = [...elements];
+  let nF = front;
+  let nR = rear;
+
+  if (operation === 'insertFront' && value !== undefined) {
+    nF = isEmpty ? 0 : (front - 1 + capacity) % capacity;
+    newArr[nF] = value;
+    snap(newArr, nF, nR, `insertFront '${value}': front wraps: (${front}-1+${capacity}) % ${capacity} = ${nF}. Place at [${nF}].`, nF, 'pushed');
+    snap(newArr, nF, nR, `Inserted '${value}' at front. FRONT=${nF}, REAR=${nR}, size=${count + 1}.`);
+  } else if (operation === 'insertLast' && value !== undefined) {
+    nR = isEmpty ? 0 : (rear + 1) % capacity;
+    newArr[nR] = value;
+    snap(newArr, nF, nR, `insertLast '${value}': rear wraps: (${rear}+1) % ${capacity} = ${nR}. Place at [${nR}].`, nR, 'pushed');
+    snap(newArr, nF, nR, `Inserted '${value}' at rear. FRONT=${nF}, REAR=${nR}, size=${count + 1}.`);
+  } else if (operation === 'deleteFront') {
+    const removed = newArr[front];
+    newArr[front] = null;
+    snap(newArr, nF, nR, `deleteFront: Remove '${removed}' at index [${front}].`, front, 'popped');
+    if (count === 1) { nF = -1; nR = -1; } else { nF = (front + 1) % capacity; }
+    snap(newArr, nF, nR, `Deleted '${removed}' from front. FRONT=${nF}, REAR=${nR}, size=${count - 1}.`);
+  } else if (operation === 'deleteLast') {
+    const removed = newArr[rear];
+    newArr[rear] = null;
+    snap(newArr, nF, nR, `deleteLast: Remove '${removed}' at index [${rear}].`, rear, 'popped');
+    if (count === 1) { nF = -1; nR = -1; } else { nR = (rear - 1 + capacity) % capacity; }
+    snap(newArr, nF, nR, `Deleted '${removed}' from rear. FRONT=${nF}, REAR=${nR}, size=${count - 1}.`);
+  }
+
+  return { steps, newElements: newArr, newFront: nF, newRear: nR };
+}
+
+// ─── FIRST NON-REPEATING CHARACTER IN STREAM ENGINE ──────────────
+
+export function generateFirstNonRepeatingSteps(stream: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const queue: string[] = [];
+  const charCount = new Map<string, number>();
+  const timeline: string[] = [];
+
+  steps.push({
+    stepIndex: 0,
+    description: `Find first non-repeating character in stream "${stream}".`,
+    codeLine: 1,
+    elements: [],
+    auxElements: [],
+    auxLabel: 'FIRST NON-REPEATING TIMELINE',
+    inputString: stream,
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < stream.length; i++) {
+    const c = stream[i];
+    const prevCount = charCount.get(c) ?? 0;
+    charCount.set(c, prevCount + 1);
+
+    if (prevCount === 0) {
+      queue.push(c);
+    }
+    steps.push({
+      stepIndex: steps.length,
+      description: `Char '${c}': count ${prevCount} → ${prevCount + 1}. ${prevCount === 0 ? 'Enqueue to candidate queue.' : 'Already seen → mark repeated.'}`,
+      codeLine: 3,
+      elements: queue.map((v, j) => ({ id: `q-${j}`, value: v, state: j === queue.length - 1 && prevCount === 0 ? 'pushed' as NodeState : 'default' as NodeState })),
+      auxElements: timeline.map((v, j) => ({ id: `tl-${j}`, value: v, state: 'default' as NodeState })),
+      auxLabel: 'FIRST NON-REPEATING TIMELINE',
+      inputString: stream,
+      currentInputIndex: i,
+    });
+
+    while (queue.length > 0 && (charCount.get(queue[0]) ?? 0) > 1) {
+      const removed = queue.shift()!;
+      steps.push({
+        stepIndex: steps.length,
+        description: `Clean head: '${removed}' has count ${(charCount.get(removed) ?? 0)} > 1 → dequeue.`,
+        codeLine: 5,
+        elements: queue.map((v, j) => ({ id: `q-${j}`, value: v, state: 'default' as NodeState })),
+        auxElements: timeline.map((v, j) => ({ id: `tl-${j}`, value: v, state: 'default' as NodeState })),
+        auxLabel: 'FIRST NON-REPEATING TIMELINE',
+        inputString: stream,
+        currentInputIndex: i,
+      });
+    }
+
+    const first = queue.length > 0 ? queue[0] : '-';
+    timeline.push(first);
+    steps.push({
+      stepIndex: steps.length,
+      description: `After '${c}': first non-repeating = '${first}'.`,
+      codeLine: 7,
+      elements: queue.map((v, j) => ({ id: `q-${j}`, value: v, state: j === 0 ? 'highlight' as NodeState : 'default' as NodeState })),
+      auxElements: timeline.map((v, j) => ({ id: `tl-${j}`, value: v, state: j === timeline.length - 1 ? 'sorted' as NodeState : 'default' as NodeState })),
+      auxLabel: 'FIRST NON-REPEATING TIMELINE',
+      inputString: stream,
+      currentInputIndex: i,
+    });
+  }
+
+  steps.push({
+    stepIndex: steps.length,
+    description: `Stream complete. Timeline: [${timeline.join(', ')}]`,
+    codeLine: 9,
+    elements: queue.map((v, j) => ({ id: `q-${j}`, value: v, state: 'default' as NodeState })),
+    auxElements: timeline.map((v, j) => ({ id: `tl-${j}`, value: v, state: 'sorted' as NodeState })),
+    auxLabel: 'FIRST NON-REPEATING TIMELINE',
+    inputString: stream,
+    currentInputIndex: stream.length,
+  });
+
+  return steps;
+}
+
+// ─── MOVING AVERAGE FROM DATA STREAM (LEETCODE #346) ENGINE ────────
+
+export function generateMovingAverageSteps(nums: number[], k: number): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const window: number[] = [];
+  const averages: { sum: number; count: number }[] = [];
+  let sum = 0;
+
+  steps.push({
+    stepIndex: 0,
+    description: `Moving Average: stream [${nums.join(', ')}], window k=${k}.`,
+    codeLine: 1,
+    elements: [],
+    auxElements: [],
+    auxLabel: 'EMITTED AVERAGES',
+    currentInputIndex: 0,
+  });
+
+  for (let i = 0; i < nums.length; i++) {
+    const n = nums[i];
+    window.push(n);
+    sum += n;
+    steps.push({
+      stepIndex: steps.length,
+      description: `Enqueue ${n}. sum = ${sum}. Window = [${window.join(', ')}].`,
+      codeLine: 3,
+      elements: window.map((v, j) => ({ id: `w-${j}`, value: v, state: j === window.length - 1 ? 'pushed' as NodeState : 'default' as NodeState })),
+      auxElements: averages.map((a, j) => ({ id: `av-${j}`, value: a.sum / a.count, state: 'default' as NodeState, auxValue: Number((a.sum / a.count).toFixed(2)) })),
+      auxLabel: 'EMITTED AVERAGES',
+      slidingWindowRange: window.length >= k ? [i - k + 1, i] : [0, i],
+      currentInputIndex: i,
+    });
+
+    if (window.length > k) {
+      const old = window.shift()!;
+      sum -= old;
+      steps.push({
+        stepIndex: steps.length,
+        description: `Window full: dequeue ${old}. sum += new - old = ${sum + old} - ${old} = ${sum}.`,
+        codeLine: 5,
+        elements: window.map((v, j) => ({ id: `w-${j}`, value: v, state: 'default' as NodeState })),
+        auxElements: averages.map((a, j) => ({ id: `av-${j}`, value: a.sum / a.count, state: 'default' as NodeState, auxValue: Number((a.sum / a.count).toFixed(2)) })),
+        auxLabel: 'EMITTED AVERAGES',
+        slidingWindowRange: [i - k + 1, i],
+        currentInputIndex: i,
+      });
+    }
+
+    const count = window.length;
+    const avg = sum / count;
+    averages.push({ sum, count });
+    steps.push({
+      stepIndex: steps.length,
+      description: `Average = ${sum}/${count} = ${avg}.`,
+      codeLine: 7,
+      elements: window.map((v, j) => ({ id: `w-${j}`, value: v, state: 'default' as NodeState })),
+      auxElements: averages.map((a, j) => ({ id: `av-${j}`, value: a.sum / a.count, state: j === averages.length - 1 ? 'sorted' as NodeState : 'default' as NodeState, auxValue: Number((a.sum / a.count).toFixed(2)) })),
+      auxLabel: 'EMITTED AVERAGES',
+      slidingWindowRange: count >= k ? [i - k + 1, i] : [0, i],
+      currentInputIndex: i,
+    });
+  }
+
+  steps.push({
+    stepIndex: steps.length,
+    description: `Moving Average complete. Averages: [${averages.map((a) => Number((a.sum / a.count).toFixed(2)).toString()).join(', ')}]`,
+    codeLine: 9,
+    elements: window.map((v, j) => ({ id: `w-${j}`, value: v, state: 'sorted' as NodeState })),
+    auxElements: averages.map((a, j) => ({ id: `av-${j}`, value: a.sum / a.count, state: 'sorted' as NodeState, auxValue: Number((a.sum / a.count).toFixed(2)) })),
+    auxLabel: 'EMITTED AVERAGES',
+    currentInputIndex: nums.length,
+  });
+
+  // Attach the stream so the renderer can draw the input ribbon
+  return steps.map((s) => ({ ...s, inputString: nums.join(' ') }));
+}
+
+// ─── TASK SCHEDULER (LEETCODE #621) ENGINE ────────────────────────
+
+export function generateTaskSchedulerSteps(tasks: string[], cooldown: number): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const remaining = new Map<string, number>();
+  for (const t of tasks) remaining.set(t, (remaining.get(t) ?? 0) + 1);
+
+  const cooling: { task: string; rem: number; readyAt: number }[] = [];
+  let schedule = '';
+  let tick = 0;
+
+  const readySnap = (): StackElementData[] => {
+    const entries = [...remaining.entries()].filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]);
+    return entries.map(([t, c], i) => ({ id: `rd-${t}-${i}`, value: `${t} ×${c}`, state: 'default' as NodeState }));
+  };
+  const coolSnap = (ct: number): StackElementData[] =>
+    cooling.map((c, i) => ({ id: `cl-${i}`, value: `${c.task} ×${c.rem} (ready t=${c.readyAt})`, state: c.readyAt <= ct ? 'highlight' as NodeState : 'default' as NodeState }));
+
+  steps.push({
+    stepIndex: 0,
+    description: `Schedule [${tasks.join(', ')}] with cooldown n=${cooldown}. Greedy: pick highest-count ready task.`,
+    codeLine: 1,
+    elements: readySnap(),
+    auxElements: [],
+    auxLabel: 'COOLING QUEUE',
+    inputString: schedule,
+    currentInputIndex: 0,
+  });
+
+  const totalTasks = tasks.length;
+  let executed = 0;
+
+  while (executed < totalTasks) {
+    for (let j = cooling.length - 1; j >= 0; j--) {
+      if (cooling[j].readyAt <= tick) {
+        const c = cooling.splice(j, 1)[0];
+        remaining.set(c.task, c.rem);
+      }
+    }
+
+    const ready = [...remaining.entries()].filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]);
+
+    if (ready.length > 0) {
+      const [taskName] = ready[0];
+      const cnt = remaining.get(taskName)!;
+      remaining.set(taskName, 0);
+      executed++;
+      schedule += taskName;
+      const newRem = cnt - 1;
+      if (newRem > 0) cooling.push({ task: taskName, rem: newRem, readyAt: tick + cooldown + 1 });
+
+      steps.push({
+        stepIndex: steps.length,
+        description: `t=${tick}: Execute '${taskName}' (highest remaining = ${cnt}). Schedule: "${schedule}".`,
+        codeLine: 4,
+        elements: readySnap(),
+        auxElements: coolSnap(tick),
+        auxLabel: 'COOLING QUEUE',
+        inputString: schedule,
+        currentInputIndex: tick + 1,
+      });
+    } else {
+      schedule += '·';
+      steps.push({
+        stepIndex: steps.length,
+        description: `t=${tick}: IDLE — all tasks in cooldown. Schedule: "${schedule}".`,
+        codeLine: 6,
+        elements: readySnap(),
+        auxElements: coolSnap(tick),
+        auxLabel: 'COOLING QUEUE',
+        inputString: schedule,
+        currentInputIndex: tick + 1,
+      });
+    }
+    tick++;
+  }
+
+  steps.push({
+    stepIndex: steps.length,
+    description: `Task Scheduler complete. Total time = ${tick}. Schedule: "${schedule}".`,
+    codeLine: 8,
+    elements: [],
+    auxElements: [],
+    auxLabel: 'COOLING QUEUE',
+    inputString: schedule,
+    currentInputIndex: tick,
+  });
+
+  return steps;
+}
+
+// ─── ROTTING ORANGES (LEETCODE #994) ENGINE ──────────────────────
+
+export function generateRottingOrangesSteps(grid: number[][]): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const rows = grid.length;
+  const cols = rows > 0 ? grid[0].length : 0;
+  const g = grid.map((row) => row.slice());
+  const serialize = (): string => g.map((row) => row.join(' ')).join(';');
+
+  const queue: [number, number][] = [];
+  let freshCount = 0;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (g[r][c] === 2) queue.push([r, c]);
+      if (g[r][c] === 1) freshCount++;
+    }
+  }
+
+  steps.push({
+    stepIndex: 0,
+    description: `Rotting Oranges: ${queue.length} rotten source(s), ${freshCount} fresh. BFS.`,
+    codeLine: 1,
+    elements: queue.map(([r, c], i) => ({ id: `bfs-${i}`, value: `R${r}C${c}`, state: 'default' as NodeState })),
+    auxElements: [{ id: 'fc-0', value: 'Fresh Left', state: 'default' as NodeState, auxValue: freshCount }],
+    auxLabel: 'FRESH ORANGES LEFT',
+    inputString: serialize(),
+    currentInputIndex: 0,
+  });
+
+  if (freshCount === 0) {
+    steps.push({
+      stepIndex: 1,
+      description: `No fresh oranges. Time = 0 minutes.`,
+      codeLine: 10,
+      elements: [],
+      auxElements: [{ id: 'fc-0', value: 'Fresh Left', state: 'sorted' as NodeState, auxValue: 0 }],
+      auxLabel: 'FRESH ORANGES LEFT',
+      inputString: serialize(),
+      currentInputIndex: 0,
+    });
+    return steps;
+  }
+
+  const dirs: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const seen = new Set<string>();
+  let minutes = 0;
+
+  while (queue.length > 0 && freshCount > 0) {
+    const batchSize = queue.length;
+    minutes++;
+
+    for (let b = 0; b < batchSize; b++) {
+      const [r, c] = queue.shift()!;
+      for (const [dr, dc] of dirs) {
+        const nr = r + dr;
+        const nc = c + dc;
+        const key = `${nr},${nc}`;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && g[nr][nc] === 1 && !seen.has(key)) {
+          seen.add(key);
+          g[nr][nc] = 2;
+          freshCount--;
+          queue.push([nr, nc]);
+        }
+      }
+    }
+
+    steps.push({
+      stepIndex: steps.length,
+      description: `Minute ${minutes}: Rotted ${batchSize} source(s). ${freshCount} fresh left.`,
+      codeLine: 5,
+      elements: queue.map(([r, c], i) => ({ id: `bfs-${i}`, value: `R${r}C${c}`, state: 'pushed' as NodeState })),
+      auxElements: [{ id: 'fc-0', value: 'Fresh Left', state: 'active' as NodeState, auxValue: freshCount }],
+      auxLabel: 'FRESH ORANGES LEFT',
+      inputString: serialize(),
+      currentInputIndex: minutes,
+    });
+  }
+
+  if (freshCount > 0) {
+    steps.push({
+      stepIndex: steps.length,
+      description: `Impossible: ${freshCount} fresh remain isolated. Answer = -1.`,
+      codeLine: 10,
+      elements: [],
+      auxElements: [{ id: 'fc-0', value: 'Fresh Left', state: 'error' as NodeState, auxValue: freshCount }],
+      auxLabel: 'FRESH ORANGES LEFT',
+      inputString: serialize(),
+      currentInputIndex: minutes,
+    });
+  } else {
+    steps.push({
+      stepIndex: steps.length,
+      description: `All rotten. Minimum time = ${minutes} minutes.`,
+      codeLine: 10,
+      elements: [],
+      auxElements: [{ id: 'fc-0', value: 'Fresh Left', state: 'sorted' as NodeState, auxValue: 0 }],
+      auxLabel: 'FRESH ORANGES LEFT',
+      inputString: serialize(),
+      currentInputIndex: minutes,
+    });
+  }
+
+  return steps;
+}
+
+// ─── DOTA2 SENATE (LEETCODE #649) ENGINE ────────────────────────
+
+export function generateDota2SenateSteps(senate: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const cleaned = senate.toUpperCase().replace(/[^RD]/g, '');
+  const rQ: number[] = [];
+  const dQ: number[] = [];
+  const n = cleaned.length;
+
+  for (let i = 0; i < n; i++) {
+    if (cleaned[i] === 'R') rQ.push(i);
+    else dQ.push(i);
+  }
+
+  steps.push({
+    stepIndex: 0,
+    description: `Dota2 Senate: "${cleaned}". ${rQ.length} Radiant, ${dQ.length} Dire. Two-queue simulation.`,
+    codeLine: 1,
+    elements: rQ.map((idx, i) => ({ id: `r-${i}`, value: `R@${idx}`, state: 'default' as NodeState })),
+    auxElements: dQ.map((idx, i) => ({ id: `d-${i}`, value: `D@${idx}`, state: 'default' as NodeState })),
+    auxLabel: 'DIRE QUEUE',
+    inputString: cleaned,
+    currentInputIndex: 0,
+  });
+
+  let round = 0;
+  while (rQ.length > 0 && dQ.length > 0) {
+    round++;
+    const rIdx = rQ.shift()!;
+    const dIdx = dQ.shift()!;
+
+    if (rIdx < dIdx) {
+      rQ.push(rIdx + n);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Round ${round}: R@${rIdx} (earlier) bans D@${dIdx}. R re-enqueues at ${rIdx}+${n}=${rIdx + n}.`,
+        codeLine: 4,
+        elements: rQ.map((idx, i) => ({ id: `r-${i}`, value: `R@${idx}`, state: i === rQ.length - 1 ? 'pushed' as NodeState : 'default' as NodeState })),
+        auxElements: dQ.map((idx, i) => ({ id: `d-${i}`, value: `D@${idx}`, state: 'default' as NodeState })),
+        auxLabel: 'DIRE QUEUE',
+        inputString: cleaned,
+        currentInputIndex: round,
+      });
+    } else {
+      dQ.push(dIdx + n);
+      steps.push({
+        stepIndex: steps.length,
+        description: `Round ${round}: D@${dIdx} (earlier) bans R@${rIdx}. D re-enqueues at ${dIdx}+${n}=${dIdx + n}.`,
+        codeLine: 6,
+        elements: rQ.map((idx, i) => ({ id: `r-${i}`, value: `R@${idx}`, state: 'default' as NodeState })),
+        auxElements: dQ.map((idx, i) => ({ id: `d-${i}`, value: `D@${idx}`, state: i === dQ.length - 1 ? 'pushed' as NodeState : 'default' as NodeState })),
+        auxLabel: 'DIRE QUEUE',
+        inputString: cleaned,
+        currentInputIndex: round,
+      });
+    }
+
+    if (rQ.length === 0 || dQ.length === 0) break;
+  }
+
+  const winner = rQ.length > 0 ? 'Radiant' : 'Dire';
+  steps.push({
+    stepIndex: steps.length,
+    description: `${winner} wins! ${rQ.length > 0 ? `Dire queue empty — ${rQ.length} Radiant senator(s) remain.` : `Radiant queue empty — ${dQ.length} Dire senator(s) remain.`}`,
+    codeLine: 8,
+    elements: rQ.map((idx, i) => ({ id: `r-${i}`, value: `R@${idx}`, state: rQ.length > 0 ? 'sorted' as NodeState : 'default' as NodeState })),
+    auxElements: dQ.map((idx, i) => ({ id: `d-${i}`, value: `D@${idx}`, state: dQ.length > 0 ? 'sorted' as NodeState : 'default' as NodeState })),
+    auxLabel: 'DIRE QUEUE',
+    inputString: cleaned,
+    currentInputIndex: round,
+  });
+
+  return steps;
+}
