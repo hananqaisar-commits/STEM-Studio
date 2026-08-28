@@ -72,7 +72,7 @@ const DashboardLayout = () => {
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
 
-  const isOnLanding = location.pathname === '/dashboard';
+
 
   // Determine active module and category from path.
   // If we are on a DSA category page (e.g. /dashboard/complexity), 
@@ -86,16 +86,14 @@ const DashboardLayout = () => {
   return (
     <div className="dashboard-shell">
       <Navbar onToggleSidebar={toggleSidebar} />
-      <div className={`dashboard-body${isOnLanding ? ' no-sidebar' : ''}`}>
-        {!isOnLanding && (
-          <TopicMenu
-            activeModule={activeModuleId}
-            activeCategory={activeCategoryId}
-            onSelectModule={handleSelectModule}
-            isOpen={isSidebarOpen}
-            onClose={closeSidebar}
-          />
-        )}
+      <div className="dashboard-body">
+        <TopicMenu
+          activeModule={activeModuleId}
+          activeCategory={activeCategoryId}
+          onSelectModule={handleSelectModule}
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+        />
         <main className="dashboard-main">
           <Routes>
             <Route index element={<DSAHub />} />

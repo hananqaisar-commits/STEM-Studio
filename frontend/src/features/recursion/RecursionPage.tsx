@@ -364,6 +364,8 @@ export const RecursionPage: React.FC = () => {
               currentStep?.description || 'Click Play to explore the recursion call tree step by step.',
               quizSession.phase,
             )}
+            stepNumber={currentStepIndex + 1}
+            totalSteps={totalSteps}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
             steps={executionData.steps}

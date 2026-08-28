@@ -532,8 +532,8 @@ export const ArraysPage: React.FC = () => {
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
-            steps={executionData.steps}
-            currentStepIndex={currentStepIndex}
+            stepNumber={currentStepIndex + 1}
+            totalSteps={totalSteps}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
