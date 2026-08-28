@@ -6,14 +6,25 @@ import {
   CheckCircle2,
   XCircle,
   TrendingUp,
+  ShieldCheck,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import type { QuestionResult, QuizCadence } from '../../engine/types/Quiz';
-import { CADENCE_LABELS } from '../../engine/types/Quiz';
+import { CADENCE_LABELS, TRANSFER_CHALLENGE_STEPS } from '../../engine/types/Quiz';
 
 /* ── QuizReport ────────────────────────────────────────────────────────
    Performance report shown AFTER all quiz questions are answered.
    Groups results by concept, surfaces weak points, and offers
    retry / harder-mode / back-to-learning actions.
+
+   Two faces:
+   - Regular report → ends with the "Prove You Understand" transfer
+         challenge CTA: a fresh input, first steps predicted cold.
+   - Transfer verdict (challengeMode) → judges the mental model itself:
+     all first predictions correct = concept mastered, anything less =
+     execution model needs practice. A 10/10 quiz score can come from
+     memory; a correct cold prediction on a new input cannot.
    ─────────────────────────────────────────────────────────────────── */
 
 export interface QuizReportProps {
@@ -26,6 +37,11 @@ export interface QuizReportProps {
   onHarderMode: () => void;
   onBackToLearning: () => void;
   canGoHarder: boolean;
+  /** True when this report concludes a transfer challenge — renders the
+   *  mastered / needs-practice verdict instead of the regular advice. */
+  challengeMode?: boolean;
+  /** Starts the transfer challenge: caller regenerates the input. */
+  onProveIt?: () => void;
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
@@ -97,9 +113,21 @@ export const QuizReport: React.FC<QuizReportProps> = ({
   onHarderMode,
   onBackToLearning,
   canGoHarder,
+  challengeMode = false,
+  onProveIt,
 }) => {
   const pct = answeredCount === 0 ? 0 : Math.round((correctCount / answeredCount) * 100);
   const allCorrect = correctCount === answeredCount && answeredCount > 0;
+
+  /* Transfer verdict counts FIRST attempts only — a retry-corrected
+   * answer is learning, not mastery. */
+  const firstAttemptResults = useMemo(
+    () => questionResults.filter((r) => r.wasFirstAttempt),
+    [questionResults],
+  );
+  const firstAttemptCorrect = firstAttemptResults.filter((r) => r.wasCorrect).length;
+  const mastered =
+    firstAttemptResults.length > 0 && firstAttemptCorrect === firstAttemptResults.length;
 
   const conceptStats = useMemo(() => groupByConcept(questionResults), [questionResults]);
   const weakConcepts = useMemo(
@@ -111,6 +139,25 @@ export const QuizReport: React.FC<QuizReportProps> = ({
 
   return (
     <section className="quiz-panel quiz-report" aria-label="Quiz performance report">
+      {/* ── Transfer verdict ─────────────────────────────────────────── */}
+      {challengeMode ? (
+        <div className={`quiz-verdict ${mastered ? 'is-mastered' : 'is-practice'}`}>
+          <div className="quiz-verdict-icon">
+            {mastered ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
+          </div>
+          <div className="quiz-verdict-body">
+            <span className="quiz-verdict-title">
+              {mastered ? 'Concept Mastered' : 'Execution model needs practice'}
+            </span>
+            <p className="quiz-verdict-text">
+              {mastered
+                ? `You predicted ${firstAttemptCorrect} of ${firstAttemptResults.length} steps correctly on an input you had never seen. That is a working mental model — not just a good memory of this run.`
+                : `Your answers were right on the studied input, but on this fresh input ${firstAttemptCorrect} of ${firstAttemptResults.length} first predictions were correct. Re-run the visualization, watch the steps you missed, then prove it again.`}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* ── Score Summary ──────────────────────────────────────────── */}
       <div className="quiz-report-score-block">
         <span
@@ -138,7 +185,7 @@ export const QuizReport: React.FC<QuizReportProps> = ({
       </div>
 
       {/* ── Concept Breakdown ──────────────────────────────────────── */}
-      {weakConcepts.length > 0 && (
+      {!challengeMode && weakConcepts.length > 0 && (
         <div className="quiz-report-section">
           <h4 className="quiz-report-section-title">Concept Breakdown</h4>
           <div className="quiz-report-concepts">
@@ -164,7 +211,7 @@ export const QuizReport: React.FC<QuizReportProps> = ({
       )}
 
       {/* ── Weak Points ────────────────────────────────────────────── */}
-      {weakConcepts.length > 0 && (
+      {!challengeMode && weakConcepts.length > 0 && (
         <div className="quiz-report-section">
           <h4 className="quiz-report-section-title">Weak Points</h4>
           <ul className="quiz-report-weak-list">
@@ -196,32 +243,76 @@ export const QuizReport: React.FC<QuizReportProps> = ({
       </div>
 
       {/* ── Actions ────────────────────────────────────────────────── */}
+      {/* Transfer challenge CTA — the strongest close a quiz can have:
+          a fresh input where every studied answer must be re-derived. */}
+      {!challengeMode && onProveIt && (
+        <div className="quiz-prove-cta">
+          <div className="quiz-prove-cta-text">
+            <span className="quiz-prove-cta-title">
+              <ShieldCheck size={15} />
+              Prove You Understand
+            </span>
+            <span className="quiz-prove-cta-sub">
+              New input · predict the first {TRANSFER_CHALLENGE_STEPS} steps cold.
+              Correct predictions are stronger proof than any score.
+            </span>
+          </div>
+          <button type="button" className="quiz-action quiz-prove-btn" onClick={onProveIt}>
+            <Sparkles size={14} />
+            Start Challenge
+          </button>
+        </div>
+      )}
+
       <footer className="quiz-foot quiz-report-actions">
-        <button
-          type="button"
-          className="quiz-action"
-          onClick={onRetry}
-        >
-          <RotateCcw size={14} />
-          Retry Quiz
-        </button>
-        <button
-          type="button"
-          className="quiz-action quiz-action-secondary"
-          onClick={onHarderMode}
-          disabled={!canGoHarder}
-        >
-          <ArrowUpCircle size={14} />
-          Try Harder Mode
-        </button>
-        <button
-          type="button"
-          className="quiz-report-text-btn"
-          onClick={onBackToLearning}
-        >
-          Back to Learning
-          <ArrowRight size={13} />
-        </button>
+        {challengeMode ? (
+          <>
+            <button
+              type="button"
+              className="quiz-action"
+              onClick={onRetry}
+            >
+              <RotateCcw size={14} />
+              Retry Challenge
+            </button>
+            <button
+              type="button"
+              className="quiz-report-text-btn"
+              onClick={onBackToLearning}
+            >
+              Back to Learning
+              <ArrowRight size={13} />
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="quiz-action"
+              onClick={onRetry}
+            >
+              <RotateCcw size={14} />
+              Retry Quiz
+            </button>
+            <button
+              type="button"
+              className="quiz-action quiz-action-secondary"
+              onClick={onHarderMode}
+              disabled={!canGoHarder}
+            >
+              <ArrowUpCircle size={14} />
+              Try Harder Mode
+            </button>
+            <button
+              type="button"
+              className="quiz-report-text-btn"
+              onClick={onBackToLearning}
+            >
+              Back to Learning
+              <ArrowRight size={13} />
+            </button>
+          </>
+        )}
       </footer>
     </section>
   );

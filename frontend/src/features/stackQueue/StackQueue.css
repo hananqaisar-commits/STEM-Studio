@@ -378,3 +378,157 @@
   border: 1.5px solid #10b981 !important;
   color: #047857 !important;
 }
+
+/* ── Histogram Problems (Trapping Rain Water / Largest Rectangle) ──── */
+
+.problem-histogram {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1.25rem 1rem 0.5rem;
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  min-height: 150px;
+}
+
+.hist-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: 34px;
+}
+
+.hist-water {
+  width: 100%;
+  background: rgba(56, 189, 248, 0.35);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+.hist-bar {
+  width: 100%;
+  background: rgba(99, 102, 241, 0.5);
+  border: 1px solid rgba(129, 140, 248, 0.75);
+  border-radius: 4px 4px 0 0;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hist-bar-stacked {
+  background: rgba(56, 189, 248, 0.45);
+  border-color: rgba(56, 189, 248, 0.85);
+}
+
+.hist-bar-active {
+  background: rgba(129, 140, 248, 0.95);
+  border-color: #a5b4fc;
+  box-shadow: 0 0 14px rgba(129, 140, 248, 0.55);
+}
+
+.hist-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 0.3rem;
+}
+
+/* ── Shared Problem Renderer Extras ───────────────────────────────── */
+
+.char-window {
+  color: #c7d2fe;
+  border-color: rgba(129, 140, 248, 0.55);
+  background: rgba(99, 102, 241, 0.18);
+}
+
+.queue-3d-block-wide {
+  width: auto;
+  min-width: 64px;
+  padding: 0 0.65rem;
+  white-space: nowrap;
+}
+
+.plate-value-truncate {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Rotting Oranges BFS Grid ─────────────────────────────────────── */
+
+.orange-grid {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.orange-cell {
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 0.95rem;
+  border: 1px solid var(--color-border);
+  transition: all 0.25s ease;
+}
+
+.orange-empty {
+  background: rgba(30, 41, 59, 0.6);
+  color: #475569;
+}
+
+.orange-fresh {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.7);
+  color: #fbbf24;
+}
+
+.orange-rotten {
+  background: rgba(244, 63, 94, 0.22);
+  border-color: rgba(244, 63, 94, 0.7);
+  color: #fb7185;
+}
+
+/* ── Light Mode Overrides (New Problem Renderers) ─────────────────── */
+
+.theme-light .problem-histogram {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .orange-grid {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .orange-empty {
+  background: #e2e8f0;
+  color: #94a3b8;
+}
+
+.theme-light .orange-fresh {
+  background: #fef3c7;
+}
+
+.theme-light .orange-rotten {
+  background: #ffe4e6;
+}
+
+.theme-light .char-window {
+  color: #4338ca;
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}

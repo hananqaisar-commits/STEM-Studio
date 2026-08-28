@@ -110,6 +110,58 @@ function cloneGraph(nodes: GraphNode[], edges: GraphEdge[]): {
   };
 }
 
+/** Alternate topologies for the "Prove You Understand" transfer challenge.
+ *  Same node positions as the presets (the renderer depends on them), but
+ *  different edges and weights so the student executes on a graph they have
+ *  never traversed before — prediction from memory is impossible. */
+export function getChallengeGraph(type: 'standard' | 'dag'): {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+} {
+  if (type === 'dag') {
+    // Alternate DAG: A,B start; C joins from A only; D from B and C; E,F from D
+    const nodes: GraphNode[] = [
+      { id: 'A', label: 'A', x: 80, y: 80, state: 'default' },
+      { id: 'B', label: 'B', x: 80, y: 220, state: 'default' },
+      { id: 'C', label: 'C', x: 260, y: 60, state: 'default' },
+      { id: 'D', label: 'D', x: 260, y: 240, state: 'default' },
+      { id: 'E', label: 'E', x: 440, y: 80, state: 'default' },
+      { id: 'F', label: 'F', x: 440, y: 220, state: 'default' },
+    ];
+    const edges: GraphEdge[] = [
+      { id: 'e1', from: 'A', to: 'C', directed: true, state: 'default' },
+      { id: 'e2', from: 'B', to: 'D', directed: true, state: 'default' },
+      { id: 'e3', from: 'C', to: 'D', directed: true, state: 'default' },
+      { id: 'e4', from: 'D', to: 'E', directed: true, state: 'default' },
+      { id: 'e5', from: 'D', to: 'F', directed: true, state: 'default' },
+    ];
+    return { nodes, edges };
+  }
+
+  // Alternate connected weighted undirected graph for BFS / DFS / Dijkstra / Prim
+  const nodes: GraphNode[] = [
+    { id: 'A', label: 'A', x: 80, y: 150, state: 'default' },
+    { id: 'B', label: 'B', x: 200, y: 60, state: 'default' },
+    { id: 'C', label: 'C', x: 200, y: 240, state: 'default' },
+    { id: 'D', label: 'D', x: 360, y: 60, state: 'default' },
+    { id: 'E', label: 'E', x: 360, y: 240, state: 'default' },
+    { id: 'F', label: 'F', x: 480, y: 150, state: 'default' },
+  ];
+
+  const edges: GraphEdge[] = [
+    { id: 'e1', from: 'A', to: 'B', weight: 3, directed: false, state: 'default' },
+    { id: 'e2', from: 'A', to: 'C', weight: 7, directed: false, state: 'default' },
+    { id: 'e3', from: 'B', to: 'D', weight: 4, directed: false, state: 'default' },
+    { id: 'e4', from: 'C', to: 'D', weight: 2, directed: false, state: 'default' },
+    { id: 'e5', from: 'C', to: 'E', weight: 6, directed: false, state: 'default' },
+    { id: 'e6', from: 'D', to: 'E', weight: 1, directed: false, state: 'default' },
+    { id: 'e7', from: 'D', to: 'F', weight: 9, directed: false, state: 'default' },
+    { id: 'e8', from: 'E', to: 'F', weight: 5, directed: false, state: 'default' },
+  ];
+
+  return { nodes, edges };
+}
+
 // ─── 1. BREADTH-FIRST SEARCH (BFS) ───────────────────────────────────────────
 
 export function generateBFSSteps(

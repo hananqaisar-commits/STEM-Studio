@@ -211,8 +211,14 @@ export const BinarySearchPage: React.FC = () => {
 
   const handleRandomize = () => {
     if (category === 'searchRotatedArray') {
-      const sorted = Array.from({ length: 8 }, (_, i) => (i + 1) * 10);
-      const pivot = 3;
+      /* Unique sorted values rotated at a random pivot — a genuinely
+         fresh rotation every run (this also powers the transfer
+         challenge, where a fixed array could be answered from memory). */
+      const len = 7 + Math.floor(Math.random() * 3);
+      const unique = new Set<number>();
+      while (unique.size < len) unique.add(Math.floor(Math.random() * 95) + 5);
+      const sorted = Array.from(unique).sort((a, b) => a - b);
+      const pivot = Math.floor(Math.random() * (len - 2)) + 1;
       const rotated = [...sorted.slice(pivot), ...sorted.slice(0, pivot)];
       setArray(rotated);
       setCustomArrayInput(rotated.join(', '));
@@ -220,7 +226,13 @@ export const BinarySearchPage: React.FC = () => {
       setTargetInput(String(target));
       setActiveSteps(generateRotatedSearchSteps(rotated, target));
     } else if (category === 'findPeakElement') {
-      const peakArr = [2, 8, 25, 45, 14, 9, 3];
+      /* Random mountain: one dominant peak at a random index. */
+      const len = 6 + Math.floor(Math.random() * 2);
+      const peakIdx = Math.floor(Math.random() * (len - 2)) + 1;
+      const peakArr = Array.from(
+        { length: len },
+        (_, i) => (i === peakIdx ? Math.floor(Math.random() * 30) + 70 : Math.floor(Math.random() * 40) + 5)
+      );
       setArray(peakArr);
       setCustomArrayInput(peakArr.join(', '));
       setActiveSteps(generatePeakElementSteps(peakArr));
@@ -257,6 +269,16 @@ export const BinarySearchPage: React.FC = () => {
 
   const handleSample = () => {
     handleSelectCategory(category);
+  };
+
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh array + target, predicted cold. startChallenge() must fire in
+     the same handler as the input change so the armed challenge survives
+     the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    reset();
+    handleRandomize();
   };
 
   const snippetKey =
@@ -504,7 +526,13 @@ export const BinarySearchPage: React.FC = () => {
 
         {/* Right Column: Code & Explanation */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel

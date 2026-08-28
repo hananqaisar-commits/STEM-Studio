@@ -597,6 +597,187 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
         example: 'Fresh oranges become rotten only if adjacent to rotten ones each minute.',
         applications: ['Infection spread simulation', 'Grid propagation'],
       },
+      {
+        id: 'simplifyPath',
+        name: 'Simplify Path',
+        complexity: 'O(n)',
+        description:
+          'Canonicalize a Unix path by splitting on "/" and using a stack: names push, ".." pops, "." is skipped.',
+        keyPoints: [
+          '".." at the root does nothing — the stack is checked before popping.',
+          'Multiple and trailing slashes produce empty tokens, which are skipped.',
+        ],
+        example: '"/a/./b/../../c/" → "/c"',
+        applications: ['Filesystem navigation', 'URL normalization'],
+      },
+      {
+        id: 'removeAdjacentDuplicates',
+        name: 'Remove Adjacent Duplicates',
+        complexity: 'O(n)',
+        description:
+          'Repeatedly remove pairs of adjacent equal characters; a stack makes the cascading removals automatic.',
+        keyPoints: [
+          'Push when the character differs from the top.',
+          'Pop when it matches — the incoming character is never pushed.',
+          'Newly exposed tops can match later characters, so removals cascade.',
+        ],
+        example: '"abbaca" → "ca"',
+        applications: ['Text editors', 'Syntax simplification'],
+      },
+      {
+        id: 'basicCalculator',
+        name: 'Basic Calculator',
+        complexity: 'O(n)',
+        description:
+          'Evaluate expressions with +, −, and parentheses using a context stack that saves (result, sign) at each "(".',
+        keyPoints: [
+          '"(" pushes the running result and pending sign, then resets.',
+          '")" pops the context and folds the inner value back in.',
+          'Multi-digit numbers are built one digit at a time.',
+        ],
+        example: '"2-(3+4)" → 2 − 7 = −5',
+        applications: ['Expression parsers', 'Spreadsheet engines'],
+      },
+      {
+        id: 'decodeString',
+        name: 'Decode String',
+        complexity: 'O(n · repeat)',
+        description:
+          'Decode nested patterns like "3[a2[c]]" with two parallel stacks: repeat counts and outer string segments.',
+        keyPoints: [
+          '"[" pushes (current string, repeat count) as a pair.',
+          '"]" pops both, repeats the segment, and prepends the outer string.',
+          'Counts can be multi-digit, like "12[ab]".',
+        ],
+        example: '"3[a2[c]]" → "accaccacc"',
+        applications: ['Data decompression', 'Template expansion'],
+      },
+      {
+        id: 'queueViaStacks',
+        name: 'Queue via Two Stacks',
+        complexity: 'O(1) amortized',
+        description:
+          'Implement FIFO with two LIFO stacks: an input stack for enqueue and an output stack for dequeue.',
+        keyPoints: [
+          'Transfer only when the output stack is empty.',
+          'The transfer reverses arrival order, putting the oldest value on top.',
+          'Each element moves at most twice → amortized O(1).',
+        ],
+        example: 'Enqueue 1,2,3 → dequeue returns 1',
+        applications: ['Queue libraries', 'Message buffering'],
+      },
+      {
+        id: 'stackViaQueues',
+        name: 'Stack via Two Queues',
+        complexity: 'O(n) push, O(1) pop',
+        description:
+          'Implement LIFO with two FIFO queues by making push expensive: rotate the new value to the front.',
+        keyPoints: [
+          'Push enqueues into the empty aux queue, then drains the main queue in behind it.',
+          'Swapping the queues leaves the newest value at the front — the stack top.',
+          'Pop is then a single O(1) dequeue.',
+        ],
+        example: 'Push 1,2,3 → pop returns 3',
+        applications: ['Stack emulation', 'Interview fundamentals'],
+      },
+      {
+        id: 'circularQueue',
+        name: 'Circular Queue',
+        complexity: 'O(1) per operation',
+        description:
+          'A fixed-capacity queue that wraps rear and front indices with modulo arithmetic, reusing freed slots.',
+        keyPoints: [
+          'REAR = (rear + 1) % capacity on enqueue.',
+          'Wraparound avoids the O(n) shifting of a naive array queue.',
+          'A size counter distinguishes full from empty.',
+        ],
+        example: 'Capacity 3 full → dequeue frees slot 0 → enqueue wraps into it',
+        applications: ['Ring buffers', 'Keyboard buffers', 'Streaming'],
+      },
+      {
+        id: 'circularDeque',
+        name: 'Circular Deque',
+        complexity: 'O(1) per operation',
+        description:
+          'A double-ended queue on a ring buffer: insert and delete at both ends with wraparound.',
+        keyPoints: [
+          'Front moves with (front − 1 + capacity) % capacity.',
+          'FRONT and REAR wrap in opposite directions.',
+          'Overflow and underflow checks guard every operation.',
+        ],
+        example: 'insertFront(1), insertLast(2), deleteLast() → [1]',
+        applications: ['Sliding windows', 'Undo/redo history', 'CPU scheduling'],
+      },
+      {
+        id: 'slidingWindow',
+        name: 'Sliding Window Maximum',
+        complexity: 'O(n)',
+        description:
+          'A monotonic deque of indices tracks the maximum of every window of size k in a single pass.',
+        keyPoints: [
+          'The front of the deque is always the current window maximum.',
+          'Smaller values are evicted from the back before inserting.',
+          'Out-of-window indices are evicted from the front.',
+        ],
+        example: '[1,3,-1,-3,5,3,6,7], k=3 → [3,3,5,5,6,7]',
+        applications: ['Real-time analytics', 'Stock tickers', 'Rate limiting'],
+      },
+      {
+        id: 'firstNonRepeating',
+        name: 'First Non-Repeating Character',
+        complexity: 'O(n)',
+        description:
+          'Track the first non-repeating character of a growing stream with a candidate queue and a frequency map.',
+        keyPoints: [
+          'A first sighting enqueues the character.',
+          'Cleanup is lazy: repeated heads are dequeued only when they reach the front.',
+          'Every step is O(1); the head is always the current answer.',
+        ],
+        example: 'Stream "aabc" → a, -, b, b',
+        applications: ['Stream analytics', 'Chat badges'],
+      },
+      {
+        id: 'movingAverage',
+        name: 'Moving Average from Stream',
+        complexity: 'O(1) per value',
+        description:
+          'Maintain the average of the last k stream values with a window queue and a running sum.',
+        keyPoints: [
+          'Add the incoming value to the sum, subtract the evicted one.',
+          'One add and one subtract — never a re-add of the whole window.',
+          'The queue holds the window; the sum holds the total.',
+        ],
+        example: '[1,10,3,5], k=3 → 1.0, 5.5, 4.67, 6.0',
+        applications: ['Sensor smoothing', 'Financial indicators', 'Load metrics'],
+      },
+      {
+        id: 'taskScheduler',
+        name: 'Task Scheduler',
+        complexity: 'O(n log k)',
+        description:
+          'Schedule tasks with a cooldown between identical tasks; greedy always runs the highest-count ready task.',
+        keyPoints: [
+          'Ready tasks are ordered by remaining count.',
+          'Executing a task starts its cooldown timer.',
+          'When nothing is ready, the CPU idles one tick.',
+        ],
+        example: 'AAABBB, n=2 → A B · A B · A B → 8 ticks',
+        applications: ['CPU scheduling', 'Rate-limited API calls'],
+      },
+      {
+        id: 'dota2Senate',
+        name: 'Dota2 Senate',
+        complexity: 'O(n log n)',
+        description:
+          'Two queues simulate round-robin voting; the senator with the earlier index bans an opponent each round.',
+        keyPoints: [
+          'The fronts of both party queues compare original indices.',
+          'The winner re-enqueues with index + n for the next round.',
+          'A party wins when the opponent queue empties.',
+        ],
+        example: '"RD" → R bans D → Radiant wins',
+        applications: ['Turn-based simulation', 'Voting systems'],
+      },
     ],
   },
 
@@ -1097,6 +1278,20 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
         applications: ['Currency systems', 'Change-making'],
       },
       {
+        id: 'houseRobber',
+        name: 'House Robber',
+        complexity: 'O(n) time, O(1) space',
+        description:
+          'Maximize loot from houses where adjacent picks are forbidden: rob(i) = max(rob(i−1), rob(i−2) + value[i]).',
+        keyPoints: [
+          'At each house: rob it (plus the best up to i−2) or skip it (best up to i−1).',
+          'Two rolling variables replace the full dp array.',
+          'The recurrence is the template for every non-adjacent selection problem.',
+        ],
+        example: '[2,7,9,3,1] → 2 + 9 + 1 = 12',
+        applications: ['Scheduling with cooldowns', 'Resource selection'],
+      },
+      {
         id: 'knapsack01',
         name: '0/1 Knapsack',
         complexity: 'O(n·W)',
@@ -1170,55 +1365,71 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
       'Tries (prefix trees) store strings character-by-character, enabling fast prefix searches and autocomplete.',
     topics: [
       {
-        id: 'insert',
+        id: 'trieInsert',
         name: 'Trie Insert',
         complexity: 'O(m)',
         description:
           'Insert a word by creating nodes for each character, marking the final node as the end of a word.',
         keyPoints: [
-          'Reuses existing prefix nodes.',
+          'Reuses existing prefix nodes — shared prefixes cost nothing extra.',
           'Each edge represents a character.',
         ],
         example: 'Insert "cat", "car", "card" → shared path c-a-t/r-d',
         applications: ['Autocomplete', 'Spell checker'],
       },
       {
-        id: 'search',
+        id: 'trieSearch',
         name: 'Trie Search',
         complexity: 'O(m)',
         description:
           'Search follows character edges; a word exists only if the final node is marked as an end.',
         keyPoints: [
           'Prefix search stops at any node.',
-          'Word search requires isEndOfWord flag.',
+          'Word search requires the isEndOfWord flag.',
         ],
         example: 'Search "cat" in trie with "cat", "car" → found.',
         applications: ['Dictionary lookups', 'Prefix matching'],
       },
       {
-        id: 'delete',
-        name: 'Trie Delete',
-        complexity: 'O(m)',
+        id: 'triePrefix',
+        name: 'Prefix Search',
+        complexity: 'O(p)',
         description:
-          'Remove a word by unmarking the end flag and pruning unused nodes from the leaf upward.',
+          'Check whether any stored word starts with a prefix by walking the prefix path and testing for descendants.',
         keyPoints: [
-          'Only delete nodes that are not part of another word.',
-          'Do not remove shared prefixes.',
+          'Traverse the prefix in O(p).',
+          'A node with children (or an end flag) confirms a match.',
         ],
-        applications: ['Dynamic dictionaries', 'Contact lists'],
+        example: 'Prefix "ca" in ["cat", "car"] → true',
+        applications: ['Search-as-you-type', 'Domain lookups'],
       },
       {
-        id: 'prefixMatch',
-        name: 'Prefix Match / Auto-complete',
-        complexity: 'O(m + k)',
+        id: 'wordDictionary',
+        name: 'Word Dictionary (Wildcards)',
+        complexity: 'O(m · b)',
         description:
-          'Find all words with a given prefix by traversing to the prefix node and collecting descendants.',
+          'Match words containing wildcard dots by branching at every "." to try each child edge.',
         keyPoints: [
-          'Traverse the prefix in O(m).',
-          'DFS/BFS from the prefix node collects k results.',
+          'A literal character follows exactly one edge.',
+          'A "." branches into all children — backtracking.',
+          'Failing fast at each level keeps deep searches cheap.',
         ],
-        example: 'Prefix "ca" → "cat", "car", "card"',
-        applications: ['Search suggestions', 'Autocomplete'],
+        example: 'Words "hello hall ham", query "h.l." → matches "hello" and "hall"',
+        applications: ['Regex-lite search', ' crossword solvers'],
+      },
+      {
+        id: 'autocomplete',
+        name: 'Autocomplete',
+        complexity: 'O(p + k)',
+        description:
+          'Collect all words sharing a prefix: walk to the prefix node, then gather every end-flagged descendant.',
+        keyPoints: [
+          'Traverse the prefix in O(p).',
+          'DFS from the prefix node collects k results.',
+          'Sorting results by frequency turns it into a real suggestion engine.',
+        ],
+        example: 'Prefix "car" in "cat car card care careful" → car, card, care, careful',
+        applications: ['Search suggestions', 'IDE completion', 'Hashtag lookup'],
       },
     ],
   },

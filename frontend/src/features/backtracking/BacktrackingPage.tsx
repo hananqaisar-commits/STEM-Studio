@@ -116,6 +116,15 @@ export const BacktrackingPage: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAlg]);
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh candidates / board size, predicted cold. startChallenge() must
+     fire in the same handler as the input change so the armed challenge
+     survives the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
+  };
+
   const handleRandomize = () => {
     reset();
     quizSession.resetSession();
@@ -421,7 +430,13 @@ export const BacktrackingPage: React.FC = () => {
         </div>
 
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
 
 
         </div>

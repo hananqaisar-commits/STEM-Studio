@@ -168,6 +168,15 @@ export const HashMapsPage: React.FC = () => {
     }
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh array + target, predicted cold. startChallenge() must fire in
+     the same handler as the input change so the armed challenge survives
+     the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
+  };
+
   const handleBarElementClick = (index: number, currentValue: number) => {
     const valStr = prompt(`Edit value at index [${index}]:`, currentValue.toString());
     if (valStr !== null) {
@@ -402,7 +411,13 @@ export const HashMapsPage: React.FC = () => {
 
         {/* Right Column: Quiz & Explanation */}
         <div className="quiz-rail">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
         </div>
         <div className="bottom-row">
           <MultiLanguageCodePanel

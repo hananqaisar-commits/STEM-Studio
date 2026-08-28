@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap, Search } from 'lucide-react';
 import type { QuizQuestion, QuizCadence } from '../../engine/types/Quiz';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
@@ -10,6 +10,15 @@ import '../mascot/Mascot.css';
    Answering is two-stage — select, then check. The old cards committed
    on the first click, which punished a misclick with a permanent wrong
    mark, and gave keyboard users nothing to press Enter on.
+
+   Two question kinds share one card:
+   - 'predict' → "Predict the next step" (mentally execute the algorithm)
+   - 'reason'  → "Why does this happen?" (justify a visible step)
+
+   When the student exhausts both attempts the reveal carries the
+   "Let's inspect this step" cue, and Continue advances the canvas to
+   the exact step that was mispredicted — the visualization itself
+   closes the feedback loop.
 
    Enhanced features per mode:
    - Concept (light): Key Idea insight box after answer
@@ -35,6 +44,11 @@ export interface QuizPanelProps {
   timeRemaining?: number | null;
   /** Streak multiplier: x1, x2 (3+ streak), x3 (5+ streak). */
   streakMultiplier?: number;
+  /** True while the transfer challenge (fresh input) is in play. */
+  challengeMode?: boolean;
+  /** True when the reveal follows a final wrong attempt — Continue then
+   *  advances the canvas to the mispredicted step ("watch the step"). */
+  inspectPending?: boolean;
   onAnswer: (index: number) => void;
   onContinue: () => void;
   /** Per-category wording, e.g. "Resume traversal". */
@@ -54,6 +68,8 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   cadence = 'normal',
   timeRemaining = null,
   streakMultiplier = 1,
+  challengeMode = false,
+  inspectPending = false,
   onAnswer,
   onContinue,
   continueLabel = 'Continue',
@@ -115,10 +131,28 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
     return 'quiz-option is-muted';
   };
 
-  const eyebrow =
-    phase === 'retrying'
+  const eyebrow = challengeMode
+    ? `Transfer challenge \u00b7 ${checkpointNumber} of ${totalCheckpoints}`
+    : phase === 'retrying'
       ? `Checkpoint ${checkpointNumber} of ${totalCheckpoints} \u00b7 attempt 2 of 2`
       : `Checkpoint ${checkpointNumber} of ${totalCheckpoints}`;
+
+  /* The card title states what the question trains. 'reason' questions
+   * ask for justification of a visible step; everything else is a
+   * prediction the student must mentally execute. */
+  const title = challengeMode
+    ? 'Prove it — new input'
+    : question.kind === 'reason'
+      ? 'Why does this happen?'
+      : 'Predict the next step';
+
+  /* After a final wrong answer, Continue becomes an inspection: the
+   * canvas advances to the mispredicted step so the student watches the
+   * ground truth instead of just reading it. */
+  const effectiveContinueLabel =
+    phase === 'revealed' && !wasCorrect && inspectPending
+      ? 'Watch the step'
+      : continueLabel;
 
   /* Timer bar width percentage (15s max). */
   const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / 15) * 100) : 100;
@@ -150,7 +184,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
       <header className="quiz-head">
         <div className="quiz-head-text">
           <span className="quiz-eyebrow">{eyebrow}</span>
-          <h3 className="quiz-title">Predict the next step</h3>
+          <h3 className="quiz-title">{title}</h3>
         </div>
         <div className="quiz-head-mascot">
           <Octa
@@ -227,7 +261,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
           <div className="quiz-feedback is-hint">
             <Lightbulb size={15} />
             <span>
-              <span className="quiz-feedback-title">Not quite \u2014 try once more.</span>
+              <span className="quiz-feedback-title">Not quite — try once more.</span>
               {question.hint}
             </span>
           </div>
@@ -238,9 +272,26 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
             {wasCorrect ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
             <span>
               <span className="quiz-feedback-title">
-                {wasCorrect ? 'Correct.' : 'The correct answer is shown above.'}
+                {wasCorrect
+                  ? 'Correct.'
+                  : inspectPending
+                    ? "Let's inspect this step."
+                    : 'The correct answer is shown above.'}
               </span>
               {question.explanation}
+            </span>
+          </div>
+        )}
+
+        {/* Inspect-the-step cue — wrong on the final attempt. Learning does
+            not stop at the wrong answer: Continue runs the exact step on
+            the canvas so the student sees where their model broke. */}
+        {phase === 'revealed' && !wasCorrect && inspectPending && (
+          <div className="quiz-inspect-note">
+            <Search size={14} />
+            <span>
+              Press <strong>Watch the step</strong> — the canvas will run the very step you
+              predicted. Compare it with what you expected, then try the next prediction.
             </span>
           </div>
         )}
@@ -265,7 +316,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
 
         {locked ? (
           <button ref={continueRef} type="button" className="quiz-action" onClick={onContinue}>
-            {continueLabel}
+            {effectiveContinueLabel}
             <ArrowRight size={14} />
           </button>
         ) : (
