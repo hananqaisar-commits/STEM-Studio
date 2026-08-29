@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Bar } from '../../components/primitives/Bar';
 import { Maximize2 } from 'lucide-react';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import '../sorting/Sorting.css';
+import { MotionPresets } from '../../engine/motionEngine';
 
 interface ArrayRendererProps {
   currentStep: ArrayStep | null;
@@ -15,6 +16,16 @@ export const ArrayRenderer: React.FC<ArrayRendererProps> = ({
   onElementClick,
   onToggleFullscreen,
 }) => {
+  const canvasRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!currentStep || !canvasRef.current) return;
+    const bars = Array.from(canvasRef.current.querySelectorAll<HTMLElement>('.interactive-bar-wrapper'));
+    const [first, second] = currentStep.comparingIndices ?? [];
+    if (first !== undefined && bars[first]) MotionPresets.pulseCompare(bars[first], second === undefined ? undefined : bars[second]);
+    const [swapA, swapB] = currentStep.swappingIndices ?? [];
+    if (swapA !== undefined && bars[swapA]) MotionPresets.liftShiftDrop(bars[swapA], 28);
+    if (swapB !== undefined && bars[swapB]) MotionPresets.liftShiftDrop(bars[swapB], -28);
+  }, [currentStep]);
   if (!currentStep) {
     return (
       <div className="sorting-canvas-empty">
@@ -57,7 +68,7 @@ export const ArrayRenderer: React.FC<ArrayRendererProps> = ({
           </button>
         )}
       </div>
-      <div className="bars-canvas">
+      <div ref={canvasRef} className="bars-canvas">
         {array.map((value, index) => {
           const heightPercent = (value / max) * 100;
           const state = getElementState(index);
