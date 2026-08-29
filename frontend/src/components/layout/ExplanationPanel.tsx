@@ -12,6 +12,8 @@ interface TimeComplexity {
 
 interface StepLike {
   description?: string;
+  explanation?: string;
+  phase?: string;
   [key: string]: any;
 }
 
@@ -66,10 +68,24 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
     }
   }, [currentIdx, hasHistory]);
 
-  // Build the cumulative history bullets from step descriptions.
+  // Array engines use `description`; graph, list and search engines use
+  // `explanation`. Resolve both at the shared boundary so every visualizer
+  // describes the real algorithm action instead of falling back to “Step n”.
+  const getStepText = (step: StepLike, idx: number) => {
+    const text = step.description?.trim() || step.explanation?.trim();
+    if (text) return text;
+    return step.phase
+      ? `${step.phase}: the visualizer is applying this operation to the current state.`
+      : `The algorithm is updating the highlighted values for operation ${idx + 1}.`;
+  };
+
+  const activeIndex = hasHistory ? Math.min(currentIdx, steps.length - 1) : 0;
+  const activeStepText = hasHistory ? getStepText(steps[activeIndex], activeIndex) : fallbackText;
+
+  // Keep a concise trace for context while giving the active step priority.
   const historyBullets = hasHistory
     ? steps.slice(0, currentIdx + 1).map((step, idx) => {
-        const text = step.description?.trim() || `Step ${idx + 1}`;
+        const text = getStepText(step, idx);
         const isActive = idx === currentIdx;
         return { text, isActive, idx };
       })
@@ -87,12 +103,17 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
           </div>
         </div>
 
-        {hasHistory ? (
-          <div className="explanation-history-box">
-            <div className="history-box-header">
+        <div className="explanation-current-action">
+          <span className="explanation-current-label">Now executing</span>
+          <p className="explanation-text">{activeStepText}</p>
+        </div>
+
+        {hasHistory && historyBullets.length > 1 && (
+          <details className="explanation-history-box">
+            <summary className="history-box-header">
               <List size={13} />
-              <span>What happened so far</span>
-            </div>
+              <span>Execution trace</span>
+            </summary>
             <ul ref={historyListRef} className="explanation-history-list">
               {historyBullets.map((bullet) => (
                 <li
@@ -105,9 +126,7 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
                 </li>
               ))}
             </ul>
-          </div>
-        ) : (
-          <p className="explanation-text">{fallbackText}</p>
+          </details>
         )}
       </div>
 
