@@ -329,9 +329,9 @@
 }
 
 .topic-sidebar {
-  width: 280px !important;
-  min-width: 280px !important;
-  max-width: 280px !important;
+  width: 340px !important;
+  min-width: 340px !important;
+  max-width: 340px !important;
   background-color: var(--color-app-bg);
   border-right: 1px solid var(--color-border);
   display: flex;
