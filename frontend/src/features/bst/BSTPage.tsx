@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
+import { Plus, Search, Maximize2, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
@@ -72,6 +73,7 @@ export const BSTPage: React.FC = () => {
   const [inputValue, setInputValue] = useState<string>('45');
   const [wordValue, setWordValue] = useState<string>('cat');
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
@@ -408,15 +410,12 @@ export const BSTPage: React.FC = () => {
         </button>
       </div>
 
-      <label className="predict-toggle-label ml-2">
-        <HelpCircle size={14} />
-        <span>Quiz Mode</span>
-        <input
-          type="checkbox"
-          checked={quizEnabled}
-          onChange={(e) => setQuizEnabled(e.target.checked)}
-        />
-      </label>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -465,6 +464,24 @@ export const BSTPage: React.FC = () => {
         activeId={treeCategory}
         onSelect={(id) => setTreeCategory(id as TreeCategory)}
         placeholder="Search tree structure or operation..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs with Pure Vector Icons */}
@@ -618,20 +635,6 @@ export const BSTPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <div className="predict-mode-group">
-            <label className="predict-toggle-label">
-              <HelpCircle size={16} />
-              <span>Quiz Mode</span>
-              <input
-                type="checkbox"
-                checked={quizEnabled}
-                onChange={(e) => setQuizEnabled(e.target.checked)}
-              />
-            </label>
-          </div>
-        </div>
       </div>
 
       {/* Main Learning Workspace */}
@@ -679,25 +682,27 @@ export const BSTPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className="bottom-row">
-          <MultiLanguageCodePanel
-            algorithmKey={treeCategory}
-            title="Tree Operations"
-            activeLine={bstStep?.codeLine}
-            variables={bstStep?.variables}
-            onCustomCodeRun={(arraySteps) => {
-              const bstSteps: BSTStep[] = arraySteps.map((step) => ({
-                nodes: [],
-                edges: [],
-                description: step.description,
-                codeLine: step.codeLine,
-                variables: step.variables || {},
-              }));
-              setActiveOperationSteps(bstSteps);
-              reset();
-            }}
-            currentArray={[10, 20, 30, 40, 50]}
-          />
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={treeCategory}
+              title="Tree Operations"
+              activeLine={bstStep?.codeLine}
+              variables={bstStep?.variables}
+              onCustomCodeRun={(arraySteps) => {
+                const bstSteps: BSTStep[] = arraySteps.map((step) => ({
+                  nodes: [],
+                  edges: [],
+                  description: step.description,
+                  codeLine: step.codeLine,
+                  variables: step.variables || {},
+                }));
+                setActiveOperationSteps(bstSteps);
+                reset();
+              }}
+              currentArray={[10, 20, 30, 40, 50]}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)}
