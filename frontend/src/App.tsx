@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -64,6 +64,14 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Resizable Sidebar Width (200px min - 450px max)
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('stem-studio-sidebar-width');
+    return saved ? Math.min(Math.max(parseInt(saved, 10), 200), 450) : 260;
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+
   const pathSegment = location.pathname.split('/')[2] || '';
 
   const handleSelectModule = (moduleId: string) => {
@@ -84,8 +92,47 @@ const DashboardLayout = () => {
   const activeModuleId = isModulePage ? pathSegment : (isDsaCategory ? 'dsa' : '');
   const activeCategoryId = isDsaCategory ? pathSegment : '';
 
+  // Handle Dragging Splitter to Resize Sidebar Width
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.min(Math.max(e.clientX, 200), 450);
+      setSidebarWidth(newWidth);
+      localStorage.setItem('stem-studio-sidebar-width', newWidth.toString());
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  const handleResetWidth = () => {
+    setSidebarWidth(260);
+    localStorage.setItem('stem-studio-sidebar-width', '260');
+  };
+
   return (
-    <div className="dashboard-shell">
+    <div className={`dashboard-shell ${isResizing ? 'is-resizing' : ''}`}>
       <Navbar onToggleSidebar={toggleSidebar} />
       <div className="dashboard-body">
         <TopicMenu
@@ -94,7 +141,20 @@ const DashboardLayout = () => {
           onSelectModule={handleSelectModule}
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
+          width={sidebarWidth}
         />
+        {/* Draggable Vertical Splitter handle */}
+        <div
+          className="sidebar-resizer"
+          onMouseDown={handleMouseDown}
+          onDoubleClick={handleResetWidth}
+          title="Drag to resize sidebar width • Double-click to reset"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar width"
+        >
+          <div className="resizer-handle-grip" />
+        </div>
         <main className="dashboard-main">
           <Routes>
             <Route index element={<DSAHub />} />
