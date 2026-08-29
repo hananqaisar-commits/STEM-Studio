@@ -60,15 +60,13 @@ export const MascotLoading: React.FC<MascotLoadingProps> = ({
         <div className="splash-status">
           <span className="splash-status__label splash-status__label--loading">
             {message}
-            <span className="splash-dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
           </span>
           <span className="splash-status__label splash-status__label--done">
             Ready when you are
           </span>
+          <div className="splash-shimmer-track">
+            <div className="splash-shimmer-fill" />
+          </div>
         </div>
       </div>
     </div>

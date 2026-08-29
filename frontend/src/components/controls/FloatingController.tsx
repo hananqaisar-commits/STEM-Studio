@@ -263,7 +263,7 @@ const ControlButton: React.FC<ControlButtonProps> = ({
   return (
     <button
       type="button"
-      className={`fc-btn ${variant === 'primary' ? 'fc-btn-primary' : ''}`}
+      className={`fc-icon-btn ${variant === 'primary' ? 'fc-icon-btn-primary' : ''}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={`${label} (${shortcut})`}
