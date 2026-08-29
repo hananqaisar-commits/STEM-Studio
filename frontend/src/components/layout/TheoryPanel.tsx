@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, ChevronDown, Lightbulb } from 'lucide-react';
+import {
+  GraduationCap,
+  ChevronDown,
+  Lightbulb,
+  Sparkles,
+  ListOrdered,
+  Code2,
+  Briefcase,
+  Zap
+} from 'lucide-react';
 import { THEORY_CONTENT, type TheoryTopic } from '../../data/theoryContent';
 import './Layout.css';
 
@@ -48,16 +57,17 @@ export const TheoryPanel: React.FC<TheoryPanelProps> = ({
     <div className={`theory-panel ${className}`}>
       <div className="theory-panel-header">
         <div className="theory-panel-title">
-          <BookOpen size={18} />
-          <span>Theory & Concepts</span>
+          <GraduationCap size={20} className="theory-panel-icon" />
+          <span>Theory & Core Concepts</span>
         </div>
         <p className="theory-panel-subtitle">{category.overview}</p>
         <div className="theory-panel-actions">
           <button className="theory-action-btn" onClick={expandAll} type="button">
-            Expand all
+            <Sparkles size={12} />
+            <span>Expand all</span>
           </button>
           <button className="theory-action-btn" onClick={collapseAll} type="button">
-            Collapse all
+            <span>Collapse all</span>
           </button>
         </div>
       </div>
@@ -100,7 +110,12 @@ const TheoryTopicItem: React.FC<TheoryTopicItemProps> = ({
       >
         <span className="theory-topic-name">{topic.name}</span>
         <span className="theory-topic-meta">
-          {topic.complexity && <span className="theory-topic-complexity">{topic.complexity}</span>}
+          {topic.complexity && (
+            <span className="theory-topic-complexity">
+              <Zap size={11} />
+              {topic.complexity}
+            </span>
+          )}
           <ChevronDown size={16} className="theory-topic-chevron" />
         </span>
       </button>
@@ -114,7 +129,7 @@ const TheoryTopicItem: React.FC<TheoryTopicItemProps> = ({
           {topic.keyPoints && topic.keyPoints.length > 0 && (
             <div className="theory-key-points">
               <div className="theory-subhead">
-                <Lightbulb size={14} />
+                <Lightbulb size={14} className="subhead-icon" />
                 <span>Key Points</span>
               </div>
               <ul>
@@ -128,6 +143,7 @@ const TheoryTopicItem: React.FC<TheoryTopicItemProps> = ({
           {topic.steps && topic.steps.length > 0 && (
             <div className="theory-steps">
               <div className="theory-subhead">
+                <ListOrdered size={14} className="subhead-icon" />
                 <span>Algorithm Steps</span>
               </div>
               <ol>
@@ -141,6 +157,7 @@ const TheoryTopicItem: React.FC<TheoryTopicItemProps> = ({
           {topic.example && (
             <div className="theory-example">
               <div className="theory-subhead">
+                <Sparkles size={14} className="subhead-icon" />
                 <span>Example Walkthrough</span>
               </div>
               <pre>{topic.example}</pre>
@@ -150,6 +167,7 @@ const TheoryTopicItem: React.FC<TheoryTopicItemProps> = ({
           {topic.codeSnippet && (
             <div className="theory-code">
               <div className="theory-subhead">
+                <Code2 size={14} className="subhead-icon" />
                 <span>Reference Implementation</span>
               </div>
               <pre>{topic.codeSnippet}</pre>
@@ -159,6 +177,7 @@ const TheoryTopicItem: React.FC<TheoryTopicItemProps> = ({
           {topic.applications && topic.applications.length > 0 && (
             <div className="theory-applications">
               <div className="theory-subhead">
+                <Briefcase size={14} className="subhead-icon" />
                 <span>Real-World Applications</span>
               </div>
               <ul>

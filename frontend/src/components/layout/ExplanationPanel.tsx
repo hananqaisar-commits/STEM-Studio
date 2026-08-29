@@ -111,36 +111,27 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
         )}
       </div>
 
-      {/* Complexity Cards */}
+      {/* Compact Horizontal Complexity Ribbon */}
       {(timeComplexity || spaceComplexity) && (
-        <div className="panel-section complexity-section">
-          <div className="complexity-grid">
-            {timeComplexity && (
-              <div className="complexity-card">
-                <div className="complexity-header">
-                  <Clock size={14} />
-                  <span>Time Complexity</span>
-                </div>
-                <div className="complexity-body">
-                  <span>Best: <strong>{timeComplexity.best}</strong></span>
-                  <span>Avg: <strong>{timeComplexity.average}</strong></span>
-                  <span>Worst: <strong>{timeComplexity.worst}</strong></span>
-                </div>
-              </div>
-            )}
-
-            {spaceComplexity && (
-              <div className="complexity-card">
-                <div className="complexity-header">
-                  <HardDrive size={14} />
-                  <span>Space Complexity</span>
-                </div>
-                <div className="complexity-body">
-                  <span>Space: <strong>{spaceComplexity}</strong></span>
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="complexity-ribbon">
+          {timeComplexity && (
+            <div className="complexity-pill">
+              <Clock size={13} className="complexity-icon" />
+              <span className="complexity-title">Time:</span>
+              <span className="complexity-badge">Best <strong>{timeComplexity.best}</strong></span>
+              <span className="complexity-sep">•</span>
+              <span className="complexity-badge">Avg <strong>{timeComplexity.average}</strong></span>
+              <span className="complexity-sep">•</span>
+              <span className="complexity-badge">Worst <strong>{timeComplexity.worst}</strong></span>
+            </div>
+          )}
+          {spaceComplexity && (
+            <div className="complexity-pill">
+              <HardDrive size={13} className="complexity-icon" />
+              <span className="complexity-title">Space:</span>
+              <span className="complexity-badge"><strong>{spaceComplexity}</strong></span>
+            </div>
+          )}
         </div>
       )}
 

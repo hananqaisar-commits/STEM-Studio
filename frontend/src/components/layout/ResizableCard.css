@@ -1,0 +1,77 @@
+/* ─── 4-Side Resizable Card Styling ───────────────────────────────────── */
+.resizable-card-container {
+  position: relative;
+  box-sizing: border-box;
+  transition: width 0.05s ease-out, height 0.05s ease-out;
+}
+
+.resizable-card-container:hover .resize-handle {
+  opacity: 1;
+}
+
+.resize-handle {
+  position: absolute;
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  user-select: none;
+}
+
+.handle-top {
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 7px;
+  cursor: ns-resize;
+}
+
+.handle-bottom {
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 7px;
+  cursor: ns-resize;
+}
+
+.handle-left {
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+}
+
+.handle-right {
+  right: -3px;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+}
+
+.handle-corner {
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  border-right: 3px solid var(--purple-400, #c084fc);
+  border-bottom: 3px solid var(--purple-400, #c084fc);
+  border-bottom-right-radius: 6px;
+  margin: 2px;
+}
+
+.handle-top:hover,
+.handle-bottom:hover {
+  background: rgba(168, 85, 247, 0.4);
+}
+
+.handle-left:hover,
+.handle-right:hover {
+  background: rgba(168, 85, 247, 0.4);
+}
+
+.handle-corner:hover {
+  border-color: var(--purple-600, #9333ea);
+  background: rgba(168, 85, 247, 0.3);
+}
