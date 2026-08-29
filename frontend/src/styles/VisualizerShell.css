@@ -527,8 +527,6 @@
   max-height: 480px;
   overflow: auto !important;
 }
-  flex: 1;
-}
 
 .ll-canvas-header,
 .graph-canvas-header,
