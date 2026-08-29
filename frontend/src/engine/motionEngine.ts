@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- *  STEM STUDIO — COMPLETE MOTION PRESET SYSTEM (21 PRIMITIVES)
+ *  STEM STUDIO — COMPLETE MOTION PRESET SYSTEM (21 PRIMITIVES + ALIASES)
  * ═══════════════════════════════════════════════════════════════════
  *
  *  Provides all 21 master animation primitives covering 104 syllabus topics:
@@ -177,7 +177,7 @@ export function collapseRemove(el: TargetElement, onComplete?: () => void) {
 // ---------------------------------------------------------------------------
 
 /** 7. Two elements being compared: brief synchronized scale pulse. */
-export function pulseCompare(elA: TargetElement, elB: TargetElement) {
+export function pulseCompare(elA: TargetElement, elB?: TargetElement) {
   [elA, elB].forEach((el) => {
     if (!el) return;
     el.animate(
@@ -348,7 +348,6 @@ export function windowSlide(
   durationMs = 400
 ) {
   if (!el) return;
-  const keyframes: Keyframe[] = [{}];
   const targetFrame: Keyframe = {};
   if (x !== undefined) targetFrame.transform = `translateX(${x}px)`;
   if (width !== undefined) targetFrame.width = `${width}px`;
@@ -495,6 +494,23 @@ export function trieDescend(nodeRefs: HTMLElement[], staggerMs = 150) {
 }
 
 // ---------------------------------------------------------------------------
+// Semantic Alias Helpers (Backward Compatibility Across All Renderers)
+// ---------------------------------------------------------------------------
+export const stackPush = dropSettle;
+export const stackPop = flyAway;
+export const peekPulse = (el: TargetElement) => flashState(el, '168,85,247');
+export const queueEnqueue = slideInQueue;
+export const queueDequeue = slideOutQueue;
+export const nodeEntrance = popIn;
+export const nodePulse = (el: TargetElement) => pulseCompare(el);
+export const barSwap = (elA: TargetElement, elB: TargetElement, distanceX: number, onComplete?: () => void) => {
+  if (!elA || !elB) return;
+  liftShiftDrop(elA, distanceX);
+  return liftShiftDrop(elB, -distanceX, onComplete);
+};
+export const barLiftAndShift = liftShiftDrop;
+
+// ---------------------------------------------------------------------------
 // Master Presets Object Export
 // ---------------------------------------------------------------------------
 export const presets = {
@@ -521,6 +537,17 @@ export const presets = {
   branchExpand,
   bucketDistribute,
   trieDescend,
+
+  // Aliases
+  stackPush,
+  stackPop,
+  peekPulse,
+  queueEnqueue,
+  queueDequeue,
+  nodeEntrance,
+  nodePulse,
+  barSwap,
+  barLiftAndShift,
 };
 
 export const MotionPresets = presets;
