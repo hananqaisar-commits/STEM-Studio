@@ -235,9 +235,9 @@
 }
 
 .topic-sidebar {
-  width: var(--sidebar-width, 260px);
-  min-width: 240px;
-  max-width: 450px;
+  width: 240px !important;
+  min-width: 240px !important;
+  max-width: 240px !important;
   background-color: var(--color-app-bg);
   border-right: 1px solid var(--color-border);
   display: flex;
@@ -246,7 +246,7 @@
   height: calc(100vh - var(--navbar-height));
   position: sticky;
   top: var(--navbar-height);
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 100;
   overflow-y: auto;
