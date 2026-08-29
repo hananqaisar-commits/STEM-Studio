@@ -252,19 +252,43 @@
 .sorting-workspace,
 .ll-workspace,
 .graph-workspace,
-.bs-workspace {
+.bs-workspace,
+.bst-workspace,
+.arrays-workspace,
+.strings-workspace,
+.stack-queue-workspace,
+.recursion-workspace,
+.backtracking-workspace,
+.greedy-workspace,
+.dp-workspace,
+.hash-maps-workspace,
+.trie-workspace,
+.complexity-workspace {
   display: grid;
-  grid-template-columns: 1fr var(--viz-side-col, 340px);
+  grid-template-columns: minmax(0, 1fr) var(--viz-side-col, 340px);
   gap: 1.5rem;
   align-items: start;
+  position: relative;
+  width: 100%;
 }
 
 @media (max-width: 1024px) {
   .sorting-workspace,
   .ll-workspace,
   .graph-workspace,
-  .bs-workspace {
-    grid-template-columns: 1fr;
+  .bs-workspace,
+  .bst-workspace,
+  .arrays-workspace,
+  .strings-workspace,
+  .stack-queue-workspace,
+  .recursion-workspace,
+  .backtracking-workspace,
+  .greedy-workspace,
+  .dp-workspace,
+  .hash-maps-workspace,
+  .trie-workspace,
+  .complexity-workspace {
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
 }
