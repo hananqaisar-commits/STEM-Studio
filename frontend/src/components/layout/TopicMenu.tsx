@@ -21,6 +21,8 @@ interface TopicMenuProps {
   onClose?: () => void;
   /** Currently active category route segment (e.g. 'sorting') */
   activeCategory?: string;
+  /** Resizable sidebar width in pixels */
+  width?: number;
 }
 
 /**
@@ -36,6 +38,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   isOpen = false,
   onClose,
   activeCategory = '',
+  width,
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -97,7 +100,10 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
         aria-hidden="true"
       />
 
-      <aside className={`topic-sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+      <aside
+        className={`topic-sidebar ${isOpen ? 'sidebar-open' : ''}`}
+        style={width ? ({ '--sidebar-width': `${width}px` } as React.CSSProperties) : undefined}
+      >
         {/* Dashboard back button */}
         <div className="sidebar-dashboard-row">
           <button className="sidebar-dashboard-btn" onClick={handleDashboardClick}>

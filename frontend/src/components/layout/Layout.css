@@ -234,7 +234,6 @@
   background-color: rgba(239, 68, 68, 0.1);
 }
 
-/* 2. Topic Menu Sidebar */
 .topic-sidebar {
   width: 260px;
   min-width: 200px;
@@ -243,7 +242,7 @@
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 1rem;
+  padding: 1.25rem 0.85rem;
   height: calc(100vh - var(--navbar-height));
   position: sticky;
   top: var(--navbar-height);
@@ -256,8 +255,8 @@
 }
 
 .sidebar-header {
-  margin-bottom: 1rem;
-  padding: 0 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0 0.4rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -319,9 +318,9 @@
 }
 
 .sidebar-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-size: 0.725rem;
+  font-weight: 800;
+  letter-spacing: 1.2px;
   color: var(--color-text-muted);
 }
 
@@ -365,35 +364,40 @@
 .topic-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
   overflow-y: auto;
+  padding-right: 2px;
 }
 
 .topic-card {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 0.875rem;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
   border-radius: 10px;
-  background: none;
-  border: 1px solid transparent;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
+  width: 100%;
 }
 
 .topic-card:hover {
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-elevated);
+  border-color: var(--color-border-strong);
+  transform: translateX(2px);
 }
 
 .topic-card.active {
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-elevated);
   border-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .topic-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   background-color: var(--color-app-bg);
   border: 1px solid var(--color-border);
@@ -414,17 +418,25 @@
 .topic-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .topic-name {
-  font-size: 0.875rem;
+  font-size: 0.825rem;
   font-weight: 600;
   color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topic-category {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Hamburger menu button — only visible on mobile/tablet */
@@ -447,6 +459,42 @@
   color: var(--color-text);
   border-color: var(--color-primary-hover);
   background-color: var(--color-surface);
+}
+
+/* Vertical Draggable Resizer Splitter Bar */
+.sidebar-resizer {
+  width: 6px;
+  height: calc(100vh - var(--navbar-height));
+  position: sticky;
+  top: var(--navbar-height);
+  background-color: var(--color-border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, width 0.15s ease;
+  z-index: 101;
+}
+
+.sidebar-resizer:hover,
+.dashboard-shell.is-resizing .sidebar-resizer {
+  background-color: var(--color-primary-hover);
+  width: 8px;
+}
+
+.resizer-handle-grip {
+  width: 2px;
+  height: 24px;
+  border-radius: 2px;
+  background-color: var(--color-text-muted);
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-resizer:hover .resizer-handle-grip {
+  opacity: 0.9;
+  background-color: #ffffff;
 }
 
 /* Dashboard layout classes */

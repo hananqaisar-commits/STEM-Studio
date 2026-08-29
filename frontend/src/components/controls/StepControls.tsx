@@ -25,8 +25,8 @@ export const StepControls: React.FC<StepControlsProps> = ({
         className="control-btn"
         onClick={onReset}
         disabled={disabled}
-        title="Reset algorithm to step 0"
-        aria-label="Reset"
+        title="Reset algorithm (R)"
+        aria-label="Reset algorithm (R)"
       >
         <RotateCcw size={18} />
       </button>
@@ -35,8 +35,8 @@ export const StepControls: React.FC<StepControlsProps> = ({
         className="control-btn"
         onClick={onStepBack}
         disabled={disabled || !canStepBack}
-        title="Step Backward"
-        aria-label="Step Backward"
+        title="Step Backward (←)"
+        aria-label="Step Backward (←)"
       >
         <SkipBack size={18} />
       </button>
@@ -45,8 +45,8 @@ export const StepControls: React.FC<StepControlsProps> = ({
         className="control-btn"
         onClick={onStepForward}
         disabled={disabled || !canStepForward}
-        title="Step Forward"
-        aria-label="Step Forward"
+        title="Step Forward (→)"
+        aria-label="Step Forward (→)"
       >
         <SkipForward size={18} />
       </button>

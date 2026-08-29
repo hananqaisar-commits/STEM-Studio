@@ -32,7 +32,8 @@ export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
       className={`control-btn play-pause-btn ${isPlaying ? 'is-playing' : ''}`}
       onClick={handleClick}
       disabled={disabled}
-      aria-label={isPlaying ? 'Pause execution' : 'Play execution'}
+      title={isPlaying ? 'Pause execution (Space)' : 'Play execution (Space)'}
+      aria-label={isPlaying ? 'Pause execution (Space)' : 'Play execution (Space)'}
     >
       {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: 2 }} />}
     </button>
