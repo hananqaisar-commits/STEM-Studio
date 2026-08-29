@@ -35,6 +35,7 @@ import type { TrieNodeStructure } from './trieEngine';
 
 import './BST.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList, parseStringList } from '../../utils/batchInputParser';
 
 type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie';
 
@@ -70,8 +71,9 @@ export const BSTPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  const [inputValue, setInputValue] = useState<string>('45');
-  const [wordValue, setWordValue] = useState<string>('cat');
+  const [inputValue, setInputValue] = useState<string>('20, 10, 30, 5, 15');
+  const [wordValue, setWordValue] = useState<string>('cat, car, dog');
+  const [inputError, setInputError] = useState<string | null>(null);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
@@ -154,21 +156,36 @@ export const BSTPage: React.FC = () => {
     revisionData: buildRevisionData(revisionKey),
   });
 
-  // Operations for BST
+  // ─── BATCH OPERATIONS FOR BST ─────────────────────────────────────────────
   const handleBSTInsert = () => {
-    const num = Number(inputValue);
-    if (isNaN(num)) return;
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
     setRevisionKey('insert');
-    const { steps, newTree } = generateBSTInsertSteps(bstTree, num);
-    setBstTree(newTree);
-    setActiveOperationSteps(steps);
+
+    let currentTree = bstTree;
+    const allSteps: BSTStep[] = [];
+
+    for (const num of nums) {
+      const { steps, newTree } = generateBSTInsertSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+
+    setBstTree(currentTree);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
     if (!quizEnabled) play();
   };
 
   const handleBSTSearch = () => {
-    const num = Number(inputValue);
+    const parseRes = parseNumberList(inputValue);
+    const num = parseRes.isValid && parseRes.values.length > 0 ? parseRes.values[0] : Number(inputValue);
     if (isNaN(num)) return;
     setRevisionKey('search');
     const steps = generateBSTSearchSteps(bstTree, num);
@@ -178,30 +195,58 @@ export const BSTPage: React.FC = () => {
     if (!quizEnabled) play();
   };
 
-  // Operations for AVL
+  // ─── BATCH OPERATIONS FOR AVL ─────────────────────────────────────────────
   const handleAVLInsert = () => {
-    const num = Number(inputValue);
-    if (isNaN(num)) return;
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
     setRevisionKey('avlInsert');
-    const { steps, newTree } = generateAVLInsertSteps(avlTree, num);
-    setAvlTree(newTree);
-    setActiveOperationSteps(steps);
+
+    let currentTree = avlTree;
+    const allSteps: BSTStep[] = [];
+
+    for (const num of nums) {
+      const { steps, newTree } = generateAVLInsertSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+
+    setAvlTree(currentTree);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
-  // Operations for Heap
+  // ─── BATCH OPERATIONS FOR HEAP ────────────────────────────────────────────
   const handleHeapInsert = () => {
-    const num = Number(inputValue);
-    if (isNaN(num)) return;
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
     setRevisionKey('heapInsert');
-    const { steps, newHeap } = generateHeapInsertSteps(heapArray, num, heapType);
-    setHeapArray(newHeap);
-    setActiveOperationSteps(steps);
+
+    let currentHeap = [...heapArray];
+    const allSteps: BSTStep[] = [];
+
+    for (const num of nums) {
+      const { steps, newHeap } = generateHeapInsertSteps(currentHeap, num, heapType);
+      allSteps.push(...steps);
+      currentHeap = newHeap;
+    }
+
+    setHeapArray(currentHeap);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
   const handleHeapExtract = () => {
@@ -211,29 +256,103 @@ export const BSTPage: React.FC = () => {
     setActiveOperationSteps(steps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
-  // Operations for Trie
+  // ─── BATCH OPERATIONS FOR TRIE ────────────────────────────────────────────
   const handleTrieInsert = () => {
-    if (!wordValue.trim()) return;
+    const parseRes = parseStringList(wordValue, { lowercase: true });
+    const words = parseRes.isValid ? parseRes.values : wordValue.split(/[\s,;]+/).filter(Boolean);
+    if (words.length === 0) {
+      setInputError('Please enter valid word(s)');
+      return;
+    }
+    setInputError(null);
     setRevisionKey('trieInsert');
-    const { steps, newRoot } = generateTrieInsertSteps(trieRoot, wordValue.trim());
-    setTrieRoot(newRoot);
-    setActiveOperationSteps(steps);
+
+    let currentRoot = trieRoot;
+    const allSteps: BSTStep[] = [];
+
+    for (const w of words) {
+      const { steps, newRoot } = generateTrieInsertSteps(currentRoot, w);
+      allSteps.push(...steps);
+      currentRoot = newRoot;
+    }
+
+    setTrieRoot(currentRoot);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
   const handleTrieSearch = () => {
-    if (!wordValue.trim()) return;
+    const parseRes = parseStringList(wordValue, { lowercase: true });
+    const query = parseRes.isValid && parseRes.values.length > 0 ? parseRes.values[0] : wordValue.trim();
+    if (!query) return;
     setRevisionKey('trieSearch');
-    const steps = generateTrieSearchSteps(trieRoot, wordValue.trim());
+    const steps = generateTrieSearchSteps(trieRoot, query);
     setActiveOperationSteps(steps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
+  };
+
+  // ─── BATCH BUILD COMPLETE DATASET FROM SCRATCH ────────────────────────────
+  const handleBuildTreeFromScratch = () => {
+    setInputError(null);
+    if (treeCategory === 'bst') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [20, 10, 30, 5, 15];
+      let currentTree: BSTTreeStructure | undefined = undefined;
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newTree } = generateBSTInsertSteps(currentTree, num);
+        allSteps.push(...steps);
+        currentTree = newTree;
+      }
+      setBstTree(currentTree);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'avl') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [30, 20, 40, 10, 25, 35, 50];
+      let currentTree: AVLNodeStructure | undefined = undefined;
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newTree } = generateAVLInsertSteps(currentTree, num);
+        allSteps.push(...steps);
+        currentTree = newTree;
+      }
+      setAvlTree(currentTree);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'heap') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [40, 20, 30, 10, 50];
+      let currentHeap: number[] = [];
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newHeap } = generateHeapInsertSteps(currentHeap, num, heapType);
+        allSteps.push(...steps);
+        currentHeap = newHeap;
+      }
+      setHeapArray(currentHeap);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'trie') {
+      const parseRes = parseStringList(wordValue, { lowercase: true });
+      const words = parseRes.isValid ? parseRes.values : ['cat', 'car', 'dog'];
+      let currentRoot = createTrieRoot();
+      const allSteps: BSTStep[] = [];
+      for (const w of words) {
+        const { steps, newRoot } = generateTrieInsertSteps(currentRoot, w);
+        allSteps.push(...steps);
+        currentRoot = newRoot;
+      }
+      setTrieRoot(currentRoot);
+      setActiveOperationSteps(allSteps);
+    }
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
   };
 
   // Preset Handlers Across All Categories
@@ -328,12 +447,12 @@ export const BSTPage: React.FC = () => {
     <div className="fs-floating-controls">
       {treeCategory !== 'trie' ? (
         <input
-          type="number"
+          type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           className="bst-input"
-          style={{ width: '75px' }}
-          placeholder="Val"
+          style={{ width: '130px' }}
+          placeholder="e.g. 20, 10, 30"
         />
       ) : (
         <input
@@ -341,8 +460,8 @@ export const BSTPage: React.FC = () => {
           value={wordValue}
           onChange={(e) => setWordValue(e.target.value)}
           className="bst-input"
-          style={{ width: '85px' }}
-          placeholder="Word"
+          style={{ width: '130px' }}
+          placeholder="e.g. cat, car"
         />
       )}
 
@@ -525,29 +644,41 @@ export const BSTPage: React.FC = () => {
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
           {treeCategory !== 'trie' ? (
-            <div className="bst-input-group">
-              <span>Value:</span>
+            <div className="bst-input-group" title="Enter comma-separated values (e.g. 20, 10, 30, 5, 15)">
+              <span style={{ fontWeight: 600 }}>Values:</span>
               <input
-                type="number"
+                type="text"
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  if (inputError) setInputError(null);
+                }}
                 className="bst-input"
-                placeholder="e.g. 45"
+                placeholder="e.g. 20, 10, 30, 5, 15"
+                style={{ minWidth: '150px' }}
               />
             </div>
           ) : (
-            <div className="bst-input-group">
-              <span>Word:</span>
+            <div className="bst-input-group" title="Enter comma-separated words (e.g. cat, car, dog)">
+              <span style={{ fontWeight: 600 }}>Words:</span>
               <input
                 type="text"
                 value={wordValue}
-                onChange={(e) => setWordValue(e.target.value)}
+                onChange={(e) => {
+                  setWordValue(e.target.value);
+                  if (inputError) setInputError(null);
+                }}
                 className="bst-input"
-                placeholder="e.g. cat"
-                style={{ width: '110px' }}
+                placeholder="e.g. cat, car, dog"
+                style={{ minWidth: '150px' }}
               />
             </div>
           )}
+
+          <button className="bst-btn btn-mode" onClick={handleBuildTreeFromScratch} title="Build dataset sequentially from scratch">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Build Dataset</span>
+          </button>
 
           {treeCategory === 'bst' && (
             <>

@@ -123,7 +123,7 @@ export function generateInsertHeadSteps(
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
   const oldHeadId = nodes.length > 0 ? nodes[0].id : null;
-  const newId = `node-${Date.now() % 10000}`;
+  const newId = `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   // Step 1: Allocate new node
   const newNode: ListNodeItem = {
@@ -205,20 +205,19 @@ export function generateInsertTailSteps(
   }
 
   const steps: LinkedListStep[] = [];
-  const nodes = cloneNodes(currentNodes);
-  const newId = `node-${Date.now() % 10000}`;
-  const headId = nodes[0].id;
-  const tailId = nodes[nodes.length - 1].id;
+  const newId = `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const headId = currentNodes[0].id;
+  const tailId = currentNodes[currentNodes.length - 1].id;
 
   // Step 1: Initial list state
-  assignPointerLabels(nodes, { head: headId, tail: tailId });
+  assignPointerLabels(currentNodes, { head: headId, tail: tailId });
   steps.push({
-    nodes: cloneNodes(nodes),
+    nodes: cloneNodes(currentNodes),
     headId,
     tailId,
     pointers: { head: headId, tail: tailId },
     phase: 'Locate Tail',
-    explanation: `Locating the tail node of the list (value: ${nodes[nodes.length - 1].value}).`,
+    explanation: `Locating the tail node of the list (value: ${currentNodes[currentNodes.length - 1].value}).`,
     codeLine: 1,
     highlightedNodeIds: [tailId],
     listType: 'singly',
@@ -232,7 +231,7 @@ export function generateInsertTailSteps(
     status: 'new',
     pointerLabels: ['NEW_NODE'],
   };
-  const step2Nodes = [...nodes, newNode];
+  const step2Nodes = [...currentNodes, newNode];
   assignPointerLabels(step2Nodes, { head: headId, tail: tailId, new: newId });
 
   steps.push({
@@ -717,7 +716,7 @@ export function generateDoublyInsertHeadSteps(
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
   const oldHeadId = nodes.length > 0 ? nodes[0].id : null;
-  const newId = `node-${Date.now() % 10000}`;
+  const newId = `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   const newNode: ListNodeItem = {
     id: newId,

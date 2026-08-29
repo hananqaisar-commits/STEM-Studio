@@ -364,6 +364,7 @@
   flex-direction: column;
   gap: 1rem;
   min-width: 0; /* lets the canvas shrink instead of overflowing the grid */
+  min-height: 0;
   position: relative;
 }
 
@@ -424,6 +425,7 @@
   box-shadow: var(--shadow-md);
   height: 100%;
   min-height: 350px;
+  flex: 1;
 }
 
 .ll-canvas-header,

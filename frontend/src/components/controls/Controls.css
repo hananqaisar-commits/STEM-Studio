@@ -222,8 +222,9 @@
   }
 
   .fc-btn {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 42px;
+    padding-top: 6px;
     border-radius: 9px;
   }
 }

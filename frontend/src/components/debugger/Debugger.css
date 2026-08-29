@@ -764,7 +764,6 @@
   border-top: 1px solid var(--color-border);
 }
 
-.scope-box,
 .stack-box {
   border: 1px solid var(--color-border);
   border-radius: 9px;
@@ -772,7 +771,6 @@
   overflow: hidden;
 }
 
-.scope-header,
 .stack-header {
   display: flex;
   align-items: center;
@@ -790,21 +788,20 @@
   transition: background 0.15s ease;
 }
 
-.scope-header:hover,
 .stack-header:hover {
   background: var(--color-surface-elevated);
 }
 
-.scope-caret {
+.stack-caret {
   color: var(--color-text-muted);
   transition: transform 0.2s ease;
 }
 
-.scope-caret.collapsed {
+.stack-caret.collapsed {
   transform: rotate(-90deg);
 }
 
-.scope-badge {
+.stack-badge {
   margin-left: auto;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
@@ -815,48 +812,6 @@
   letter-spacing: 0.02em;
   text-transform: none;
 }
-
-.scope-pills-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  padding: 0.6rem 0.65rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.scope-empty {
-  font-size: 0.72rem;
-  font-style: italic;
-  color: var(--color-text-muted);
-}
-
-.scope-pill {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  font-family: 'Fira Code', 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-}
-
-.pill-name {
-  padding: 0.2rem 0.45rem;
-  background: var(--color-surface-elevated);
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
-.pill-val {
-  padding: 0.2rem 0.5rem;
-  background: var(--color-app-bg);
-  color: var(--color-text);
-  font-weight: 700;
-}
-
-.pill-val.val-type-number { color: var(--success-color, #22c55e); }
-.pill-val.val-type-boolean { color: var(--error-color, #ef4444); }
-.pill-val.val-type-string { color: #eab308; }
 
 .stack-frames {
   display: flex;

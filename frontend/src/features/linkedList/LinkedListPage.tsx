@@ -43,6 +43,7 @@ import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './LinkedList.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList } from '../../utils/batchInputParser';
 
 interface AlgorithmMeta {
   id: LinkedListCategory;
@@ -70,7 +71,8 @@ export const LinkedListPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  const [inputValue, setInputValue] = useState<string>('42');
+  const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40');
+  const [inputError, setInputError] = useState<string | null>(null);
 
   // Interactive & Quiz Modes
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -164,21 +166,102 @@ export const LinkedListPage: React.FC = () => {
     }
   };
 
-  // ─── ACTION HANDLERS ────────────────────────────────────────────────────────
+  // ─── ACTION HANDLERS (UNIVERSAL BATCH SEQUENTIAL EXECUTION) ─────────────────
 
   const handleInsertHead = () => {
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps =
-      category === 'doubly'
-        ? generateDoublyInsertHeadSteps(baseNodes, val)
-        : generateInsertHeadSteps(baseNodes, val);
-    setActiveSteps(steps);
+    const res = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = res.isValid && res.values.length > 0
+      ? res.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+
+    if (rawValues.length === 0) {
+      setInputError('Please enter at least one value');
+      return;
+    }
+    setInputError(null);
+
+    let current = [...baseNodes];
+    const allSteps: LinkedListStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps =
+        category === 'doubly'
+          ? generateDoublyInsertHeadSteps(current, val)
+          : generateInsertHeadSteps(current, val);
+      allSteps.push(...opSteps);
+      if (opSteps.length > 0) {
+        current = opSteps[opSteps.length - 1].nodes;
+      }
+    }
+
+    setBaseNodes(current);
+    setActiveSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    play();
   };
 
   const handleInsertTail = () => {
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps = generateInsertTailSteps(baseNodes, val);
-    setActiveSteps(steps);
+    const res = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = res.isValid && res.values.length > 0
+      ? res.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+
+    if (rawValues.length === 0) {
+      setInputError('Please enter at least one value');
+      return;
+    }
+    setInputError(null);
+
+    let current = [...baseNodes];
+    const allSteps: LinkedListStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps = generateInsertTailSteps(current, val);
+      allSteps.push(...opSteps);
+      if (opSteps.length > 0) {
+        current = opSteps[opSteps.length - 1].nodes;
+      }
+    }
+
+    setBaseNodes(current);
+    setActiveSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    play();
+  };
+
+  const handleBuildList = () => {
+    const res = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = res.isValid && res.values.length > 0
+      ? res.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+
+    if (rawValues.length === 0) {
+      setInputError('Please enter at least one value');
+      return;
+    }
+    setInputError(null);
+
+    let current: ListNodeItem[] = [];
+    const allSteps: LinkedListStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps =
+        category === 'doubly'
+          ? generateInsertTailSteps(current, val)
+          : generateInsertTailSteps(current, val);
+      allSteps.push(...opSteps);
+      if (opSteps.length > 0) {
+        current = opSteps[opSteps.length - 1].nodes;
+      }
+    }
+
+    setBaseNodes(current);
+    setActiveSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    play();
   };
 
   const handleDeleteHead = () => {
@@ -314,23 +397,30 @@ export const LinkedListPage: React.FC = () => {
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
       <div className="bst-input-group">
-        <span>Val:</span>
+        <span>Values:</span>
         <input
           type="text"
           className="bst-input"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
+          placeholder="e.g. 10, 20, 30"
+          style={{ width: '130px' }}
         />
       </div>
 
-      <button className="bst-btn btn-insert" onClick={handleInsertHead}>
-        <Plus size={14} />
-        <span>Head</span>
+      <button className="bst-btn btn-insert" onClick={handleBuildList} title="Build complete list sequentially">
+        <Sparkles size={14} />
+        <span>Build</span>
       </button>
 
       <button className="bst-btn btn-insert" onClick={handleInsertTail}>
         <Plus size={14} />
         <span>Tail</span>
+      </button>
+
+      <button className="bst-btn btn-insert" onClick={handleInsertHead}>
+        <Plus size={14} />
+        <span>Head</span>
       </button>
 
       <button className="bst-btn btn-search" onClick={handleDeleteHead}>
@@ -438,27 +528,37 @@ export const LinkedListPage: React.FC = () => {
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="ll-toolbar">
         <div className="ll-toolbar-actions">
-          {/* Custom Input */}
-          <div className="ll-input-group">
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
-              Val:
+          {/* Batch Custom Input */}
+          <div className="ll-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>
+              Values:
             </span>
             <input
               type="text"
               className="ll-input"
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                if (inputError) setInputError(null);
+              }}
+              placeholder="e.g. 10, 20, 30, 40"
+              style={{ width: '160px' }}
             />
           </div>
 
-          <button className="ll-btn ll-btn-primary" onClick={handleInsertHead}>
-            <Plus size={14} />
-            <span>Insert Head</span>
+          <button className="ll-btn ll-btn-primary" onClick={handleBuildList} title="Build complete list sequentially">
+            <Sparkles size={14} />
+            <span>Build List</span>
           </button>
 
-          <button className="ll-btn ll-btn-secondary" onClick={handleInsertTail}>
+          <button className="ll-btn ll-btn-secondary" onClick={handleInsertTail} title="Insert values at tail sequentially">
             <Plus size={14} />
             <span>Insert Tail</span>
+          </button>
+
+          <button className="ll-btn ll-btn-secondary" onClick={handleInsertHead} title="Insert values at head sequentially">
+            <Plus size={14} />
+            <span>Insert Head</span>
           </button>
 
           <button className="ll-btn ll-btn-danger" onClick={handleDeleteHead}>
