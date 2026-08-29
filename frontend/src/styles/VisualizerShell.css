@@ -428,6 +428,76 @@
    a page-level header. Single unified white background and purple border
    contract across all 110+ algorithms in both normal and fullscreen mode. */
 
+/* ─── UNIFIED STUDIO RIBBON & TOOLBAR CONTROLS ─────────────────────
+   Unifies fragmented floating island cards into a sleek, professional IDE
+   studio workbench pane across all 144 algorithms. */
+
+.ll-tabs-bar,
+.bs-tabs-bar,
+.bst-tabs-bar,
+.sq-tabs-bar,
+.category-tabs-bar,
+.ll-toolbar,
+.bs-toolbar,
+.bst-toolbar,
+.sorting-control-bar,
+.stack-queue-toolbar,
+.array-toolbar,
+.greedy-toolbar,
+.hashmaps-toolbar,
+.strings-toolbar {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  padding: 0.5rem 0.85rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+}
+
+.ll-tab-btn,
+.bs-tab-btn,
+.bst-tab-btn,
+.sq-tab-btn,
+.tab-btn {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--color-text-secondary) !important;
+  border-radius: 8px !important;
+  padding: 0.45rem 0.85rem !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+}
+
+.ll-tab-btn:hover,
+.bs-tab-btn:hover,
+.bst-tab-btn:hover,
+.sq-tab-btn:hover,
+.tab-btn:hover {
+  background: rgba(168, 85, 247, 0.08) !important;
+  color: var(--color-text) !important;
+}
+
+.ll-tab-btn.active,
+.bs-tab-btn.active,
+.bst-tab-btn.active,
+.sq-tab-btn.active,
+.tab-btn.active {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.18), rgba(99, 102, 241, 0.18)) !important;
+  border-color: rgba(168, 85, 247, 0.4) !important;
+  color: #a855f7 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.12) !important;
+}
+
+.ll-canvas-header,
+.bs-canvas-header,
+.bst-canvas-header,
+.graph-canvas-header,
+.sorting-canvas-header {
+  background: rgba(168, 85, 247, 0.04) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  padding: 0.65rem 1.1rem !important;
+}
+
 .ll-canvas-card,
 .graph-canvas-card,
 .bs-canvas-card,
@@ -448,8 +518,7 @@
 .strings-canvas-card {
   display: flex;
   flex-direction: column;
-  background-color: #ffffff !important;
-  background: #ffffff !important;
+  background: var(--color-surface) !important;
   border: 1.5px solid var(--purple-300, #d8b4fe) !important;
   border-radius: 16px;
   box-shadow: var(--shadow-md);
@@ -457,6 +526,7 @@
   min-height: 320px;
   max-height: 480px;
   overflow: auto !important;
+}
   flex: 1;
 }
 
