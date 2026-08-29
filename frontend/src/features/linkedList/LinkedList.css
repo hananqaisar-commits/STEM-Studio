@@ -315,11 +315,16 @@
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 2.5rem 1.5rem;
-  overflow: auto;
-  min-height: 320px;
+  justify-content: flex-start;
+  padding: 2rem 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  max-height: 440px;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
   position: relative;
+  box-sizing: border-box;
 }
 
 /* ─── LINKED LIST SVG & HTML RENDERER ─────────────────────────────── */
@@ -328,7 +333,10 @@
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 2rem 1rem;
+  padding: 2.5rem 1rem 1.5rem 1rem;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
 }
 
 .ll-node-wrapper {
