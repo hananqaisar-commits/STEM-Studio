@@ -80,7 +80,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
 
   const locked = phase === 'revealed';
   const optionCount = question.options.length;
-  const isChallenge = cadence === 'intensive';
   const isConcept = cadence === 'light';
 
   /* Move focus to the card when it opens. */
@@ -154,8 +153,8 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
       ? 'Watch the step'
       : continueLabel;
 
-  /* Timer bar width percentage (15s max). */
-  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / 15) * 100) : 100;
+  /* Timer bar width percentage (the shared Challenge limit is 10 seconds). */
+  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / 10) * 100) : 100;
   const timerUrgent = timeRemaining !== null && timeRemaining <= 5;
 
   /* Progress percentage for Guided mode. */
@@ -164,7 +163,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   return (
     <section className="quiz-panel" aria-label="Prediction checkpoint">
       {/* Timer bar — Challenge mode only */}
-      {isChallenge && timeRemaining !== null && (
+      {timeRemaining !== null && (
         <div className={`quiz-timer-bar${timerUrgent ? ' is-urgent' : ''}`}>
           <div
             className="quiz-timer-fill"

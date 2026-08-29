@@ -35,7 +35,7 @@ import {
    Three modes with differentiated features:
    - Concept (light): weight-1 only, insight boxes, no timer
    - Guided (normal): weight 1-2, hints, progress bar
-   - Challenge (intensive): weight 1-3, 15s timer, streak multipliers
+   - Challenge (intensive): weight 1-3, 10s timer, streak multipliers
    ─────────────────────────────────────────────────────────────────── */
 
 export type QuizPhase = 'idle' | 'revision' | 'asking' | 'retrying' | 'revealed' | 'report';
@@ -249,15 +249,13 @@ export function useQuizSession({
     setWasCorrect(false);
     setPhase('asking');
 
-    /* Start timer in Challenge mode. */
-    if (cadence === 'intensive') {
-      setTimeRemaining(15);
-    }
-  }, [enabled, phase, active, currentStepIndex, cadence]);
+    /* Every quiz question has the same 10-second response window. */
+    setTimeRemaining(10);
+  }, [enabled, phase, active, currentStepIndex]);
 
   /* Challenge mode timer countdown. */
   useEffect(() => {
-    if (phase !== 'asking' || cadence !== 'intensive' || timeRemaining === null) {
+    if (phase !== 'asking' || timeRemaining === null) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -297,7 +295,7 @@ export function useQuizSession({
         timerRef.current = null;
       }
     };
-  }, [phase, cadence, timeRemaining]);
+  }, [phase, timeRemaining]);
 
   /* Dismiss if the student navigates off the question's step using the
      player bar (step back, seek, reset). Without this the panel would
