@@ -440,3 +440,44 @@ Use `maskNarration(step.description, quizSession.phase)` to prevent step narrati
 - [ ] Retry resets session, Harder Mode bumps cadence
 - [ ] Same behavior across all 14 categories
 - [ ] Works in all 5 themes
+
+---
+
+## 17. Premium UI/UX & Renderer Contract Standards (Mandatory for All Future Modules)
+
+To maintain a luxury, high-end "White-Purple" aesthetic and prevent design regressions across all 110+ algorithms and any future modules, the following rules are non-negotiable:
+
+### 17A. Visualizer Shell Contract
+- **White Background Contract:** All visualizer containers (`*-canvas-card`, `*-canvas-container`) MUST use background `#ffffff !important` with border `1.5px solid var(--purple-300, #d8b4fe) !important` and `border-radius: 16px`.
+- **Title Inset Guarantee:** Headers (`*-canvas-header`) MUST use `padding: 0.85rem 1.5rem 0.85rem 1.75rem !important` (1.75rem left inset) so titles/controls are never cut off.
+- **Viewport Scrollable Bounds:** Every canvas viewport MUST enforce internal scrolling (`overflow: auto` or `overflow-x: auto`) to prevent UI overflow or clipping.
+
+### 17B. Unified Renderer Color & Shape Palette
+- **Bars & Tubes (Sorting, Arrays, Searching, Heaps):**
+  - Default: Glass Purple (`linear-gradient(180deg, #c084fc, #9333ea)`).
+  - Active/Comparing: Electric Violet Glow (`linear-gradient(180deg, #a855f7, #7e22ce)` + `18px glow`).
+  - Swapping/Key Focus: Amber Gold Glow (`linear-gradient(180deg, #fbbf24, #d97706)` + warm glow).
+  - Sorted/Completed: Deep Emerald Mint (`linear-gradient(180deg, #34d399, #059669)`).
+- **Nodes & Circles (BST, Trees, Graphs, Recursion, Linked List, Trie):**
+  - Default: `#ffffff` pill circle with `2.5px solid #c084fc` purple border, `#581c87` JetBrains Mono font, and soft shadow.
+  - Active Node: Gradient purple fill (`#a855f7`), white crisp text.
+  - Target Node: Gradient gold fill (`#f59e0b`).
+  - Completed Node: Emerald mint fill (`#10b981`).
+- **Plates & Disks (Tower of Hanoi, Recursion Stack, Stack Items):**
+  - High-contrast gradient disk plates (`#c084fc` to `#7e22ce`) with rounded glass corners (`border-radius: 10px`), white inner borders, and bold white text.
+- **Cells & Grid Tiles (DP Grids, Backtracking, String Grids):**
+  - `#ffffff` tile, `1.5px solid var(--purple-200, #e9d5ff)` border, JetBrains Mono font. Active: Gradient violet (`#a855f7`).
+- **Edges & Lines (Graph Edges, Tree Links, Pointer Arrows):**
+  - Smooth `2.5px` purple stroke (`#c084fc`), scaling to `3.5px` glowing stroke (`#9333ea`) on active step execution.
+
+### 17C. Floating Controller & Action Bar
+- **Icon-Only Circular Controls:** Player floating controls MUST use frameless, circular icon buttons (`.fc-icon-btn`). Never use bulky text buttons inside floating overlays.
+- **Action Group Alignment:** Header controls (Quiz Mode toggle, Hide Debugger toggle, Fullscreen toggle) MUST sit inside `.viz-actions` pinned flush to the top right of the canvas header.
+
+### 17D. Footer & Explanation Panels
+- **Horizontal Complexity Ribbon:** Complexity metrics MUST be rendered in a single horizontal ribbon (`⚡ Time: Best • Avg • Worst | 💾 Space`). Never stack complexity cards vertically in 3+ columns.
+- **Lucide Vector Icons Only:** Always import vector Lucide icons (`GraduationCap`, `Sparkles`, `Lightbulb`, `ListOrdered`, `Code2`, `Briefcase`, `Zap`). Raw text emojis or unicode characters are strictly prohibited for UI icons.
+
+### 17E. Custom Code Core Learning Engine
+- Custom code execution engines (`codeExecutionEngine.ts`) MUST capture logic steps even when user code fails or produces incorrect output, allowing students to visually trace bugs and learn step-by-step.
+

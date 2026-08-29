@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Layers, Plus, Trash2, CheckCircle2, Filter, Maximize2, Sparkles
+  Layers, Plus, Trash2, CheckCircle2, Maximize2, Sparkles
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
+import { ResizableStudioLayout } from '../../components/layout/ResizableStudioLayout';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
 import { buildStackQueueCheckpoints, buildRevisionData } from './quizAdapter';
@@ -1218,46 +1219,7 @@ export const StackQueuePage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs Bar Matching BST */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs">
-          <button
-            className={`category-tab ${['stack', 'queue', 'circularQueue'].includes(category) ? 'active' : ''}`}
-            onClick={() => {
-              setCategory('stack');
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <Layers size={16} />
-            <span>Core Primitives (LIFO & FIFO)</span>
-          </button>
 
-          <button
-            className={`category-tab ${PROBLEMS_LIST.filter((p) => p.group === 'Stack').some((p) => p.id === category) ? 'active' : ''}`}
-            onClick={() => {
-              setCategory('validParentheses');
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <CheckCircle2 size={16} />
-            <span>10 Stack Classical Problems</span>
-          </button>
-
-          <button
-            className={`category-tab ${PROBLEMS_LIST.filter((p) => p.group === 'Queue').some((p) => p.id === category) ? 'active' : ''}`}
-            onClick={() => {
-              setCategory('queueViaStacks');
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <Filter size={16} />
-            <span>10 Queue Classical Problems</span>
-          </button>
-        </div>
-      </div>
 
       {/* Operations Control Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
@@ -1336,69 +1298,74 @@ export const StackQueuePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Workspace Layout (Canvas + Code Debugger) */}
-      <div className="sorting-workspace scene-workspace">
-        <div className="renderer-section">
-          <div className="bst-canvas-card">
-            <div className="bst-canvas-header">
-              <div className="ll-canvas-title">
-                <Layers size={16} className="text-accent" />
-                <span>
-                  {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
-                </span>
+      {/* Main Workspace Layout (Canvas + Drag Splitter + Quiz Dock + Code Debugger) */}
+      <ResizableStudioLayout
+        initialLeftPercent={68}
+        leftContent={
+          <div className="renderer-section" style={{ height: '100%' }}>
+            <div className="bst-canvas-card">
+              <div className="bst-canvas-header">
+                <div className="ll-canvas-title">
+                  <Layers size={16} className="text-accent" />
+                  <span>
+                    {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
+                  </span>
+                </div>
+                <button
+                  className="bst-btn btn-fullscreen"
+                  onClick={() => setIsFullScreenOpen(true)}
+                  title="Full Screen Canvas View"
+                >
+                  <Maximize2 size={14} />
+                </button>
               </div>
-              <button
-                className="bst-btn btn-fullscreen"
-                onClick={() => setIsFullScreenOpen(true)}
-                title="Full Screen Canvas View"
-              >
-                <Maximize2 size={14} />
-              </button>
+
+              {renderCanvas()}
             </div>
 
-            {renderCanvas()}
-          </div>
-
-          <FloatingController
-            isPlaying={isPlaying}
-            canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < totalSteps - 1}
-            onPlay={play}
-            onPause={pause}
-            onReset={reset}
-            onStepBack={stepBack}
-            onStepForward={stepForward}
-            onStop={() => { pause(); reset(); }}
-            onResume={play}
-            quizMode={quizEnabled}
-          />
-        </div>
-
-        {/* Right Panel: Quiz rail always visible; debugger panel togglable */}
-        <div className="quiz-rail">
-          <QuizDock
-            session={quizSession}
-            cadence={cadence}
-            onCadenceChange={setCadence}
-            onEnableQuiz={() => setQuizEnabled(true)}
-            onProveIt={handleProveIt}
-          />
-        </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
-            <StackQueueCodePanel
-              category={category}
-              activeLine={currentStep?.codeLine ?? 1}
+            <FloatingController
+              isPlaying={isPlaying}
+              canStepBack={currentStepIndex > 0}
+              canStepForward={currentStepIndex < totalSteps - 1}
+              onPlay={play}
+              onPause={pause}
+              onReset={reset}
+              onStepBack={stepBack}
+              onStepForward={stepForward}
+              onStop={() => { pause(); reset(); }}
+              onResume={play}
+              quizMode={quizEnabled}
             />
-          )}
+          </div>
+        }
+        rightContent={
+          <div className="quiz-rail">
+            <QuizDock
+              session={quizSession}
+              cadence={cadence}
+              onCadenceChange={setCadence}
+              onEnableQuiz={() => setQuizEnabled(true)}
+              onProveIt={handleProveIt}
+            />
+          </div>
+        }
+        bottomContent={
+          <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+            {showDebugger && (
+              <StackQueueCodePanel
+                category={category}
+                activeLine={currentStep?.codeLine ?? 1}
+              />
+            )}
 
-          <ExplanationPanel
-            description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
-            steps={activeSteps}
-            currentStepIndex={currentStepIndex}
-          />
-        </div>
-      </div>
+            <ExplanationPanel
+              description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
+              steps={activeSteps}
+              currentStepIndex={currentStepIndex}
+            />
+          </div>
+        }
+      />
 
       {/* FullScreen Canvas Modal matching BST */}
       <FullScreenCanvasModal

@@ -1,3 +1,5 @@
+@import '../components/layout/ResizableStudioLayout.css';
+
 /* ═══════════════════════════════════════════════════════════════════
    VISUALIZER SHELL — shared layout contract for all 6 algorithm pages
    ═══════════════════════════════════════════════════════════════════
@@ -392,33 +394,97 @@
 
 /* ─── 3. CANVAS CARD ───────────────────────────────────────────────
    Linked List / Graph / Binary Search wrap their renderer in a card with
-   a page-level header. Keep that shape but align padding, radius and
-   shadow with BST's `.bst-canvas-container`. */
+   a page-level header. Single unified white background and purple border
+   contract across all 110+ algorithms in both normal and fullscreen mode. */
 
 .ll-canvas-card,
 .graph-canvas-card,
 .bs-canvas-card,
-.bst-canvas-card {
+.bst-canvas-card,
+.bt-renderer,
+.tree-canvas-container,
+.sorting-canvas-container,
+.stack-container,
+.queue-container,
+.circular-queue-container,
+.problem-container,
+.dp-container,
+.array-container,
+.hashmap-container,
+.trie-container,
+.complexity-container,
+.recursion-canvas-container,
+.strings-canvas-card {
   display: flex;
   flex-direction: column;
-  background: var(--color-app-bg);
-  border: 1px solid var(--color-border);
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  border: 1.5px solid var(--purple-300, #d8b4fe) !important;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  min-height: 0;
+  height: 100%;
+  min-height: 350px;
   flex: 1;
 }
 
 .ll-canvas-header,
 .graph-canvas-header,
-.bs-canvas-header {
+.bs-canvas-header,
+.bt-canvas-header,
+.recursion-canvas-header,
+.tree-canvas-header,
+.sorting-canvas-header,
+.bst-canvas-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.85rem 1.25rem;
-  border-bottom: 1px solid var(--color-border);
+  padding: 0.85rem 1.5rem 0.85rem 1.75rem !important; /* 1 inch inset so title is never cut off */
+  border-bottom: 1px solid var(--purple-200, #e9d5ff) !important;
+  background: rgba(250, 245, 255, 0.4);
+}
+
+/* ─── STYLED SELECT DROPDOWN ───────────────────────────────────── */
+.bst-select,
+.viz-select-dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--color-surface, #ffffff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239333ea' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 14px;
+  border: 1.5px solid var(--purple-300, #d8b4fe) !important;
+  border-radius: 10px !important;
+  padding: 0.45rem 2.2rem 0.45rem 0.85rem !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: var(--color-text, #1e293b) !important;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(147, 51, 234, 0.08);
+}
+
+.bst-select:hover,
+.viz-select-dropdown:hover {
+  border-color: var(--purple-500, #a855f7) !important;
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.15);
+}
+
+.bst-select:focus,
+.viz-select-dropdown:focus {
+  border-color: var(--purple-600, #9333ea) !important;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.2);
+}
+
+.bst-select option,
+.bst-select optgroup {
+  background-color: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  padding: 6px;
 }
 
 /* ─── 4. MISSING BUTTON VARIANT ────────────────────────────────────
@@ -649,4 +715,181 @@
 .explanation-text,
 .history-bullet-text {
   overflow-wrap: anywhere;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   11. UNIFIED GLOBAL RENDERER CONTRACT (All 110+ Algorithm Visualizers)
+   Single unified luxury theme for bars, nodes, circles, plates, cards,
+   grid cells, and edges across Sorting, Trees, Graphs, Recursion, DP, etc.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── A. BARS & TUBES (Sorting, Array, Searching, Heap) ──────────── */
+.array-bar,
+.bar-element,
+.sorting-bar {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  background: linear-gradient(180deg, #c084fc 0%, #9333ea 100%) !important;
+  border: 1px solid rgba(192, 132, 252, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.15);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.array-bar.comparing,
+.array-bar.active,
+.bar-element.active,
+.bar-element.comparing {
+  background: linear-gradient(180deg, #a855f7 0%, #7e22ce 100%) !important;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.5) !important;
+  transform: scaleY(1.03);
+}
+
+.array-bar.swapping,
+.array-bar.pivot,
+.bar-element.swapping,
+.bar-element.key {
+  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%) !important;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.5) !important;
+  transform: scaleY(1.05);
+}
+
+.array-bar.sorted,
+.bar-element.sorted {
+  background: linear-gradient(180deg, #34d399 0%, #059669 100%) !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.5) !important;
+}
+
+/* ── B. NODES & CIRCLES (BST, Trees, Graph, Recursion, Linked List, Trie) ─ */
+.tree-node,
+.graph-node,
+.bst-node,
+.recursion-node,
+.node-circle,
+.node-item,
+.ll-node-content,
+.trie-node-circle {
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 2.5px solid var(--purple-400, #c084fc) !important;
+  color: var(--purple-900, #581c87) !important;
+  font-weight: 800 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.12) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.tree-node.active,
+.tree-node.current,
+.graph-node.active,
+.graph-node.visited,
+.bst-node.active,
+.recursion-node.active,
+.node-circle.active,
+.node-item.active,
+.trie-node-circle.active {
+  background: linear-gradient(135deg, #a855f7, #7e22ce) !important;
+  border-color: #9333ea !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.45) !important;
+}
+
+.tree-node.swapping,
+.tree-node.target,
+.graph-node.target,
+.bst-node.target,
+.recursion-node.highlight,
+.node-circle.highlight {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  border-color: #d97706 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.45) !important;
+}
+
+.tree-node.sorted,
+.tree-node.completed,
+.graph-node.path,
+.bst-node.found,
+.recursion-node.done,
+.node-circle.done {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.45) !important;
+}
+
+/* ── C. PLATES & DISKS (Tower of Hanoi, Recursion Stack, Stack Items) ─ */
+.hanoi-disk,
+.disk-element,
+.stack-item,
+.queue-item {
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  box-shadow: 0 4px 14px rgba(147, 51, 234, 0.2) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.hanoi-disk.moving,
+.disk-element.active,
+.stack-item.top {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.45) !important;
+}
+
+/* ── D. CELLS & TILES (DP Grids, Backtracking, String Grids, Arrays) ── */
+.dp-cell,
+.grid-cell,
+.cell-box,
+.matrix-cell,
+.backtracking-cell {
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  border: 1.5px solid var(--purple-200, #e9d5ff) !important;
+  color: var(--purple-900, #581c87) !important;
+  font-weight: 700 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  transition: all 0.2s ease !important;
+}
+
+.dp-cell.active,
+.grid-cell.active,
+.cell-box.active,
+.matrix-cell.active,
+.backtracking-cell.active {
+  background: linear-gradient(135deg, #a855f7, #7e22ce) !important;
+  border-color: #9333ea !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(147, 51, 234, 0.35) !important;
+}
+
+.dp-cell.target,
+.grid-cell.path,
+.cell-box.solution,
+.backtracking-cell.solution {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35) !important;
+}
+
+/* ── E. EDGES & CONNECTING LINES (Graphs, Trees, Linked Lists) ─────── */
+.tree-edge,
+.graph-edge,
+.ll-pointer-line,
+.trie-edge {
+  stroke: var(--purple-300, #d8b4fe) !important;
+  stroke-width: 2.5px !important;
+  transition: stroke 0.25s ease, stroke-width 0.25s ease !important;
+}
+
+.tree-edge.active,
+.graph-edge.active,
+.ll-pointer-line.active,
+.graph-edge.path {
+  stroke: var(--purple-600, #9333ea) !important;
+  stroke-width: 3.5px !important;
+  filter: drop-shadow(0 0 6px rgba(147, 51, 234, 0.5)) !important;
 }
