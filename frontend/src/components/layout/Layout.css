@@ -235,8 +235,8 @@
 }
 
 .topic-sidebar {
-  width: 260px;
-  min-width: 200px;
+  width: var(--sidebar-width, 260px);
+  min-width: 240px;
   max-width: 450px;
   background-color: var(--color-app-bg);
   border-right: 1px solid var(--color-border);
@@ -248,8 +248,7 @@
   top: var(--navbar-height);
   flex-shrink: 0;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 500;
-  resize: horizontal;
+  z-index: 100;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -286,26 +285,12 @@
   overflow: hidden;
 }
 
-.sidebar-dashboard-btn::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 50%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: all 0.5s ease;
-  transform: skewX(-20deg);
-}
-
 .sidebar-dashboard-btn:hover {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #ffffff;
   border-color: var(--color-primary-hover);
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transform: translateY(-2px) scale(1.01);
-}
-
-.sidebar-dashboard-btn:hover::before {
-  left: 150%;
 }
 
 .sidebar-dashboard-btn svg {
@@ -439,26 +424,160 @@
   text-overflow: ellipsis;
 }
 
-/* Hamburger menu button — only visible on mobile/tablet */
-.hamburger-btn {
-  display: none;
+/* ─── SIDEBAR ACCORDION CATEGORIES & TOPICS ───────────────────── */
+.module-categories-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-left: 0.4rem;
+}
+
+.category-accordion {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.category-accordion.active {
+  border-color: var(--color-primary-hover);
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background-color 0.15s ease;
+}
+
+.category-header:hover {
+  background-color: var(--color-surface-elevated);
+}
+
+.category-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.category-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
-.hamburger-btn:hover {
+.category-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.category-name {
+  font-size: 0.775rem;
+  font-weight: 600;
   color: var(--color-text);
-  border-color: var(--color-primary-hover);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-count {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+
+.category-chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.category-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.category-topics {
+  display: none;
+  background-color: var(--color-app-bg);
+  border-top: 1px solid var(--color-border);
+  padding: 0.35rem 0.25rem;
+}
+
+.category-topics.open {
+  display: block;
+}
+
+.category-topics-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.topic-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.topic-item:hover {
   background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.topic-item.active {
+  background-color: var(--color-surface-elevated);
+  color: var(--color-primary-hover);
+  font-weight: 600;
+}
+
+.topic-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.topic-item.active .topic-dot {
+  background-color: var(--color-primary-hover);
+}
+
+.topic-item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Vertical Draggable Resizer Splitter Bar */
@@ -473,14 +592,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, width 0.15s ease;
+  transition: background-color 0.2s ease;
   z-index: 101;
 }
 
 .sidebar-resizer:hover,
 .dashboard-shell.is-resizing .sidebar-resizer {
   background-color: var(--color-primary-hover);
-  width: 8px;
 }
 
 .resizer-handle-grip {
