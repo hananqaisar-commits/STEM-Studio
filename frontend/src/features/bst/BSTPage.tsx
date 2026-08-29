@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, HelpCircle, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Plus, Search, Maximize2, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildBSTCheckpoints } from './quizAdapter';
+import { buildBSTCheckpoints, buildRevisionData, type BSTAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import {
@@ -33,6 +34,8 @@ import { generateTrieInsertSteps, generateTrieSearchSteps, createTrieRoot } from
 import type { TrieNodeStructure } from './trieEngine';
 
 import './BST.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList, parseStringList } from '../../utils/batchInputParser';
 
 type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie';
 
@@ -58,9 +61,21 @@ const RANDOM_WORD_POOL = ['apple', 'app', 'code', 'coder', 'tree', 'trie', 'data
 
 export const BSTPage: React.FC = () => {
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
-  const [inputValue, setInputValue] = useState<string>('45');
-  const [wordValue, setWordValue] = useState<string>('cat');
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  // Tracks the last-run operation so the quiz revision card matches what is visualized.
+  const [revisionKey, setRevisionKey] = useState<BSTAlgorithmKey>('insert');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ['bst', 'avl', 'heap', 'trie'].includes(topic)) {
+      setTreeCategory(topic as TreeCategory);
+    }
+  }, [searchParams]);
+
+  const [inputValue, setInputValue] = useState<string>('20, 10, 30, 5, 15');
+  const [wordValue, setWordValue] = useState<string>('cat, car, dog');
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
@@ -101,16 +116,26 @@ export const BSTPage: React.FC = () => {
     currentStep,
     totalSteps,
     isPlaying,
-    speed,
     play,
     pause,
     stepForward,
     stepBack,
     reset,
-    setSpeed,
-  } = useStepPlayer({ steps: activeOperationSteps });
+  seekTo,
+    } = useStepPlayer({ steps: activeOperationSteps });
 
   const bstStep = currentStep as BSTStep | null;
+
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+    onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
 
   // Build quiz checkpoints from the current operation steps
   const quizCheckpoints = React.useMemo(
@@ -128,23 +153,41 @@ export const BSTPage: React.FC = () => {
     stepForward,
     module: 'bst',
     algorithmId: treeCategory,
+    revisionData: buildRevisionData(revisionKey),
   });
 
-  // Operations for BST
+  // ─── BATCH OPERATIONS FOR BST ─────────────────────────────────────────────
   const handleBSTInsert = () => {
-    const num = Number(inputValue);
-    if (isNaN(num)) return;
-    const { steps, newTree } = generateBSTInsertSteps(bstTree, num);
-    setBstTree(newTree);
-    setActiveOperationSteps(steps);
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
+    setRevisionKey('insert');
+
+    let currentTree = bstTree;
+    const allSteps: BSTStep[] = [];
+
+    for (const num of nums) {
+      const { steps, newTree } = generateBSTInsertSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+
+    setBstTree(currentTree);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
     if (!quizEnabled) play();
   };
 
   const handleBSTSearch = () => {
-    const num = Number(inputValue);
+    const parseRes = parseNumberList(inputValue);
+    const num = parseRes.isValid && parseRes.values.length > 0 ? parseRes.values[0] : Number(inputValue);
     if (isNaN(num)) return;
+    setRevisionKey('search');
     const steps = generateBSTSearchSteps(bstTree, num);
     setActiveOperationSteps(steps);
     reset();
@@ -152,57 +195,164 @@ export const BSTPage: React.FC = () => {
     if (!quizEnabled) play();
   };
 
-  // Operations for AVL
+  // ─── BATCH OPERATIONS FOR AVL ─────────────────────────────────────────────
   const handleAVLInsert = () => {
-    const num = Number(inputValue);
-    if (isNaN(num)) return;
-    const { steps, newTree } = generateAVLInsertSteps(avlTree, num);
-    setAvlTree(newTree);
-    setActiveOperationSteps(steps);
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
+    setRevisionKey('avlInsert');
+
+    let currentTree = avlTree;
+    const allSteps: BSTStep[] = [];
+
+    for (const num of nums) {
+      const { steps, newTree } = generateAVLInsertSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+
+    setAvlTree(currentTree);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
-  // Operations for Heap
+  // ─── BATCH OPERATIONS FOR HEAP ────────────────────────────────────────────
   const handleHeapInsert = () => {
-    const num = Number(inputValue);
-    if (isNaN(num)) return;
-    const { steps, newHeap } = generateHeapInsertSteps(heapArray, num, heapType);
-    setHeapArray(newHeap);
-    setActiveOperationSteps(steps);
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
+    setRevisionKey('heapInsert');
+
+    let currentHeap = [...heapArray];
+    const allSteps: BSTStep[] = [];
+
+    for (const num of nums) {
+      const { steps, newHeap } = generateHeapInsertSteps(currentHeap, num, heapType);
+      allSteps.push(...steps);
+      currentHeap = newHeap;
+    }
+
+    setHeapArray(currentHeap);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
   const handleHeapExtract = () => {
+    setRevisionKey('heapExtract');
     const { steps, newHeap } = generateHeapExtractSteps(heapArray, heapType);
     setHeapArray(newHeap);
     setActiveOperationSteps(steps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
-  // Operations for Trie
+  // ─── BATCH OPERATIONS FOR TRIE ────────────────────────────────────────────
   const handleTrieInsert = () => {
-    if (!wordValue.trim()) return;
-    const { steps, newRoot } = generateTrieInsertSteps(trieRoot, wordValue.trim());
-    setTrieRoot(newRoot);
-    setActiveOperationSteps(steps);
+    const parseRes = parseStringList(wordValue, { lowercase: true });
+    const words = parseRes.isValid ? parseRes.values : wordValue.split(/[\s,;]+/).filter(Boolean);
+    if (words.length === 0) {
+      setInputError('Please enter valid word(s)');
+      return;
+    }
+    setInputError(null);
+    setRevisionKey('trieInsert');
+
+    let currentRoot = trieRoot;
+    const allSteps: BSTStep[] = [];
+
+    for (const w of words) {
+      const { steps, newRoot } = generateTrieInsertSteps(currentRoot, w);
+      allSteps.push(...steps);
+      currentRoot = newRoot;
+    }
+
+    setTrieRoot(currentRoot);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
   };
 
   const handleTrieSearch = () => {
-    if (!wordValue.trim()) return;
-    const steps = generateTrieSearchSteps(trieRoot, wordValue.trim());
+    const parseRes = parseStringList(wordValue, { lowercase: true });
+    const query = parseRes.isValid && parseRes.values.length > 0 ? parseRes.values[0] : wordValue.trim();
+    if (!query) return;
+    setRevisionKey('trieSearch');
+    const steps = generateTrieSearchSteps(trieRoot, query);
     setActiveOperationSteps(steps);
     reset();
     quizSession.resetSession();
-    play();
+    if (!quizEnabled) play();
+  };
+
+  // ─── BATCH BUILD COMPLETE DATASET FROM SCRATCH ────────────────────────────
+  const handleBuildTreeFromScratch = () => {
+    setInputError(null);
+    if (treeCategory === 'bst') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [20, 10, 30, 5, 15];
+      let currentTree: BSTTreeStructure | undefined = undefined;
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newTree } = generateBSTInsertSteps(currentTree, num);
+        allSteps.push(...steps);
+        currentTree = newTree;
+      }
+      setBstTree(currentTree);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'avl') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [30, 20, 40, 10, 25, 35, 50];
+      let currentTree: AVLNodeStructure | undefined = undefined;
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newTree } = generateAVLInsertSteps(currentTree, num);
+        allSteps.push(...steps);
+        currentTree = newTree;
+      }
+      setAvlTree(currentTree);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'heap') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [40, 20, 30, 10, 50];
+      let currentHeap: number[] = [];
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newHeap } = generateHeapInsertSteps(currentHeap, num, heapType);
+        allSteps.push(...steps);
+        currentHeap = newHeap;
+      }
+      setHeapArray(currentHeap);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'trie') {
+      const parseRes = parseStringList(wordValue, { lowercase: true });
+      const words = parseRes.isValid ? parseRes.values : ['cat', 'car', 'dog'];
+      let currentRoot = createTrieRoot();
+      const allSteps: BSTStep[] = [];
+      for (const w of words) {
+        const { steps, newRoot } = generateTrieInsertSteps(currentRoot, w);
+        allSteps.push(...steps);
+        currentRoot = newRoot;
+      }
+      setTrieRoot(currentRoot);
+      setActiveOperationSteps(allSteps);
+    }
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
   };
 
   // Preset Handlers Across All Categories
@@ -281,18 +431,28 @@ export const BSTPage: React.FC = () => {
     reset();
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     A freshly generated tree + operation, predicted cold.
+     startChallenge() must fire in the same handler as the input change
+     so the armed challenge survives the checkpoint reset the new
+     execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomTree();
+  };
+
 
   // Shared Floating Header Controls for FullScreen Modal
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
       {treeCategory !== 'trie' ? (
         <input
-          type="number"
+          type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           className="bst-input"
-          style={{ width: '75px' }}
-          placeholder="Val"
+          style={{ width: '130px' }}
+          placeholder="e.g. 20, 10, 30"
         />
       ) : (
         <input
@@ -300,8 +460,8 @@ export const BSTPage: React.FC = () => {
           value={wordValue}
           onChange={(e) => setWordValue(e.target.value)}
           className="bst-input"
-          style={{ width: '85px' }}
-          placeholder="Word"
+          style={{ width: '130px' }}
+          placeholder="e.g. cat, car"
         />
       )}
 
@@ -369,39 +529,42 @@ export const BSTPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
-        <HelpCircle size={14} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
-  // Shared Player Controls
-  const renderPlayerControls = () => (
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
       <div className="player-center">
         <div className="step-progress-bar">
-          <div className="step-progress-fill" style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -420,6 +583,24 @@ export const BSTPage: React.FC = () => {
         activeId={treeCategory}
         onSelect={(id) => setTreeCategory(id as TreeCategory)}
         placeholder="Search tree structure or operation..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs with Pure Vector Icons */}
@@ -463,29 +644,41 @@ export const BSTPage: React.FC = () => {
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
           {treeCategory !== 'trie' ? (
-            <div className="bst-input-group">
-              <span>Value:</span>
+            <div className="bst-input-group" title="Enter comma-separated values (e.g. 20, 10, 30, 5, 15)">
+              <span style={{ fontWeight: 600 }}>Values:</span>
               <input
-                type="number"
+                type="text"
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  if (inputError) setInputError(null);
+                }}
                 className="bst-input"
-                placeholder="e.g. 45"
+                placeholder="e.g. 20, 10, 30, 5, 15"
+                style={{ minWidth: '150px' }}
               />
             </div>
           ) : (
-            <div className="bst-input-group">
-              <span>Word:</span>
+            <div className="bst-input-group" title="Enter comma-separated words (e.g. cat, car, dog)">
+              <span style={{ fontWeight: 600 }}>Words:</span>
               <input
                 type="text"
                 value={wordValue}
-                onChange={(e) => setWordValue(e.target.value)}
+                onChange={(e) => {
+                  setWordValue(e.target.value);
+                  if (inputError) setInputError(null);
+                }}
                 className="bst-input"
-                placeholder="e.g. cat"
-                style={{ width: '110px' }}
+                placeholder="e.g. cat, car, dog"
+                style={{ minWidth: '150px' }}
               />
             </div>
           )}
+
+          <button className="bst-btn btn-mode" onClick={handleBuildTreeFromScratch} title="Build dataset sequentially from scratch">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Build Dataset</span>
+          </button>
 
           {treeCategory === 'bst' && (
             <>
@@ -498,15 +691,15 @@ export const BSTPage: React.FC = () => {
                 <span>Search</span>
               </button>
               <div className="traversal-btn-group">
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('inorder'); setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <ListOrdered size={14} />
                   <span>Inorder</span>
                 </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('preorder'); setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <GitCommit size={14} />
                   <span>Preorder</span>
                 </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('postorder'); setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
                   <CornerDownRight size={14} />
                   <span>Postorder</span>
                 </button>
@@ -573,21 +766,10 @@ export const BSTPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} />
-            <span>Quiz Mode</span>
-          </button>
-        </div>
       </div>
 
       {/* Main Learning Workspace */}
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
           <BSTRenderer
             currentStep={bstStep}
@@ -606,40 +788,64 @@ export const BSTPage: React.FC = () => {
             </div>
           )}
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Multi-Language Debugger & Explanation */}
-        <div className="explanation-section">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-          <MultiLanguageCodePanel
-            algorithmKey={treeCategory}
-            activeLine={bstStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            variables={bstStep?.variables}
-            onCustomCodeRun={(arraySteps) => {
-              const bstSteps: BSTStep[] = arraySteps.map((step) => ({
-                nodes: [],
-                edges: [],
-                description: step.description,
-                codeLine: step.codeLine,
-                variables: step.variables || {},
-              }));
-              setActiveOperationSteps(bstSteps);
-              reset();
-            }}
-            currentArray={[10, 20, 30, 40, 50]}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
           />
+        </div>
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={treeCategory}
+              title="Tree Operations"
+              activeLine={bstStep?.codeLine}
+              variables={bstStep?.variables}
+              onCustomCodeRun={(arraySteps) => {
+                const bstSteps: BSTStep[] = arraySteps.map((step) => ({
+                  nodes: [],
+                  edges: [],
+                  description: step.description,
+                  codeLine: step.codeLine,
+                  variables: step.variables || {},
+                }));
+                setActiveOperationSteps(bstSteps);
+                reset();
+              }}
+              currentArray={[10, 20, 30, 40, 50]}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)}
+            steps={activeOperationSteps}
+            currentStepIndex={currentStepIndex}
             timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
             spaceComplexity="O(H)"
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="bst" activeTopic={treeCategory} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal
@@ -648,7 +854,23 @@ export const BSTPage: React.FC = () => {
         title={`Tree Studio | ${treeCategory.toUpperCase()}`}
         subtitle="Interactive Dynamic Tree Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <BSTRenderer currentStep={bstStep} />
       </FullScreenCanvasModal>

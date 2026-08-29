@@ -1,0 +1,397 @@
+/* ─── Octa Mascot Styles ─────────────────────────────────────────────
+   Clean SVG-based mascot system. Animations are subtle and contextual.
+   ─────────────────────────────────────────────────────────────────── */
+
+/* ── Octa wrapper ──────────────────────────────────────────────────── */
+.octa-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.octa-wrapper .octa-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+/* Interactive mascot gets idle breathing animation */
+.octa-interactive {
+  animation: octa-breathe 4s ease-in-out infinite;
+}
+
+.octa-interactive:hover {
+  transform: scale(1.05);
+  animation-play-state: paused;
+}
+
+/* ── Breathing (subtle scale pulse) ────────────────────────────────── */
+@keyframes octa-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.02); }
+}
+
+/* ── Floating (for hero/dashboard) ─────────────────────────────────── */
+.octa-floating {
+  animation: octa-float 6s ease-in-out infinite;
+}
+
+@keyframes octa-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ── Jump-in entrance (auth card) ──────────────────────────────────── */
+.octa-jump-in {
+  animation: octa-jump 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: bottom center;
+}
+
+@keyframes octa-jump {
+  0% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.6) rotate(-10deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.05) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+/* ── Entrance fade (generic) ───────────────────────────────────────── */
+.octa-fade-in {
+  animation: octa-fade-in 0.4s ease-out forwards;
+}
+
+@keyframes octa-fade-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Wiggle (success/happy) ────────────────────────────────────────── */
+.octa-wiggle {
+  animation: octa-wiggle 0.5s ease-in-out;
+}
+
+@keyframes octa-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+/* ── Nod (thinking) ────────────────────────────────────────────────── */
+.octa-nod {
+  animation: octa-nod 1.5s ease-in-out infinite;
+}
+
+@keyframes octa-nod {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(3deg); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LOADING SCREEN — premium branded splash
+   Vector wordmark anchor + Octa surprised→happy crossfade.
+   Lifecycle is controlled by real app state; no fake timers/progress.
+   ══════════════════════════════════════════════════════════════════ */
+
+.mascot-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background-color: var(--color-app-bg);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.6s;
+}
+
+.mascot-loading--exit {
+  opacity: 0;
+  transform: scale(1.015);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mascot-loading-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.1rem, 3vh, 1.7rem);
+  padding: 1.5rem;
+  transform: translateY(-2vh); /* optical centering */
+}
+
+/* ── Octa crossfade: surprised (loading) → happy (complete) ────────── */
+
+.mascot-loading-mascot {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  animation: splash-mascot-float 4.2s ease-in-out 1.2s infinite;
+}
+
+.mascot-layer {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  transition: opacity 0.45s ease;
+}
+
+.mascot-layer--surprised { opacity: 1; }
+.mascot-layer--happy { opacity: 0; }
+
+.mascot-loading--complete .mascot-layer--surprised { opacity: 0; }
+
+.mascot-loading--complete .mascot-layer--happy {
+  opacity: 1;
+  animation: splash-mascot-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes splash-mascot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes splash-mascot-pop {
+  0% { transform: scale(0.92); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* ── Status line (crossfades with phase) ───────────────────────────── */
+
+.splash-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 2.2rem;
+  margin-top: 0.5rem;
+  animation: octa-fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+.splash-status__label {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--purple-600, #9333ea);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.splash-status__label--loading { opacity: 0.9; }
+.splash-status__label--done { opacity: 0; transform: translateY(4px); display: none; }
+
+.mascot-loading--complete .splash-status__label--loading {
+  opacity: 0;
+  transform: translateY(-4px);
+  display: none;
+}
+
+.mascot-loading--complete .splash-status__label--done {
+  opacity: 1;
+  display: inline-flex;
+  transform: translateY(0);
+  color: #10b981;
+}
+
+/* Luxury purple glass shimmer progress line */
+.splash-shimmer-track {
+  width: 180px;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--purple-100, #f3e8ff);
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.splash-shimmer-fill {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 50%;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--purple-500, #a855f7) 50%,
+    var(--purple-700, #7e22ce) 100%
+  );
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+  animation: splash-shimmer-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.mascot-loading--complete .splash-shimmer-fill {
+  left: 0;
+  width: 100%;
+  background: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+  animation: none;
+  transition: all 0.4s ease;
+}
+
+@keyframes splash-shimmer-sweep {
+  0% {
+    left: -50%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   AUTH CARD MASCOT — sits on top-left of card with jump-in
+   ══════════════════════════════════════════════════════════════════ */
+
+.mascot-auth-jump {
+  position: absolute;
+  top: -20px;
+  left: -10px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DASHBOARD HERO
+   ══════════════════════════════════════════════════════════════════ */
+
+.mascot-hero-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.mascot-hero-center .octa-interactive {
+  animation: octa-float 6s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   EXPLANATION PANEL — reading mascot
+   ══════════════════════════════════════════════════════════════════ */
+
+.explanation-mascot {
+  display: inline-flex;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   REVIEW SECTION — paper plane + speech bubble
+   ══════════════════════════════════════════════════════════════════ */
+
+.mascot-speech-bubble {
+  position: absolute;
+  top: -8px;
+  right: -20px;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #1f2937);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+  white-space: nowrap;
+}
+
+.mascot-speech-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  background: var(--bg-card, #fff);
+  border-right: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  transform: rotate(45deg);
+}
+
+.paper-plane-fly {
+  position: absolute;
+  top: -10px;
+  right: -30px;
+  width: 24px;
+  height: 24px;
+  color: var(--color-primary, #3b82f6);
+  animation: paper-plane-fly 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes paper-plane-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(40px, -30px) rotate(-15deg) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(80px, -60px) rotate(-30deg) scale(0.7);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   REDUCED MOTION — respect user preferences
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .octa-interactive,
+  .octa-floating,
+  .octa-jump-in,
+  .octa-fade-in,
+  .octa-wiggle,
+  .octa-nod,
+  .mascot-loading,
+  .mascot-loading-mascot,
+  .mascot-layer,
+  .mascot-layer--happy,
+  .splash-status,
+  .splash-status__label,
+  .splash-dots i {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Splash fades instantly; entrance animations start visible */
+  .splash-status {
+    opacity: 1;
+  }
+
+  .paper-plane-fly {
+    animation: none !important;
+    opacity: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   RESPONSIVE — tighten splash on small screens
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .mascot-loading-stage {
+    gap: 1rem;
+    padding: 1rem;
+  }
+}

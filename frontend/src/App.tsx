@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { MascotProvider } from './components/mascot';
 import { SignIn } from './features/auth/SignIn';
 import { SignUp } from './features/auth/SignUp';
 import { ForgotPassword } from './features/auth/ForgotPassword';
 import { ResetPassword } from './features/auth/ResetPassword';
 import { LoadingScreen } from './components/common/LoadingScreen';
+import { BootSplash } from './components/common/BootSplash';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
 import { ModuleHub } from './features/hub/ModuleHub';
-import { MODULES } from './data/categories';
+import { MODULES, DSA_CATEGORIES } from './data/categories';
 import { ComplexityPage } from './features/complexity/ComplexityPage';
 import { SortingPage } from './features/sorting/SortingPage';
 import { BSTPage } from './features/bst/BSTPage';
@@ -79,13 +81,16 @@ const DashboardLayout = () => {
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
 
-  const isOnLanding = location.pathname === '/dashboard';
 
-  // Determine active module and category from path
+
+  // Determine active module and category from path.
+  // If we are on a DSA category page (e.g. /dashboard/complexity), 
+  // the active module must be 'dsa' so the sidebar correctly shows all DSA categories.
   const isModulePage = MODULES.some(m => m.id === pathSegment);
-  const isCategoryPage = !isOnLanding && !isModulePage && !!pathSegment;
-  const activeModuleId = isModulePage ? pathSegment : (isCategoryPage ? 'dsa' : '');
-  const activeCategoryId = isCategoryPage ? pathSegment : '';
+  const isDsaCategory = DSA_CATEGORIES.some(c => c.id === pathSegment);
+  
+  const activeModuleId = isModulePage ? pathSegment : (isDsaCategory ? 'dsa' : '');
+  const activeCategoryId = isDsaCategory ? pathSegment : '';
 
   // Handle Dragging Splitter to Resize Sidebar Width
   useEffect(() => {
@@ -129,31 +134,14 @@ const DashboardLayout = () => {
   return (
     <div className={`dashboard-shell ${isResizing ? 'is-resizing' : ''}`}>
       <Navbar onToggleSidebar={toggleSidebar} />
-      <div className={`dashboard-body${isOnLanding ? ' no-sidebar' : ''}`}>
-        {!isOnLanding && (
-          <>
-            <TopicMenu
-              activeModule={activeModuleId}
-              activeCategory={activeCategoryId}
-              onSelectModule={handleSelectModule}
-              isOpen={isSidebarOpen}
-              onClose={closeSidebar}
-              width={sidebarWidth}
-            />
-            {/* Draggable Vertical Splitter handle */}
-            <div
-              className="sidebar-resizer"
-              onMouseDown={handleMouseDown}
-              onDoubleClick={handleResetWidth}
-              title="Drag to resize sidebar width • Double-click to reset"
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize sidebar width"
-            >
-              <div className="resizer-handle-grip" />
-            </div>
-          </>
-        )}
+      <div className="dashboard-body">
+        <TopicMenu
+          activeModule={activeModuleId}
+          activeCategory={activeCategoryId}
+          onSelectModule={handleSelectModule}
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+        />
         <main className="dashboard-main">
           <Routes>
             <Route index element={<DSAHub />} />
@@ -181,26 +169,24 @@ const DashboardLayout = () => {
 };
 
 const AppContent = () => {
-  const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (showSplash) {
-    return <LoadingScreen />;
-  }
+  const { isLoading } = useAuth();
+  const [splashExited, setSplashExited] = useState(false);
+  const handleSplashExited = useCallback(() => setSplashExited(true), []);
 
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
-      <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
-      <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-      <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
-      <Route path="/dashboard/*" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
+        <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
+        <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+        <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
+        <Route path="/dashboard/*" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>} />
+      </Routes>
+      {!splashExited && (
+        <BootSplash loading={isLoading} onExited={handleSplashExited} />
+      )}
+    </>
   );
 };
 
@@ -208,9 +194,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <MascotProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </MascotProvider>
       </AuthProvider>
     </ThemeProvider>
   );

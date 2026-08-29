@@ -20,12 +20,16 @@ interface VisualizerHeaderProps {
   activeId?: string;
   onSelect: (id: string) => void;
   placeholder?: string;
+  /** Right-hand unified action group (Quiz Mode / Debugger toggle). */
+  actions?: React.ReactNode;
   /** Enable two-level dropdown mode (category + topic) instead of search bar */
   categories?: CategoryTopics[];
   /** Currently selected category ID in dropdown mode */
   activeCategoryId?: string;
   /** Callback when a category is selected in dropdown mode */
   onSelectCategory?: (categoryId: string) => void;
+  /** When true and categories are provided, render only the category dropdown (no topic dropdown). */
+  categorySelectorOnly?: boolean;
 }
 
 /**
@@ -43,9 +47,11 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
   activeId,
   onSelect,
   placeholder = 'Search algorithms...',
+  actions,
   categories,
   activeCategoryId,
   onSelectCategory,
+  categorySelectorOnly = false,
 }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -115,10 +121,12 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
               onChange={(e) => {
                 const catId = e.target.value;
                 onSelectCategory?.(catId);
-                // Auto-select first topic of new category
-                const cat = categories.find((c) => c.categoryId === catId);
-                if (cat && cat.topics.length > 0) {
-                  onSelect(cat.topics[0].id);
+                if (!categorySelectorOnly) {
+                  // Auto-select first topic of new category
+                  const cat = categories.find((c) => c.categoryId === catId);
+                  if (cat && cat.topics.length > 0) {
+                    onSelect(cat.topics[0].id);
+                  }
                 }
               }}
             >
@@ -130,26 +138,28 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
             </select>
             <ChevronDown size={14} className="viz-dropdown-chevron" />
           </div>
-    
-          {/* Topic dropdown */}
-          <div className="viz-dropdown-wrapper">
-            <select
-              className="viz-dropdown-select"
-              value={activeId || ''}
-              onChange={(e) => onSelect(e.target.value)}
-            >
-              {(() => {
-                const activeCat = categories.find((c) => c.categoryId === activeCategoryId);
-                const topics = activeCat ? activeCat.topics : [];
-                return topics.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.group ? `[${t.group}] ` : ''}{t.name}
-                  </option>
-                ));
-              })()}
-            </select>
-            <ChevronDown size={14} className="viz-dropdown-chevron" />
-          </div>
+
+          {/* Topic dropdown — hidden when categorySelectorOnly is enabled */}
+          {!categorySelectorOnly && (
+            <div className="viz-dropdown-wrapper">
+              <select
+                className="viz-dropdown-select"
+                value={activeId || ''}
+                onChange={(e) => onSelect(e.target.value)}
+              >
+                {(() => {
+                  const activeCat = categories.find((c) => c.categoryId === activeCategoryId);
+                  const topics = activeCat ? activeCat.topics : [];
+                  return topics.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.group ? `[${t.group}] ` : ''}{t.name}
+                    </option>
+                  ));
+                })()}
+              </select>
+              <ChevronDown size={14} className="viz-dropdown-chevron" />
+            </div>
+          )}
         </div>
       ) : (
         /* Search mode: existing command palette */
@@ -193,6 +203,8 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
           </div>
         </>
       )}
+
+      {actions}
     </header>
   );
 };

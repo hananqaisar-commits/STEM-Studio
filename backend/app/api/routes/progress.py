@@ -27,14 +27,23 @@ from backend.infrastructure.database.models import (
 
 router = APIRouter(prefix="/api/progress", tags=["User Progress & Quizzes"])
 
-# Total algorithms per module for percentage calculations
+# Total algorithms per module for percentage calculations.
+# Kept in sync with frontend/src/data/categoryTopics.ts (selectable topics per module).
 MODULE_ALGORITHM_COUNTS = {
-    "sorting": 7,
-    "stackQueue": 6,
+    "sorting": 10,
+    "arrays": 6,
+    "strings": 4,
     "linkedList": 6,
-    "bst": 5,
+    "stackQueue": 22,
     "binarySearch": 5,
-    "graph": 6,
+    "hashMaps": 4,
+    "bst": 4,
+    "graph": 5,
+    "recursion": 5,
+    "backtracking": 4,
+    "greedy": 4,
+    "dp": 8,
+    "trie": 5,
 }
 
 

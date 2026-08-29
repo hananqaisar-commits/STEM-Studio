@@ -1,6 +1,8 @@
 import React from 'react';
-import { BookOpen, Lightbulb, Eye, Target, ArrowRight } from 'lucide-react';
+import { BookOpen, Lightbulb, Eye, Target, ArrowRight, Code2 } from 'lucide-react';
 import type { QuizRevisionData } from '../../engine/types/Quiz';
+import { Octa } from '../mascot';
+import '../mascot/Mascot.css';
 
 /* ── QuizRevision ──────────────────────────────────────────────────────
    A revision card shown BEFORE quiz questions start. Gives the student
@@ -19,7 +21,7 @@ export const QuizRevision: React.FC<QuizRevisionProps> = ({
   revisionData,
   onBegin,
 }) => {
-  const { description, complexity, keyIdea, watchFor, quickTip } = revisionData;
+  const { description, complexity, keyIdea, watchFor, quickTip, example } = revisionData;
 
   return (
     <section className="quiz-panel quiz-revision" aria-label="Revision card">
@@ -28,10 +30,13 @@ export const QuizRevision: React.FC<QuizRevisionProps> = ({
         <div className="quiz-head-text">
           <span className="quiz-eyebrow">
             <Target size={13} />
-            Revision
+            Last-Minute Revision
           </span>
           <h3 className="quiz-title quiz-revision-title">{algorithmName}</h3>
           <p className="quiz-revision-desc">{description}</p>
+        </div>
+        <div className="quiz-head-mascot">
+          <Octa expression="reading" size="small" className="octa-nod" />
         </div>
         <span className="quiz-revision-complexity">{complexity}</span>
       </header>
@@ -61,6 +66,17 @@ export const QuizRevision: React.FC<QuizRevisionProps> = ({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* ── Example ──────────────────────────────────────────────────── */}
+      {example && (
+        <div className="quiz-revision-section">
+          <div className="quiz-revision-section-head">
+            <Code2 size={15} />
+            <span className="quiz-revision-section-title">Example</span>
+          </div>
+          <p className="quiz-revision-section-body quiz-revision-example">{example}</p>
         </div>
       )}
 

@@ -1,32 +1,30 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+
+import { useNavigate, Link } from 'react-router-dom';
 import {
-  Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
-  GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
-  MessageSquare, ChevronDown, ExternalLink, AtSign, Send, Heart,
-  ArrowRight, BookOpen, Cpu, Monitor, type LucideIcon,
+  MessageSquare, ChevronDown, Send, Sparkles,
+  ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
+
+  type LucideIcon,
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
+import { apiClient } from '../../api/apiClient';
+import { Octa, useMascot } from '../../components/mascot';
+import '../../components/mascot/Mascot.css';
 import './DSAHub.css';
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
-  GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-};
 
 const MODULE_ICON_MAP: Record<string, LucideIcon> = {
   BookOpen, Cpu, Monitor,
 };
 
-/* ── Bubble positions for dynamic category circles ────────────────── */
+/* ── Bubble positions for subject modules around the hero image ──────
+   Positions are kept close to the image so the visual feels connected
+   and compact rather than scattered. */
 const BUBBLE_POSITIONS = [
-  { top: '5%', left: '-10%' },
-  { top: '-5%', right: '10%' },
-  { top: '40%', left: '-15%' },
-  { bottom: '10%', left: '-8%' },
-  { bottom: '0%', right: '5%' },
-  { top: '20%', right: '-12%' },
+  { top: '18%', left: '18%' },
+  { top: '14%', right: '18%' },
+  { bottom: '16%', left: '26%' },
 ];
 
 /* ── Features data ────────────────────────────────────────────────── */
@@ -39,14 +37,6 @@ const FEATURES = [
   { icon: Edit3, title: 'Custom Input Editor', desc: 'Test any algorithm with your own custom data inputs' },
 ];
 
-/* ── Reviews data ─────────────────────────────────────────────────── */
-const REVIEWS = [
-  { stars: 5, text: 'The visualizations made recursion click for me. Seeing the call tree build up step by step was exactly what I needed to understand how recursive functions work.', name: 'Ayesha K.', role: 'CS Student' },
-  { stars: 4, text: 'Quiz mode in Challenge level is intense but incredibly rewarding. The 15-second timer really pushes you to think fast and build intuition.', name: 'Ahmed R.', role: 'Self-learner' },
-  { stars: 5, text: "Best DSA tool I've used. The multi-language debugger is a game changer — seeing the same algorithm in Python and C++ side by side really deepens understanding.", name: 'Fatima S.', role: 'CS Student' },
-  { stars: 5, text: "The Dynamic Programming section finally made 2D grid problems clear. The color-coded cells showing computed values step by step is brilliant.", name: 'Usman M.', role: 'Bootcamp Graduate' },
-];
-
 /* ── FAQs data ────────────────────────────────────────────────────── */
 const FAQS = [
   { q: 'What is STEM Studio?', a: 'STEM Studio is an interactive learning platform for Data Structures and Algorithms. It provides step-by-step visualizations, quiz-based learning, and multi-language code support for 14+ DSA categories.' },
@@ -57,33 +47,48 @@ const FAQS = [
   { q: 'What programming languages are supported?', a: 'The multi-language debugger supports Python, C++, Java, Go, and Pseudocode. You can switch between languages to see how the same algorithm is implemented differently.' },
 ];
 
-/* ── Contributors data ────────────────────────────────────────────── */
-const CONTRIBUTORS = [
-  {
-    name: 'Hanan Qaisar',
-    role: 'Lead Developer',
-    initials: 'HQ',
-    github: 'https://github.com/hananqaisar',
-    work: 'Database, API, Dashboard, all 14 DSA categories, Quiz mode system, overall architecture and project lead',
-  },
-  {
-    name: 'Muhammad Hassan',
-    role: 'UI Developer',
-    initials: 'MH',
-    github: 'https://github.com/muhammadhassan',
-    work: 'Theme system (4 themes), Fullscreen mode, UI alignments, visual improvements, and responsive design',
-  },
-  {
-    name: 'Muhammad Aftab',
-    role: 'Visualizer Developer',
-    initials: 'MA',
-    github: 'https://github.com/muhammadaftab',
-    work: 'Linked List, Trees, and Graph visualizers, Debugger UI components, and algorithm engine development',
-  },
+/* ── Inline SVG brand icons (not available in lucide-react v1.x) ── */
+const LinkedinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+);
+const InstagramIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+);
+const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+);
+
+/* ── Footer social links ──────────────────────────────────────────── */
+const SOCIAL_LINKS = [
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: LinkedinIcon },
+  { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: InstagramIcon },
+  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: GithubIcon },
 ];
+
+const AFTAB_LINKEDIN = 'https://www.linkedin.com/in/m-aftab-riaz-6468332b9/?skipRedirect=true';
+
+interface PlatformStats {
+  active_learners: number;
+  total_reviews: number;
+  average_rating: number;
+}
+
+interface ReviewItem {
+  review_id: number;
+  name: string;
+  role: string;
+  rating: number;
+  text: string;
+  created_at: string;
+}
 
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
+  const { state: mascotState, setExpression, setContext } = useMascot();
+
+  useEffect(() => {
+    setContext('dashboard');
+  }, [setContext]);
 
   const availableModules = MODULES.filter(m => m.available).length;
   const totalCategories = MODULES.reduce((sum, m) => sum + m.categoryCount, 0);
@@ -92,20 +97,73 @@ export const DSAHub: React.FC = () => {
   /* ── FAQ accordion state ────────────────────────────────────────── */
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  /* ── Platform stats ─────────────────────────────────────────────── */
+  const [stats, setStats] = useState<PlatformStats>({
+    active_learners: 0,
+    total_reviews: 0,
+    average_rating: 0,
+  });
+
+  /* ── Reviews ────────────────────────────────────────────────────── */
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+
   /* ── Share experience form ──────────────────────────────────────── */
   const [reviewStars, setReviewStars] = useState(0);
   const [reviewName, setReviewName] = useState('');
-  const [reviewEmail, setReviewEmail] = useState('');
+  const [reviewRole, setReviewRole] = useState('');
   const [reviewText, setReviewText] = useState('');
+  const [reviewStatus, setReviewStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
   /* ── FAQ question form ──────────────────────────────────────────── */
   const [faqQuestion, setFaqQuestion] = useState('');
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const fetchStats = () => {
+    apiClient<PlatformStats>('/api/stats/platform')
+      .then(setStats)
+      .catch(() => {
+        // Fallback to local counts if backend is unavailable
+        setStats({ active_learners: 0, total_reviews: 0, average_rating: 0 });
+      });
+  };
+
+  const fetchReviews = () => {
+    apiClient<ReviewItem[]>('/api/stats/reviews?limit=10')
+      .then(setReviews)
+      .catch(() => setReviews([]));
+  };
+
+  useEffect(() => {
+    fetchStats();
+    fetchReviews();
+  }, []);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`Review from ${reviewName}`);
-    const body = encodeURIComponent(`Rating: ${reviewStars}/5\nName: ${reviewName}\nEmail: ${reviewEmail}\n\nReview:\n${reviewText}`);
-    window.open(`mailto:hananqaisar316@gmail.com?subject=${subject}&body=${body}`, '_blank');
+    if (reviewStars === 0) return;
+    setReviewStatus('submitting');
+    setExpression('focused');
+    try {
+      await apiClient('/api/stats/reviews', {
+        method: 'POST',
+        body: {
+          name: reviewName,
+          role: reviewRole,
+          rating: reviewStars,
+          text: reviewText,
+        },
+      });
+      setReviewStatus('success');
+      setExpression('happy', { temporary: true, durationMs: 1500 });
+      setReviewStars(0);
+      setReviewName('');
+      setReviewRole('');
+      setReviewText('');
+      fetchReviews();
+      fetchStats();
+    } catch {
+      setReviewStatus('error');
+      setExpression('sad', { temporary: true, durationMs: 2000 });
+    }
   };
 
   const handleFaqSubmit = (e: React.FormEvent) => {
@@ -121,8 +179,8 @@ export const DSAHub: React.FC = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  /* ── Dynamic bubbles — pick 6 available categories ──────────────── */
-  const bubbleCategories = DSA_CATEGORIES.filter(c => c.available).slice(0, 6);
+  /* ── Subject module bubbles are rendered directly from MODULES ───── */
+  // (kept close to the hero image for a premium, compact visual)
 
   return (
     <div className="dsa-hub">
@@ -145,6 +203,30 @@ export const DSAHub: React.FC = () => {
               Explore Features
             </button>
           </div>
+          <div className="hero-social-proof">
+            <div className="hero-avatar-stack">
+              {['A', 'S', 'R', 'M'].map((initial, i) => (
+                <div
+                  key={i}
+                  className="hero-avatar-chip"
+                  style={{ background: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6'][i] }}
+                >
+                  {initial}
+                </div>
+              ))}
+            </div>
+            <div className="hero-social-text">
+              <span className="hero-social-count">{stats.active_learners.toLocaleString()}</span>
+              <span> Active Learners</span>
+            </div>
+            {stats.total_reviews > 0 && (
+              <div className="hero-social-rating">
+                <Star size={14} fill="currentColor" />
+                <span>{stats.average_rating.toFixed(2)}/5</span>
+                <span className="hero-rating-count">({stats.total_reviews} Reviews)</span>
+              </div>
+            )}
+          </div>
           <div className="hero-stats">
             <div className="hero-stat">
               <span className="hero-stat-num">{availableModules}</span>
@@ -160,29 +242,35 @@ export const DSAHub: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="hero-visual">
-          <img
-            src="/images/hero-students.jpeg"
-            alt="Students learning DSA"
-            className="hero-image"
-          />
+        <div className="hero-visual mascot-hero">
+          <div className="mascot-hero-center">
+            <Octa expression={mascotState.expression} size="xl" />
+          </div>
           <div className="hero-bubbles">
-            {bubbleCategories.map((cat, i) => {
-              const Icon = ICON_MAP[cat.iconName] ?? Activity;
+            {MODULES.map((mod, i) => {
+              const Icon = MODULE_ICON_MAP[mod.iconName] ?? BookOpen;
               const pos = BUBBLE_POSITIONS[i] || BUBBLE_POSITIONS[0];
               return (
                 <button
-                  key={cat.id}
-                  className="hero-bubble"
+                  key={mod.id}
+                  className={`hero-bubble ${!mod.available ? 'hero-bubble-soon' : ''}`}
                   style={{
                     ...pos,
                     animationDelay: `${i * 0.5}s`,
                   } as React.CSSProperties}
-                  onClick={() => navigate('/dashboard/dsa')}
-                  title={cat.name}
+                  onMouseEnter={() => setExpression('focused', { temporary: true, durationMs: 800 })}
+                  onClick={() => {
+                    if (!mod.available) return;
+                    setExpression('focused', { temporary: true, durationMs: 500 });
+                    navigate(`/dashboard/${mod.id}`);
+                  }}
+                  title={mod.available ? mod.name : `${mod.name} — Coming Soon`}
+                  disabled={!mod.available}
+                  type="button"
                 >
                   <Icon size={18} />
-                  <span className="hero-bubble-label">{cat.name.split(' ')[0]}</span>
+                  <span className="hero-bubble-label">{mod.name.split(' ')[0]}</span>
+                  {!mod.available && <span className="hero-bubble-soon-badge">Soon</span>}
                 </button>
               );
             })}
@@ -250,23 +338,29 @@ export const DSAHub: React.FC = () => {
         <h2 className="section-title">What Students Say</h2>
         <p className="section-subtitle">Real feedback from learners using STEM Studio</p>
         <div className="reviews-scroll">
-          {REVIEWS.map((r, i) => (
-            <div key={i} className="review-card">
-              <div className="review-stars">
-                {Array.from({ length: 5 }).map((_, si) => (
-                  <Star key={si} size={14} fill={si < r.stars ? 'currentColor' : 'none'} />
-                ))}
-              </div>
-              <p className="review-text">&ldquo;{r.text}&rdquo;</p>
-              <div className="review-author">
-                <div className="review-avatar"><User size={14} /></div>
-                <div>
-                  <span className="review-name">{r.name}</span>
-                  <span className="review-role">{r.role}</span>
+          {reviews.length > 0 ? (
+            reviews.map((r) => (
+              <div key={r.review_id} className="review-card">
+                <div className="review-stars">
+                  {Array.from({ length: 5 }).map((_, si) => (
+                    <Star key={si} size={14} fill={si < r.rating ? 'currentColor' : 'none'} />
+                  ))}
+                </div>
+                <p className="review-text">&ldquo;{r.text}&rdquo;</p>
+                <div className="review-author">
+                  <div className="review-avatar"><User size={14} /></div>
+                  <div>
+                    <span className="review-name">{r.name}</span>
+                    <span className="review-role">{r.role}</span>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="review-card review-card-placeholder">
+              <p className="review-text">No approved reviews yet. Be the first to share your experience!</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
@@ -310,7 +404,23 @@ export const DSAHub: React.FC = () => {
       <section id="share-experience" className="landing-section">
         <h2 className="section-title">Share Your Experience</h2>
         <p className="section-subtitle">Tell us how STEM Studio helped you learn DSA</p>
-        <form className="review-form" onSubmit={handleReviewSubmit}>
+        <div className="review-mascot-wrap">
+          <div className="review-mascot">
+            <Octa
+              expression={reviewStatus === 'success' ? 'happy' : reviewStatus === 'error' ? 'sad' : 'review'}
+              size="medium"
+              className={reviewStatus === 'submitting' ? 'octa-nod' : ''}
+            />
+            {reviewStatus === 'success' && (
+              <span className="mascot-speech-bubble animate-fade-in">Thanks!</span>
+            )}
+            {reviewStatus === 'success' && (
+              <svg className="paper-plane-fly" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </div>
+          <form className="review-form" onSubmit={handleReviewSubmit}>
           <div className="review-form-row">
             <div className="review-form-field">
               <label>Your Rating</label>
@@ -320,6 +430,10 @@ export const DSAHub: React.FC = () => {
                     key={s}
                     type="button"
                     className={`star-btn${s <= reviewStars ? ' is-active' : ''}`}
+                    onMouseEnter={() => {
+                      if (s <= 2) setExpression('thinking', { temporary: true, durationMs: 600 });
+                      else if (s >= 4) setExpression('happy', { temporary: true, durationMs: 600 });
+                    }}
                     onClick={() => setReviewStars(s)}
                   >
                     <Star size={20} fill={s <= reviewStars ? 'currentColor' : 'none'} />
@@ -341,13 +455,13 @@ export const DSAHub: React.FC = () => {
               />
             </div>
             <div className="review-form-field">
-              <label><Mail size={13} /> Email</label>
+              <label><Star size={13} /> Role</label>
               <input
-                type="email"
+                type="text"
                 className="form-input"
-                placeholder="your@email.com"
-                value={reviewEmail}
-                onChange={(e) => setReviewEmail(e.target.value)}
+                placeholder="e.g. CS Student"
+                value={reviewRole}
+                onChange={(e) => setReviewRole(e.target.value)}
                 required
               />
             </div>
@@ -361,76 +475,147 @@ export const DSAHub: React.FC = () => {
               onChange={(e) => setReviewText(e.target.value)}
               rows={4}
               required
+              minLength={10}
             />
           </div>
-          <button type="submit" className="review-submit-btn">
-            Submit Review <Send size={14} />
+          {reviewStatus === 'success' && (
+            <p className="review-status review-status-success">
+              Thank you! Your review has been submitted for approval.
+            </p>
+          )}
+          {reviewStatus === 'error' && (
+            <p className="review-status review-status-error">
+              Failed to submit review. Please try again later.
+            </p>
+          )}
+          <button
+            type="submit"
+            className="review-submit-btn"
+            disabled={reviewStatus === 'submitting' || reviewStars === 0}
+          >
+            {reviewStatus === 'submitting' ? 'Submitting...' : 'Submit Review'} <Send size={14} />
           </button>
-        </form>
+          </form>
+        </div>
       </section>
 
-      {/* ── Footer / Contributors ──────────────────────────────────── */}
-      <footer id="contributors" className="landing-footer">
+      {/* ── Footer ───────────────────────────────────────────────────── */}
+      <footer id="footer" className="landing-footer">
         <div className="footer-grid">
-          {/* Contributors */}
+          {/* Brand */}
+          <div className="footer-col footer-brand-col">
+            <Link to="/dashboard" className="footer-brand">
+              <div className="footer-brand-logo">
+                <Sparkles size={20} />
+              </div>
+              <span className="footer-brand-title">STEM <span>Studio</span></span>
+            </Link>
+            <p className="footer-desc">
+              Interactive visualization tools for mastering data structures and algorithms.
+            </p>
+            <p className="footer-made-with" style={{ fontWeight: 600, letterSpacing: '0.5px' }}>
+              <Sparkles size={13} style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'text-bottom' }} /> Crafted by{' '}
+              <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
+                Octa Team
+              </span>
+            </p>
+            <a href="mailto:hello@dsavisualizer.in" className="footer-email">
+              <Mail size={15} /> hello@dsavisualizer.in
+            </a>
+
+          </div>
+
+          {/* Navigation */}
           <div className="footer-col">
-            <h3 className="footer-heading">Contributors</h3>
-            <div className="contributor-list">
-              {CONTRIBUTORS.map((c) => (
-                <div key={c.name} className="contributor-card">
-                  <div className="contributor-avatar">{c.initials}</div>
-                  <div className="contributor-info">
-                    <div className="contributor-name-row">
-                      <span className="contributor-name">{c.name}</span>
-                      <span className="contributor-role">{c.role}</span>
-                    </div>
-                    <p className="contributor-work">{c.work}</p>
-                    <a href={c.github} target="_blank" rel="noopener noreferrer" className="contributor-github">
-                      <ExternalLink size={13} /> GitHub
-                    </a>
-                  </div>
+            <h3 className="footer-heading">Navigation</h3>
+            <div className="footer-links">
+              <button className="footer-link-btn" onClick={() => scrollToSection('hero')}>
+                <HomeIcon size={15} /> Home
+              </button>
+              <button className="footer-link-btn" onClick={() => scrollToSection('features')}>
+                <Zap size={15} /> Features
+              </button>
+              <button className="footer-link-btn" onClick={() => navigate('/dashboard/dsa')}>
+                <Eye size={15} /> Visualizer
+              </button>
+              <button className="footer-link-btn" onClick={() => scrollToSection('reviews')}>
+                <Star size={15} /> Reviews
+              </button>
+              <button className="footer-link-btn" onClick={() => scrollToSection('faqs')}>
+                <MessageSquare size={15} /> FAQs
+              </button>
+            </div>
+          </div>
+
+          {/* Legal */}
+          <div className="footer-col">
+            <h3 className="footer-heading">Legal</h3>
+            <div className="footer-links">
+              <button className="footer-link-btn" onClick={() => navigate('/privacy')}>Privacy Policy</button>
+              <button className="footer-link-btn" onClick={() => navigate('/terms')}>Terms of Service</button>
+              <button className="footer-link-btn" onClick={() => navigate('/cookies')}>Cookies</button>
+            </div>
+          </div>
+
+          {/* Connect */}
+          <div className="footer-col">
+            <h3 className="footer-heading">Connect</h3>
+            <div className="footer-social-row">
+              {SOCIAL_LINKS.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.name}
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer-social-btn"
+                    aria-label={social.name}
+                    title={social.name}
+                  >
+                    <Icon size={18} />
+                  </a>
+                );
+              })}
+            </div>
+            <h3 className="footer-heading footer-team-heading">Team / Contributors</h3>
+            <div className="footer-team-cards">
+              <div className="footer-team-card">
+                <span className="team-role">Lead</span>
+                <span className="team-name">Hanan</span>
+                <p className="team-desc">Architecture · API · Database · Core Features</p>
+                <div className="team-socials">
+                  <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
+                  <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer"><InstagramIcon size={14} /></a>
+                  <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer"><GithubIcon size={14} /></a>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="footer-col">
-            <h3 className="footer-heading">Contact</h3>
-            <div className="footer-links">
-              <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer" className="footer-link">
-                <ExternalLink size={15} /> LinkedIn
-              </a>
-              <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer" className="footer-link">
-                <AtSign size={15} /> Instagram
-              </a>
-              <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer" className="footer-link">
-                <ExternalLink size={15} /> GitHub
-              </a>
-              <a href="mailto:hananqaisar316@gmail.com" className="footer-link">
-                <Mail size={15} /> hananqaisar316@gmail.com
-              </a>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="footer-col">
-            <h3 className="footer-heading">Quick Links</h3>
-            <div className="footer-links">
-              <button className="footer-link-btn" onClick={() => scrollToSection('hero')}>Home</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('features')}>Features</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('reviews')}>Reviews</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('faqs')}>FAQs</button>
-              <button className="footer-link-btn" onClick={() => scrollToSection('modules')}>Modules</button>
+              </div>
+              <div className="footer-team-card">
+                <span className="team-role">UI / Frontend</span>
+                <span className="team-name">Hassan</span>
+                <p className="team-desc">Dashboard · Navigation · Visual Polish</p>
+              </div>
+              <div className="footer-team-card">
+                <span className="team-role">Algorithms</span>
+                <span className="team-name">Aftab</span>
+                <p className="team-desc">Animation · Creative Features</p>
+                <div className="team-socials">
+                  <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="footer-bottom">
-          <p>Built with <Heart size={13} fill="currentColor" /> by STEM Studio Team</p>
-          <p className="footer-copy">&copy; {new Date().getFullYear()} STEM Studio. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} STEM Studio. All rights reserved.</p>
+          <div className="footer-bottom-links">
+            <button onClick={() => navigate('/sitemap')}>Sitemap</button>
+            <button onClick={() => navigate('/contact')}>Contact</button>
+          </div>
         </div>
       </footer>
     </div>
   );
 };
+

@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Link2,
   Plus,
   Trash2,
   RotateCcw,
-  HelpCircle,
   Maximize2,
   Sparkles,
   Shuffle,
@@ -17,7 +17,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildLinkedListCheckpoints } from './quizAdapter';
+import { buildLinkedListCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   createInitialNodes,
@@ -33,15 +33,17 @@ import {
   type LinkedListStep,
 } from './linkedListEngine';
 import { LinkedListRenderer } from './LinkedListRenderer';
-import { LinkedListCodePanel } from './LinkedListCodePanel';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { LINKED_LIST_SNIPPETS } from './linkedListSnippets';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './LinkedList.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList } from '../../utils/batchInputParser';
 
 interface AlgorithmMeta {
   id: LinkedListCategory;
@@ -61,10 +63,20 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const LinkedListPage: React.FC = () => {
   const [category, setCategory] = useState<LinkedListCategory>('singly');
-  const [inputValue, setInputValue] = useState<string>('42');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS_LIST.some((a) => a.id === topic)) {
+      setCategory(topic as LinkedListCategory);
+    }
+  }, [searchParams]);
+
+  const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40');
+  const [inputError, setInputError] = useState<string | null>(null);
 
   // Interactive & Quiz Modes
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -80,14 +92,24 @@ export const LinkedListPage: React.FC = () => {
     currentStep,
     totalSteps,
     isPlaying,
-    speed,
     play,
     pause,
     stepForward,
     stepBack,
     reset,
-    setSpeed,
-  } = useStepPlayer<LinkedListStep>({ steps: activeSteps });
+  seekTo,
+    } = useStepPlayer<LinkedListStep>({ steps: activeSteps });
+
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+    onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
@@ -105,6 +127,7 @@ export const LinkedListPage: React.FC = () => {
     stepForward,
     module: 'linkedList',
     algorithmId: category,
+    revisionData: buildRevisionData(category),
   });
 
   // Handle Category Switching
@@ -143,21 +166,102 @@ export const LinkedListPage: React.FC = () => {
     }
   };
 
-  // ─── ACTION HANDLERS ────────────────────────────────────────────────────────
+  // ─── ACTION HANDLERS (UNIVERSAL BATCH SEQUENTIAL EXECUTION) ─────────────────
 
   const handleInsertHead = () => {
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps =
-      category === 'doubly'
-        ? generateDoublyInsertHeadSteps(baseNodes, val)
-        : generateInsertHeadSteps(baseNodes, val);
-    setActiveSteps(steps);
+    const res = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = res.isValid && res.values.length > 0
+      ? res.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+
+    if (rawValues.length === 0) {
+      setInputError('Please enter at least one value');
+      return;
+    }
+    setInputError(null);
+
+    let current = [...baseNodes];
+    const allSteps: LinkedListStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps =
+        category === 'doubly'
+          ? generateDoublyInsertHeadSteps(current, val)
+          : generateInsertHeadSteps(current, val);
+      allSteps.push(...opSteps);
+      if (opSteps.length > 0) {
+        current = opSteps[opSteps.length - 1].nodes;
+      }
+    }
+
+    setBaseNodes(current);
+    setActiveSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    play();
   };
 
   const handleInsertTail = () => {
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps = generateInsertTailSteps(baseNodes, val);
-    setActiveSteps(steps);
+    const res = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = res.isValid && res.values.length > 0
+      ? res.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+
+    if (rawValues.length === 0) {
+      setInputError('Please enter at least one value');
+      return;
+    }
+    setInputError(null);
+
+    let current = [...baseNodes];
+    const allSteps: LinkedListStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps = generateInsertTailSteps(current, val);
+      allSteps.push(...opSteps);
+      if (opSteps.length > 0) {
+        current = opSteps[opSteps.length - 1].nodes;
+      }
+    }
+
+    setBaseNodes(current);
+    setActiveSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    play();
+  };
+
+  const handleBuildList = () => {
+    const res = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = res.isValid && res.values.length > 0
+      ? res.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+
+    if (rawValues.length === 0) {
+      setInputError('Please enter at least one value');
+      return;
+    }
+    setInputError(null);
+
+    let current: ListNodeItem[] = [];
+    const allSteps: LinkedListStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps =
+        category === 'doubly'
+          ? generateInsertTailSteps(current, val)
+          : generateInsertTailSteps(current, val);
+      allSteps.push(...opSteps);
+      if (opSteps.length > 0) {
+        current = opSteps[opSteps.length - 1].nodes;
+      }
+    }
+
+    setBaseNodes(current);
+    setActiveSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    play();
   };
 
   const handleDeleteHead = () => {
@@ -215,6 +319,42 @@ export const LinkedListPage: React.FC = () => {
     quizSession.resetSession();
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh node values AND the operation steps generated immediately —
+     unlike handleRandomize, which empties the canvas until the student
+     runs an operation (that second input change would disarm the
+     challenge). */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    reset();
+    const randomVals = Array.from(
+      { length: category === 'middleNode' ? 5 : 4 },
+      () => Math.floor(Math.random() * 90) + 10
+    );
+    if (category === 'reverse') {
+      const nodes = createInitialNodes(randomVals, 'singly');
+      setBaseNodes(nodes);
+      setActiveSteps(generateReverseSteps(nodes));
+    } else if (category === 'middleNode') {
+      const nodes = createInitialNodes(randomVals, 'singly');
+      setBaseNodes(nodes);
+      setActiveSteps(generateMiddleNodeSteps(nodes));
+    } else if (category === 'detectCycle') {
+      const nodes = createInitialNodes(randomVals, 'singly', 2);
+      setBaseNodes(nodes);
+      setActiveSteps(generateCycleDetectionSteps(nodes, 2));
+    } else {
+      const kind = category === 'doubly' ? 'doubly' : category === 'circular' ? 'circular' : 'singly';
+      const nodes = createInitialNodes(randomVals, kind);
+      setBaseNodes(nodes);
+      setActiveSteps(
+        kind === 'doubly'
+          ? generateDoublyInsertHeadSteps(nodes, randomVals[0])
+          : generateInsertHeadSteps(nodes, randomVals[0])
+      );
+    }
+  };
+
   const snippetKey =
     category === 'reverse'
       ? 'reverse'
@@ -224,55 +364,63 @@ export const LinkedListPage: React.FC = () => {
       ? 'middle_node'
       : 'singly_insert_head';
 
-  const renderPlayerControls = () => (
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
-
       <div className="player-center">
         <div className="step-progress-bar">
           <div
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
   const renderFloatingControls = () => (
     <div className="fs-floating-controls">
       <div className="bst-input-group">
-        <span>Val:</span>
+        <span>Values:</span>
         <input
           type="text"
           className="bst-input"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
+          placeholder="e.g. 10, 20, 30"
+          style={{ width: '130px' }}
         />
       </div>
 
-      <button className="bst-btn btn-insert" onClick={handleInsertHead}>
-        <Plus size={14} />
-        <span>Head</span>
+      <button className="bst-btn btn-insert" onClick={handleBuildList} title="Build complete list sequentially">
+        <Sparkles size={14} />
+        <span>Build</span>
       </button>
 
       <button className="bst-btn btn-insert" onClick={handleInsertTail}>
         <Plus size={14} />
         <span>Tail</span>
+      </button>
+
+      <button className="bst-btn btn-insert" onClick={handleInsertHead}>
+        <Plus size={14} />
+        <span>Head</span>
       </button>
 
       <button className="bst-btn btn-search" onClick={handleDeleteHead}>
@@ -318,15 +466,12 @@ export const LinkedListPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-        style={{ marginLeft: '0.5rem' }}
-      >
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -340,6 +485,24 @@ export const LinkedListPage: React.FC = () => {
         activeId={category}
         onSelect={(id) => handleSelectCategory(id as LinkedListCategory)}
         placeholder="Search algorithm, operation, or concept..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
@@ -365,27 +528,37 @@ export const LinkedListPage: React.FC = () => {
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="ll-toolbar">
         <div className="ll-toolbar-actions">
-          {/* Custom Input */}
-          <div className="ll-input-group">
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
-              Val:
+          {/* Batch Custom Input */}
+          <div className="ll-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>
+              Values:
             </span>
             <input
               type="text"
               className="ll-input"
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                if (inputError) setInputError(null);
+              }}
+              placeholder="e.g. 10, 20, 30, 40"
+              style={{ width: '160px' }}
             />
           </div>
 
-          <button className="ll-btn ll-btn-primary" onClick={handleInsertHead}>
-            <Plus size={14} />
-            <span>Insert Head</span>
+          <button className="ll-btn ll-btn-primary" onClick={handleBuildList} title="Build complete list sequentially">
+            <Sparkles size={14} />
+            <span>Build List</span>
           </button>
 
-          <button className="ll-btn ll-btn-secondary" onClick={handleInsertTail}>
+          <button className="ll-btn ll-btn-secondary" onClick={handleInsertTail} title="Insert values at tail sequentially">
             <Plus size={14} />
             <span>Insert Tail</span>
+          </button>
+
+          <button className="ll-btn ll-btn-secondary" onClick={handleInsertHead} title="Insert values at head sequentially">
+            <Plus size={14} />
+            <span>Insert Head</span>
           </button>
 
           <button className="ll-btn ll-btn-danger" onClick={handleDeleteHead}>
@@ -431,29 +604,10 @@ export const LinkedListPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Mode Toggles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button
-            className={`ll-btn ${quizEnabled ? 'll-btn-primary' : 'll-btn-secondary'}`}
-            onClick={() => setQuizEnabled(!quizEnabled)}
-          >
-            <HelpCircle size={14} />
-            <span>Quiz Mode</span>
-          </button>
-
-          <button
-            className="ll-btn ll-btn-secondary"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
       </div>
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
-      <div className="ll-workspace">
+      <div className="ll-workspace scene-workspace">
         <div className="renderer-section">
           <div className="ll-canvas-card">
             <div className="ll-canvas-header">
@@ -475,29 +629,49 @@ export const LinkedListPage: React.FC = () => {
             <LinkedListRenderer step={currentStep} nodes={baseNodes} />
           </div>
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Code & Explanation */}
-        <div className="explanation-section">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-          <LinkedListCodePanel
-            snippetKey={snippetKey}
-            activeLine={currentStep?.codeLine}
-            pointers={currentStep?.pointers}
-            nodesCount={currentStep ? currentStep.nodes.length : baseNodes.length}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
           />
-
-          <MultiLanguageCodePanel
-            algorithmKey={category}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            currentArray={baseNodes.map((n) => n.value as number)}
-          />
+        </div>
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={category}
+              title="Linked List"
+              snippets={LINKED_LIST_SNIPPETS[snippetKey]}
+              activeLine={currentStep?.codeLine}
+              variables={{
+                nodes_count: currentStep ? currentStep.nodes.length : baseNodes.length,
+                ...(currentStep?.pointers ?? {}),
+              }}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Run an operation to observe step-by-step execution.', quizSession.phase)}
+            steps={activeSteps}
+            currentStepIndex={currentStepIndex}
           />
         </div>
       </div>
@@ -509,10 +683,28 @@ export const LinkedListPage: React.FC = () => {
         title={`Linked List Visualizer | ${category.toUpperCase()}`}
         subtitle="Interactive Pointer Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <LinkedListRenderer step={currentStep} nodes={baseNodes} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="linkedList" activeTopic={category} />
+
     </div>
   );
 };

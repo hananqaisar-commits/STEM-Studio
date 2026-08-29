@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   RotateCcw,
-  HelpCircle,
   Maximize2,
   Sparkles,
   Shuffle,
@@ -16,7 +16,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildBinarySearchCheckpoints } from './quizAdapter';
+import { buildBinarySearchCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateBinarySearchSteps,
@@ -28,15 +28,16 @@ import {
   type BinarySearchStep,
 } from './binarySearchEngine';
 import { BinarySearchRenderer } from './BinarySearchRenderer';
-import { BinarySearchCodePanel } from './BinarySearchCodePanel';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { BINARY_SEARCH_SNIPPETS } from './binarySearchSnippets';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './BinarySearch.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgorithmMeta {
   id: BinarySearchCategory;
@@ -55,13 +56,22 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 
 export const BinarySearchPage: React.FC = () => {
   const [category, setCategory] = useState<BinarySearchCategory>('binarySearch');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS_LIST.some((a) => a.id === topic)) {
+      setCategory(topic as BinarySearchCategory);
+    }
+  }, [searchParams]);
+
 
   const [array, setArray] = useState<number[]>([4, 8, 15, 23, 42, 56, 77, 89, 94]);
   const [targetInput, setTargetInput] = useState<string>('42');
   const [customArrayInput, setCustomArrayInput] = useState<string>('4, 8, 15, 23, 42, 56, 77, 89, 94');
 
   // Modes & Modals
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -74,14 +84,24 @@ export const BinarySearchPage: React.FC = () => {
     currentStep,
     totalSteps,
     isPlaying,
-    speed,
     play,
     pause,
     stepForward,
     stepBack,
     reset,
-    setSpeed,
-  } = useStepPlayer<BinarySearchStep>({ steps: activeSteps });
+  seekTo,
+    } = useStepPlayer<BinarySearchStep>({ steps: activeSteps });
+
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+    onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
@@ -99,6 +119,7 @@ export const BinarySearchPage: React.FC = () => {
     stepForward,
     module: 'binarySearch',
     algorithmId: category,
+    revisionData: buildRevisionData(category),
   });
 
   // Handle Category Switching
@@ -192,8 +213,14 @@ export const BinarySearchPage: React.FC = () => {
 
   const handleRandomize = () => {
     if (category === 'searchRotatedArray') {
-      const sorted = Array.from({ length: 8 }, (_, i) => (i + 1) * 10);
-      const pivot = 3;
+      /* Unique sorted values rotated at a random pivot — a genuinely
+         fresh rotation every run (this also powers the transfer
+         challenge, where a fixed array could be answered from memory). */
+      const len = 7 + Math.floor(Math.random() * 3);
+      const unique = new Set<number>();
+      while (unique.size < len) unique.add(Math.floor(Math.random() * 95) + 5);
+      const sorted = Array.from(unique).sort((a, b) => a - b);
+      const pivot = Math.floor(Math.random() * (len - 2)) + 1;
       const rotated = [...sorted.slice(pivot), ...sorted.slice(0, pivot)];
       setArray(rotated);
       setCustomArrayInput(rotated.join(', '));
@@ -201,7 +228,13 @@ export const BinarySearchPage: React.FC = () => {
       setTargetInput(String(target));
       setActiveSteps(generateRotatedSearchSteps(rotated, target));
     } else if (category === 'findPeakElement') {
-      const peakArr = [2, 8, 25, 45, 14, 9, 3];
+      /* Random mountain: one dominant peak at a random index. */
+      const len = 6 + Math.floor(Math.random() * 2);
+      const peakIdx = Math.floor(Math.random() * (len - 2)) + 1;
+      const peakArr = Array.from(
+        { length: len },
+        (_, i) => (i === peakIdx ? Math.floor(Math.random() * 30) + 70 : Math.floor(Math.random() * 40) + 5)
+      );
       setArray(peakArr);
       setCustomArrayInput(peakArr.join(', '));
       setActiveSteps(generatePeakElementSteps(peakArr));
@@ -240,6 +273,16 @@ export const BinarySearchPage: React.FC = () => {
     handleSelectCategory(category);
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh array + target, predicted cold. startChallenge() must fire in
+     the same handler as the input change so the armed challenge survives
+     the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    reset();
+    handleRandomize();
+  };
+
   const snippetKey =
     category === 'lowerBound'
       ? 'lowerBound'
@@ -249,32 +292,33 @@ export const BinarySearchPage: React.FC = () => {
 
   const currentTarget = Number(targetInput) || 0;
 
-  const renderPlayerControls = () => (
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
-
       <div className="player-center">
         <div className="step-progress-bar">
           <div
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -318,15 +362,12 @@ export const BinarySearchPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-        style={{ marginLeft: '0.5rem' }}
-      >
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -340,6 +381,24 @@ export const BinarySearchPage: React.FC = () => {
         activeId={category}
         onSelect={(id) => handleSelectCategory(id as BinarySearchCategory)}
         placeholder="Search algorithm or pattern..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
@@ -433,30 +492,10 @@ export const BinarySearchPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Mode Toggles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button
-            className={`ll-btn ${quizEnabled ? 'll-btn-primary' : 'll-btn-secondary'}`}
-            onClick={() => setQuizEnabled(!quizEnabled)}
-            style={quizEnabled ? { background: '#38bdf8', color: '#0f172a' } : {}}
-          >
-            <HelpCircle size={14} />
-            <span>Quiz Mode</span>
-          </button>
-
-          <button
-            className="ll-btn ll-btn-secondary"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
       </div>
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
-      <div className="bs-workspace">
+      <div className="bs-workspace scene-workspace">
         <div className="renderer-section">
           <div className="bs-canvas-card">
             <div className="bs-canvas-header">
@@ -478,31 +517,51 @@ export const BinarySearchPage: React.FC = () => {
             <BinarySearchRenderer step={currentStep} array={array} target={currentTarget} />
           </div>
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Code & Explanation */}
-        <div className="explanation-section">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-          <BinarySearchCodePanel
-            snippetKey={snippetKey}
-            activeLine={currentStep?.codeLine}
-            left={currentStep?.left}
-            mid={currentStep?.mid}
-            right={currentStep?.right}
-            target={currentTarget}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
           />
-
-          <MultiLanguageCodePanel
-            algorithmKey={category}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            currentArray={array}
-          />
+        </div>
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={category}
+              title="Binary Search"
+              snippets={BINARY_SEARCH_SNIPPETS[snippetKey]}
+              activeLine={currentStep?.codeLine}
+              variables={{
+                target: currentTarget,
+                left: currentStep?.left ?? null,
+                mid: currentStep?.mid ?? null,
+                right: currentStep?.right ?? null,
+              }}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)}
+            steps={activeSteps}
+            currentStepIndex={currentStepIndex}
           />
         </div>
       </div>
@@ -514,10 +573,28 @@ export const BinarySearchPage: React.FC = () => {
         title={`Binary Search Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Logarithmic Search Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <BinarySearchRenderer step={currentStep} array={array} target={currentTarget} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="binarySearch" activeTopic={category} />
+
     </div>
   );
 };

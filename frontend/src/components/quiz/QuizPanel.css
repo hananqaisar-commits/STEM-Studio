@@ -23,24 +23,38 @@
    ─────────────────────────────────────────────────────────────────── */
 
 .quiz-dock {
-  /* Single accent, matching the shell's focus ring. */
-  --quiz-accent: #818cf8;
-  --quiz-accent-soft: rgba(129, 140, 248, 0.09);
-  --quiz-accent-ring: rgba(129, 140, 248, 0.2);
-  --quiz-ok-soft: rgba(34, 197, 94, 0.09);
+  /* Single accent, matching the shell's purple theme. */
+  --quiz-accent: var(--purple-600, #9333ea);
+  --quiz-accent-soft: rgba(147, 51, 234, 0.09);
+  --quiz-accent-ring: rgba(147, 51, 234, 0.2);
+  --quiz-ok-soft: rgba(16, 185, 129, 0.09);
   --quiz-bad-soft: rgba(239, 68, 68, 0.08);
 
   /* Reserved so the cards below in the same rail hold still when a
      checkpoint opens and closes. */
+  position: relative;
   min-height: 268px;
   display: flex;
   flex-direction: column;
 }
 
+.quiz-dock-mascot {
+  position: absolute;
+  top: -1rem;
+  right: 0.6rem;
+  z-index: 5;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+[data-theme='dark'] .quiz-dock-mascot .octa-img {
+  filter: brightness(1.05);
+}
+
 [data-theme='dark'] .quiz-dock {
-  --quiz-accent-soft: rgba(129, 140, 248, 0.14);
-  --quiz-ok-soft: rgba(74, 222, 128, 0.12);
-  --quiz-bad-soft: rgba(248, 113, 113, 0.12);
+  --quiz-accent-soft: rgba(168, 85, 247, 0.16);
+  --quiz-ok-soft: rgba(52, 211, 153, 0.14);
+  --quiz-bad-soft: rgba(248, 113, 113, 0.14);
 }
 
 /* ─── Card shell ───────────────────────────────────────────────────── */
@@ -69,6 +83,12 @@
 
 .quiz-head-text {
   min-width: 0;
+}
+
+.quiz-head-mascot {
+  margin-left: auto;
+  margin-right: 0.4rem;
+  opacity: 0.95;
 }
 
 .quiz-eyebrow {
@@ -254,6 +274,31 @@
 .quiz-feedback-title {
   display: block;
   font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ─── Inspect-the-step note (final wrong answer) ────────────────── */
+
+.quiz-inspect-note {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px dashed var(--quiz-accent);
+  border-radius: 8px;
+  background: var(--quiz-accent-soft);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-top: 0.3rem;
+}
+
+.quiz-inspect-note svg {
+  flex-shrink: 0;
+  color: var(--quiz-accent);
+  margin-top: 0.1rem;
+}
+
+.quiz-inspect-note strong {
   color: var(--text-primary);
 }
 
@@ -736,6 +781,11 @@
   background: var(--quiz-accent-soft);
 }
 
+.quiz-revision-example {
+  font-family: 'JetBrains Mono', monospace;
+  white-space: pre-wrap;
+}
+
 .quiz-revision-list {
   margin: 0;
   padding: 0 0 0 1rem;
@@ -947,6 +997,110 @@
   color: var(--text-primary);
 }
 
+/* Score summary (compact row + full-width bar) */
+.quiz-report-score-block {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-primary);
+}
+
+.quiz-report-score-block .quiz-report-bar {
+  flex: 1 1 100%;
+}
+
+.quiz-report-summary {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quiz-report-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Report section wrappers */
+.quiz-report-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.quiz-report-section-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.quiz-report-concept-count {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+}
+
+/* Weak points list */
+.quiz-report-weak-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.quiz-report-weak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  font-size: 0.71rem;
+  font-weight: 600;
+  color: var(--error-color);
+  white-space: nowrap;
+}
+
+/* Quiet text action in the report footer */
+.quiz-report-text-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.32rem 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.quiz-report-text-btn:hover {
+  color: var(--text-primary);
+}
+
 /* Report actions */
 .quiz-report-actions {
   display: flex;
@@ -1012,6 +1166,160 @@
 
 .quiz-report-btn-text:hover {
   color: var(--text-primary);
+}
+
+
+/* ─── Transfer verdict (challenge report) ────────────────────────── */
+
+.quiz-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 10px;
+}
+
+.quiz-verdict.is-mastered {
+  border: 1px solid var(--success-color);
+  background: var(--quiz-ok-soft);
+}
+
+.quiz-verdict.is-practice {
+  border: 1px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.quiz-verdict-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.quiz-verdict.is-mastered .quiz-verdict-icon {
+  color: var(--success-color);
+}
+
+.quiz-verdict.is-practice .quiz-verdict-icon {
+  color: #f59e0b;
+}
+
+.quiz-verdict-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.quiz-verdict-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quiz-verdict-text {
+  margin: 0;
+  font-size: 0.77rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* ─── "Prove You Understand" CTA ─────────────────────────────────── */
+
+.quiz-prove-cta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--quiz-accent);
+  border-radius: 10px;
+  background: var(--quiz-accent-soft);
+}
+
+.quiz-prove-cta-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.quiz-prove-cta-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quiz-prove-cta-title svg {
+  color: var(--quiz-accent);
+}
+
+.quiz-prove-cta-sub {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.quiz-prove-btn {
+  flex-shrink: 0;
+}
+
+/* ─── Observation mode (quiz off) ────────────────────────────────── */
+
+.quiz-observation-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.quiz-observation-list {
+  margin: 0;
+  padding: 0 0 0 1rem;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.quiz-observation-list li {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.quiz-observation-cta-text {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ─── Challenge armed banner (idle, transfer challenge) ──────────── */
+
+.quiz-challenge-armed {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--quiz-accent);
+  border-radius: 8px;
+  background: var(--quiz-accent-soft);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.quiz-challenge-armed svg {
+  flex-shrink: 0;
+  color: var(--quiz-accent);
+  margin-top: 0.1rem;
 }
 
 

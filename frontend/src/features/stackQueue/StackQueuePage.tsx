@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Layers, Plus, Trash2, Code, CheckCircle2, Filter, HelpCircle, Maximize2, Sparkles
+  Layers, Plus, Trash2, CheckCircle2, Maximize2, Sparkles
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
+import { ResizableStudioLayout } from '../../components/layout/ResizableStudioLayout';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildStackQueueCheckpoints } from './quizAdapter';
+import { buildStackQueueCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateStackPushSteps,
@@ -22,6 +24,17 @@ import {
   generateSimplifyPathSteps,
   generateRemoveAdjacentDuplicatesSteps,
   generateSlidingWindowSteps,
+  generateBasicCalculatorSteps,
+  generateDecodeStringSteps,
+  generateTrappingRainWaterSteps,
+  generateLargestRectangleSteps,
+  generateStackViaQueuesSteps,
+  generateCircularDequeSteps,
+  generateFirstNonRepeatingSteps,
+  generateMovingAverageSteps,
+  generateTaskSchedulerSteps,
+  generateRottingOrangesSteps,
+  generateDota2SenateSteps,
   type StackQueueCategory,
   type StackQueueStep
 } from './stackQueueEngine';
@@ -29,15 +42,16 @@ import { StackRenderer } from './StackRenderer';
 import { QueueRenderer } from './QueueRenderer';
 import { CircularQueueRenderer } from './CircularQueueRenderer';
 import { ProblemRenderer } from './ProblemRenderer';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
-import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
+import { parseNumberList } from '../../utils/batchInputParser';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface ProblemMeta {
   id: StackQueueCategory;
@@ -76,12 +90,23 @@ const PROBLEMS_LIST: ProblemMeta[] = [
   { id: 'dota2Senate', name: 'Dota2 Senate Round-Robin', group: 'Queue', leetcodeId: '#649', description: 'Round-robin voting ban queue strategy' },
 ];
 
+// Circular Deque ring capacity shared by state, handlers and the engine
+const CD_CAPACITY = 5;
+
 export const StackQueuePage: React.FC = () => {
   const [category, setCategory] = useState<StackQueueCategory>('stack');
-  const [inputValue, setInputValue] = useState<string>('42');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && PROBLEMS_LIST.some((a) => a.id === topic)) {
+      setCategory(topic as StackQueueCategory);
+    }
+  }, [searchParams]);
+
+  const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40, 50');
 
   // Modes & Modals matching BST
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -102,6 +127,15 @@ export const StackQueuePage: React.FC = () => {
   const [qvsIn, setQvsIn] = useState<(number | string)[]>([10, 20]);
   const [qvsOut, setQvsOut] = useState<(number | string)[]>([5]);
 
+  // Stack via Two Queues state (main queue holds the stack, aux drains on push)
+  const [svqMain, setSvqMain] = useState<(number | string)[]>([10, 20, 30]);
+  const [svqAux, setSvqAux] = useState<(number | string)[]>([]);
+
+  // Circular Deque ring state (CD_CAPACITY slots, front/rear point at elements)
+  const [cdElements, setCdElements] = useState<(number | string | null)[]>([10, 20, null, null, null]);
+  const [cdFront, setCdFront] = useState<number>(0);
+  const [cdRear, setCdRear] = useState<number>(1);
+
   // Code Debugger Visibility State
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
 
@@ -111,14 +145,13 @@ export const StackQueuePage: React.FC = () => {
     currentStep,
     totalSteps,
     isPlaying,
-    speed,
     play,
     pause,
     stepForward,
     stepBack,
     reset,
-    setSpeed,
-  } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
+  seekTo,
+    } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
@@ -136,16 +169,29 @@ export const StackQueuePage: React.FC = () => {
     stepForward,
     module: 'stackQueue',
     algorithmId: category,
+    revisionData: buildRevisionData(category),
   });
 
-  // ─── ACTION HANDLERS ─────────────────────────────────────────────
+  // ─── ACTION HANDLERS (UNIVERSAL BATCH SEQUENTIAL EXECUTION) ─────────────────
 
   const handlePush = () => {
-    if (!inputValue.trim()) return;
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps = generateStackPushSteps(stackData, val);
-    setStackData([...stackData, val]);
-    setActiveSteps(steps);
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (rawValues.length === 0) return;
+
+    let current = [...stackData];
+    const allSteps: StackQueueStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps = generateStackPushSteps(current, val);
+      allSteps.push(...opSteps);
+      current = [...current, val];
+    }
+
+    setStackData(current);
+    setActiveSteps(allSteps);
     reset();
     play();
   };
@@ -159,11 +205,23 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleEnqueue = () => {
-    if (!inputValue.trim()) return;
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const steps = generateQueueEnqueueSteps(queueData, val);
-    setQueueData([...queueData, val]);
-    setActiveSteps(steps);
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (rawValues.length === 0) return;
+
+    let current = [...queueData];
+    const allSteps: StackQueueStep[] = [];
+
+    for (const val of rawValues) {
+      const opSteps = generateQueueEnqueueSteps(current, val);
+      allSteps.push(...opSteps);
+      current = [...current, val];
+    }
+
+    setQueueData(current);
+    setActiveSteps(allSteps);
     reset();
     play();
   };
@@ -177,13 +235,29 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleCircularEnqueue = () => {
-    if (!inputValue.trim()) return;
-    const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue);
-    const res = generateCircularQueueEnqueueSteps(cqElements, cqFront, cqRear, 6, val);
-    setCqElements(res.newElements);
-    setCqFront(res.newFront);
-    setCqRear(res.newRear);
-    setActiveSteps(res.steps);
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : inputValue.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (rawValues.length === 0) return;
+
+    let currentElements = [...cqElements];
+    let currentFront = cqFront;
+    let currentRear = cqRear;
+    const allSteps: StackQueueStep[] = [];
+
+    for (const val of rawValues) {
+      const res = generateCircularQueueEnqueueSteps(currentElements, currentFront, currentRear, 6, val);
+      allSteps.push(...res.steps);
+      currentElements = res.newElements;
+      currentFront = res.newFront;
+      currentRear = res.newRear;
+    }
+
+    setCqElements(currentElements);
+    setCqFront(currentFront);
+    setCqRear(currentRear);
+    setActiveSteps(allSteps);
     reset();
     play();
   };
@@ -197,11 +271,70 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleMinStackPush = () => {
-    const num = Number(inputValue) || 1;
-    const res = generateMinStackPushSteps(minMainStack, minAuxStack, num);
-    setMinMainStack(res.newMain);
-    setMinAuxStack(res.newMin);
-    setActiveSteps(res.steps);
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) return;
+
+    let curMain = [...minMainStack];
+    let curMin = [...minAuxStack];
+    const allSteps: StackQueueStep[] = [];
+
+    for (const num of nums) {
+      const res = generateMinStackPushSteps(curMain, curMin, num);
+      allSteps.push(...res.steps);
+      curMain = res.newMain;
+      curMin = res.newMin;
+    }
+
+    setMinMainStack(curMain);
+    setMinAuxStack(curMin);
+    setActiveSteps(allSteps);
+    reset();
+    play();
+  };
+
+  const handleBuildBatchStackQueue = () => {
+    const parseRes = parseNumberList(inputValue);
+    const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
+      ? parseRes.values
+      : [10, 20, 30, 40, 50];
+
+    if (category === 'stack') {
+      let current: (number | string)[] = [];
+      const allSteps: StackQueueStep[] = [];
+      for (const val of rawValues) {
+        const opSteps = generateStackPushSteps(current, val);
+        allSteps.push(...opSteps);
+        current = [...current, val];
+      }
+      setStackData(current);
+      setActiveSteps(allSteps);
+    } else if (category === 'queue') {
+      let current: (number | string)[] = [];
+      const allSteps: StackQueueStep[] = [];
+      for (const val of rawValues) {
+        const opSteps = generateQueueEnqueueSteps(current, val);
+        allSteps.push(...opSteps);
+        current = [...current, val];
+      }
+      setQueueData(current);
+      setActiveSteps(allSteps);
+    } else if (category === 'minStack') {
+      let curMain: number[] = [];
+      let curMin: number[] = [];
+      const allSteps: StackQueueStep[] = [];
+      for (const val of rawValues.map(Number).filter((n) => !isNaN(n))) {
+        const res = generateMinStackPushSteps(curMain, curMin, val);
+        allSteps.push(...res.steps);
+        curMain = res.newMain;
+        curMin = res.newMin;
+      }
+      setMinMainStack(curMain);
+      setMinAuxStack(curMin);
+      setActiveSteps(allSteps);
+    }
     reset();
     play();
   };
@@ -269,6 +402,129 @@ export const StackQueuePage: React.FC = () => {
     play();
   };
 
+  const parseNumArray = (fallback: number[]): number[] => {
+    const nums = inputValue.trim().split(/[\s,]+/).map(Number).filter((n) => !isNaN(n));
+    return nums.length > 0 ? nums : fallback;
+  };
+
+  const handleBasicCalculator = () => {
+    const expr = inputValue.trim() || '2-(3+4)';
+    setActiveSteps(generateBasicCalculatorSteps(expr));
+    reset();
+    play();
+  };
+
+  const handleDecodeString = () => {
+    const s = inputValue.trim() || '3[a2[c]]';
+    setActiveSteps(generateDecodeStringSteps(s));
+    reset();
+    play();
+  };
+
+  const handleTrappingRainWater = () => {
+    const heights = parseNumArray([4, 2, 0, 3, 2, 5]);
+    setActiveSteps(generateTrappingRainWaterSteps(heights));
+    reset();
+    play();
+  };
+
+  const handleLargestRectangle = () => {
+    const heights = parseNumArray([2, 1, 5, 6, 2, 3]);
+    setActiveSteps(generateLargestRectangleSteps(heights));
+    reset();
+    play();
+  };
+
+  const handleStackViaQueuesPush = () => {
+    const raw = inputValue.trim();
+    const val: number | string = raw === '' ? 42 : isNaN(Number(raw)) ? raw : Number(raw);
+    const res = generateStackViaQueuesSteps(svqMain, svqAux, 'push', val);
+    setSvqMain(res.newMain);
+    setSvqAux(res.newAux);
+    setActiveSteps(res.steps);
+    reset();
+    play();
+  };
+
+  const handleStackViaQueuesPop = () => {
+    const res = generateStackViaQueuesSteps(svqMain, svqAux, 'pop');
+    setSvqMain(res.newMain);
+    setSvqAux(res.newAux);
+    setActiveSteps(res.steps);
+    reset();
+    play();
+  };
+
+  const handleCircularDeque = (
+    op: 'insertFront' | 'insertLast' | 'deleteFront' | 'deleteLast'
+  ) => {
+    let value: number | string | undefined;
+    if (op === 'insertFront' || op === 'insertLast') {
+      const raw = inputValue.trim();
+      value = raw === '' ? 42 : isNaN(Number(raw)) ? raw : Number(raw);
+    }
+    const res = generateCircularDequeSteps(cdElements, cdFront, cdRear, CD_CAPACITY, op, value);
+    setCdElements(res.newElements);
+    setCdFront(res.newFront);
+    setCdRear(res.newRear);
+    setActiveSteps(res.steps);
+    reset();
+    play();
+  };
+
+  const handleFirstNonRepeating = () => {
+    const stream = inputValue.trim().replace(/[^a-zA-Z]/g, '') || 'aabc';
+    setActiveSteps(generateFirstNonRepeatingSteps(stream));
+    reset();
+    play();
+  };
+
+  const handleMovingAverage = () => {
+    const parts = inputValue.split('|');
+    const nums = parts[0].trim().split(/[\s,]+/).map(Number).filter((n) => !isNaN(n));
+    const k = parts[1] ? Math.max(1, Number(parts[1]) || 3) : 3;
+    setActiveSteps(generateMovingAverageSteps(nums.length > 0 ? nums : [1, 10, 3, 5], k));
+    reset();
+    play();
+  };
+
+  const handleTaskScheduler = () => {
+    const tokens = inputValue.trim().split(/[\s,]+/).filter(Boolean);
+    let cooldown = 2;
+    let taskStr = tokens.join('');
+    if (tokens.length > 1 && !isNaN(Number(tokens[tokens.length - 1]))) {
+      cooldown = Math.max(0, Number(tokens[tokens.length - 1]));
+      taskStr = tokens.slice(0, -1).join('');
+    }
+    const tasks = taskStr.toUpperCase().replace(/[^A-Z]/g, '').split('').filter(Boolean);
+    setActiveSteps(
+      generateTaskSchedulerSteps(
+        tasks.length > 0 ? tasks : ['A', 'A', 'A', 'B', 'B', 'B'],
+        cooldown
+      )
+    );
+    reset();
+    play();
+  };
+
+  const handleRottingOranges = () => {
+    const rows = inputValue.trim().split(';').map((r) => r.trim().split(/[\s,]+/).map(Number));
+    const valid =
+      rows.length > 0 && rows.every((r) => r.length > 0 && r.every((c) => !isNaN(c) && c >= 0 && c <= 2));
+    setActiveSteps(
+      generateRottingOrangesSteps(valid ? rows : [[2, 1, 1], [1, 1, 0], [0, 1, 1]])
+    );
+    reset();
+    play();
+  };
+
+  const handleDota2Senate = () => {
+    const senate = inputValue.trim().toUpperCase().replace(/[^RD]/g, '') || 'RDDR';
+    setActiveSteps(generateDota2SenateSteps(senate));
+    reset();
+    play();
+  };
+
   // ─── DEFAULT CATEGORY STEP GENERATOR ─────────────────────────────────────
   const getCategoryDefaultSteps = (
     cat: StackQueueCategory,
@@ -280,7 +536,12 @@ export const StackQueuePage: React.FC = () => {
     currMinMain: number[] = minMainStack,
     currMinAux: number[] = minAuxStack,
     currQvsIn: (number | string)[] = qvsIn,
-    currQvsOut: (number | string)[] = qvsOut
+    currQvsOut: (number | string)[] = qvsOut,
+    currSvqMain: (number | string)[] = svqMain,
+    currSvqAux: (number | string)[] = svqAux,
+    currCd: (number | string | null)[] = cdElements,
+    currCdFront: number = cdFront,
+    currCdRear: number = cdRear
   ): StackQueueStep[] => {
     switch (cat) {
       case 'stack':
@@ -305,6 +566,40 @@ export const StackQueuePage: React.FC = () => {
         return generateRemoveAdjacentDuplicatesSteps('abbaca');
       case 'slidingWindow':
         return generateSlidingWindowSteps([1, 3, -1, -3, 5, 3, 6, 7], 3);
+      case 'basicCalculator':
+        return generateBasicCalculatorSteps('2-(3+4)');
+      case 'decodeString':
+        return generateDecodeStringSteps('3[a2[c]]');
+      case 'trappingRainWater':
+        return generateTrappingRainWaterSteps([4, 2, 0, 3, 2, 5]);
+      case 'largestRectangle':
+        return generateLargestRectangleSteps([2, 1, 5, 6, 2, 3]);
+      case 'stackViaQueues':
+        return generateStackViaQueuesSteps(
+          currSvqMain.length ? currSvqMain : [10, 20, 30],
+          currSvqAux,
+          'push',
+          42
+        ).steps;
+      case 'circularDeque':
+        return generateCircularDequeSteps(
+          currCd.some((e) => e !== null) ? currCd : [10, 20, null, null, null],
+          currCdFront >= 0 ? currCdFront : 0,
+          currCdRear >= 0 ? currCdRear : 1,
+          CD_CAPACITY,
+          'insertLast',
+          30
+        ).steps;
+      case 'firstNonRepeating':
+        return generateFirstNonRepeatingSteps('aabc');
+      case 'movingAverage':
+        return generateMovingAverageSteps([1, 10, 3, 5], 3);
+      case 'taskScheduler':
+        return generateTaskSchedulerSteps(['A', 'A', 'A', 'B', 'B', 'B'], 2);
+      case 'rottingOranges':
+        return generateRottingOrangesSteps([[2, 1, 1], [1, 1, 0], [0, 1, 1]]);
+      case 'dota2Senate':
+        return generateDota2SenateSteps('RDDR');
       default:
         return generateStackPushSteps([10, 25, 30], 42);
     }
@@ -325,6 +620,8 @@ export const StackQueuePage: React.FC = () => {
     const sampleMinAux = [8, 4, 4, 2];
     const sampleQvsIn = [10, 20, 30];
     const sampleQvsOut = [5];
+    const sampleSvqMain = [10, 20, 30];
+    const sampleCd: (number | string | null)[] = [10, 20, null, null, null];
 
     setStackData(sampleStack);
     setQueueData(sampleQueue);
@@ -335,28 +632,237 @@ export const StackQueuePage: React.FC = () => {
     setMinAuxStack(sampleMinAux);
     setQvsIn(sampleQvsIn);
     setQvsOut(sampleQvsOut);
+    setSvqMain(sampleSvqMain);
+    setSvqAux([]);
+    setCdElements(sampleCd);
+    setCdFront(0);
+    setCdRear(1);
 
-    const steps = getCategoryDefaultSteps(category, sampleStack, sampleQueue, sampleCq, 0, 3, sampleMinMain, sampleMinAux, sampleQvsIn, sampleQvsOut);
+    const steps = getCategoryDefaultSteps(
+      category,
+      sampleStack,
+      sampleQueue,
+      sampleCq,
+      0,
+      3,
+      sampleMinMain,
+      sampleMinAux,
+      sampleQvsIn,
+      sampleQvsOut,
+      sampleSvqMain,
+      [],
+      sampleCd,
+      0,
+      1
+    );
     setActiveSteps(steps);
     reset();
     play();
   };
 
   const handleRandomData = () => {
-    const rndStack = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
-    const rndQueue = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
-    const rndCq = [rndStack[0], rndStack[1], rndStack[2], null, null, null];
+    const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-    setStackData(rndStack);
-    setQueueData(rndQueue);
-    setCqElements(rndCq);
-    setCqFront(0);
-    setCqRear(2);
+    // Problem categories roll a fresh expression / array input so the
+    // "Prove You Understand" transfer challenge always runs on unseen data.
+    switch (category) {
+      case 'validParentheses': {
+        const pairs = ['()', '[]', '{}'];
+        let expr = '';
+        for (let i = 0; i < randInt(3, 5); i++) {
+          const p = pairs[randInt(0, 2)];
+          expr += Math.random() < 0.75 ? p : p[1] + p[0];
+        }
+        setInputValue(expr);
+        setActiveSteps(generateValidParenthesesSteps(expr));
+        break;
+      }
+      case 'minStack': {
+        const main = Array.from({ length: randInt(3, 4) }, () => randInt(1, 30));
+        const aux = main.map((_, i) => Math.min(...main.slice(0, i + 1)));
+        const pushVal = randInt(1, 30);
+        setMinMainStack(main);
+        setMinAuxStack(aux);
+        setInputValue(String(pushVal));
+        setActiveSteps(generateMinStackPushSteps(main, aux, pushVal).steps);
+        break;
+      }
+      case 'postfixEval': {
+        const ops = ['+', '-', '*'];
+        const nums = Array.from({ length: 3 }, () => randInt(2, 20));
+        const expr = `${nums[0]} ${nums[1]} ${ops[randInt(0, 2)]} ${nums[2]} ${ops[randInt(0, 2)]}`;
+        setInputValue(expr);
+        setActiveSteps(generatePostfixEvalSteps(expr));
+        break;
+      }
+      case 'dailyTemperatures': {
+        const temps = Array.from({ length: randInt(6, 8) }, () => randInt(68, 85));
+        setInputValue(temps.join(' '));
+        setActiveSteps(generateDailyTemperaturesSteps(temps));
+        break;
+      }
+      case 'simplifyPath': {
+        const segs = ['a', 'b', 'c', '.', '..'];
+        const path =
+          '/' + ['a', 'b', 'c'][randInt(0, 2)] +
+          '/' +
+          Array.from({ length: randInt(2, 4) }, () => segs[randInt(0, 4)]).join('/') +
+          '/';
+        setInputValue(path);
+        setActiveSteps(generateSimplifyPathSteps(path));
+        break;
+      }
+      case 'removeAdjacentDuplicates': {
+        let s = '';
+        for (let i = 0; i < randInt(5, 8); i++) s += 'abc'[randInt(0, 2)];
+        setInputValue(s);
+        setActiveSteps(generateRemoveAdjacentDuplicatesSteps(s));
+        break;
+      }
+      case 'basicCalculator': {
+        const a = randInt(1, 9), b = randInt(1, 9), c = randInt(1, 9), d = randInt(1, 9);
+        const variants = [
+          `${a}+${b}-${c}`,
+          `${a}-(${b}+${c})`,
+          `${a}+(${b}-${c})`,
+          `${a}-${b}+(${c}-${d})`,
+          `(${a}+${b})-(${c}-${d})`,
+        ];
+        const expr = variants[randInt(0, variants.length - 1)];
+        setInputValue(expr);
+        setActiveSteps(generateBasicCalculatorSteps(expr));
+        break;
+      }
+      case 'decodeString': {
+        const randLetters = () => Array.from({ length: 2 }, () => 'abc'[randInt(0, 2)]).join('');
+        const variants = [
+          `${randInt(2, 3)}[${randLetters()}]`,
+          `${randInt(2, 3)}[${randLetters()}]${randInt(2, 3)}[${randLetters()}]`,
+          `${randInt(2, 3)}[${randLetters()}${randInt(2, 3)}[${randLetters()}]]`,
+          `${randLetters()}${randInt(2, 3)}[${randLetters()}]`,
+        ];
+        const s = variants[randInt(0, variants.length - 1)];
+        setInputValue(s);
+        setActiveSteps(generateDecodeStringSteps(s));
+        break;
+      }
+      case 'trappingRainWater': {
+        const n = randInt(6, 8);
+        const heights = Array.from(
+          { length: n },
+          (_, i) => (i === 0 || i === n - 1 ? randInt(3, 5) : randInt(0, 4))
+        );
+        setInputValue(heights.join(' '));
+        setActiveSteps(generateTrappingRainWaterSteps(heights));
+        break;
+      }
+      case 'largestRectangle': {
+        const heights = Array.from({ length: randInt(5, 7) }, () => randInt(1, 6));
+        setInputValue(heights.join(' '));
+        setActiveSteps(generateLargestRectangleSteps(heights));
+        break;
+      }
+      case 'queueViaStacks': {
+        const inStack = Array.from({ length: randInt(2, 3) }, () => randInt(5, 60));
+        const outStack = [randInt(5, 60)];
+        const val = randInt(5, 60);
+        setQvsIn(inStack);
+        setQvsOut(outStack);
+        setInputValue(String(val));
+        setActiveSteps(generateQueueViaStacksSteps(inStack, outStack, 'enqueue', val).steps);
+        break;
+      }
+      case 'stackViaQueues': {
+        const main = Array.from({ length: randInt(2, 4) }, () => randInt(5, 60));
+        const val = randInt(5, 60);
+        setSvqMain(main);
+        setSvqAux([]);
+        setInputValue(String(val));
+        setActiveSteps(generateStackViaQueuesSteps(main, [], 'push', val).steps);
+        break;
+      }
+      case 'circularDeque': {
+        const elems: (number | string | null)[] = [randInt(5, 60), randInt(5, 60), null, null, null];
+        const op = Math.random() < 0.5 ? 'insertFront' : 'insertLast';
+        const val = randInt(5, 60);
+        const res = generateCircularDequeSteps(elems, 0, 1, CD_CAPACITY, op, val);
+        setCdElements(res.newElements);
+        setCdFront(res.newFront);
+        setCdRear(res.newRear);
+        setInputValue(String(val));
+        setActiveSteps(res.steps);
+        break;
+      }
+      case 'slidingWindow': {
+        const nums = Array.from({ length: 8 }, () => randInt(-5, 10));
+        setInputValue(nums.join(' '));
+        setActiveSteps(generateSlidingWindowSteps(nums, 3));
+        break;
+      }
+      case 'firstNonRepeating': {
+        let stream = '';
+        for (let i = 0; i < randInt(6, 8); i++) stream += 'abcd'[randInt(0, 3)];
+        setInputValue(stream);
+        setActiveSteps(generateFirstNonRepeatingSteps(stream));
+        break;
+      }
+      case 'movingAverage': {
+        const nums = Array.from({ length: 6 }, () => randInt(1, 20));
+        setInputValue(nums.join(' '));
+        setActiveSteps(generateMovingAverageSteps(nums, 3));
+        break;
+      }
+      case 'taskScheduler': {
+        const tasks = Array.from({ length: randInt(6, 8) }, () => 'ABC'[randInt(0, 2)]);
+        setInputValue([...tasks, '2'].join(' '));
+        setActiveSteps(generateTaskSchedulerSteps(tasks, 2));
+        break;
+      }
+      case 'rottingOranges': {
+        let grid: number[][];
+        do {
+          grid = Array.from({ length: 3 }, () =>
+            Array.from({ length: 3 }, () => [0, 1, 1, 2][randInt(0, 3)])
+          );
+        } while (!grid.some((r) => r.includes(2)) || !grid.some((r) => r.includes(1)));
+        setInputValue(grid.map((r) => r.join(' ')).join(';'));
+        setActiveSteps(generateRottingOrangesSteps(grid));
+        break;
+      }
+      case 'dota2Senate': {
+        let senate = '';
+        for (let i = 0; i < randInt(5, 8); i++) senate += Math.random() < 0.5 ? 'R' : 'D';
+        setInputValue(senate);
+        setActiveSteps(generateDota2SenateSteps(senate));
+        break;
+      }
+      default: {
+        // Core primitives keep the shared random structure roll
+        const rndStack = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
+        const rndQueue = Array.from({ length: 4 }, () => Math.floor(Math.random() * 85) + 10);
+        const rndCq = [rndStack[0], rndStack[1], rndStack[2], null, null, null];
 
-    const steps = getCategoryDefaultSteps(category, rndStack, rndQueue, rndCq, 0, 2);
-    setActiveSteps(steps);
+        setStackData(rndStack);
+        setQueueData(rndQueue);
+        setCqElements(rndCq);
+        setCqFront(0);
+        setCqRear(2);
+
+        setActiveSteps(getCategoryDefaultSteps(category, rndStack, rndQueue, rndCq, 0, 2));
+        break;
+      }
+    }
     reset();
     play();
+  };
+
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh input rolled for the active problem, predicted cold.
+     startChallenge() must fire in the same handler as the input
+     change so the armed challenge survives the checkpoint reset. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomData();
   };
 
   const handleClearAll = () => {
@@ -369,6 +875,11 @@ export const StackQueuePage: React.FC = () => {
     setMinAuxStack([]);
     setQvsIn([]);
     setQvsOut([]);
+    setSvqMain([]);
+    setSvqAux([]);
+    setCdElements([null, null, null, null, null]);
+    setCdFront(-1);
+    setCdRear(-1);
     setActiveSteps([]);
     reset();
   };
@@ -387,7 +898,11 @@ export const StackQueuePage: React.FC = () => {
     <>
       {category === 'stack' && (
         <>
-          <button className="bst-btn btn-insert" onClick={handlePush}>
+          <button className="bst-btn btn-mode" onClick={handleBuildBatchStackQueue} title="Build stack sequentially">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Build Stack</span>
+          </button>
+          <button className="bst-btn btn-insert" onClick={handlePush} title="Push value(s) sequentially">
             <Plus size={14} />
             <span>Push</span>
           </button>
@@ -399,7 +914,11 @@ export const StackQueuePage: React.FC = () => {
 
       {category === 'queue' && (
         <>
-          <button className="bst-btn btn-insert" onClick={handleEnqueue}>
+          <button className="bst-btn btn-mode" onClick={handleBuildBatchStackQueue} title="Build queue sequentially">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Build Queue</span>
+          </button>
+          <button className="bst-btn btn-insert" onClick={handleEnqueue} title="Enqueue value(s) sequentially">
             <Plus size={14} />
             <span>Enqueue</span>
           </button>
@@ -476,6 +995,100 @@ export const StackQueuePage: React.FC = () => {
           <span>Compute Window Max</span>
         </button>
       )}
+
+      {category === 'basicCalculator' && (
+        <button className="bst-btn btn-insert" onClick={handleBasicCalculator}>
+          <CheckCircle2 size={14} />
+          <span>Evaluate Expression</span>
+        </button>
+      )}
+
+      {category === 'decodeString' && (
+        <button className="bst-btn btn-insert" onClick={handleDecodeString}>
+          <CheckCircle2 size={14} />
+          <span>Decode String</span>
+        </button>
+      )}
+
+      {category === 'trappingRainWater' && (
+        <button className="bst-btn btn-insert" onClick={handleTrappingRainWater}>
+          <CheckCircle2 size={14} />
+          <span>Compute Trapped Water</span>
+        </button>
+      )}
+
+      {category === 'largestRectangle' && (
+        <button className="bst-btn btn-insert" onClick={handleLargestRectangle}>
+          <CheckCircle2 size={14} />
+          <span>Compute Max Area</span>
+        </button>
+      )}
+
+      {category === 'stackViaQueues' && (
+        <>
+          <button className="bst-btn btn-insert" onClick={handleStackViaQueuesPush}>
+            <Plus size={14} />
+            <span>Push (Drain)</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleStackViaQueuesPop}>
+            <span>Pop</span>
+          </button>
+        </>
+      )}
+
+      {category === 'circularDeque' && (
+        <>
+          <button className="bst-btn btn-insert" onClick={() => handleCircularDeque('insertFront')}>
+            <Plus size={14} />
+            <span>Insert Front</span>
+          </button>
+          <button className="bst-btn btn-insert" onClick={() => handleCircularDeque('insertLast')}>
+            <Plus size={14} />
+            <span>Insert Last</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={() => handleCircularDeque('deleteFront')}>
+            <span>Delete Front</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={() => handleCircularDeque('deleteLast')}>
+            <span>Delete Last</span>
+          </button>
+        </>
+      )}
+
+      {category === 'firstNonRepeating' && (
+        <button className="bst-btn btn-insert" onClick={handleFirstNonRepeating}>
+          <CheckCircle2 size={14} />
+          <span>Process Stream</span>
+        </button>
+      )}
+
+      {category === 'movingAverage' && (
+        <button className="bst-btn btn-insert" onClick={handleMovingAverage}>
+          <CheckCircle2 size={14} />
+          <span>Stream Averages</span>
+        </button>
+      )}
+
+      {category === 'taskScheduler' && (
+        <button className="bst-btn btn-insert" onClick={handleTaskScheduler}>
+          <CheckCircle2 size={14} />
+          <span>Run Scheduler</span>
+        </button>
+      )}
+
+      {category === 'rottingOranges' && (
+        <button className="bst-btn btn-insert" onClick={handleRottingOranges}>
+          <CheckCircle2 size={14} />
+          <span>Run BFS Rot</span>
+        </button>
+      )}
+
+      {category === 'dota2Senate' && (
+        <button className="bst-btn btn-insert" onClick={handleDota2Senate}>
+          <CheckCircle2 size={14} />
+          <span>Run Election</span>
+        </button>
+      )}
     </>
   );
 
@@ -490,34 +1103,44 @@ export const StackQueuePage: React.FC = () => {
     </>
   );
 
-  const renderPlayerControls = () => (
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+    onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
+
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
-
       <div className="player-center">
         <div className="step-progress-bar">
           <div
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
-        <span className="step-counter">
-          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
-        </span>
       </div>
-
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -552,15 +1175,12 @@ export const StackQueuePage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-        style={{ marginLeft: '0.5rem' }}
-      >
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -579,48 +1199,27 @@ export const StackQueuePage: React.FC = () => {
         activeId={category}
         onSelect={(id) => handleSelectProblem(id as StackQueueCategory)}
         placeholder="Search 20 DSA problems (#739, Water, Min)..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
-      {/* Category Tabs Bar Matching BST */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs">
-          <button
-            className={`category-tab ${['stack', 'queue', 'circularQueue'].includes(category) ? 'active' : ''}`}
-            onClick={() => {
-              setCategory('stack');
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <Layers size={16} />
-            <span>Core Primitives (LIFO & FIFO)</span>
-          </button>
 
-          <button
-            className={`category-tab ${PROBLEMS_LIST.filter((p) => p.group === 'Stack').some((p) => p.id === category) ? 'active' : ''}`}
-            onClick={() => {
-              setCategory('validParentheses');
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <CheckCircle2 size={16} />
-            <span>10 Stack Classical Problems</span>
-          </button>
-
-          <button
-            className={`category-tab ${PROBLEMS_LIST.filter((p) => p.group === 'Queue').some((p) => p.id === category) ? 'active' : ''}`}
-            onClick={() => {
-              setCategory('queueViaStacks');
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <Filter size={16} />
-            <span>10 Queue Classical Problems</span>
-          </button>
-        </div>
-      </div>
 
       {/* Operations Control Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
@@ -666,17 +1265,17 @@ export const StackQueuePage: React.FC = () => {
           </select>
 
           {/* Input Group Matching BST */}
-          <div className="bst-input-group">
-            <span>Value:</span>
-            <input
-              type="text"
-              className="bst-input"
-              style={{ width: '90px' }}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Val / Expr"
-            />
-          </div>
+            <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
+              <span style={{ fontWeight: 600 }}>Values:</span>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="bst-input"
+                placeholder="e.g. 10, 20, 30, 40"
+                style={{ minWidth: '160px' }}
+              />
+            </div>
 
           {/* Category Action Buttons */}
           {renderCategoryActions()}
@@ -697,84 +1296,76 @@ export const StackQueuePage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Toolbar Right Matching BST */}
-        <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} />
-            <span>Quiz Mode</span>
-          </button>
-
-          <button
-            className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
-
-          <button
-            className={`bst-btn ${showDebugger ? 'active' : ''}`}
-            onClick={() => setShowDebugger(!showDebugger)}
-          >
-            <Code size={14} />
-            <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
-          </button>
-        </div>
       </div>
 
-      {/* Main Workspace Layout (Canvas + Code Debugger) */}
-      <div className="sorting-workspace">
-        <div className="renderer-section">
-          <div className="bst-canvas-card">
-            <div className="bst-canvas-header">
-              <div className="ll-canvas-title">
-                <Layers size={16} className="text-accent" />
-                <span>
-                  {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
-                </span>
+      {/* Main Workspace Layout (Canvas + Drag Splitter + Quiz Dock + Code Debugger) */}
+      <ResizableStudioLayout
+        initialLeftPercent={68}
+        leftContent={
+          <div className="renderer-section" style={{ height: '100%' }}>
+            <div className="bst-canvas-card">
+              <div className="bst-canvas-header">
+                <div className="ll-canvas-title">
+                  <Layers size={16} className="text-accent" />
+                  <span>
+                    {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
+                  </span>
+                </div>
+                <button
+                  className="bst-btn btn-fullscreen"
+                  onClick={() => setIsFullScreenOpen(true)}
+                  title="Full Screen Canvas View"
+                >
+                  <Maximize2 size={14} />
+                </button>
               </div>
-              <button
-                className="bst-btn btn-fullscreen"
-                onClick={() => setIsFullScreenOpen(true)}
-                title="Full Screen Canvas View"
-              >
-                <Maximize2 size={14} />
-              </button>
+
+              {renderCanvas()}
             </div>
 
-            {renderCanvas()}
+            <FloatingController
+              isPlaying={isPlaying}
+              canStepBack={currentStepIndex > 0}
+              canStepForward={currentStepIndex < totalSteps - 1}
+              onPlay={play}
+              onPause={pause}
+              onReset={reset}
+              onStepBack={stepBack}
+              onStepForward={stepForward}
+              onStop={() => { pause(); reset(); }}
+              onResume={play}
+              quizMode={quizEnabled}
+            />
           </div>
-
-          {renderPlayerControls()}
-        </div>
-
-        {/* Right Panel: Code Debugger + Explanation */}
-        {showDebugger && (
-          <div className="explanation-section">
-            <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-            <MultiLanguageCodePanel
-              algorithmKey={category}
-              breakpoints={[]}
-              onToggleBreakpoint={() => {}}
+        }
+        rightContent={
+          <div className="quiz-rail">
+            <QuizDock
+              session={quizSession}
+              cadence={cadence}
+              onCadenceChange={setCadence}
+              onEnableQuiz={() => setQuizEnabled(true)}
+              onProveIt={handleProveIt}
             />
-
-            <StackQueueCodePanel
-              category={category}
-              activeLine={currentStep?.codeLine ?? 1}
-            />
+          </div>
+        }
+        bottomContent={
+          <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+            {showDebugger && (
+              <StackQueueCodePanel
+                category={category}
+                activeLine={currentStep?.codeLine ?? 1}
+              />
+            )}
 
             <ExplanationPanel
               description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
+              steps={activeSteps}
+              currentStepIndex={currentStepIndex}
             />
           </div>
-        )}
-      </div>
+        }
+      />
 
       {/* FullScreen Canvas Modal matching BST */}
       <FullScreenCanvasModal
@@ -783,10 +1374,28 @@ export const StackQueuePage: React.FC = () => {
         title={`Stack & Queue Studio | ${(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? 'Visualizer').toUpperCase()}`}
         subtitle="Interactive LIFO / FIFO Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         {renderCanvas()}
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="stackQueue" activeTopic={category} />
+
     </div>
   );
 };

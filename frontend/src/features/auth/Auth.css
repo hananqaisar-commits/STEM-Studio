@@ -8,6 +8,7 @@
 }
 
 .auth-card {
+  position: relative;
   width: 100%;
   max-width: 440px;
   background-color: var(--color-app-bg);
@@ -16,6 +17,10 @@
   padding: 3rem 2.5rem;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 1px solid var(--color-border);
+}
+
+.auth-card-with-mascot {
+  margin-top: 1.75rem;
 }
 
 .auth-header {
@@ -178,7 +183,7 @@
 }
 
 .auth-button:hover {
-  background-color: var(--accent-hover);
+  background-color: var(--color-primary-hover);
 }
 
 .auth-button:active {

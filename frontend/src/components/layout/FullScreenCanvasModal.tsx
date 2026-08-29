@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Minimize2, Sun, Moon } from 'lucide-react';
+import { Minimize2 } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 import './FullScreenCanvasModal.css';
 
 interface FullScreenCanvasModalProps {
@@ -10,6 +11,8 @@ interface FullScreenCanvasModalProps {
   subtitle?: string;
   toolbarControls?: React.ReactNode;
   playbackControls?: React.ReactNode;
+  /** Optional floating controller rendered inside the fullscreen body. */
+  floatingControls?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -20,9 +23,10 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   subtitle = 'Interactive DSA Inspector',
   toolbarControls,
   playbackControls,
+  floatingControls,
   children,
 }) => {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const { actualTheme } = useTheme();
 
   // Trigger native browser fullscreen
   useEffect(() => {
@@ -51,7 +55,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={`fs-modal-overlay theme-${theme} animate-fade-in`}>
+    <div className={`fs-modal-overlay theme-${actualTheme} animate-fade-in`}>
       {/* Top Floating Glassmorphic Header Toolbar */}
       <header className="fs-modal-header">
         <div className="fs-header-branding">
@@ -67,16 +71,9 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
         )}
 
         <div className="fs-header-actions">
-          {/* Light / Dark Mode Toggle */}
-          <button
-            className="fs-icon-btn theme-toggle-btn"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-          >
-            {theme === 'dark' ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-indigo-400" />}
-            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-          </button>
-
+          <span className="fs-quiz-disabled-hint" title="Quiz mode is disabled while in fullscreen">
+            Quiz mode unavailable
+          </span>
           {/* Exit Fullscreen Button */}
           <button className="fs-icon-btn exit-fs-btn" onClick={onClose} title="Exit Fullscreen Mode">
             <Minimize2 size={15} />
@@ -87,6 +84,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
 
       {/* Main Canvas Scrollable Workspace */}
       <main className="fs-modal-body">
+        {floatingControls}
         <div className="fs-workspace-scrollable">
           {children}
         </div>

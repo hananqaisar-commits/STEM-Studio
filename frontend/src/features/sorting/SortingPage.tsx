@@ -1,21 +1,25 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, HelpCircle, Hash
+  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, Hash
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
+import { FloatingController } from '../../components/controls/FloatingController';
 import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
 import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildSortingCheckpoints } from './quizAdapter';
+import { buildSortingCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
 import { generateBubbleSortSteps } from './algorithms/bubbleSort';
@@ -30,6 +34,8 @@ import { generateRadixSortSteps } from './algorithms/radixSort';
 import { generateBucketSortSteps } from './algorithms/bucketSort';
 
 import './Sorting.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList } from '../../utils/batchInputParser';
 
 type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell' | 'counting' | 'radix' | 'bucket';
 type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
@@ -78,14 +84,24 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 
 export const SortingPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as AlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [arraySize, setArraySize] = useState<number>(12);
   const [arrayPattern, setArrayPattern] = useState<ArrayPattern>('random');
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
+  const [rawArrayInput, setRawArrayInput] = useState<string>(() => generateArray(12, 'random').join(', '));
 
   // Debugger & Modal & Predict state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Custom code execution state
@@ -130,6 +146,7 @@ export const SortingPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
+    seekTo,
     setSpeed,
   } = useStepPlayer({ steps: customSteps ?? executionData.steps });
 
@@ -149,6 +166,7 @@ export const SortingPage: React.FC = () => {
     stepForward,
     module: 'sorting',
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   // Clear custom steps when algorithm or array changes
@@ -167,7 +185,9 @@ export const SortingPage: React.FC = () => {
   const handleRandomize = () => {
     reset();
     quizSession.resetSession();
-    setInitialArray(generateArray(arraySize, arrayPattern));
+    const arr = generateArray(arraySize, arrayPattern);
+    setInitialArray(arr);
+    setRawArrayInput(arr.join(', '));
   };
 
   const handleApplyCustomArray = (newArr: number[]) => {
@@ -175,7 +195,18 @@ export const SortingPage: React.FC = () => {
     quizSession.resetSession();
     setArraySize(newArr.length);
     setInitialArray(newArr);
+    setRawArrayInput(newArr.join(', '));
     setShowCustomEditor(false);
+  };
+
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     A fresh, never-studied array becomes the execution the student must
+     predict cold. startChallenge() must fire in the same handler as the
+     input change so the armed challenge survives the checkpoint reset
+     the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
   };
 
   const handleBarElementClick = (index: number, currentValue: number) => {
@@ -192,13 +223,24 @@ export const SortingPage: React.FC = () => {
 
 
 
-  const renderPlayerControls = () => (
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+    onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => {
+        pause();
+        reset();
+      },
+      onResume: play,
+    },
+  });
+
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton
-          isPlaying={isPlaying}
-          onToggle={isPlaying ? pause : play}
-        />
+        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
         <StepControls
           onStepBack={stepBack}
           onStepForward={stepForward}
@@ -207,22 +249,29 @@ export const SortingPage: React.FC = () => {
           canStepForward={currentStepIndex < totalSteps - 1}
         />
       </div>
-
       <div className="player-center">
         <div className="step-progress-bar">
           <div
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
-        <span className="step-counter">
-          Step {currentStepIndex + 1} / {totalSteps}
-        </span>
+        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-
       <div className="player-right">
         <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+        </div>
     </div>
   );
 
@@ -265,14 +314,12 @@ export const SortingPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -286,7 +333,6 @@ export const SortingPage: React.FC = () => {
           id: alg.key,
           name: alg.name,
           description: `Step-by-step ${alg.name} execution over a live memory array`,
-          group: alg.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => {
@@ -294,7 +340,25 @@ export const SortingPage: React.FC = () => {
           reset();
           quizSession.resetSession();
         }}
-        placeholder="Search sorting algorithm or complexity..."
+        placeholder="Search sorting algorithm..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs Bar Matching BST */}
@@ -312,7 +376,6 @@ export const SortingPage: React.FC = () => {
             >
               {alg.icon}
               <span>{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>
@@ -321,9 +384,30 @@ export const SortingPage: React.FC = () => {
       {/* Operations Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
+          {/* Direct Batch Array Input */}
+          <div className="bst-input-group" title="Enter custom comma-separated numbers (e.g. 8, 3, 5, 1, 9, 2)">
+            <span style={{ fontWeight: 600 }}>Array:</span>
+            <input
+              type="text"
+              value={rawArrayInput}
+              onChange={(e) => {
+                setRawArrayInput(e.target.value);
+                const res = parseNumberList(e.target.value);
+                if (res.isValid && res.values.length >= 2) {
+                  setInitialArray(res.values);
+                  setCustomSteps(null);
+                  reset();
+                }
+              }}
+              className="bst-input"
+              placeholder="e.g. 8, 3, 5, 1, 9, 2"
+              style={{ minWidth: '150px' }}
+            />
+          </div>
+
           <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
             <Edit3 size={14} />
-            <span>Custom Values</span>
+            <span>Editor</span>
           </button>
 
           <div className="bst-input-group">
@@ -378,29 +462,10 @@ export const SortingPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} />
-            <span>Quiz Mode</span>
-          </button>
-
-          <button
-            className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
       </div>
 
       {/* Main Learning Workspace */}
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         {/* Left Column: Visual Canvas & Interactive Controls */}
         <div className="renderer-section">
           <SortingRenderer
@@ -409,31 +474,55 @@ export const SortingPage: React.FC = () => {
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
-        <div className="explanation-section">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            activeLine={currentStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            variables={currentStep?.variables}
-            callStack={currentStep?.callStack}
-            onCustomCodeRun={handleCustomCodeRun}
-            currentArray={initialArray}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
           />
+        </div>
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={selectedAlg}
+              title="Sorting Algorithm"
+              activeLine={currentStep?.codeLine}
+              variables={currentStep?.variables}
+              callStack={currentStep?.callStack}
+              onCustomCodeRun={handleCustomCodeRun}
+              currentArray={initialArray}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
+            steps={executionData.steps}
+            currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="sorting" activeTopic={selectedAlg} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal
@@ -442,7 +531,23 @@ export const SortingPage: React.FC = () => {
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <SortingRenderer
           currentStep={currentStep}

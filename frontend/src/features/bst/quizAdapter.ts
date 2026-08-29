@@ -189,7 +189,17 @@ export function buildBSTCheckpoints(steps: BSTStep[]): QuizCheckpoint[] {
 
 /* ── Revision data ─────────────────────────────────────────────────── */
 
-type BSTAlgorithmKey = 'insert' | 'search' | 'inorder' | 'preorder' | 'postorder';
+export type BSTAlgorithmKey =
+  | 'insert'
+  | 'search'
+  | 'inorder'
+  | 'preorder'
+  | 'postorder'
+  | 'avlInsert'
+  | 'heapInsert'
+  | 'heapExtract'
+  | 'trieInsert'
+  | 'trieSearch';
 
 const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
   insert: {
@@ -198,6 +208,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Follow the BST property: smaller values go left, larger values go right',
     watchFor: ['Comparison at each node', 'Traversal direction', 'Leaf insertion'],
     quickTip: 'Always insert as a leaf—traverse until you hit null, then create the node',
+    example: 'Insert 5 into BST [8,3,10,1,6]: 5<8 go left, 5>3 go right, 5<6 go left → insert 5 as left child of 6.',
   },
   search: {
     description: 'Find a target value in a binary search tree',
@@ -205,6 +216,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'At each node, the BST property tells you which subtree to search next',
     watchFor: ['Direction decision', 'Termination conditions', 'Worst case (skewed tree)'],
     quickTip: 'If target < node go left, if target > node go right, if equal you found it',
+    example: 'Search 6 in BST [8,3,10,1,6]: 6<8 go left, 6>3 go right, 6=6 → found.',
   },
   inorder: {
     description: 'Traverse the tree in left-node-right order',
@@ -212,6 +224,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Inorder traversal of a BST visits nodes in ascending sorted order',
     watchFor: ['Visit order (L-N-R)', 'Stack/recursion depth', 'Sorted output property'],
     quickTip: 'Inorder on a BST always produces elements in sorted order—useful for validation',
+    example: 'BST [8,3,10,1,6]: inorder visits 1,3,6,8,10 — sorted ascending.',
   },
   preorder: {
     description: 'Traverse the tree in node-left-right order',
@@ -219,6 +232,7 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Visit the node before its children—useful for copying the tree structure',
     watchFor: ['Visit order (N-L-R)', 'Root-first property', 'Serialization use'],
     quickTip: 'Preorder is useful for creating a copy of the tree or serialization',
+    example: 'BST [8,3,10,1,6]: preorder visits 8,3,1,6,10 — root first, then left subtree, then right.',
   },
   postorder: {
     description: 'Traverse the tree in left-right-node order',
@@ -226,6 +240,47 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Visit children before the node—useful for deletion (children before parent)',
     watchFor: ['Visit order (L-R-N)', 'Bottom-up processing', 'Deletion use case'],
     quickTip: 'Postorder processes all descendants before their parent—ideal for safe deletion',
+    example: 'BST [8,3,10,1,6]: postorder visits 1,6,3,10,8 — children before parent.',
+  },
+  avlInsert: {
+    description: 'Insert into an AVL tree and rebalance with rotations',
+    complexity: 'O(log n) time, O(log n) space',
+    keyIdea: 'After each insert, node heights update and the first unbalanced node rotates back into balance',
+    watchFor: ['Balance factor −1/0/+1', 'LL → right rotation', 'LR → left then right rotation'],
+    quickTip: 'Balance factor = height(left) − height(right); only ancestors of the inserted node can lose balance',
+    example: 'Insert 10, 20, 30: after 30 the root leans right (BF −2) → left rotation makes 20 the root.',
+  },
+  heapInsert: {
+    description: 'Insert a value into a binary heap and sift it up',
+    complexity: 'O(log n) time, O(1) space (iterative)',
+    keyIdea: 'Append at the next free slot, then swap upward while the heap property is violated',
+    watchFor: ['Parent index = (i−1)/2', 'Swap stops when parent dominates', 'Max vs min heap direction'],
+    quickTip: 'A heap is a complete tree stored in an array—children of i live at 2i+1 and 2i+2',
+    example: 'Max-heap [90,75,60,40]: insert 85 → appended under 40, swaps up: 85>40, 85<90 stops → [90,85,60,40,75].',
+  },
+  heapExtract: {
+    description: 'Remove the heap root and restore the heap property',
+    complexity: 'O(log n) time, O(1) space (iterative)',
+    keyIdea: 'Move the last element to the root, then sift it down by swapping with the dominant child',
+    watchFor: ['Root removed first', 'Sift-down picks larger child (max heap)', 'Array shrinks by one'],
+    quickTip: 'Extract always removes the extreme element—the root—because a heap only guarantees the top',
+    example: 'Max-heap [90,85,60]: extract 90 → last element 60 becomes root, sifts down → [85,60].',
+  },
+  trieInsert: {
+    description: 'Insert a word into a trie character by character',
+    complexity: 'O(m) time, O(m) space (m = word length)',
+    keyIdea: 'Each character descends one level; missing children are created, and the final node is marked as a word end',
+    watchFor: ['Shared prefixes reuse nodes', 'isEnd flag on last char', 'New branch creation'],
+    quickTip: 'Tries trade memory for lookup speed—common prefixes are stored only once',
+    example: 'Insert "cat" then "car": c→a is shared, then t and r branch off node a.',
+  },
+  trieSearch: {
+    description: 'Search for a full word in a trie',
+    complexity: 'O(m) time, O(1) space',
+    keyIdea: 'Descend one node per character; the word exists only if every edge exists AND the last node is marked as an end',
+    watchFor: ['Missing child = fail fast', 'isEnd check at the end', 'Prefix vs full word'],
+    quickTip: 'Reaching the last character is not enough—the isEnd flag distinguishes "car" from "card"',
+    example: 'Trie with "car": searching "ca" walks fine but returns false—no isEnd on a.',
   },
 };
 

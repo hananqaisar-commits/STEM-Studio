@@ -275,6 +275,7 @@ const REVISION_DATA: Record<HashMapsAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Store each seen value in a hash map; check if complement (target - current) exists',
     watchFor: ['Complement lookup', 'Map stores value→index', 'Single-pass optimization'],
     quickTip: 'For each element, check if (target - element) is in the map before adding current element',
+    example: 'Array [2,7,11,15], target=9: i=0 map={2:0}; i=1 complement=9-7=2 found at index 0 → pair (0,1).',
   },
   duplicateDetect: {
     description: 'Detect if an array contains duplicate values',
@@ -282,6 +283,7 @@ const REVISION_DATA: Record<HashMapsAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Use a hash set—insertion fails (or returns false) when the element already exists',
     watchFor: ['Set vs map choice', 'Early termination', 'Space trade-off'],
     quickTip: 'A hash set gives O(1) average lookup—stop as soon as you find the first duplicate',
+    example: 'Array [1,2,3,2]: insert 1→set{1}, insert 2→set{1,2}, insert 3→set{1,2,3}, insert 2→already in set! Duplicate found.',
   },
   frequencyMap: {
     description: 'Count occurrences of each element in an array',
@@ -289,6 +291,7 @@ const REVISION_DATA: Record<HashMapsAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'Use a hash map to track how many times each value has appeared',
     watchFor: ['Key initialization', 'Increment logic', 'Iteration over entries'],
     quickTip: 'Use map.getOrDefault(key, 0) + 1 or the ?? 0 pattern to handle first occurrence cleanly',
+    example: 'Array [1,2,2,3,3,3]: map={1:1, 2:2, 3:3}. Each key maps to its count.',
   },
   subarraySum: {
     description: 'Find a contiguous subarray that sums to a target',
@@ -296,6 +299,7 @@ const REVISION_DATA: Record<HashMapsAlgorithmKey, QuizRevisionData> = {
     keyIdea: 'If runningSum - target exists in the prefix sum map, a valid subarray is found',
     watchFor: ['Prefix sum map', 'Complement check', 'Index tracking'],
     quickTip: 'Store each prefix sum with its index—when (currentSum - target) is in the map, the subarray is between those indices',
+    example: 'Array [1,2,3,7,5], target=12: runningSums=[1,3,6,13,18]. At i=3, sum=13, complement=13-12=1 found at i=0 → subarray [1..3]=[2,3,7]=12.',
   },
 };
 

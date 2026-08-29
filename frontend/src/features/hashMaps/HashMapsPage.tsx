@@ -1,21 +1,22 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Edit3, Search, Hash, Maximize2, HelpCircle, Sparkles, Trash2, Layers, Copy, Map
+  Edit3, Search, Hash, Maximize2, Sparkles, Trash2, Layers, Copy, Map
 } from 'lucide-react';
 import { HashMapRenderer } from './HashMapRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildHashMapsCheckpoints } from './quizAdapter';
+import { buildHashMapsCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 import type { HashMapsAlgorithmKey } from './quizAdapter';
 
@@ -26,6 +27,7 @@ import { runSubarraySum } from './algorithms/subarraySum';
 
 import '../sorting/Sorting.css';
 import './HashMaps.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgMeta {
   key: HashMapsAlgorithmKey;
@@ -51,6 +53,14 @@ const DEFAULT_INPUTS: Record<HashMapsAlgorithmKey, { arr: number[]; target?: num
 
 export const HashMapsPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<HashMapsAlgorithmKey>('twoSum');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as HashMapsAlgorithmKey);
+    }
+  }, [searchParams]);
+
 
   // Custom input state
   const [inputArr, setInputArr] = useState<number[]>(DEFAULT_INPUTS.twoSum.arr);
@@ -59,7 +69,8 @@ export const HashMapsPage: React.FC = () => {
   // UI state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(true);
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Sync inputs when algorithm changes
@@ -90,14 +101,24 @@ export const HashMapsPage: React.FC = () => {
     currentStep,
     totalSteps,
     isPlaying,
-    speed,
     play,
     pause,
     stepForward,
     stepBack,
     reset,
-    setSpeed,
-  } = useStepPlayer({ steps: executionData.steps });
+  seekTo,
+    } = useStepPlayer({ steps: executionData.steps });
+
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+    onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
 
   // Build quiz checkpoints
   const quizCheckpoints = useMemo(
@@ -115,6 +136,7 @@ export const HashMapsPage: React.FC = () => {
     stepForward,
     module: 'hashMaps' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   // Clear quiz when algorithm or array changes
@@ -149,6 +171,15 @@ export const HashMapsPage: React.FC = () => {
     }
   };
 
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh array + target, predicted cold. startChallenge() must fire in
+     the same handler as the input change so the armed challenge survives
+     the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
+  };
+
   const handleBarElementClick = (index: number, currentValue: number) => {
     const valStr = prompt(`Edit value at index [${index}]:`, currentValue.toString());
     if (valStr !== null) {
@@ -161,37 +192,33 @@ export const HashMapsPage: React.FC = () => {
     }
   };
 
-  const renderPlayerControls = () => (
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton
-          isPlaying={isPlaying}
-          onToggle={isPlaying ? pause : play}
-        />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
-
       <div className="player-center">
         <div className="step-progress-bar">
           <div
             className="step-progress-fill"
             style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
           />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
-        <span className="step-counter">
-          Step {currentStepIndex + 1} / {totalSteps}
-        </span>
       </div>
-
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -220,14 +247,12 @@ export const HashMapsPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -285,7 +310,6 @@ export const HashMapsPage: React.FC = () => {
           id: alg.key,
           name: alg.name,
           description: `Step-by-step ${alg.name} execution with live HashMap visualization`,
-          group: alg.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => {
@@ -294,6 +318,24 @@ export const HashMapsPage: React.FC = () => {
           quizSession.resetSession();
         }}
         placeholder="Search hash map algorithm or technique..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs Bar */}
@@ -311,7 +353,6 @@ export const HashMapsPage: React.FC = () => {
             >
               {alg.icon}
               <span>{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>
@@ -352,29 +393,10 @@ export const HashMapsPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} />
-            <span>Quiz Mode</span>
-          </button>
-
-          <button
-            className="bst-btn btn-fullscreen"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas View"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
       </div>
 
       {/* Main Learning Workspace */}
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         {/* Left Column: Visual Canvas & Interactive Controls */}
         <div className="renderer-section">
           <HashMapRenderer
@@ -383,30 +405,56 @@ export const HashMapsPage: React.FC = () => {
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
 
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
         {/* Right Column: Quiz & Explanation */}
-        <div className="explanation-section">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            activeLine={currentStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            variables={currentStep?.variables}
-            callStack={currentStep?.callStack}
-            currentArray={inputArr}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
           />
+        </div>
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={selectedAlg}
+              title="Hash Map"
+              activeLine={currentStep?.codeLine}
+              variables={currentStep?.variables}
+              callStack={currentStep?.callStack}
+              currentArray={inputArr}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
+            stepNumber={currentStepIndex + 1}
+            totalSteps={totalSteps}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
+            steps={executionData.steps}
+            currentStepIndex={currentStepIndex}
           />
         </div>
       </div>
+
+      <TheoryPanel categoryId="hashMaps" activeTopic={selectedAlg} />
 
       {/* Reusable Native FullScreen Canvas Modal */}
       <FullScreenCanvasModal
@@ -415,7 +463,23 @@ export const HashMapsPage: React.FC = () => {
         title={`Hash Map Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="HashMap Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <HashMapRenderer
           currentStep={currentStep}

@@ -1,20 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Binary, Search, GitBranch, BookOpen, MessageSquare, Maximize2, HelpCircle, Sparkles, Trash2, Layers
+  Binary, Search, GitBranch, BookOpen, MessageSquare, Maximize2, Sparkles, Trash2, Layers
 } from 'lucide-react';
 import { TrieRenderer } from './TrieRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
-import { PlayPauseButton } from '../../components/controls/PlayPauseButton';
-import { StepControls } from '../../components/controls/StepControls';
-import { SpeedSlider } from '../../components/controls/SpeedSlider';
+import { FloatingController } from '../../components/controls/FloatingController';
+import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
-import { buildTrieCheckpoints } from './quizAdapter';
+import { buildTrieCheckpoints, buildRevisionData } from './quizAdapter';
 import type { TrieAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
@@ -28,6 +29,7 @@ import type { TrieStep } from './algorithms/trieTypes';
 import '../sorting/Sorting.css';
 import '../bst/BST.css';
 import './Trie.css';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgMeta {
   key: TrieAlgorithmKey;
@@ -66,10 +68,19 @@ function pickRandomWords(count: number): string[] {
 
 export const TriePage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<TrieAlgorithmKey>('trieInsert');
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic && ALGORITHMS.some((a) => a.key === topic)) {
+      setSelectedAlg(topic as TrieAlgorithmKey);
+    }
+  }, [searchParams]);
+
   const [wordsInput, setWordsInput] = useState<string>(DEFAULT_PARAMS.trieInsert.words);
   const [queryInput, setQueryInput] = useState<string>(DEFAULT_PARAMS.trieSearch.query);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState(true);
+  const [quizEnabled, setQuizEnabled] = useState(false);
+  const [showDebugger, setShowDebugger] = useState(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
@@ -92,8 +103,9 @@ export const TriePage: React.FC = () => {
 
   const {
     currentStepIndex, currentStep, totalSteps, isPlaying,
-    speed, play, pause, stepForward, stepBack, reset, setSpeed,
-  } = useStepPlayer({ steps: executionData.steps });
+    play, pause, stepForward, stepBack, reset,
+  seekTo,
+    } = useStepPlayer({ steps: executionData.steps });
 
   const trieStep = currentStep as TrieStep | null;
 
@@ -112,12 +124,22 @@ export const TriePage: React.FC = () => {
     stepForward,
     module: 'trie' as any,
     algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
   });
 
   useEffect(() => {
     quizSession.resetSession();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAlg, wordsInput, queryInput]);
+
+  /* ── Transfer challenge ("Prove You Understand") ─────────────────
+     Fresh word set + query, predicted cold. startChallenge() must fire
+     in the same handler as the input change so the armed challenge
+     survives the checkpoint reset the new execution triggers. */
+  const handleProveIt = () => {
+    quizSession.startChallenge();
+    handleRandomize();
+  };
 
   const handleRandomize = () => {
     reset();
@@ -147,27 +169,44 @@ export const TriePage: React.FC = () => {
     setQueryInput(d.query);
   };
 
-  const renderPlayerControls = () => (
+  usePlaybackShortcuts({
+    handlers: {
+      onTogglePlay: isPlaying ? pause : play,
+      onReset: reset,
+    onStepForward: stepForward,
+      onStepBack: stepBack,
+      onStop: () => { pause(); reset(); },
+      onResume: play,
+    },
+  });
+
+  const renderFullscreenPlayerControls = () => (
     <div className="player-bar" style={{ margin: 0 }}>
       <div className="player-left">
-        <PlayPauseButton isPlaying={isPlaying} onToggle={isPlaying ? pause : play} />
-        <StepControls
-          onStepBack={stepBack}
-          onStepForward={stepForward}
-          onReset={reset}
-          canStepBack={currentStepIndex > 0}
-          canStepForward={currentStepIndex < totalSteps - 1}
-        />
+        <span className="step-counter font-mono text-xs">
+          Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
+        </span>
       </div>
       <div className="player-center">
         <div className="step-progress-bar">
-          <div className="step-progress-fill" style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }} />
+          <div
+            className="step-progress-fill"
+            style={{ width: `${(currentStepIndex / Math.max(1, totalSteps - 1)) * 100}%` }}
+          />
+          {totalSteps > 0 && (
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, totalSteps - 1)}
+              value={currentStepIndex}
+              onChange={(e) => seekTo(parseInt(e.target.value))}
+              className="timeline-scrubber"
+              title="Scrub timeline"
+            />
+          )}
         </div>
-        <span className="step-counter">Step {currentStepIndex + 1} / {totalSteps}</span>
       </div>
-      <div className="player-right">
-        <SpeedSlider speed={speed} onSpeedChange={setSpeed} />
-      </div>
+      <div className="player-right" />
     </div>
   );
 
@@ -199,13 +238,12 @@ export const TriePage: React.FC = () => {
         <button className="bst-btn btn-mode" onClick={handleSample} title="Sample"><Layers size={13} className="text-amber-400" /><span>Sample</span></button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random"><Sparkles size={13} className="text-emerald-400" /><span>Random</span></button>
       </div>
-      <button
-        className={`quiz-mode-btn ml-2 ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-      >
-        <HelpCircle size={14} /><span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -219,7 +257,6 @@ export const TriePage: React.FC = () => {
           id: a.key,
           name: a.name,
           description: `Step-by-step ${a.name} visualization on a Trie`,
-          group: a.complexity,
         }))}
         activeId={selectedAlg}
         onSelect={(id) => {
@@ -231,6 +268,24 @@ export const TriePage: React.FC = () => {
           quizSession.resetSession();
         }}
         placeholder="Search trie algorithm..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       <div className="tree-category-toolbar animate-fade-in">
@@ -250,7 +305,6 @@ export const TriePage: React.FC = () => {
             >
               {alg.icon}
               <span>{alg.name}</span>
-              <span className="text-[10px] opacity-75 font-mono bg-black/30 px-1.5 py-0.5 rounded ml-1">{alg.complexity}</span>
             </button>
           ))}
         </div>
@@ -293,56 +347,69 @@ export const TriePage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <button
-            className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-            onClick={() => setQuizEnabled((prev) => !prev)}
-            title="Toggle Quiz Mode"
-          >
-            <HelpCircle size={16} /><span>Quiz Mode</span>
-          </button>
-          <button className="bst-btn btn-fullscreen" onClick={() => setIsFullScreenOpen(true)} title="Full Screen">
-            <Maximize2 size={14} />
-          </button>
-        </div>
       </div>
 
-      <div className="sorting-workspace">
+      <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
           <TrieRenderer
             currentStep={trieStep}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
-          {renderPlayerControls()}
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
         </div>
 
-        <div className="explanation-section">
-          <QuizDock session={quizSession} cadence={cadence} onCadenceChange={setCadence} />
-
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            activeLine={trieStep?.codeLine}
-            breakpoints={[]}
-            onToggleBreakpoint={() => {}}
-            variables={trieStep?.variables}
-            onCustomCodeRun={(arraySteps) => {
-              const trieSteps: TrieStep[] = arraySteps.map(s => ({
-                trieNodes: [],
-                trieEdges: [],
-                description: s.description,
-                codeLine: s.codeLine,
-                variables: s.variables || {},
-                array: [],
-              }));
-              // eslint-disable-next-line no-console
-              console.log('Custom code run:', trieSteps.length, 'steps');
-            }}
-            currentArray={[]}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
           />
+
+
+        </div>
+
+
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={selectedAlg}
+              title="Trie"
+              activeLine={trieStep?.codeLine}
+              variables={trieStep?.variables}
+              onCustomCodeRun={(arraySteps) => {
+                const trieSteps: TrieStep[] = arraySteps.map(s => ({
+                  trieNodes: [],
+                  trieEdges: [],
+                  description: s.description,
+                  codeLine: s.codeLine,
+                  variables: s.variables || {},
+                  array: [],
+                }));
+                // eslint-disable-next-line no-console
+                console.log('Custom code run:', trieSteps.length, 'steps');
+              }}
+              currentArray={[]}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)}
+            steps={executionData.steps}
+            currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
@@ -355,10 +422,28 @@ export const TriePage: React.FC = () => {
         title={`Trie Studio | ${selectedAlg.toUpperCase()}`}
         subtitle="Prefix Tree Inspector"
         toolbarControls={renderFloatingControls()}
-        playbackControls={renderPlayerControls()}
+        playbackControls={renderFullscreenPlayerControls()}
+
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        }
       >
         <TrieRenderer currentStep={trieStep} />
       </FullScreenCanvasModal>
+      <TheoryPanel categoryId="trie" activeTopic={selectedAlg} />
+
     </div>
   );
 };

@@ -8,6 +8,8 @@ interface CustomArrayEditorProps {
   onClose: () => void;
 }
 
+import { parseNumberList } from '../../utils/batchInputParser';
+
 export const CustomArrayEditor: React.FC<CustomArrayEditorProps> = ({
   currentArray,
   onApplyCustomArray,
@@ -17,32 +19,24 @@ export const CustomArrayEditor: React.FC<CustomArrayEditorProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const handleApply = () => {
-    try {
-      const parsed = inputText
-        .split(',')
-        .map((val) => val.trim())
-        .filter((val) => val !== '')
-        .map((val) => {
-          const num = Number(val);
-          if (isNaN(num)) throw new Error(`Invalid number '${val}'`);
-          return Math.min(100, Math.max(5, num)); // Keep values in 5-100 range for display
-        });
-
-      if (parsed.length < 3) {
-        setError('Please enter at least 3 numbers.');
-        return;
-      }
-
-      if (parsed.length > 50) {
-        setError('Maximum array limit is 50 numbers.');
-        return;
-      }
-
-      onApplyCustomArray(parsed);
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Invalid input format');
+    const res = parseNumberList(inputText);
+    if (!res.isValid || res.values.length === 0) {
+      setError(res.error || 'Please enter valid numbers.');
+      return;
     }
+
+    if (res.values.length < 2) {
+      setError('Please enter at least 2 numbers.');
+      return;
+    }
+
+    if (res.values.length > 50) {
+      setError('Maximum array limit is 50 numbers.');
+      return;
+    }
+
+    onApplyCustomArray(res.values);
+    onClose();
   };
 
   return (

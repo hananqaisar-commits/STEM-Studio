@@ -47,6 +47,16 @@ export interface QuizQuestion {
   /** The question. Must be answerable from the canvas alone. */
   prompt: string;
   /**
+   * What the question trains.
+   *   'predict' — "what happens next?" (mentally EXECUTE the algorithm)
+   *   'reason'  — "why does this happen?" (justify a step already visible)
+   *
+   * A quiz that only ever asks one of the two proves execution OR recall,
+   * never both. Adapters tag conceptual anchors as 'reason'; step-bound
+   * checkpoints default to 'predict'.
+   */
+  kind?: 'predict' | 'reason';
+  /**
    * Answer choices.
    *
    * These must NOT contain the comparison that decides the answer. The
@@ -150,7 +160,19 @@ export interface QuizRevisionData {
   watchFor: string[];
   /** Practical insight for solving quiz questions. */
   quickTip: string;
+  /** A tiny worked example that the student can reason through. */
+  example?: string;
 }
+
+/* ── Transfer challenge ("Prove You Understand") ──────────────────────
+   After a completed quiz, the student gets a FRESH input and must
+   predict the first few real steps. Getting them right is far stronger
+   evidence of learning than the quiz score itself: the input is new, so
+   only a working mental model can produce the right answers.
+   ─────────────────────────────────────────────────────────────────── */
+
+/** How many early checkpoints the transfer challenge asks. */
+export const TRANSFER_CHALLENGE_STEPS = 3;
 
 /* ── Per-question result tracking ───────────────────────────────────────
    Collected during the quiz for the post-quiz performance report.
