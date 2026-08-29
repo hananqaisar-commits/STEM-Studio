@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { ListNodeItem, LinkedListStep } from './linkedListEngine';
+import { MotionPresets } from '../../engine/motionEngine';
 import './LinkedList.css';
 
 interface LinkedListRendererProps {
@@ -8,6 +9,14 @@ interface LinkedListRendererProps {
 }
 
 export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, nodes }) => {
+  const activeNodeRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (activeNodeRef.current) {
+      MotionPresets.nodeEntrance(activeNodeRef.current);
+    }
+  }, [step]);
+
   const displayNodes = step ? step.nodes : nodes;
   const listType = step ? step.listType : 'singly';
 

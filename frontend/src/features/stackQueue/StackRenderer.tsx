@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ArrowLeft, Inbox } from 'lucide-react';
 import type { StackQueueStep } from './stackQueueEngine';
+import { MotionPresets } from '../../engine/motionEngine';
 import './StackQueue.css';
 
 interface StackRendererProps {
@@ -8,6 +9,23 @@ interface StackRendererProps {
 }
 
 export const StackRenderer: React.FC<StackRendererProps> = ({ currentStep }) => {
+  const topPlateRef = useRef<HTMLDivElement | null>(null);
+  const prevActionRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!currentStep || !topPlateRef.current) return;
+    const topEl = currentStep.elements[currentStep.elements.length - 1];
+    if (!topEl) return;
+
+    if (topEl.state === 'pushed') {
+      MotionPresets.stackPush(topPlateRef.current);
+    } else if (topEl.state === 'popped') {
+      MotionPresets.stackPop(topPlateRef.current);
+    } else if (topEl.state === 'active') {
+      MotionPresets.peekPulse(topPlateRef.current);
+    }
+  }, [currentStep]);
+
   if (!currentStep) return null;
 
   const elements = currentStep.elements;
@@ -41,7 +59,11 @@ export const StackRenderer: React.FC<StackRendererProps> = ({ currentStep }) => 
                 if (el.state === 'error') stateClass = 'plate-error';
 
                 return (
-                  <div key={el.id} className={`stack-3d-plate ${stateClass}`}>
+                  <div
+                    key={el.id}
+                    ref={isTop ? topPlateRef : null}
+                    className={`stack-3d-plate ${stateClass}`}
+                  >
                     {/* Animated TOP Pointer Badge */}
                     {isTop && (
                       <div className="top-pointer-badge" title={`Top of stack (index ${idx})`} aria-label={`Top of stack, index ${idx}`}>

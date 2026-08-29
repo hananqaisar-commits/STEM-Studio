@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Maximize2 } from 'lucide-react';
 import type { ArrayStep } from '../../engine/types/Step';
+import { MotionPresets } from '../../engine/motionEngine';
 
 interface DPRendererProps {
   currentStep: ArrayStep | null;
@@ -108,6 +109,14 @@ interface GridProps {
 }
 
 const GridRenderer: React.FC<GridProps> = ({ array, comparingIndices, sortedIndices, rows, cols, variables, onToggleFullscreen }) => {
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!gridRef.current) return;
+    const cells = Array.from(gridRef.current.querySelectorAll<HTMLElement>('.dp-grid-cell'));
+    const activeCells = comparingIndices.map(index => cells[index]).filter(Boolean);
+    if (activeCells.length) MotionPresets.gridFillWave(activeCells, { stagger: 0.04 });
+    sortedIndices.forEach(index => { if (cells[index]) MotionPresets.flashState(cells[index], '37,99,235'); });
+  }, [comparingIndices, sortedIndices]);
   const maxVal = Math.max(...array, 1);
   const s1 = typeof variables.s1 === 'string' ? variables.s1 : '';
   const s2 = typeof variables.s2 === 'string' ? variables.s2 : '';
@@ -142,7 +151,7 @@ const GridRenderer: React.FC<GridProps> = ({ array, comparingIndices, sortedIndi
         )}
       </div>
 
-      <div className="dp-grid-wrapper">
+      <div ref={gridRef} className="dp-grid-wrapper">
         {/* Column labels */}
         <div className="dp-grid-col-labels" style={{ gridTemplateColumns: `40px repeat(${cols}, 1fr)` }}>
           <div className="dp-corner-label" />

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { BinarySearchStep } from './binarySearchEngine';
+import { MotionPresets } from '../../engine/motionEngine';
 import './BinarySearch.css';
 
 interface BinarySearchRendererProps {
@@ -13,6 +14,13 @@ export const BinarySearchRenderer: React.FC<BinarySearchRendererProps> = ({
   array,
   target,
 }) => {
+  const midCellRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (midCellRef.current && step?.mid != null) {
+      MotionPresets.nodePulse(midCellRef.current);
+    }
+  }, [step?.mid]);
   const displayArray =
     step?.array ||
     array.map((val, idx) => ({
@@ -89,7 +97,12 @@ export const BinarySearchRenderer: React.FC<BinarySearchRendererProps> = ({
               )}
 
               {/* Element Value Box */}
-              <div className={`bs-elem-box ${stateClass}`}>{elem.value}</div>
+              <div
+                ref={elem.index === step?.mid ? midCellRef : null}
+                className={`bs-elem-box ${stateClass}`}
+              >
+                {elem.value}
+              </div>
 
               {/* Index Subscript */}
               <span className="bs-elem-index">idx: {elem.index}</span>

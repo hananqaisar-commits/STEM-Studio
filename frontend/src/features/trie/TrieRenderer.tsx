@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
 import { CircleCheck, Maximize2 } from 'lucide-react';
 import type { TrieStep } from './algorithms/trieTypes';
 import '../bst/BST.css';
 import './Trie.css';
+import { MotionPresets } from '../../engine/motionEngine';
 
 interface TrieRendererProps {
   currentStep: TrieStep | null;
@@ -17,6 +18,17 @@ export const TrieRenderer: React.FC<TrieRendererProps> = ({
   onNodeClick,
   onToggleFullscreen,
 }) => {
+  const nodesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!currentStep || !nodesRef.current) return;
+    const wrappers = Array.from(nodesRef.current.querySelectorAll<HTMLElement>('.bst-node-wrapper'));
+    const path = currentStep.trieNodes
+      .map((node, index) => ({ node, index }))
+      .filter(({ node }) => node.state !== 'default')
+      .map(({ index }) => wrappers[index])
+      .filter(Boolean);
+    if (path.length) MotionPresets.trieDescend(path);
+  }, [currentStep]);
   if (!currentStep || currentStep.trieNodes.length === 0) {
     return (
       <div className="bst-canvas-empty">
@@ -89,7 +101,7 @@ export const TrieRenderer: React.FC<TrieRendererProps> = ({
           })}
         </svg>
 
-        <div className="bst-nodes-layer" style={{ height: maxY + 'px' }}>
+        <div ref={nodesRef} className="bst-nodes-layer" style={{ height: maxY + 'px' }}>
           {nodes.map((node) => (
             <div
               key={node.id}

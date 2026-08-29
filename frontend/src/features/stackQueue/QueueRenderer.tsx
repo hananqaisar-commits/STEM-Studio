@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, CircleDashed } from 'lucide-react';
 import type { StackQueueStep } from './stackQueueEngine';
+import { MotionPresets } from '../../engine/motionEngine';
 import './StackQueue.css';
 
 interface QueueRendererProps {
@@ -8,6 +9,22 @@ interface QueueRendererProps {
 }
 
 export const QueueRenderer: React.FC<QueueRendererProps> = ({ currentStep }) => {
+  const rearBlockRef = useRef<HTMLDivElement | null>(null);
+  const frontBlockRef = useRef<HTMLDivElement | null>(null);
+  const prevActionRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!currentStep) return;
+    const rearEl = currentStep.elements[currentStep.elements.length - 1];
+    const frontEl = currentStep.elements[0];
+
+    if (rearEl?.state === 'pushed' && rearBlockRef.current) {
+      MotionPresets.queueEnqueue(rearBlockRef.current);
+    } else if (frontEl?.state === 'popped' && frontBlockRef.current) {
+      MotionPresets.queueDequeue(frontBlockRef.current);
+    }
+  }, [currentStep]);
+
   if (!currentStep) return null;
 
   const elements = currentStep.elements;
@@ -44,7 +61,11 @@ export const QueueRenderer: React.FC<QueueRendererProps> = ({ currentStep }) => 
                 if (el.state === 'popped') stateClass = 'block-popped';
 
                 return (
-                  <div key={el.id} className={`queue-3d-block ${stateClass}`}>
+                  <div
+                    key={el.id}
+                    ref={isFront ? frontBlockRef : isRear ? rearBlockRef : null}
+                    className={`queue-3d-block ${stateClass}`}
+                  >
                     {/* FRONT & REAR pointer badges */}
                     {isFront && (
                       <span className="queue-pointer-badge front-badge" title={`Front of queue (index ${idx})`} aria-label={`Front of queue, index ${idx}`}>
