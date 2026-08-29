@@ -93,12 +93,13 @@
 /* ─── Floating Controller ───────────────────────────────────────── */
 
 .floating-controller {
-  position: absolute;
+  position: relative;
   z-index: 50;
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 1.25rem;
+  margin: 0.75rem auto 0 auto;
   background: rgba(255, 255, 255, 0.95);
   border: 1.5px solid var(--purple-300, #d8b4fe);
   border-radius: 9999px;

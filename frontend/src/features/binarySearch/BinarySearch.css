@@ -198,8 +198,8 @@
   font-family: monospace;
 }
 
-/* ─── WORKSPACE GRID ──────────────────────────────────────────────── */
-
+/* ─── WORKSPACE GRID — OVERRIDDEN BY VisualizerShell.css ──────────── */
+/*
 .bs-workspace {
   display: grid;
   grid-template-columns: 1fr 380px;
@@ -213,6 +213,7 @@
     grid-template-columns: 1fr;
   }
 }
+*/
 
 /* ─── CANVAS CARD ─────────────────────────────────────────────────── */
 
