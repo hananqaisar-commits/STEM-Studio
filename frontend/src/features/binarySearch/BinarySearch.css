@@ -241,10 +241,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 1.5rem;
-  overflow-x: auto;
-  min-height: 320px;
-  gap: 2rem;
+  padding: 2rem 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  max-height: 440px;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  box-sizing: border-box;
+  gap: 1.5rem;
 }
 
 /* ─── COMPARISON HUD ──────────────────────────────────────────────── */
@@ -286,8 +291,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 2rem 1rem;
-  overflow-x: auto;
+  padding: 2.5rem 1rem 1rem 1rem;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
 }
 
 .bs-elem-cell {

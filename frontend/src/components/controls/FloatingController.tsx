@@ -271,9 +271,6 @@ const ControlButton: React.FC<ControlButtonProps> = ({
       title={`${label} (${shortcut})`}
     >
       {children}
-      <span className="fc-btn-shortcut" aria-hidden="true">
-        {shortcut}
-      </span>
     </button>
   );
 };
