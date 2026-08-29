@@ -97,26 +97,27 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.4rem;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--color-border);
+  gap: 0.35rem;
+  padding: 0.25rem 1.25rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid var(--purple-300, #d8b4fe);
   border-radius: 9999px;
-  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0, 0, 0, 0.02);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(147, 51, 234, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   user-select: none;
   touch-action: none;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 [data-theme='dark'] .floating-controller {
-  background: rgba(15, 23, 42, 0.92);
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(168, 85, 247, 0.4);
 }
 
 .floating-controller.is-dragging {
   cursor: grabbing;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 12px 32px rgba(147, 51, 234, 0.22);
   transform: scale(1.02);
 }
 
@@ -124,8 +125,8 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0 0.25rem;
-  border-right: 1px solid var(--color-border);
+  padding: 0 0.5rem 0 0.1rem;
+  border-right: 1px solid var(--purple-200, #e9d5ff);
   color: var(--color-text-secondary);
   cursor: grab;
 }
@@ -144,7 +145,7 @@
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: var(--color-text-muted);
+  background: var(--purple-400, #c084fc);
 }
 
 .floating-controller-buttons {
@@ -153,59 +154,65 @@
   gap: 0.35rem;
 }
 
+.fc-icon-btn,
 .fc-btn {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border);
-  background: var(--color-app-bg);
-  color: var(--color-text);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #475569);
   cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: var(--shadow-sm);
+  transition: all 0.18s ease;
+  padding: 0;
 }
 
+.fc-icon-btn:hover:not(:disabled),
 .fc-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: var(--color-primary-hover);
-  color: var(--color-primary);
-  box-shadow: var(--shadow-md);
+  color: var(--purple-600, #9333ea);
+  background: rgba(147, 51, 234, 0.12);
+  transform: scale(1.15);
 }
 
+.fc-icon-btn:disabled,
 .fc-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
+.fc-icon-btn-primary,
 .fc-btn-primary {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #ffffff;
+  color: #ffffff !important;
+  background: var(--purple-600, #9333ea) !important;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
 }
 
+.fc-icon-btn-primary:hover:not(:disabled),
 .fc-btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-  color: #ffffff;
+  background: var(--purple-700, #7e22ce) !important;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.45);
 }
 
 .fc-btn-shortcut {
   position: absolute;
-  bottom: 2px;
-  font-size: 0.55rem;
+  bottom: -11px;
+  font-size: 0.48rem;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  color: var(--color-text-muted);
-  opacity: 0.8;
+  color: var(--purple-600, #9333ea);
+  opacity: 0.85;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .fc-btn-primary .fc-btn-shortcut {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 @media (max-width: 768px) {

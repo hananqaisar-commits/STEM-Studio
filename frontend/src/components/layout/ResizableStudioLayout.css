@@ -1,0 +1,98 @@
+/* ═══════════════════════════════════════════════════════════════════
+   STUDIO WORKBENCH LAYOUT & RESIZABLE SPLITTER (CRM Dashboard Standard)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.studio-workbench-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.studio-top-grid {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 440px;
+  position: relative;
+}
+
+.studio-main-panel {
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  transition: flex 0.05s ease-out;
+}
+
+.studio-split-handle {
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 10;
+  position: relative;
+  margin: 0 2px;
+}
+
+.split-handle-grip {
+  width: 5px;
+  height: 42px;
+  border-radius: 9999px;
+  background: var(--purple-300, #d8b4fe);
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.15);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.split-handle-grip::after {
+  content: '⋮';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  color: var(--purple-700, #7e22ce);
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.studio-split-handle:hover .split-handle-grip,
+.studio-split-handle:active .split-handle-grip {
+  width: 7px;
+  background: var(--purple-600, #9333ea);
+  box-shadow: 0 0 14px rgba(147, 51, 234, 0.4);
+}
+
+.studio-split-handle:hover .split-handle-grip::after,
+.studio-split-handle:active .split-handle-grip::after {
+  opacity: 1;
+}
+
+.studio-rail-panel {
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  transition: flex 0.05s ease-out;
+}
+
+.studio-bottom-section {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .studio-top-grid {
+    flex-direction: column;
+  }
+  .studio-split-handle {
+    display: none;
+  }
+  .studio-main-panel,
+  .studio-rail-panel {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+  }
+}

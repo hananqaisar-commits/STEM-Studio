@@ -1,121 +1,110 @@
 /* ═══════════════════════════════════════════════════════════════════
-   STEM WORDMARK — vector brand lockup (real text + gradient clip)
+   STEM WORDMARK — Ultra-Premium Mature Brand Lockup
    ═══════════════════════════════════════════════════════════════════ */
 
-/* Brand gradient tokens (theme-aware) */
 :root {
-  --splash-grad-1: #2f7bff;
-  --splash-grad-2: #5a4bff;
-  --splash-grad-3: #863bff;
-  --splash-ink: #16214a;
+  --splash-grad-1: #c084fc;
+  --splash-grad-2: #9333ea;
+  --splash-grad-3: #6b21a8;
+  --splash-ink: #1e1b4b;
 }
 
 [data-theme='dark'] {
-  --splash-grad-1: #4da3ff;
-  --splash-grad-2: #7d6bff;
-  --splash-grad-3: #a26bff;
-  --splash-ink: #0e1633;
+  --splash-grad-1: #e9d5ff;
+  --splash-grad-2: #c084fc;
+  --splash-grad-3: #9333ea;
+  --splash-ink: #faf5ff;
 }
 
 .stem-wordmark {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
-  animation: wordmark-breathe 5s ease-in-out 1.6s infinite;
+  gap: 0.4rem;
+  position: relative;
 }
 
 .stem-wordmark__letters {
   display: flex;
   line-height: 1;
   font-weight: 800;
-  font-size: clamp(3.25rem, 11vw, 5rem);
-  letter-spacing: -0.045em;
+  font-size: clamp(2.4rem, 6vw, 3.4rem);
+  letter-spacing: -0.035em;
   user-select: none;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .stem-wordmark__letter {
   display: inline-block;
   background: linear-gradient(
-    140deg,
-    var(--splash-grad-1) 8%,
-    var(--splash-grad-2) 52%,
-    var(--splash-grad-3) 92%
+    135deg,
+    var(--splash-grad-1) 0%,
+    var(--splash-grad-2) 55%,
+    var(--splash-grad-3) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   opacity: 0;
-  transform: translateY(0.45em) scale(0.98);
-  animation: letter-enter 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: calc(140ms + var(--letter-index) * 85ms);
+  transform: translateY(8px);
+  animation: letter-mature-fade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(80ms + var(--letter-index) * 60ms);
   will-change: transform, opacity;
 }
 
 .stem-wordmark__sub {
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.46em;
-  text-indent: 0.46em; /* optically balance the tracking */
-  color: var(--color-text-muted);
+  letter-spacing: 0.52em;
+  text-indent: 0.52em;
+  color: var(--purple-500, #a855f7);
   opacity: 0;
-  transform: translateY(6px);
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.62s forwards;
+  transform: translateY(4px);
+  animation: rise-in-mature 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
 }
 
 /* One-shot settle beat when loading completes */
 .stem-wordmark.is-settled .stem-wordmark__letters {
-  animation: wordmark-settle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: wordmark-mature-settle 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Compact static variant (auth headers) */
 .stem-wordmark--compact {
-  animation: none;
-  gap: 0.35rem;
-  margin-bottom: 1.5rem;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .stem-wordmark--compact .stem-wordmark__letters {
-  font-size: clamp(1.9rem, 6vw, 2.4rem);
+  font-size: clamp(1.75rem, 5vw, 2.2rem);
 }
 
 .stem-wordmark--compact .stem-wordmark__sub {
-  font-size: 0.58rem;
+  font-size: 0.55rem;
 }
 
 /* ── Keyframes ─────────────────────────────────────────────────────── */
 
-@keyframes letter-enter {
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes rise-in {
+@keyframes letter-mature-fade {
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes wordmark-breathe {
-  0%,
-  100% {
+@keyframes rise-in-mature {
+  to {
+    opacity: 0.9;
     transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
   }
 }
 
-@keyframes wordmark-settle {
+@keyframes wordmark-mature-settle {
   0% {
     transform: scale(1);
   }
-  45% {
-    transform: scale(1.03);
+  50% {
+    transform: scale(1.015);
   }
   100% {
     transform: scale(1);
