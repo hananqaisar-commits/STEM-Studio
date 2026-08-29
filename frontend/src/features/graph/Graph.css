@@ -178,8 +178,8 @@
   gap: 0.5rem;
 }
 
-/* ─── MAIN WORKSPACE GRID ─────────────────────────────────────────── */
-
+/* ─── MAIN WORKSPACE GRID — OVERRIDDEN BY VisualizerShell.css ─────── */
+/*
 .graph-workspace {
   display: grid;
   grid-template-columns: 1fr 380px;
@@ -193,6 +193,7 @@
     grid-template-columns: 1fr;
   }
 }
+*/
 
 /* ─── CANVAS CARD ─────────────────────────────────────────────────── */
 
