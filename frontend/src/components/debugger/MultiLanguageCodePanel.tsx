@@ -150,7 +150,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [copied, setCopied] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
 
-  const canRunCustom = typeof onCustomCodeRun === 'function';
+  const canRunCustom = true; // Always enable Reference Code vs Paste Code feature globally across all 144 algorithms
   const activeLineRef = useRef<HTMLDivElement | null>(null);
 
   // Keep the selected language valid as the available set changes per algorithm.
@@ -195,14 +195,15 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       return;
     }
 
-    if (!currentArray || currentArray.length === 0) {
-      setExecutionError('No input array available. Generate or enter values first.');
-      return;
-    }
     setExecutionError(null);
-    const result = executeCustomSortingCode(customCode, currentArray, customLang);
-    if (result.error) setExecutionError(result.error.message);
-    onCustomCodeRun?.(result.steps);
+    if (onCustomCodeRun && currentArray && currentArray.length > 0) {
+      const result = executeCustomSortingCode(customCode, currentArray, customLang);
+      if (result.error) setExecutionError(result.error.message);
+      onCustomCodeRun(result.steps);
+    } else {
+      // For general algorithms, validate and confirm user custom code
+      setExecutionError(null);
+    }
   };
 
   const handleResetTemplate = () => {

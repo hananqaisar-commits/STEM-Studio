@@ -608,7 +608,18 @@ export const DSAHub: React.FC = () => {
         </div>
 
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} STEM Studio. All rights reserved.</p>
+          <p>
+            &copy; {new Date().getFullYear()} STEM Studio. All rights reserved. •{' '}
+            <a
+              href="https://opensource.org/licenses/MIT"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#a855f7', textDecoration: 'none', fontWeight: 600 }}
+              title="View MIT License"
+            >
+              MIT License
+            </a>
+          </p>
           <div className="footer-bottom-links">
             <button onClick={() => navigate('/sitemap')}>Sitemap</button>
             <button onClick={() => navigate('/contact')}>Contact</button>

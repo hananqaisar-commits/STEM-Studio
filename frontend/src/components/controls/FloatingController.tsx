@@ -162,10 +162,21 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`floating-controller ${className}`}
+      className={`floating-controller ${isDragging ? 'is-dragging' : ''} ${className}`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
       role="toolbar"
       aria-label="Playback controls"
     >
+      <div className="floating-controller-grip" title="Drag to move controller">
+        <span className="grip-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </div>
+
       <div className="floating-controller-buttons">
         <ControlButton
           label={isPlaying ? 'Pause' : 'Play'}
