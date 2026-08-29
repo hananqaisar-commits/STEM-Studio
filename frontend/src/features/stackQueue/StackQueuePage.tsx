@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Layers, Plus, Trash2, Code, CheckCircle2, Filter, HelpCircle, Maximize2, Sparkles
+  Layers, Plus, Trash2, CheckCircle2, Filter, Maximize2, Sparkles
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
@@ -46,6 +46,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { StackQueueCodePanel } from './StackQueueCodePanel';
 import './StackQueue.css';
 import { parseNumberList } from '../../utils/batchInputParser';
@@ -1173,11 +1174,12 @@ export const StackQueuePage: React.FC = () => {
         </button>
       </div>
 
-      <label className="predict-toggle-label" style={{ marginLeft: '0.5rem' }}>
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
-      </label>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -1196,6 +1198,24 @@ export const StackQueuePage: React.FC = () => {
         activeId={category}
         onSelect={(id) => handleSelectProblem(id as StackQueueCategory)}
         placeholder="Search 20 DSA problems (#739, Water, Min)..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs Bar Matching BST */}
@@ -1314,37 +1334,6 @@ export const StackQueuePage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Toolbar Right Matching BST */}
-        <div className="bst-toolbar-right">
-          <div className="predict-mode-group flex items-center gap-2">
-            <label className="predict-toggle-label">
-              <HelpCircle size={16} />
-              <span>Quiz Mode</span>
-              <input
-                type="checkbox"
-                checked={quizEnabled}
-                onChange={(e) => setQuizEnabled(e.target.checked)}
-              />
-            </label>
-
-            <button
-              className="bst-btn btn-fullscreen"
-              onClick={() => setIsFullScreenOpen(true)}
-              title="Full Screen Canvas View"
-            >
-              <Maximize2 size={14} />
-            </button>
-
-            <button
-              className={`bst-btn ${showDebugger ? 'active' : ''}`}
-              onClick={() => setShowDebugger(!showDebugger)}
-            >
-              <Code size={14} />
-              <span>{showDebugger ? 'Hide Debugger' : 'Show Debugger'}</span>
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Main Workspace Layout (Canvas + Code Debugger) */}
@@ -1385,32 +1374,30 @@ export const StackQueuePage: React.FC = () => {
           />
         </div>
 
-        {/* Right Panel: Code Debugger + Explanation */}
-        {showDebugger && (
-          <>
-            <div className="quiz-rail">
-              <QuizDock
-                session={quizSession}
-                cadence={cadence}
-                onCadenceChange={setCadence}
-                onEnableQuiz={() => setQuizEnabled(true)}
-                onProveIt={handleProveIt}
-              />
-            </div>
-            <div className="bottom-row">
-              <StackQueueCodePanel
-                category={category}
-                activeLine={currentStep?.codeLine ?? 1}
-              />
+        {/* Right Panel: Quiz rail always visible; debugger panel togglable */}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
+        </div>
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <StackQueueCodePanel
+              category={category}
+              activeLine={currentStep?.codeLine ?? 1}
+            />
+          )}
 
-              <ExplanationPanel
-                description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
-                steps={activeSteps}
-                currentStepIndex={currentStepIndex}
-              />
-            </div>
-          </>
-        )}
+          <ExplanationPanel
+            description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
+            steps={activeSteps}
+            currentStepIndex={currentStepIndex}
+          />
+        </div>
       </div>
 
       {/* FullScreen Canvas Modal matching BST */}

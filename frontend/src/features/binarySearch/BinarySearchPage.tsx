@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   RotateCcw,
-  HelpCircle,
   Maximize2,
   Sparkles,
   Shuffle,
@@ -34,6 +33,7 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './BinarySearch.css';
@@ -71,6 +71,7 @@ export const BinarySearchPage: React.FC = () => {
 
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -361,15 +362,12 @@ export const BinarySearchPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-        style={{ marginLeft: '0.5rem' }}
-      >
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -383,6 +381,24 @@ export const BinarySearchPage: React.FC = () => {
         activeId={category}
         onSelect={(id) => handleSelectCategory(id as BinarySearchCategory)}
         placeholder="Search algorithm or pattern..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
@@ -476,26 +492,6 @@ export const BinarySearchPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Mode Toggles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button
-            className={`ll-btn ${quizEnabled ? 'll-btn-primary' : 'll-btn-secondary'}`}
-            onClick={() => setQuizEnabled(!quizEnabled)}
-            style={quizEnabled ? { background: '#38bdf8', color: '#0f172a' } : {}}
-          >
-            <HelpCircle size={14} />
-            <span>Quiz Mode</span>
-          </button>
-
-          <button
-            className="ll-btn ll-btn-secondary"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
       </div>
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
@@ -546,19 +542,21 @@ export const BinarySearchPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className="bottom-row">
-          <MultiLanguageCodePanel
-            algorithmKey={category}
-            title="Binary Search"
-            snippets={BINARY_SEARCH_SNIPPETS[snippetKey]}
-            activeLine={currentStep?.codeLine}
-            variables={{
-              target: currentTarget,
-              left: currentStep?.left ?? null,
-              mid: currentStep?.mid ?? null,
-              right: currentStep?.right ?? null,
-            }}
-          />
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={category}
+              title="Binary Search"
+              snippets={BINARY_SEARCH_SNIPPETS[snippetKey]}
+              activeLine={currentStep?.codeLine}
+              variables={{
+                target: currentTarget,
+                left: currentStep?.left ?? null,
+                mid: currentStep?.mid ?? null,
+                right: currentStep?.right ?? null,
+              }}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)}

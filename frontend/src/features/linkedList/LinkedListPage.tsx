@@ -5,7 +5,6 @@ import {
   Plus,
   Trash2,
   RotateCcw,
-  HelpCircle,
   Maximize2,
   Sparkles,
   Shuffle,
@@ -39,6 +38,7 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './LinkedList.css';
@@ -76,6 +76,7 @@ export const LinkedListPage: React.FC = () => {
 
   // Interactive & Quiz Modes
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -465,15 +466,12 @@ export const LinkedListPage: React.FC = () => {
         </button>
       </div>
 
-      <button
-        className={`quiz-mode-btn ${quizEnabled ? 'is-active' : ''}`}
-        onClick={() => setQuizEnabled((prev) => !prev)}
-        title="Toggle Quiz Mode"
-        style={{ marginLeft: '0.5rem' }}
-      >
-        <HelpCircle size={16} />
-        <span>Quiz Mode</span>
-      </button>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -487,6 +485,24 @@ export const LinkedListPage: React.FC = () => {
         activeId={category}
         onSelect={(id) => handleSelectCategory(id as LinkedListCategory)}
         placeholder="Search algorithm, operation, or concept..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
@@ -588,25 +604,6 @@ export const LinkedListPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Mode Toggles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button
-            className={`ll-btn ${quizEnabled ? 'll-btn-primary' : 'll-btn-secondary'}`}
-            onClick={() => setQuizEnabled(!quizEnabled)}
-          >
-            <HelpCircle size={14} />
-            <span>Quiz Mode</span>
-          </button>
-
-          <button
-            className="ll-btn ll-btn-secondary"
-            onClick={() => setIsFullScreenOpen(true)}
-            title="Full Screen Canvas"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
       </div>
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
@@ -657,17 +654,19 @@ export const LinkedListPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className="bottom-row">
-          <MultiLanguageCodePanel
-            algorithmKey={category}
-            title="Linked List"
-            snippets={LINKED_LIST_SNIPPETS[snippetKey]}
-            activeLine={currentStep?.codeLine}
-            variables={{
-              nodes_count: currentStep ? currentStep.nodes.length : baseNodes.length,
-              ...(currentStep?.pointers ?? {}),
-            }}
-          />
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={category}
+              title="Linked List"
+              snippets={LINKED_LIST_SNIPPETS[snippetKey]}
+              activeLine={currentStep?.codeLine}
+              variables={{
+                nodes_count: currentStep ? currentStep.nodes.length : baseNodes.length,
+                ...(currentStep?.pointers ?? {}),
+              }}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Run an operation to observe step-by-step execution.', quizSession.phase)}

@@ -260,7 +260,7 @@
 .scene-workspace {
   display: grid;
   grid-template-columns: 1fr var(--viz-side-col, 380px);
-  grid-template-rows: 1fr minmax(200px, 320px);
+  grid-template-rows: minmax(0, 1fr) minmax(220px, 340px);
   grid-template-areas:
     "canvas  quiz"
     "bottom  bottom";
@@ -288,7 +288,7 @@
   gap: 0.75rem;
   min-width: 0;
   max-height: calc(100vh - var(--navbar-height) - 180px);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .bottom-row {
@@ -300,6 +300,12 @@
   overflow: hidden;
 }
 
+/* Debugger hidden: the explanation panel reclaims the full row width
+   instead of leaving an empty fixed column. */
+.bottom-row--single {
+  grid-template-columns: 1fr;
+}
+
 .bottom-row > .multi-lang-code-panel,
 .bottom-row > .explanation-panel,
 .bottom-row > .stack-queue-code-panel {
@@ -307,6 +313,12 @@
   min-height: 0;
   max-height: 100%;
   overflow: hidden;
+}
+
+/* Panels scroll their own content instead of clipping it. */
+.bottom-row > .explanation-panel,
+.bottom-row > .stack-queue-code-panel {
+  overflow-y: auto;
 }
 
 @media (max-width: 1100px) {
@@ -361,7 +373,7 @@
   gap: 0.75rem;
   min-width: 0;
   max-height: calc(100vh - var(--navbar-height) - 180px);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .explanation-section > * {
@@ -530,4 +542,111 @@
   background: transparent;
   border-radius: 0;
   padding: 0;
+}
+
+/* ─── 8. UNIFIED ACTION GROUP — Quiz Mode / Hide-Show Debugger ─────
+   Single professional control group rendered by `VisualizerActions`
+   in every visualizer header. Pill buttons, never checkboxes. */
+
+.viz-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+  /* Stay pinned to the right edge even when the header wraps to a new row. */
+  margin-left: auto;
+}
+
+.viz-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.775rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.viz-action-btn:hover {
+  border-color: var(--color-primary-hover);
+  color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.viz-action-quiz.is-active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+}
+
+.viz-action-quiz.is-active:hover {
+  color: #ffffff;
+}
+
+.viz-action-debugger.is-active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
+}
+
+.viz-action-debugger.is-active:hover {
+  color: #ffffff;
+}
+
+/* ─── 9. RENDERER VIEWPORTS — internal scrolling, no clipping ──────
+   Oversized visualizer content scrolls inside its own canvas instead
+   of escaping, clipping, or pushing unrelated UI. Direction follows the
+   geometry of each renderer family. */
+
+/* Wide sequences: horizontal scroll */
+.bars-canvas,
+.ll-canvas-body {
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: 0;
+  max-width: 100%;
+}
+
+/* Two-dimensional layouts: scroll both axes */
+.tree-canvas-container,
+.graph-canvas-body,
+.bs-canvas-body,
+.bt-canvas-body,
+.recursion-tree-area,
+.dp-grid-body,
+.hashmap-table-body {
+  overflow: auto;
+  min-height: 0;
+  max-width: 100%;
+}
+
+/* Deep vertical structures: vertical scroll */
+.stack-container,
+.queue-container,
+.circular-queue-container,
+.problem-container {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ─── 10. TEXT SAFETY — wrap, never collide ────────────────────────
+   Regular UI text wraps inside its container; code keeps its own
+   horizontal scrolling and is deliberately excluded. */
+
+.viz-item-desc,
+.quiz-title,
+.explanation-text,
+.history-bullet-text {
+  overflow-wrap: anywhere;
 }

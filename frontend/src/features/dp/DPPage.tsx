@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Edit3, Maximize2, HelpCircle, Sparkles, Trash2, Layers,
+  Edit3, Maximize2, Sparkles, Trash2, Layers,
   Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins,
 } from 'lucide-react';
 import { DPRenderer } from './DPRenderer';
@@ -12,6 +12,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
@@ -64,6 +65,7 @@ export const DPPage: React.FC = () => {
 
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [showCustomEditor, setShowCustomEditor] = useState(false);
 
@@ -306,10 +308,12 @@ export const DPPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <label className="predict-toggle-label ml-2">
-        <HelpCircle size={16} /><span>Quiz Mode</span>
-        <input type="checkbox" checked={quizEnabled} onChange={(e) => setQuizEnabled(e.target.checked)} />
-      </label>
+      <VisualizerActions
+        quizEnabled={quizEnabled}
+        onToggleQuiz={() => setQuizEnabled((v) => !v)}
+        debuggerVisible={showDebugger}
+        onToggleDebugger={() => setShowDebugger((v) => !v)}
+      />
     </div>
   );
 
@@ -464,6 +468,24 @@ export const DPPage: React.FC = () => {
         activeId={selectedAlg}
         onSelect={(id) => { setSelectedAlg(id as DPAlgorithmKey); reset(); quizSession.resetSession(); }}
         placeholder="Search DP algorithm..."
+        actions={
+          <VisualizerActions
+            quizEnabled={quizEnabled}
+            onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            debuggerVisible={showDebugger}
+            onToggleDebugger={() => setShowDebugger((v) => !v)}
+          >
+            <button
+              type="button"
+              className="viz-action-btn"
+              onClick={() => setIsFullScreenOpen(true)}
+              title="Full Screen Canvas View"
+            >
+              <Maximize2 size={14} />
+              <span>Fullscreen</span>
+            </button>
+          </VisualizerActions>
+        }
       />
 
       {/* Category Tabs Bar */}
@@ -505,19 +527,6 @@ export const DPPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        <div className="bst-toolbar-right">
-          <div className="predict-mode-group flex items-center gap-2">
-            <label className="predict-toggle-label">
-              <HelpCircle size={16} /><span>Quiz Mode</span>
-              <input type="checkbox" checked={quizEnabled}
-                onChange={(e) => setQuizEnabled(e.target.checked)} />
-            </label>
-            <button className="bst-btn btn-fullscreen" onClick={() => setIsFullScreenOpen(true)} title="Full Screen Canvas View">
-              <Maximize2 size={14} />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Main Learning Workspace */}
@@ -552,15 +561,17 @@ export const DPPage: React.FC = () => {
         </div>
 
 
-        <div className="bottom-row">
-          <MultiLanguageCodePanel
-            algorithmKey={selectedAlg}
-            title="Dynamic Programming"
-            activeLine={currentStep?.codeLine}
-            variables={currentStep?.variables}
-            callStack={currentStep?.callStack}
-            currentArray={[]}
-          />
+        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
+          {showDebugger && (
+            <MultiLanguageCodePanel
+              algorithmKey={selectedAlg}
+              title="Dynamic Programming"
+              activeLine={currentStep?.codeLine}
+              variables={currentStep?.variables}
+              callStack={currentStep?.callStack}
+              currentArray={[]}
+            />
+          )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}

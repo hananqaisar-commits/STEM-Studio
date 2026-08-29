@@ -20,6 +20,8 @@ interface VisualizerHeaderProps {
   activeId?: string;
   onSelect: (id: string) => void;
   placeholder?: string;
+  /** Right-hand unified action group (Quiz Mode / Debugger toggle). */
+  actions?: React.ReactNode;
   /** Enable two-level dropdown mode (category + topic) instead of search bar */
   categories?: CategoryTopics[];
   /** Currently selected category ID in dropdown mode */
@@ -45,6 +47,7 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
   activeId,
   onSelect,
   placeholder = 'Search algorithms...',
+  actions,
   categories,
   activeCategoryId,
   onSelectCategory,
@@ -200,6 +203,8 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({
           </div>
         </>
       )}
+
+      {actions}
     </header>
   );
 };
