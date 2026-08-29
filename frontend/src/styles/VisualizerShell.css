@@ -519,19 +519,36 @@
   padding: 6px;
 }
 
-/* ─── 4. MISSING BUTTON VARIANT ────────────────────────────────────
-   `.btn-fullscreen` was used by Sorting and Stack & Queue but never
-   defined anywhere, so those buttons rendered as a bare `.bst-btn`. */
+/* ─── 4. UNIVERSAL FULLSCREEN BUTTON ───────────────────────────────
+   Premium glassmorphic fullscreen button — identical on all 144 algorithms. */
 
 .bst-btn.btn-fullscreen {
-  color: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(147, 51, 234, 0.08);
+  border: 1.5px solid rgba(168, 85, 247, 0.25);
+  color: rgba(168, 85, 247, 0.7);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .bst-btn.btn-fullscreen:hover {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #ffffff;
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(99, 102, 241, 0.15));
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #a855f6;
+  box-shadow: 0 4px 16px rgba(147, 51, 234, 0.2);
+  transform: scale(1.08);
+}
+
+.bst-btn.btn-fullscreen:active {
+  transform: scale(0.95);
 }
 
 /* ─── 5. STRUCTURAL UTILITIES ──────────────────────────────────────
@@ -928,3 +945,82 @@
   stroke-width: 3.5px !important;
   filter: drop-shadow(0 0 6px rgba(147, 51, 234, 0.5)) !important;
 }
+
+/* ── F. HASH BUCKETS & TABLE SLOTS ─────────────────────────────────── */
+.hash-bucket,
+.hash-slot,
+.hashmap-bucket,
+.hashmap-slot {
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  border: 1.5px solid var(--purple-200, #e9d5ff) !important;
+  color: var(--purple-900, #581c87) !important;
+  font-weight: 700 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.08) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.hash-bucket.active,
+.hash-slot.active,
+.hashmap-bucket.active,
+.hashmap-slot.active {
+  background: linear-gradient(135deg, #a855f7, #7e22ce) !important;
+  border-color: #9333ea !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(147, 51, 234, 0.4) !important;
+}
+
+.hash-bucket.collision,
+.hashmap-bucket.collision {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  border-color: #d97706 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4) !important;
+}
+
+/* ── G. CHARACTER CELLS (Strings, Palindromes, Anagrams) ──────────── */
+.char-cell,
+.string-char,
+.string-cell {
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  border: 1.5px solid var(--purple-200, #e9d5ff) !important;
+  color: var(--purple-900, #581c87) !important;
+  font-weight: 800 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.08) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.char-cell.active,
+.string-char.active,
+.string-cell.active {
+  background: linear-gradient(135deg, #a855f7, #7e22ce) !important;
+  border-color: #9333ea !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(147, 51, 234, 0.35) !important;
+}
+
+.char-cell.match,
+.string-char.match,
+.string-cell.match {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35) !important;
+}
+
+/* ── H. INDEX BADGES & POINTER TAGS ───────────────────────────────── */
+.index-badge,
+.pointer-badge,
+.pointer-tag {
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  padding: 0.12rem 0.45rem !important;
+  border-radius: 9999px !important;
+  letter-spacing: 0.04em !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+

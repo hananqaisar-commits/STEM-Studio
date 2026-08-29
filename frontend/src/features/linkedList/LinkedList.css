@@ -265,8 +265,9 @@
   background: rgba(239, 68, 68, 0.25);
 }
 
-/* ─── MAIN WORKSPACE GRID ─────────────────────────────────────────── */
-
+/* ─── MAIN WORKSPACE GRID — OVERRIDDEN BY VisualizerShell.css ─────── */
+/* Local grid commented out to prevent conflict with global grid-template-areas layout */
+/*
 .ll-workspace {
   display: grid;
   grid-template-columns: 1fr 380px;
@@ -280,6 +281,7 @@
     grid-template-columns: 1fr;
   }
 }
+*/
 
 /* ─── CANVAS CARD ─────────────────────────────────────────────────── */
 
