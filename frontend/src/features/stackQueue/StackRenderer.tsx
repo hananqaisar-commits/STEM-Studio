@@ -14,16 +14,16 @@ export const StackRenderer: React.FC<StackRendererProps> = ({ currentStep }) => 
 
   useEffect(() => {
     if (!currentStep || !topPlateRef.current) return;
-    const action = currentStep.action;
+    const topEl = currentStep.elements[currentStep.elements.length - 1];
+    if (!topEl) return;
 
-    if (action === 'PUSH' && prevActionRef.current !== 'PUSH') {
+    if (topEl.state === 'pushed') {
       MotionPresets.stackPush(topPlateRef.current);
-    } else if (action === 'POP' && prevActionRef.current !== 'POP') {
+    } else if (topEl.state === 'popped') {
       MotionPresets.stackPop(topPlateRef.current);
-    } else if (action === 'PEEK') {
+    } else if (topEl.state === 'active') {
       MotionPresets.peekPulse(topPlateRef.current);
     }
-    prevActionRef.current = action;
   }, [currentStep]);
 
   if (!currentStep) return null;

@@ -15,14 +15,14 @@ export const QueueRenderer: React.FC<QueueRendererProps> = ({ currentStep }) => 
 
   useEffect(() => {
     if (!currentStep) return;
-    const action = currentStep.action;
+    const rearEl = currentStep.elements[currentStep.elements.length - 1];
+    const frontEl = currentStep.elements[0];
 
-    if (action === 'PUSH' && rearBlockRef.current && prevActionRef.current !== 'PUSH') {
+    if (rearEl?.state === 'pushed' && rearBlockRef.current) {
       MotionPresets.queueEnqueue(rearBlockRef.current);
-    } else if (action === 'POP' && frontBlockRef.current && prevActionRef.current !== 'POP') {
+    } else if (frontEl?.state === 'popped' && frontBlockRef.current) {
       MotionPresets.queueDequeue(frontBlockRef.current);
     }
-    prevActionRef.current = action;
   }, [currentStep]);
 
   if (!currentStep) return null;
