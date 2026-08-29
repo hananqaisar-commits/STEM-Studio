@@ -141,7 +141,20 @@ const DashboardLayout = () => {
           onSelectModule={handleSelectModule}
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
+          width={sidebarWidth}
         />
+        {/* Draggable Vertical Splitter handle */}
+        <div
+          className="sidebar-resizer"
+          onMouseDown={handleMouseDown}
+          onDoubleClick={handleResetWidth}
+          title="Drag to resize sidebar width • Double-click to reset"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar width"
+        >
+          <div className="resizer-handle-grip" />
+        </div>
         <main className="dashboard-main">
           <Routes>
             <Route index element={<DSAHub />} />

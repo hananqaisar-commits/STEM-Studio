@@ -38,6 +38,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   isOpen = false,
   onClose,
   activeCategory = '',
+  width,
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
