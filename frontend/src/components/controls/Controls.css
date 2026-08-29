@@ -200,19 +200,7 @@
 }
 
 .fc-btn-shortcut {
-  position: absolute;
-  bottom: -11px;
-  font-size: 0.48rem;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--purple-600, #9333ea);
-  opacity: 0.85;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.fc-btn-primary .fc-btn-shortcut {
-  color: rgba(255, 255, 255, 0.9);
+  display: none !important;
 }
 
 @media (max-width: 768px) {
