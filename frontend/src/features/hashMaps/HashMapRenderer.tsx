@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Maximize2, Hash, Database } from 'lucide-react';
 import { Bar } from '../../components/primitives/Bar';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import '../sorting/Sorting.css';
 import './HashMaps.css';
+import { MotionPresets } from '../../engine/motionEngine';
 
 interface HashMapRendererProps {
   currentStep: ArrayStep | null;
@@ -38,6 +39,7 @@ export const HashMapRenderer: React.FC<HashMapRendererProps> = ({
   onElementClick,
   onToggleFullscreen,
 }) => {
+  const mapRef = useRef<HTMLDivElement>(null);
   const variables = currentStep?.variables ?? {};
   const mapEntriesStr = typeof variables.mapEntries === 'string' ? variables.mapEntries : '';
   const mapHighlight = typeof variables.mapHighlight === 'string' ? variables.mapHighlight : '';
@@ -47,6 +49,15 @@ export const HashMapRenderer: React.FC<HashMapRendererProps> = ({
     () => parseMapEntries(mapEntriesStr, mapHighlight, mapNew),
     [mapEntriesStr, mapHighlight, mapNew]
   );
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const rows = Array.from(mapRef.current.querySelectorAll<HTMLElement>('.hashmap-row'));
+    rows.forEach((row) => {
+      if (row.classList.contains('hashmap-row-new')) MotionPresets.bucketDistribute(row, 0, 0);
+      else if (row.classList.contains('hashmap-row-lookup')) MotionPresets.flashState(row);
+    });
+  }, [mapEntries]);
 
   if (!currentStep) {
     return (
@@ -125,7 +136,7 @@ export const HashMapRenderer: React.FC<HashMapRendererProps> = ({
             <span>HashMap is empty</span>
           </div>
         ) : (
-          <div className="hashmap-table">
+          <div ref={mapRef} className="hashmap-table">
             <div className="hashmap-table-head">
               <span className="hashmap-col-key">Key</span>
               <span className="hashmap-col-value">Value</span>
