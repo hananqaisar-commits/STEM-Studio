@@ -421,10 +421,11 @@
   background: #ffffff !important;
   border: 1.5px solid var(--purple-300, #d8b4fe) !important;
   border-radius: 16px;
-  overflow: hidden;
   box-shadow: var(--shadow-md);
   height: 100%;
-  min-height: 350px;
+  min-height: 320px;
+  max-height: 480px;
+  overflow: auto !important;
   flex: 1;
 }
 

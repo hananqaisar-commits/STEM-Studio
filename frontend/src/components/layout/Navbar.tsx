@@ -42,8 +42,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const currentModule = pathSegment ? MODULES.find(m => m.id === pathSegment) : null;
 
   const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] = [
-    { value: 'light', label: 'Light', icon: <Sun size={14} /> },
-    { value: 'dark', label: 'Dark', icon: <Moon size={14} /> },
+    { value: 'light', label: 'Clean Light', icon: <Sun size={14} /> },
+    { value: 'dark', label: 'Midnight Dark', icon: <Moon size={14} /> },
   ];
 
   const isOnDashboard = location.pathname === '/dashboard';
@@ -100,18 +100,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
         <div className="navbar-right">
           <div className="theme-dropdown-container" ref={themeDropdownRef}>
             <button
-              className="theme-selector-btn"
-              onClick={() => setShowThemeDropdown(!showThemeDropdown)}
+              className={`theme-selector-btn ${showThemeDropdown ? 'active' : ''}`}
+              onClick={() => setShowThemeDropdown((prev) => !prev)}
               aria-label="Select Appearance"
             >
-              <Palette size={15} aria-hidden="true" />
-              <span className="theme-selector-label">Theme</span>
-              <ChevronDown size={14} />
+              <Palette size={15} className="theme-palette-icon" aria-hidden="true" />
+              <span className="theme-selector-label">
+                {theme === 'dark' ? 'Dark' : 'Light'}
+              </span>
+              <ChevronDown size={14} className={`theme-chevron ${showThemeDropdown ? 'rotated' : ''}`} />
             </button>
 
             {showThemeDropdown && (
               <div className="theme-dropdown-menu animate-fade-in">
-                <div className="dropdown-header">Appearance</div>
+                <div className="dropdown-header">Appearance Mode</div>
                 <div className="dropdown-divider" />
                 {themeOptions.map((option) => (
                   <button

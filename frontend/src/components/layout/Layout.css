@@ -142,19 +142,113 @@
   position: relative;
 }
 
-.user-profile-btn {
+/* ─── THEME & USER DROPDOWNS ──────────────────────────────────── */
+.theme-dropdown-container,
+.user-dropdown-container {
+  position: relative;
+}
+
+.theme-selector-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 20px;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text);
   cursor: pointer;
+  font-weight: 600;
+  font-size: 0.825rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-selector-btn:hover,
+.theme-selector-btn.active {
+  background-color: var(--color-surface-elevated);
+  border-color: var(--color-primary-hover);
+  color: var(--color-primary-hover);
+  box-shadow: 0 4px 12px rgba(129, 140, 248, 0.18);
+}
+
+.theme-palette-icon {
+  color: var(--color-primary-hover);
+}
+
+.theme-chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.theme-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.theme-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 190px;
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: 0.5rem;
+  z-index: 1000;
+  backdrop-filter: blur(12px);
+}
+
+.dropdown-header {
+  font-size: 0.725rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 0.35rem 0.5rem;
+}
+
+.theme-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  font-size: 0.825rem;
   font-weight: 500;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-option-btn:hover {
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text);
+}
+
+.theme-option-btn.active {
+  background-color: var(--color-surface-elevated);
+  color: var(--color-primary-hover);
+  font-weight: 700;
+}
+
+.theme-option-icon {
+  display: flex;
+  align-items: center;
+  color: inherit;
+}
+
+.theme-option-text {
+  flex: 1;
+  text-align: left;
+}
+
+.theme-active-icon {
+  color: var(--color-primary-hover);
+  flex-shrink: 0;
 }
 
 .user-profile-btn:hover {
