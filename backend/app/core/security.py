@@ -54,14 +54,23 @@ def create_access_token(user_id: int, email: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_refresh_token(user_id: int) -> str:
-    """Create a long-lived JWT refresh token."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+def create_refresh_token(user_id: int, remember_me: bool = False) -> str:
+    """Create a long-lived JWT refresh token.
+
+    When ``remember_me`` is set the token uses the extended lifetime
+    (JWT_REMEMBER_ME_EXPIRE_DAYS) so the session survives browser
+    restarts; otherwise the standard shorter lifetime applies.
+    """
+    days = (
+        settings.JWT_REMEMBER_ME_EXPIRE_DAYS
+        if remember_me
+        else settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
     )
+    expire = datetime.now(timezone.utc) + timedelta(days=days)
     payload = {
         "sub": str(user_id),
         "type": "refresh",
+        "remember": remember_me,
         "exp": expire,
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)

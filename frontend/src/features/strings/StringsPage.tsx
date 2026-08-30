@@ -210,10 +210,14 @@ export const StringsPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       <div className="string-input-group">
-        <span>Input:</span>
+        <span>String:</span>
         <input
           type="text"
           value={inputStr}
@@ -234,26 +238,19 @@ export const StringsPage: React.FC = () => {
         </div>
       )}
 
-      <div className="dataset-mode-selector ml-1">
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear Input">
-          <Trash2 size={14} /><span>Empty</span>
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleSample} title="Sample Input">
-          <Layers size={14} /><span>Sample</span>
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random String">
-          <Sparkles size={14} />
+          <Sparkles size={14} className="text-emerald-400" />
           <span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
@@ -296,40 +293,7 @@ export const StringsPage: React.FC = () => {
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          <div className="string-input-group">
-            <span>String:</span>
-            <input
-              type="text"
-              value={inputStr}
-              onChange={(e) => setInputStr(e.target.value)}
-              placeholder="Enter string..."
-            />
-          </div>
-
-          {selectedAlg === 'anagram' && (
-            <div className="string-input-group">
-              <span>Second:</span>
-              <input
-                type="text"
-                value={secondStr}
-                onChange={(e) => setSecondStr(e.target.value)}
-                placeholder="Second string..."
-              />
-            </div>
-          )}
-
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear Input">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample Input">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random String">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -392,7 +356,17 @@ export const StringsPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`String Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="String Character Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

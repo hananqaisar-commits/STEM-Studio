@@ -322,35 +322,69 @@ export const BinarySearchPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="bst-input-group">
-        <span>Target:</span>
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Target Input */}
+      <div className="bs-input-group">
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
+          Target:
+        </span>
         <input
           type="text"
-          className="bst-input"
+          className="bs-input"
           value={targetInput}
           onChange={(e) => setTargetInput(e.target.value)}
         />
       </div>
 
-      <button className="bst-btn btn-insert" onClick={handleRunSearch}>
+      {/* Array Input */}
+      <div className="bs-input-group" style={{ minWidth: '220px' }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
+          Arr:
+        </span>
+        <input
+          type="text"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--color-text)',
+            fontSize: '0.8rem',
+            width: '100%',
+            fontFamily: 'monospace',
+          }}
+          value={customArrayInput}
+          onChange={(e) => setCustomArrayInput(e.target.value)}
+          onBlur={handleApplyCustomArray}
+          onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomArray()}
+        />
+      </div>
+
+      <button
+        className="ll-btn ll-btn-primary"
+        onClick={handleRunSearch}
+        style={{ background: '#38bdf8', color: '#0f172a' }}
+      >
         <Play size={14} />
         <span>Search</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleRandomize}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleRandomize}>
         <Shuffle size={14} />
         <span>Random</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleReset}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleReset}>
         <RotateCcw size={14} />
         <span>Reset</span>
       </button>
 
       {/* dataset-mode-selector */}
-      <div className="dataset-mode-selector ml-1">
+      <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
         <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -361,14 +395,7 @@ export const BinarySearchPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
@@ -406,73 +433,7 @@ export const BinarySearchPage: React.FC = () => {
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="bs-toolbar">
         <div className="bs-toolbar-actions">
-          {/* Target Input */}
-          <div className="bs-input-group">
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
-              Target:
-            </span>
-            <input
-              type="text"
-              className="bs-input"
-              value={targetInput}
-              onChange={(e) => setTargetInput(e.target.value)}
-            />
-          </div>
-
-          {/* Array Input */}
-          <div className="bs-input-group" style={{ minWidth: '220px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
-              Arr:
-            </span>
-            <input
-              type="text"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: 'var(--color-text)',
-                fontSize: '0.8rem',
-                width: '100%',
-                fontFamily: 'monospace',
-              }}
-              value={customArrayInput}
-              onChange={(e) => setCustomArrayInput(e.target.value)}
-              onBlur={handleApplyCustomArray}
-              onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomArray()}
-            />
-          </div>
-
-          <button
-            className="ll-btn ll-btn-primary"
-            onClick={handleRunSearch}
-            style={{ background: '#38bdf8', color: '#0f172a' }}
-          >
-            <Play size={14} />
-            <span>Search</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleRandomize}>
-            <Shuffle size={14} />
-            <span>Random</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleReset}>
-            <RotateCcw size={14} />
-            <span>Reset</span>
-          </button>
-
-          {/* dataset-mode-selector */}
-          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -554,7 +515,17 @@ export const BinarySearchPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Binary Search Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Logarithmic Search Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

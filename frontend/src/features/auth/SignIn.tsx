@@ -9,6 +9,7 @@ import './Auth.css';
 export const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +29,7 @@ export const SignIn: React.FC = () => {
     setExpression('focused');
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       setExpression('happy', { temporary: true, durationMs: 900 });
       setTimeout(() => navigate('/dashboard'), 300);
     } catch (err: any) {
@@ -108,7 +109,11 @@ export const SignIn: React.FC = () => {
 
             <div className="auth-options">
               <label className="remember-me">
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
                 <span>Remember me</span>
               </label>
               <Link to="/forgot-password" className="auth-link">Forgot password?</Link>

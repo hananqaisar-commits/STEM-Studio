@@ -16,8 +16,12 @@ def send_password_reset_email(to_email: str, reset_url: str) -> bool:
     settings = get_settings()
 
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning(
-            "SMTP_USER or SMTP_PASSWORD not configured. Printing Password Reset Link to terminal instead."
+        logger.error(
+            "Password reset email NOT sent to %s: SMTP_USER/SMTP_PASSWORD are not "
+            "configured in backend/.env (or the deployment environment). The reset "
+            "link is printed below for local development only. Reset link: %s",
+            to_email,
+            reset_url,
         )
         print("\n" + "═" * 65)
         print(f"📧 PASSWORD RESET LINK FOR [{to_email}]:")
@@ -157,6 +161,6 @@ The STEM Studio Team
         print(f"✅ Real email successfully delivered via Gmail SMTP to [{to_email}]")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {e}")
         print(f"❌ Failed to send SMTP email to [{to_email}]: {e}")
         return False

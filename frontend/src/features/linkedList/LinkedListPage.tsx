@@ -394,67 +394,77 @@ export const LinkedListPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="bst-input-group">
-        <span>Values:</span>
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Batch Custom Input */}
+      <div className="ll-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>
+          Values:
+        </span>
         <input
           type="text"
-          className="bst-input"
+          className="ll-input"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="e.g. 10, 20, 30"
-          style={{ width: '130px' }}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            if (inputError) setInputError(null);
+          }}
+          placeholder="e.g. 10, 20, 30, 40"
+          style={{ width: '160px' }}
         />
       </div>
 
-      <button className="bst-btn btn-insert" onClick={handleBuildList} title="Build complete list sequentially">
+      <button className="ll-btn ll-btn-primary" onClick={handleBuildList} title="Build complete list sequentially">
         <Sparkles size={14} />
-        <span>Build</span>
+        <span>Build List</span>
       </button>
 
-      <button className="bst-btn btn-insert" onClick={handleInsertTail}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleInsertTail} title="Insert values at tail sequentially">
         <Plus size={14} />
-        <span>Tail</span>
+        <span>Insert Tail</span>
       </button>
 
-      <button className="bst-btn btn-insert" onClick={handleInsertHead}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleInsertHead} title="Insert values at head sequentially">
         <Plus size={14} />
-        <span>Head</span>
+        <span>Insert Head</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleDeleteHead}>
+      <button className="ll-btn ll-btn-danger" onClick={handleDeleteHead}>
         <Trash2 size={14} />
-        <span>Delete</span>
+        <span>Delete Head</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleReverse}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleReverse}>
         <RotateCcw size={14} />
         <span>Reverse</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleCycleDetect}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleCycleDetect}>
         <RefreshCw size={14} />
-        <span>Cycle</span>
+        <span>Detect Cycle</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleFindMiddle}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleFindMiddle}>
         <Sparkles size={14} />
-        <span>Mid</span>
+        <span>Find Mid</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleRandomize}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleRandomize}>
         <Shuffle size={14} />
         <span>Random</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleResetList}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleResetList}>
         <RotateCcw size={14} />
         <span>Reset</span>
       </button>
 
       {/* dataset-mode-selector */}
-      <div className="dataset-mode-selector ml-1">
+      <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
         <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -465,14 +475,7 @@ export const LinkedListPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
@@ -510,81 +513,7 @@ export const LinkedListPage: React.FC = () => {
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="ll-toolbar">
         <div className="ll-toolbar-actions">
-          {/* Batch Custom Input */}
-          <div className="ll-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>
-              Values:
-            </span>
-            <input
-              type="text"
-              className="ll-input"
-              value={inputValue}
-              onChange={(e) => {
-                setInputValue(e.target.value);
-                if (inputError) setInputError(null);
-              }}
-              placeholder="e.g. 10, 20, 30, 40"
-              style={{ width: '160px' }}
-            />
-          </div>
-
-          <button className="ll-btn ll-btn-primary" onClick={handleBuildList} title="Build complete list sequentially">
-            <Sparkles size={14} />
-            <span>Build List</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleInsertTail} title="Insert values at tail sequentially">
-            <Plus size={14} />
-            <span>Insert Tail</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleInsertHead} title="Insert values at head sequentially">
-            <Plus size={14} />
-            <span>Insert Head</span>
-          </button>
-
-          <button className="ll-btn ll-btn-danger" onClick={handleDeleteHead}>
-            <Trash2 size={14} />
-            <span>Delete Head</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleReverse}>
-            <RotateCcw size={14} />
-            <span>Reverse</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleCycleDetect}>
-            <RefreshCw size={14} />
-            <span>Detect Cycle</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleFindMiddle}>
-            <Sparkles size={14} />
-            <span>Find Mid</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleRandomize}>
-            <Shuffle size={14} />
-            <span>Random</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleResetList}>
-            <RotateCcw size={14} />
-            <span>Reset</span>
-          </button>
-
-          {/* dataset-mode-selector */}
-          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -664,7 +593,17 @@ export const LinkedListPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Linked List Visualizer | ${category.toUpperCase()}`}
         subtitle="Interactive Pointer Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

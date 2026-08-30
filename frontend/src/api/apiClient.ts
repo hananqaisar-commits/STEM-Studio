@@ -1,3 +1,5 @@
+import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from './tokenStorage';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 interface ApiOptions {
@@ -20,7 +22,7 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
 
   // Attach access token if required
   if (requiresAuth) {
-    const token = localStorage.getItem('access_token');
+    const token = getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -42,7 +44,7 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
     const refreshed = await tryRefreshToken();
     if (refreshed) {
       // Retry the original request with new token
-      const newToken = localStorage.getItem('access_token');
+      const newToken = getAccessToken();
       if (newToken) {
         headers['Authorization'] = `Bearer ${newToken}`;
       }
@@ -62,8 +64,13 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
  * Attempt to refresh the access token using the stored refresh token.
  */
 async function tryRefreshToken(): Promise<boolean> {
-  const refreshToken = localStorage.getItem('refresh_token');
+  const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
+
+  // Preserve the storage the session was created in: remembered sessions
+  // (localStorage) stay remembered, short-lived ones (sessionStorage)
+  // still vanish when the browser closes.
+  const remembered = localStorage.getItem('refresh_token') === refreshToken;
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
@@ -74,14 +81,12 @@ async function tryRefreshToken(): Promise<boolean> {
 
     if (!response.ok) {
       // Refresh token is also invalid, clear everything
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      clearTokens();
       return false;
     }
 
     const data = await response.json();
-    localStorage.setItem('access_token', data.access_token);
-    localStorage.setItem('refresh_token', data.refresh_token);
+    storeTokens(data.access_token, data.refresh_token, remembered);
     return true;
   } catch {
     return false;

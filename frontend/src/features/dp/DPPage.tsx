@@ -1,11 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Edit3, Maximize2, Sparkles, Trash2, Layers,
+  Maximize2, Sparkles, Trash2, Layers,
   Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins,
 } from 'lucide-react';
 import { DPRenderer } from './DPRenderer';
-import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
@@ -67,7 +66,6 @@ export const DPPage: React.FC = () => {
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
-  const [showCustomEditor, setShowCustomEditor] = useState(false);
 
   // Algorithm-specific inputs
   const [fibN, setFibN] = useState<number>(8);
@@ -233,27 +231,6 @@ export const DPPage: React.FC = () => {
     setUpN(2);
   };
 
-  /* ── Custom editor handler ────────────────────────────────────────── */
-  const currentCustomArray = (): number[] => {
-    switch (selectedAlg) {
-      case 'houseRobber': return houses;
-      case 'lis': return lisArr;
-      case 'coinChange': return coins;
-      default: return houses;
-    }
-  };
-
-  const handleApplyCustomArray = (newArr: number[]) => {
-    reset();
-    quizSession.resetSession();
-    switch (selectedAlg) {
-      case 'houseRobber': setHouses(newArr.slice(0, 10)); break;
-      case 'lis': setLisArr(newArr.slice(0, 12)); break;
-      case 'coinChange': setCoins(newArr.sort((a, b) => a - b).slice(0, 5)); break;
-    }
-    setShowCustomEditor(false);
-  };
-
   usePlaybackShortcuts({
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
@@ -295,9 +272,15 @@ export const DPPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="dataset-mode-selector ml-1">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {renderAlgorithmInputs()}
+
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -308,13 +291,7 @@ export const DPPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Algorithm-specific toolbar inputs ─────────────────────────── */
@@ -452,8 +429,6 @@ export const DPPage: React.FC = () => {
     }
   };
 
-  const showCustomBtn = ['houseRobber', 'lis', 'coinChange'].includes(selectedAlg);
-
   return (
     <div className="bst-page-container">
       <VisualizerHeader
@@ -493,25 +468,7 @@ export const DPPage: React.FC = () => {
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {renderAlgorithmInputs()}
-
-          {showCustomBtn && (
-            <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
-              <Edit3 size={14} /><span>Custom Values</span>
-            </button>
-          )}
-
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Input">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Default Values">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -575,7 +532,17 @@ export const DPPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Dynamic Programming | ${selectedAlg.toUpperCase()}`}
         subtitle="DP Table Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
@@ -597,13 +564,6 @@ export const DPPage: React.FC = () => {
         <DPRenderer currentStep={currentStep} />
       </FullScreenCanvasModal>
 
-      {showCustomEditor && (
-        <CustomArrayEditor
-          currentArray={currentCustomArray()}
-          onApplyCustomArray={handleApplyCustomArray}
-          onClose={() => setShowCustomEditor(false)}
-        />
-      )}
       <TheoryPanel categoryId="dp" activeTopic={selectedAlg} />
 
     </div>
