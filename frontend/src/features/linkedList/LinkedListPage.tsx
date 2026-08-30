@@ -505,25 +505,7 @@ export const LinkedListPage: React.FC = () => {
         }
       />
 
-      {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
-      <div className="ll-tabs-bar">
-        {ALGORITHMS_LIST.map((alg) => (
-          <button
-            key={alg.id}
-            className={`ll-tab-btn ${category === alg.id ? 'active' : ''}`}
-            onClick={() => handleSelectCategory(alg.id)}
-          >
-            {alg.id === 'doubly' ? (
-              <GitBranch size={14} />
-            ) : alg.id === 'reverse' ? (
-              <RotateCcw size={14} />
-            ) : (
-              <GitCommit size={14} />
-            )}
-            <span>{alg.name}</span>
-          </button>
-        ))}
-      </div>
+
 
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="ll-toolbar">

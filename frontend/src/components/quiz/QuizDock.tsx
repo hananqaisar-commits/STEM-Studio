@@ -110,13 +110,13 @@ export const QuizDock: React.FC<QuizDockProps> = ({
             {onEnableQuiz && (
               <button type="button" className="quiz-action" onClick={onEnableQuiz}>
                 <Zap size={14} />
-                Turn on Predict mode
+                Turn on Quiz mode
               </button>
             )}
           </div>
 
           <footer className="quiz-foot">
-            <span className="quiz-score">Predict mode is off</span>
+            <span className="quiz-score">Quiz mode is off</span>
           </footer>
         </section>
       </div>
@@ -221,7 +221,7 @@ export const QuizDock: React.FC<QuizDockProps> = ({
               <Target size={13} />
               Interactive learning
             </span>
-            <h3 className="quiz-title">Predict mode</h3>
+            <h3 className="quiz-title">Quiz mode</h3>
           </div>
         </header>
 
