@@ -570,6 +570,8 @@ export const LinkedListPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={category}
               title="Linked List"
+              categoryId="linkedList"
+              topicId={category}
               snippets={LINKED_LIST_SNIPPETS[snippetKey]}
               activeLine={currentStep?.codeLine}
               variables={{

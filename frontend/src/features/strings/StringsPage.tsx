@@ -337,6 +337,8 @@ export const StringsPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="String Algorithm"
+              categoryId="strings"
+              topicId={selectedAlg}
             />
           )}
 

@@ -518,6 +518,8 @@ export const ArraysPage: React.FC = () => {
               algorithmKey={selectedAlg}
               title="Array Technique"
               currentArray={initialArray}
+              categoryId="arrays"
+              topicId={selectedAlg}
             />
           )}
 
