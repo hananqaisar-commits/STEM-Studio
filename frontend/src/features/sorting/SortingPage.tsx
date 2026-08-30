@@ -96,7 +96,8 @@ export const SortingPage: React.FC = () => {
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
   const [rawArrayInput, setRawArrayInput] = useState<string>(() => generateArray(12, 'random').join(', '));
 
-  // Fullscreen & Quiz state
+  // Debugger & Modal state
+  const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
@@ -395,25 +396,7 @@ export const SortingPage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs Bar Matching BST */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">

@@ -1264,7 +1264,38 @@ export const StackQueuePage: React.FC = () => {
       {/* Operations Control Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {renderToolbarControls()}
+
+          {/* Input Group Matching BST */}
+            <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
+              <span style={{ fontWeight: 600 }}>Values:</span>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="bst-input"
+                placeholder="e.g. 10, 20, 30, 40"
+                style={{ minWidth: '160px' }}
+              />
+            </div>
+
+          {/* Category Action Buttons */}
+          {renderCategoryActions()}
+
+          {/* Dataset Selector Group Matching BST */}
+          <div className="dataset-mode-selector">
+            <button className="bst-btn btn-mode" onClick={handleClearAll}>
+              <Trash2 size={14} className="text-rose-400" />
+              <span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSampleData}>
+              <Layers size={14} className="text-amber-400" />
+              <span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomData}>
+              <Sparkles size={14} className="text-emerald-400" />
+              <span>Random</span>
+            </button>
+          </div>
         </div>
       </div>
 

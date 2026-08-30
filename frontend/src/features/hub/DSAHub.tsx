@@ -578,30 +578,33 @@ export const DSAHub: React.FC = () => {
                 );
               })}
             </div>
-            <h3 className="footer-heading footer-team-heading">Team / Contributors</h3>
-            <div className="footer-team-cards">
-              <div className="footer-team-card">
-                <span className="team-role">Lead</span>
-                <span className="team-name">Hanan</span>
-                <p className="team-desc">Architecture · API · Database · Core Features</p>
-                <div className="team-socials">
-                  <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
-                  <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer"><InstagramIcon size={14} /></a>
-                  <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer"><GithubIcon size={14} /></a>
-                </div>
+          </div>
+        </div>
+
+        <div className="footer-team-section">
+          <h3 className="footer-heading footer-team-heading">Team / Contributors</h3>
+          <div className="footer-team-cards">
+            <div className="footer-team-card">
+              <span className="team-role">Lead</span>
+              <span className="team-name">Hanan</span>
+              <p className="team-desc">Architecture · API · Database · Core Features</p>
+              <div className="team-socials">
+                <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
+                <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer"><InstagramIcon size={14} /></a>
+                <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer"><GithubIcon size={14} /></a>
               </div>
-              <div className="footer-team-card">
-                <span className="team-role">UI / Frontend</span>
-                <span className="team-name">Hassan</span>
-                <p className="team-desc">Dashboard · Navigation · Visual Polish</p>
-              </div>
-              <div className="footer-team-card">
-                <span className="team-role">Algorithms</span>
-                <span className="team-name">Aftab</span>
-                <p className="team-desc">Animation · Creative Features</p>
-                <div className="team-socials">
-                  <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
-                </div>
+            </div>
+            <div className="footer-team-card">
+              <span className="team-role">UI / Frontend</span>
+              <span className="team-name">Hassan</span>
+              <p className="team-desc">Dashboard · Navigation · Visual Polish</p>
+            </div>
+            <div className="footer-team-card">
+              <span className="team-role">Algorithms</span>
+              <span className="team-name">Aftab</span>
+              <p className="team-desc">Animation · Creative Features</p>
+              <div className="team-socials">
+                <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
               </div>
             </div>
           </div>

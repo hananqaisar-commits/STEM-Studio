@@ -78,7 +78,7 @@
 }
 
 .speed-label {
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   font-weight: 600;
   min-width: 35px;
   color: var(--color-text);

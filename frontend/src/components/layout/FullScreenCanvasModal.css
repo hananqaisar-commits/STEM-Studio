@@ -219,10 +219,6 @@
   border-color: #93c5fd !important;
 }
 
-/* Predict toggle in Light Mode */
-.theme-light .predict-toggle-label {
-  color: #b45309 !important;
-}
 
 .theme-light .quiz-mode-btn {
   color: #b45309 !important;
@@ -257,7 +253,7 @@
 
 .fs-modal-title {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 0.9rem !important;
+  font-size: var(--text-base) !important;
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
   text-transform: uppercase;
@@ -265,7 +261,7 @@
 }
 
 .fs-modal-subtitle {
-  font-size: 0.68rem !important;
+  font-size: var(--text-xs) !important;
   opacity: 0.75;
   font-family: 'JetBrains Mono', monospace !important;
   white-space: nowrap;
@@ -302,7 +298,6 @@
 }
 
 /* Fullscreen is deliberately a focused visualization workspace. */
-.fs-modal-toolbar .predict-toggle-label,
 .fs-modal-toolbar .quiz-mode-btn,
 .fs-modal-toolbar .viz-action-quiz {
   display: none !important;
@@ -319,7 +314,7 @@
   padding: 0.45rem 0.9rem !important;
   border-radius: 8px !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 0.75rem !important;
+  font-size: var(--text-xs) !important;
   font-weight: 700 !important;
   cursor: pointer !important;
   border: 1px solid transparent !important;

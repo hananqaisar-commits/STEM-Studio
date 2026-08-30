@@ -135,13 +135,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
           <div className="user-dropdown-container" ref={userDropdownRef}>
             <button
-              className="user-profile-btn"
+              className={`user-profile-btn ${showUserDropdown ? 'active' : ''}`}
               onClick={() => setShowUserDropdown(!showUserDropdown)}
             >
               <div className="user-avatar">
                 <User size={16} />
               </div>
               <span className="user-name">{user?.username || 'Account'}</span>
+              <ChevronDown size={14} className={`theme-chevron ${showUserDropdown ? 'rotated' : ''}`} />
             </button>
 
             {showUserDropdown && (

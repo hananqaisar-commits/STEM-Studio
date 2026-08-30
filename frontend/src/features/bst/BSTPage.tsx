@@ -638,42 +638,7 @@ export const BSTPage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs with Pure Vector Icons */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs">
-          <button
-            className={`category-tab ${treeCategory === 'bst' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('bst')}
-          >
-            <Network size={16} />
-            <span>Binary Search Tree (BST)</span>
-          </button>
 
-          <button
-            className={`category-tab ${treeCategory === 'avl' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('avl')}
-          >
-            <Scale size={16} />
-            <span>AVL Tree (Self-Balancing)</span>
-          </button>
-
-          <button
-            className={`category-tab ${treeCategory === 'heap' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('heap')}
-          >
-            <Layers size={16} />
-            <span>Binary Heap (Priority Queue)</span>
-          </button>
-
-          <button
-            className={`category-tab ${treeCategory === 'trie' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('trie')}
-          >
-            <Binary size={16} />
-            <span>Trie (Prefix Tree)</span>
-          </button>
-        </div>
-      </div>
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">

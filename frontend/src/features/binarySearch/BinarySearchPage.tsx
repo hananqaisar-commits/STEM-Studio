@@ -428,25 +428,7 @@ export const BinarySearchPage: React.FC = () => {
         }
       />
 
-      {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
-      <div className="bs-tabs-bar">
-        {ALGORITHMS_LIST.map((alg) => (
-          <button
-            key={alg.id}
-            className={`bs-tab-btn ${category === alg.id ? 'active' : ''}`}
-            onClick={() => handleSelectCategory(alg.id)}
-          >
-            {alg.id === 'searchRotatedArray' ? (
-              <Compass size={14} />
-            ) : alg.id === 'findPeakElement' ? (
-              <TrendingUp size={14} />
-            ) : (
-              <Search size={14} />
-            )}
-            <span>{alg.name}</span>
-          </button>
-        ))}
-      </div>
+
 
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="bs-toolbar">

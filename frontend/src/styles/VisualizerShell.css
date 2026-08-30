@@ -69,7 +69,7 @@
 }
 
 .viz-title-text h1 {
-  font-size: 1.35rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
@@ -77,7 +77,7 @@
 }
 
 .viz-title-text p {
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
   margin: 0.15rem 0 0 0;
 }
@@ -114,7 +114,7 @@
   border: none;
   outline: none;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   color: var(--color-text);
 }
 
@@ -124,7 +124,7 @@
 
 .viz-shortcut-badge {
   flex-shrink: 0;
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   padding: 0.15rem 0.45rem;
   border-radius: 6px;
   background: var(--color-surface-elevated);
@@ -166,20 +166,20 @@
 }
 
 .viz-item-name {
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--color-text);
 }
 
 .viz-item-desc {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
 .viz-search-empty {
   padding: 0.85rem;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
@@ -210,7 +210,7 @@
   appearance: none;
   -webkit-appearance: none;
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--color-text);
   background: var(--color-surface);
@@ -558,7 +558,7 @@
   border: 1.5px solid var(--purple-300, #d8b4fe) !important;
   border-radius: 10px !important;
   padding: 0.45rem 2.2rem 0.45rem 0.85rem !important;
-  font-size: 0.8rem !important;
+  font-size: var(--text-xs) !important;
   font-weight: 600 !important;
   color: var(--color-text, #1e293b) !important;
   outline: none;
@@ -750,7 +750,7 @@
   border: 1.5px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-secondary);
-  font-size: 0.775rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -787,21 +787,7 @@
   color: #ffffff;
 }
 
-/* Predict mode is a distinct learning loop, while Quiz Mode keeps the
-   established warm accent. Both use the same geometry across every page. */
-.viz-action-predict {
-  color: #0284c7;
-  border-color: rgba(14, 165, 233, 0.48);
-  background: rgba(14, 165, 233, 0.09);
-}
 
-.viz-action-predict:hover,
-.viz-action-predict.is-active {
-  color: #ffffff;
-  border-color: #0284c7;
-  background: linear-gradient(135deg, #0ea5e9, #2563eb);
-  box-shadow: 0 0 16px rgba(37, 99, 235, 0.28);
-}
 
 /* ─── 9. RENDERER VIEWPORTS — internal scrolling, no clipping ──────
    Oversized visualizer content scrolls inside its own canvas instead
@@ -1099,7 +1085,7 @@
 .index-badge,
 .pointer-badge,
 .pointer-tag {
-  font-size: 0.65rem !important;
+  font-size: var(--text-xs) !important;
   font-weight: 700 !important;
   padding: 0.12rem 0.45rem !important;
   border-radius: 9999px !important;

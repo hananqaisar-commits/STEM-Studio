@@ -362,25 +362,7 @@ export const GraphPage: React.FC = () => {
         }
       />
 
-      {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
-      <div className="graph-tabs-bar">
-        {ALGORITHMS_LIST.map((alg) => (
-          <button
-            key={alg.id}
-            className={`graph-tab-btn ${category === alg.id ? 'active' : ''}`}
-            onClick={() => handleSelectCategory(alg.id)}
-          >
-            {alg.id === 'dijkstra' ? (
-              <Waypoints size={14} />
-            ) : alg.id === 'topoSort' ? (
-              <GitMerge size={14} />
-            ) : (
-              <Network size={14} />
-            )}
-            <span>{alg.name}</span>
-          </button>
-        ))}
-      </div>
+
 
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="graph-toolbar">

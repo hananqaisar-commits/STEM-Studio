@@ -185,7 +185,7 @@
   display: inline-flex;
   align-items: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -304,7 +304,7 @@
   right: -20px;
   background: var(--bg-card, #fff);
   color: var(--text-primary, #1f2937);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;

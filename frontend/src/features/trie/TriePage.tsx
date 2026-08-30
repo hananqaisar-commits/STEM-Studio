@@ -294,27 +294,7 @@ export const TriePage: React.FC = () => {
         }
       />
 
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map(alg => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                const d = DEFAULT_PARAMS[alg.key];
-                setWordsInput(d.words);
-                setQueryInput(d.query);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
