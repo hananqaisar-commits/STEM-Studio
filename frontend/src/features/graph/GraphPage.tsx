@@ -263,18 +263,32 @@ export const GraphPage: React.FC = () => {
     },
   });
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       {category !== 'topoSort' && (
-        <div className="bst-input-group">
-          <span>Start:</span>
+        <div className="bs-input-group">
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
+            Start:
+          </span>
           <select
-            className="bst-select"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'var(--color-text)',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
             value={startNode}
             onChange={(e) => setStartNode(e.target.value)}
           >
             {nodes.map((n) => (
-              <option key={n.id} value={n.id}>
+              <option key={n.id} value={n.id} style={{ background: 'var(--color-surface)' }}>
                 Vertex {n.label}
               </option>
             ))}
@@ -282,25 +296,29 @@ export const GraphPage: React.FC = () => {
         </div>
       )}
 
-      <button className="bst-btn btn-insert" onClick={handleRunAlgorithm}>
+      <button
+        className="ll-btn ll-btn-primary"
+        onClick={handleRunAlgorithm}
+        style={{ background: '#c084fc', color: '#0f172a' }}
+      >
         <Play size={14} />
         <span>Run Traversal</span>
       </button>
 
       {(category === 'dijkstra' || category === 'prim') && (
-        <button className="bst-btn btn-search" onClick={handleRandomizeWeights}>
+        <button className="ll-btn ll-btn-secondary" onClick={handleRandomizeWeights}>
           <Shuffle size={14} />
           <span>Random Weights</span>
         </button>
       )}
 
-      <button className="bst-btn btn-search" onClick={handleReset}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleReset}>
         <RotateCcw size={14} />
         <span>Reset</span>
       </button>
 
       {/* dataset-mode-selector */}
-      <div className="dataset-mode-selector ml-1">
+      <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
         <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -311,14 +329,7 @@ export const GraphPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
@@ -374,66 +385,7 @@ export const GraphPage: React.FC = () => {
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="graph-toolbar">
         <div className="graph-toolbar-actions">
-          {category !== 'topoSort' && (
-            <div className="bs-input-group">
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
-                Start:
-              </span>
-              <select
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--color-text)',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-                value={startNode}
-                onChange={(e) => setStartNode(e.target.value)}
-              >
-                {nodes.map((n) => (
-                  <option key={n.id} value={n.id} style={{ background: 'var(--color-surface)' }}>
-                    Vertex {n.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <button
-            className="ll-btn ll-btn-primary"
-            onClick={handleRunAlgorithm}
-            style={{ background: '#c084fc', color: '#0f172a' }}
-          >
-            <Play size={14} />
-            <span>Run Traversal</span>
-          </button>
-
-          {(category === 'dijkstra' || category === 'prim') && (
-            <button className="ll-btn ll-btn-secondary" onClick={handleRandomizeWeights}>
-              <Shuffle size={14} />
-              <span>Random Weights</span>
-            </button>
-          )}
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleReset}>
-            <RotateCcw size={14} />
-            <span>Reset</span>
-          </button>
-
-          {/* dataset-mode-selector */}
-          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleReset} title="Random">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -515,7 +467,17 @@ export const GraphPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Graph Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Network Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

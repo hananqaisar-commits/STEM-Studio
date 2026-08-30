@@ -442,100 +442,135 @@ export const BSTPage: React.FC = () => {
   };
 
 
-  // Shared Floating Header Controls for FullScreen Modal
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       {treeCategory !== 'trie' ? (
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          className="bst-input"
-          style={{ width: '130px' }}
-          placeholder="e.g. 20, 10, 30"
-        />
+        <div className="bst-input-group" title="Enter comma-separated values (e.g. 20, 10, 30, 5, 15)">
+          <span style={{ fontWeight: 600 }}>Values:</span>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              if (inputError) setInputError(null);
+            }}
+            className="bst-input"
+            placeholder="e.g. 20, 10, 30, 5, 15"
+            style={{ minWidth: '150px' }}
+          />
+        </div>
       ) : (
-        <input
-          type="text"
-          value={wordValue}
-          onChange={(e) => setWordValue(e.target.value)}
-          className="bst-input"
-          style={{ width: '130px' }}
-          placeholder="e.g. cat, car"
-        />
+        <div className="bst-input-group" title="Enter comma-separated words (e.g. cat, car, dog)">
+          <span style={{ fontWeight: 600 }}>Words:</span>
+          <input
+            type="text"
+            value={wordValue}
+            onChange={(e) => {
+              setWordValue(e.target.value);
+              if (inputError) setInputError(null);
+            }}
+            className="bst-input"
+            placeholder="e.g. cat, car, dog"
+            style={{ minWidth: '150px' }}
+          />
+        </div>
       )}
 
+      <button className="bst-btn btn-mode" onClick={handleBuildTreeFromScratch} title="Build dataset sequentially from scratch">
+        <Sparkles size={14} className="text-amber-400" />
+        <span>Build Dataset</span>
+      </button>
+
       {treeCategory === 'bst' && (
-        <div className="flex items-center gap-2">
+        <>
           <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
-            <Plus size={14} />
+            <Plus size={16} />
             <span>Insert</span>
           </button>
           <button className="bst-btn btn-search" onClick={handleBSTSearch}>
-            <Search size={14} />
+            <Search size={16} />
             <span>Search</span>
           </button>
-        </div>
+          <div className="traversal-btn-group">
+            <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('inorder'); setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+              <ListOrdered size={14} />
+              <span>Inorder</span>
+            </button>
+            <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('preorder'); setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+              <GitCommit size={14} />
+              <span>Preorder</span>
+            </button>
+            <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('postorder'); setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+              <CornerDownRight size={14} />
+              <span>Postorder</span>
+            </button>
+          </div>
+        </>
       )}
 
       {treeCategory === 'avl' && (
-        <div className="flex items-center gap-2">
-          <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
-            <Plus size={14} />
-            <span>Insert AVL</span>
-          </button>
-        </div>
+        <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
+          <Plus size={16} />
+          <span>Insert & Balance</span>
+        </button>
       )}
 
       {treeCategory === 'heap' && (
-        <div className="flex items-center gap-2">
+        <>
           <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
-            <Plus size={14} />
+            <Plus size={16} />
             <span>Push Heap</span>
           </button>
           <button className="bst-btn btn-search" onClick={handleHeapExtract}>
-            <ArrowDown size={14} />
+            <ArrowDown size={16} />
             <span>Extract Root</span>
           </button>
-        </div>
+          <div className="traversal-btn-group">
+            <button className={`bst-btn btn-traversal ${heapType === 'max' ? 'active' : ''}`} onClick={() => setHeapType('max')}>
+              <ArrowUp size={12} />
+              <span>Max Heap</span>
+            </button>
+            <button className={`bst-btn btn-traversal ${heapType === 'min' ? 'active' : ''}`} onClick={() => setHeapType('min')}>
+              <ArrowDown size={12} />
+              <span>Min Heap</span>
+            </button>
+          </div>
+        </>
       )}
 
       {treeCategory === 'trie' && (
-        <div className="flex items-center gap-2">
+        <>
           <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
-            <Plus size={14} />
+            <Plus size={16} />
             <span>Insert Word</span>
           </button>
           <button className="bst-btn btn-search" onClick={handleTrieSearch}>
-            <Search size={14} />
+            <Search size={16} />
             <span>Search Prefix</span>
           </button>
-        </div>
+        </>
       )}
 
-      {/* Preset Action Buttons Shared Across ALL Categories */}
-      <div className="dataset-mode-selector ml-1">
-        <button className="bst-btn btn-mode" onClick={handleEmptyTree} title="Clear Tree Structure">
-          <Trash2 size={13} className="text-rose-400" />
-          <span>Empty</span>
+      {/* Dataset Initialization Selector Group for ALL Categories */}
+      <div className="dataset-mode-selector">
+        <button className="bst-btn btn-mode" onClick={handleEmptyTree}>
+          <Trash2 size={14} className="text-rose-400" />
+          <span>Empty Tree</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleSampleTree} title="Load Standard Sample Tree">
-          <Layers size={13} className="text-amber-400" />
-          <span>Sample</span>
+        <button className="bst-btn btn-mode" onClick={handleSampleTree}>
+          <Layers size={14} className="text-amber-400" />
+          <span>Sample Tree</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleRandomTree} title="Generate Random Tree">
-          <Sparkles size={13} className="text-emerald-400" />
-          <span>Random</span>
+        <button className="bst-btn btn-mode" onClick={handleRandomTree}>
+          <Sparkles size={14} className="text-emerald-400" />
+          <span>Random Tree</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   const renderFullscreenPlayerControls = () => (
@@ -643,128 +678,7 @@ export const BSTPage: React.FC = () => {
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {treeCategory !== 'trie' ? (
-            <div className="bst-input-group" title="Enter comma-separated values (e.g. 20, 10, 30, 5, 15)">
-              <span style={{ fontWeight: 600 }}>Values:</span>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  if (inputError) setInputError(null);
-                }}
-                className="bst-input"
-                placeholder="e.g. 20, 10, 30, 5, 15"
-                style={{ minWidth: '150px' }}
-              />
-            </div>
-          ) : (
-            <div className="bst-input-group" title="Enter comma-separated words (e.g. cat, car, dog)">
-              <span style={{ fontWeight: 600 }}>Words:</span>
-              <input
-                type="text"
-                value={wordValue}
-                onChange={(e) => {
-                  setWordValue(e.target.value);
-                  if (inputError) setInputError(null);
-                }}
-                className="bst-input"
-                placeholder="e.g. cat, car, dog"
-                style={{ minWidth: '150px' }}
-              />
-            </div>
-          )}
-
-          <button className="bst-btn btn-mode" onClick={handleBuildTreeFromScratch} title="Build dataset sequentially from scratch">
-            <Sparkles size={14} className="text-amber-400" />
-            <span>Build Dataset</span>
-          </button>
-
-          {treeCategory === 'bst' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
-                <Plus size={16} />
-                <span>Insert</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleBSTSearch}>
-                <Search size={16} />
-                <span>Search</span>
-              </button>
-              <div className="traversal-btn-group">
-                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('inorder'); setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
-                  <ListOrdered size={14} />
-                  <span>Inorder</span>
-                </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('preorder'); setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
-                  <GitCommit size={14} />
-                  <span>Preorder</span>
-                </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('postorder'); setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
-                  <CornerDownRight size={14} />
-                  <span>Postorder</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {treeCategory === 'avl' && (
-            <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
-              <Plus size={16} />
-              <span>Insert & Balance</span>
-            </button>
-          )}
-
-          {treeCategory === 'heap' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
-                <Plus size={16} />
-                <span>Push Heap</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleHeapExtract}>
-                <ArrowDown size={16} />
-                <span>Extract Root</span>
-              </button>
-              <div className="traversal-btn-group">
-                <button className={`bst-btn btn-traversal ${heapType === 'max' ? 'active' : ''}`} onClick={() => setHeapType('max')}>
-                  <ArrowUp size={12} />
-                  <span>Max Heap</span>
-                </button>
-                <button className={`bst-btn btn-traversal ${heapType === 'min' ? 'active' : ''}`} onClick={() => setHeapType('min')}>
-                  <ArrowDown size={12} />
-                  <span>Min Heap</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {treeCategory === 'trie' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
-                <Plus size={16} />
-                <span>Insert Word</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleTrieSearch}>
-                <Search size={16} />
-                <span>Search Prefix</span>
-              </button>
-            </>
-          )}
-
-          {/* Dataset Initialization Selector Group for ALL Categories */}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmptyTree}>
-              <Trash2 size={14} className="text-rose-400" />
-              <span>Empty Tree</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSampleTree}>
-              <Layers size={14} className="text-amber-400" />
-              <span>Sample Tree</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomTree}>
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random Tree</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -853,7 +767,17 @@ export const BSTPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Tree Studio | ${treeCategory.toUpperCase()}`}
         subtitle="Interactive Dynamic Tree Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

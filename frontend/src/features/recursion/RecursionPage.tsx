@@ -264,27 +264,25 @@ export const RecursionPage: React.FC = () => {
     }
   };
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       {renderAlgInputs()}
-      <div className="dataset-mode-selector ml-1">
-        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+      <div className="dataset-mode-selector">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty Array">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample">
+        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Array">
           <Layers size={14} className="text-amber-400" /><span>Sample</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Render ─────────────────────────────────────────────────────── */
@@ -339,18 +337,7 @@ export const RecursionPage: React.FC = () => {
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {renderAlgInputs()}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty Array">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Array">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -419,7 +406,17 @@ export const RecursionPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Recursion | ${selectedAlg.toUpperCase()}`}
         subtitle="Call Tree Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
