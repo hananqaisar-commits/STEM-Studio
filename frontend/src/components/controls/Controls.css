@@ -122,6 +122,15 @@
   transform: scale(1.02);
 }
 
+/* After the first drag the controller becomes absolutely positioned at the
+   dragged spot (inside .renderer-section / .fs-modal-body, both of which
+   are position: relative). Until then it keeps its default in-flow pill
+   placement below the canvas. */
+.floating-controller.is-positioned {
+  position: absolute;
+  margin: 0;
+}
+
 .floating-controller-grip {
   display: flex;
   align-items: center;
