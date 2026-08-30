@@ -78,7 +78,7 @@
 }
 
 .speed-label {
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   font-weight: 600;
   min-width: 35px;
   color: var(--color-text);
@@ -120,6 +120,15 @@
   cursor: grabbing;
   box-shadow: 0 12px 32px rgba(147, 51, 234, 0.22);
   transform: scale(1.02);
+}
+
+/* After the first drag the controller becomes absolutely positioned at the
+   dragged spot (inside .renderer-section / .fs-modal-body, both of which
+   are position: relative). Until then it keeps its default in-flow pill
+   placement below the canvas. */
+.floating-controller.is-positioned {
+  position: absolute;
+  margin: 0;
 }
 
 .floating-controller-grip {

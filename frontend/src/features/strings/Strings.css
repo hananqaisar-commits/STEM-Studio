@@ -17,12 +17,12 @@
 }
 
 .string-cell .cell-char {
-  font-size: 1.2rem; font-weight: 700; font-family: 'Fira Code', monospace;
+  font-size: var(--text-xl); font-weight: 700; font-family: 'Fira Code', monospace;
   color: var(--color-text);
 }
 
 .string-cell .cell-index {
-  font-size: 0.6rem; color: var(--color-text-muted); margin-top: 2px;
+  font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;
 }
 
 /* State colors — match the Bar component's state colors */
@@ -37,13 +37,13 @@
 .string-input-group {
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.4rem 0.75rem; background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: 8px; font-size: 0.8rem;
+  border: 1px solid var(--color-border); border-radius: 8px; font-size: var(--text-xs);
 }
 
 .string-input-group input[type="text"] {
   padding: 0.3rem 0.5rem; background: var(--color-surface-elevated);
   border: 1px solid var(--color-border); border-radius: 4px;
-  color: var(--color-text); font-family: 'Fira Code', monospace; font-size: 0.8rem;
+  color: var(--color-text); font-family: 'Fira Code', monospace; font-size: var(--text-xs);
   min-width: 120px;
 }
 

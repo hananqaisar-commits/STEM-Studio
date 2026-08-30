@@ -283,9 +283,17 @@ export const GreedyPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="dataset-mode-selector ml-1">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Algorithm-specific inputs */}
+      {renderAlgorithmInputs()}
+
+      {/* Dataset Mode Selector */}
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Inputs">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -296,14 +304,7 @@ export const GreedyPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Algorithm-specific toolbar inputs ─────────────────────────────── */
@@ -442,43 +443,12 @@ export const GreedyPage: React.FC = () => {
       />
 
       {/* Category Tabs Bar */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {/* Algorithm-specific inputs */}
-          {renderAlgorithmInputs()}
-
-          {/* Dataset Mode Selector */}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Inputs">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Input">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -546,7 +516,17 @@ export const GreedyPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Greedy Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="Greedy Choice Visualizer"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

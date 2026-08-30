@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Edit3, Search, Hash, Maximize2, Sparkles, Trash2, Layers, Copy, Map
+  Search, Hash, Maximize2, Sparkles, Trash2, Layers, Copy, Map
 } from 'lucide-react';
 import { HashMapRenderer } from './HashMapRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
-import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
@@ -28,6 +27,7 @@ import { runSubarraySum } from './algorithms/subarraySum';
 import '../sorting/Sorting.css';
 import './HashMaps.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList } from '../../utils/batchInputParser';
 
 interface AlgMeta {
   key: HashMapsAlgorithmKey;
@@ -65,9 +65,9 @@ export const HashMapsPage: React.FC = () => {
   // Custom input state
   const [inputArr, setInputArr] = useState<number[]>(DEFAULT_INPUTS.twoSum.arr);
   const [target, setTarget] = useState<number>(DEFAULT_INPUTS.twoSum.target ?? 9);
+  const [rawArrInput, setRawArrInput] = useState<string>(DEFAULT_INPUTS.twoSum.arr.join(', '));
 
   // UI state
-  const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
@@ -77,6 +77,7 @@ export const HashMapsPage: React.FC = () => {
   useEffect(() => {
     const defaults = DEFAULT_INPUTS[selectedAlg];
     setInputArr(defaults.arr);
+    setRawArrInput(defaults.arr.join(', '));
     if (defaults.target !== undefined) setTarget(defaults.target);
   }, [selectedAlg]);
 
@@ -154,10 +155,9 @@ export const HashMapsPage: React.FC = () => {
       newArr.push(Math.floor(Math.random() * 20) + 1);
     }
     setInputArr(newArr);
+    setRawArrInput(newArr.join(', '));
     if (selectedAlg === 'twoSum' && newArr.length >= 2) {
       setTarget(newArr[0] + newArr[newArr.length - 1]);
-    } else if (selectedAlg === 'subarraySum' && newArr.length >= 3) {
-      setTarget(newArr[1] + newArr[2] + newArr[3]);
     }
   };
 
@@ -165,7 +165,7 @@ export const HashMapsPage: React.FC = () => {
     reset();
     quizSession.resetSession();
     setInputArr(newArr);
-    setShowCustomEditor(false);
+    setRawArrInput(newArr.join(', '));
     if (selectedAlg === 'twoSum' && newArr.length >= 2) {
       setTarget(newArr[0] + newArr[newArr.length - 1]);
     }
@@ -222,38 +222,64 @@ export const HashMapsPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="dataset-mode-selector ml-1">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Direct Batch Array Input */}
+      <div className="bst-input-group" title="Enter custom comma-separated numbers (e.g. 2, 7, 11, 15)">
+        <span style={{ fontWeight: 600 }}>Array:</span>
+        <input
+          type="text"
+          value={rawArrInput}
+          onChange={(e) => {
+            setRawArrInput(e.target.value);
+            const res = parseNumberList(e.target.value);
+            if (res.isValid && res.values.length > 0) {
+              const newArr = res.values;
+              setInputArr(newArr);
+              if (selectedAlg === 'twoSum' && newArr.length >= 2) {
+                setTarget(newArr[0] + newArr[newArr.length - 1]);
+              }
+              reset();
+            }
+          }}
+          className="bst-input"
+          placeholder="e.g. 2, 7, 11, 15"
+          style={{ minWidth: '150px' }}
+        />
+      </div>
+
+      {renderAlgorithmInputs()}
+
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
-          <Trash2 size={14} />
+          <Trash2 size={14} className="text-rose-400" />
           <span>Empty</span>
         </button>
         <button
           className="bst-btn btn-mode"
           onClick={() => {
             const defaults = DEFAULT_INPUTS[selectedAlg];
-            handleApplyCustomArray(defaults.arr);
+            reset();
+            quizSession.resetSession();
+            setInputArr(defaults.arr);
+            setRawArrInput(defaults.arr.join(', '));
             if (defaults.target !== undefined) setTarget(defaults.target);
           }}
           title="Sample Array"
         >
-          <Layers size={14} />
+          <Layers size={14} className="text-amber-400" />
           <span>Sample</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-          <Sparkles size={14} />
+          <Sparkles size={14} className="text-emerald-400" />
           <span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Algorithm-specific toolbar inputs ─────────────────────────────── */
@@ -339,59 +365,12 @@ export const HashMapsPage: React.FC = () => {
       />
 
       {/* Category Tabs Bar */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
-            <Edit3 size={14} />
-            <span>Custom Values</span>
-          </button>
-
-          {renderAlgorithmInputs()}
-
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
-              <Trash2 size={14} className="text-rose-400" />
-              <span>Empty</span>
-            </button>
-            <button
-              className="bst-btn btn-mode"
-              onClick={() => {
-                const defaults = DEFAULT_INPUTS[selectedAlg];
-                reset();
-                quizSession.resetSession();
-                setInputArr(defaults.arr);
-                if (defaults.target !== undefined) setTarget(defaults.target);
-              }}
-              title="Sample Array"
-            >
-              <Layers size={14} className="text-amber-400" />
-              <span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -462,7 +441,17 @@ export const HashMapsPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Hash Map Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="HashMap Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
@@ -486,15 +475,6 @@ export const HashMapsPage: React.FC = () => {
           onElementClick={handleBarElementClick}
         />
       </FullScreenCanvasModal>
-
-      {/* Custom Values Input Modal */}
-      {showCustomEditor && (
-        <CustomArrayEditor
-          currentArray={inputArr}
-          onApplyCustomArray={handleApplyCustomArray}
-          onClose={() => setShowCustomEditor(false)}
-        />
-      )}
     </div>
   );
 };

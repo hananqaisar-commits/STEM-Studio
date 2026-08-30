@@ -210,8 +210,12 @@ export const TriePage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       <div className="trie-input-group">
         <span>Words:</span>
         <input
@@ -222,29 +226,31 @@ export const TriePage: React.FC = () => {
           className="wide"
         />
       </div>
+
       {selectedAlg !== 'trieInsert' && (
         <div className="trie-input-group">
-          <span>{selectedAlg === 'wordDictionary' ? 'Pattern:' : 'Query:'}</span>
+          <span>{selectedAlg === 'wordDictionary' ? 'Pattern:' : selectedAlg === 'triePrefix' ? 'Prefix:' : 'Query:'}</span>
           <input
             type="text"
             value={queryInput}
             onChange={(e) => { setQueryInput(e.target.value); reset(); }}
-            placeholder={selectedAlg === 'wordDictionary' ? 'e.g. h.l.' : 'e.g. car'}
+            placeholder={selectedAlg === 'wordDictionary' ? 'e.g. h.l.' : selectedAlg === 'triePrefix' ? 'e.g. app' : 'e.g. car'}
           />
         </div>
       )}
-      <div className="dataset-mode-selector ml-1">
-        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear"><Trash2 size={13} className="text-rose-400" /><span>Empty</span></button>
-        <button className="bst-btn btn-mode" onClick={handleSample} title="Sample"><Layers size={13} className="text-amber-400" /><span>Sample</span></button>
-        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random"><Sparkles size={13} className="text-emerald-400" /><span>Random</span></button>
+
+      <div className="dataset-mode-selector">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear All">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSample} title="Load Sample">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Words">
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+        </button>
       </div>
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
@@ -288,64 +294,11 @@ export const TriePage: React.FC = () => {
         }
       />
 
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map(alg => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                const d = DEFAULT_PARAMS[alg.key];
-                setWordsInput(d.words);
-                setQueryInput(d.query);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          <div className="trie-input-group">
-            <span>Words:</span>
-            <input
-              type="text"
-              value={wordsInput}
-              onChange={(e) => { setWordsInput(e.target.value); reset(); }}
-              placeholder="space-separated words"
-              className="wide"
-            />
-          </div>
-
-          {selectedAlg !== 'trieInsert' && (
-            <div className="trie-input-group">
-              <span>{selectedAlg === 'wordDictionary' ? 'Pattern:' : selectedAlg === 'triePrefix' ? 'Prefix:' : 'Query:'}</span>
-              <input
-                type="text"
-                value={queryInput}
-                onChange={(e) => { setQueryInput(e.target.value); reset(); }}
-                placeholder={selectedAlg === 'wordDictionary' ? 'e.g. h.l.' : selectedAlg === 'triePrefix' ? 'e.g. app' : 'e.g. car'}
-              />
-            </div>
-          )}
-
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear All">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Load Sample">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Words">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -421,7 +374,17 @@ export const TriePage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Trie Studio | ${selectedAlg.toUpperCase()}`}
         subtitle="Prefix Tree Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

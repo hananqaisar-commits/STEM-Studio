@@ -1144,44 +1144,84 @@ export const StackQueuePage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="bst-input-group">
-        <span>Value:</span>
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Problem Selector Dropdown (⌘K search lives in the shared page header) */}
+      <select
+        className="bst-select font-bold text-xs"
+        value={category}
+        onChange={(e) => {
+          setCategory(e.target.value as StackQueueCategory);
+          setActiveSteps([]);
+          reset();
+        }}
+      >
+        <optgroup label="── Core Primitives ──">
+          <option value="stack">Stack Primitive (LIFO)</option>
+          <option value="queue">Queue Primitive (FIFO)</option>
+        </optgroup>
+        <optgroup label="── Stack Classical Problems (10) ──">
+          <option value="validParentheses">1. Valid Parentheses (#20)</option>
+          <option value="minStack">2. Min Stack O(1) (#155)</option>
+          <option value="postfixEval">3. Evaluate RPN / Postfix (#150)</option>
+          <option value="dailyTemperatures">4. Daily Temperatures / Monotonic (#739)</option>
+          <option value="simplifyPath">5. Simplify Path (#71)</option>
+          <option value="removeAdjacentDuplicates">6. Remove Adjacent Duplicates (#1047)</option>
+          <option value="basicCalculator">7. Basic Calculator Expression (#224)</option>
+          <option value="decodeString">8. Decode String Pattern (#394)</option>
+          <option value="trappingRainWater">9. Trapping Rain Water (#42)</option>
+          <option value="largestRectangle">10. Largest Rectangle in Histogram (#84)</option>
+        </optgroup>
+        <optgroup label="── Queue Classical Problems (10) ──">
+          <option value="queueViaStacks">1. Queue using 2 Stacks (#232)</option>
+          <option value="stackViaQueues">2. Stack using Queues (#225)</option>
+          <option value="circularQueue">3. Circular Queue Ring Buffer (#622)</option>
+          <option value="circularDeque">4. Design Circular Deque (#641)</option>
+          <option value="slidingWindow">5. Sliding Window Maximum (#239)</option>
+          <option value="firstNonRepeating">6. First Non-Repeating in Stream</option>
+          <option value="movingAverage">7. Moving Average Data Stream (#346)</option>
+          <option value="taskScheduler">8. Task Scheduler CPU Queue (#621)</option>
+          <option value="rottingOranges">9. Rotting Oranges BFS Grid (#994)</option>
+          <option value="dota2Senate">10. Dota2 Senate Round-Robin (#649)</option>
+        </optgroup>
+      </select>
+
+      {/* Input Group Matching BST */}
+      <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
+        <span style={{ fontWeight: 600 }}>Values:</span>
         <input
           type="text"
-          className="bst-input"
-          style={{ width: '90px' }}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Val / Expr"
+          className="bst-input"
+          placeholder="e.g. 10, 20, 30, 40"
+          style={{ minWidth: '160px' }}
         />
       </div>
 
+      {/* Category Action Buttons */}
       {renderCategoryActions()}
 
+      {/* Dataset Selector Group Matching BST */}
       <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleClearAll}>
-          <Trash2 size={14} />
+          <Trash2 size={14} className="text-rose-400" />
           <span>Empty</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleSampleData}>
-          <Layers size={14} />
+          <Layers size={14} className="text-amber-400" />
           <span>Sample</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleRandomData}>
-          <Sparkles size={14} />
+          <Sparkles size={14} className="text-emerald-400" />
           <span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
@@ -1224,45 +1264,6 @@ export const StackQueuePage: React.FC = () => {
       {/* Operations Control Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {/* Problem Selector Dropdown (⌘K search lives in the shared page header) */}
-          <select
-            className="bst-select font-bold text-xs"
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value as StackQueueCategory);
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <optgroup label="── Core Primitives ──">
-              <option value="stack">Stack Primitive (LIFO)</option>
-              <option value="queue">Queue Primitive (FIFO)</option>
-            </optgroup>
-            <optgroup label="── Stack Classical Problems (10) ──">
-              <option value="validParentheses">1. Valid Parentheses (#20)</option>
-              <option value="minStack">2. Min Stack O(1) (#155)</option>
-              <option value="postfixEval">3. Evaluate RPN / Postfix (#150)</option>
-              <option value="dailyTemperatures">4. Daily Temperatures / Monotonic (#739)</option>
-              <option value="simplifyPath">5. Simplify Path (#71)</option>
-              <option value="removeAdjacentDuplicates">6. Remove Adjacent Duplicates (#1047)</option>
-              <option value="basicCalculator">7. Basic Calculator Expression (#224)</option>
-              <option value="decodeString">8. Decode String Pattern (#394)</option>
-              <option value="trappingRainWater">9. Trapping Rain Water (#42)</option>
-              <option value="largestRectangle">10. Largest Rectangle in Histogram (#84)</option>
-            </optgroup>
-            <optgroup label="── Queue Classical Problems (10) ──">
-              <option value="queueViaStacks">1. Queue using 2 Stacks (#232)</option>
-              <option value="stackViaQueues">2. Stack using Queues (#225)</option>
-              <option value="circularQueue">3. Circular Queue Ring Buffer (#622)</option>
-              <option value="circularDeque">4. Design Circular Deque (#641)</option>
-              <option value="slidingWindow">5. Sliding Window Maximum (#239)</option>
-              <option value="firstNonRepeating">6. First Non-Repeating in Stream</option>
-              <option value="movingAverage">7. Moving Average Data Stream (#346)</option>
-              <option value="taskScheduler">8. Task Scheduler CPU Queue (#621)</option>
-              <option value="rottingOranges">9. Rotting Oranges BFS Grid (#994)</option>
-              <option value="dota2Senate">10. Dota2 Senate Round-Robin (#649)</option>
-            </optgroup>
-          </select>
 
           {/* Input Group Matching BST */}
             <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
@@ -1373,7 +1374,17 @@ export const StackQueuePage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Stack & Queue Studio | ${(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? 'Visualizer').toUpperCase()}`}
         subtitle="Interactive LIFO / FIFO Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

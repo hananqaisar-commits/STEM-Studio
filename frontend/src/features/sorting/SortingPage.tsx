@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, Hash
+  Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, Hash
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -11,7 +11,6 @@ import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
-import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
@@ -97,7 +96,7 @@ export const SortingPage: React.FC = () => {
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
   const [rawArrayInput, setRawArrayInput] = useState<string>(() => generateArray(12, 'random').join(', '));
 
-  // Debugger & Modal & Predict state
+  // Debugger & Modal state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -196,7 +195,6 @@ export const SortingPage: React.FC = () => {
     setArraySize(newArr.length);
     setInitialArray(newArr);
     setRawArrayInput(newArr.join(', '));
-    setShowCustomEditor(false);
   };
 
   /* ── Transfer challenge ("Prove You Understand") ─────────────────
@@ -275,8 +273,53 @@ export const SortingPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Direct Batch Array Input */}
+      <div className="bst-input-group" title="Enter custom comma-separated numbers (e.g. 8, 3, 5, 1, 9, 2)">
+        <span style={{ fontWeight: 600 }}>Array:</span>
+        <input
+          type="text"
+          value={rawArrayInput}
+          onChange={(e) => {
+            setRawArrayInput(e.target.value);
+            const res = parseNumberList(e.target.value);
+            if (res.isValid && res.values.length >= 2) {
+              setInitialArray(res.values);
+              setCustomSteps(null);
+              reset();
+            }
+          }}
+          className="bst-input"
+          placeholder="e.g. 8, 3, 5, 1, 9, 2"
+          style={{ minWidth: '150px' }}
+        />
+      </div>
+
+      <div className="bst-input-group">
+        <span>Pattern:</span>
+        <select
+          value={arrayPattern}
+          onChange={(e) => {
+            const pattern = e.target.value as ArrayPattern;
+            setArrayPattern(pattern);
+            reset();
+            const newArr = generateArray(arraySize, pattern);
+            setInitialArray(newArr);
+            setRawArrayInput(newArr.join(', '));
+          }}
+          className="bst-select font-bold text-xs"
+        >
+          <option value="random">Random Unsorted</option>
+          <option value="reversed">Worst Case (Reversed)</option>
+          <option value="nearlySorted">Best Case (Nearly Sorted)</option>
+        </select>
+      </div>
+
       <div className="bst-input-group">
         <span>Size:</span>
         <input
@@ -288,39 +331,31 @@ export const SortingPage: React.FC = () => {
             const size = parseInt(e.target.value);
             setArraySize(size);
             reset();
-            setInitialArray(generateArray(size, arrayPattern));
+            const newArr = generateArray(size, arrayPattern);
+            setInitialArray(newArr);
+            setRawArrayInput(newArr.join(', '));
           }}
-          className="toolbar-range w-24"
+          className="toolbar-range cursor-pointer accent-amber-400 w-24"
         />
-        <span className="text-xs font-mono font-bold">{arraySize}</span>
+        <span className="text-xs font-mono font-bold text-amber-400">{arraySize}</span>
       </div>
 
-      <div className="dataset-mode-selector ml-1">
+      {/* Dataset Mode Selector */}
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
-          <Trash2 size={14} />
+          <Trash2 size={14} className="text-rose-400" />
           <span>Empty</span>
         </button>
-        <button
-          className="bst-btn btn-mode"
-          onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])}
-          title="Sample Array"
-        >
-          <Layers size={14} />
+        <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
+          <Layers size={14} className="text-amber-400" />
           <span>Sample</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-          <Sparkles size={14} />
+          <Sparkles size={14} className="text-emerald-400" />
           <span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
@@ -361,106 +396,12 @@ export const SortingPage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs Bar Matching BST */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {/* Direct Batch Array Input */}
-          <div className="bst-input-group" title="Enter custom comma-separated numbers (e.g. 8, 3, 5, 1, 9, 2)">
-            <span style={{ fontWeight: 600 }}>Array:</span>
-            <input
-              type="text"
-              value={rawArrayInput}
-              onChange={(e) => {
-                setRawArrayInput(e.target.value);
-                const res = parseNumberList(e.target.value);
-                if (res.isValid && res.values.length >= 2) {
-                  setInitialArray(res.values);
-                  setCustomSteps(null);
-                  reset();
-                }
-              }}
-              className="bst-input"
-              placeholder="e.g. 8, 3, 5, 1, 9, 2"
-              style={{ minWidth: '150px' }}
-            />
-          </div>
-
-          <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
-            <Edit3 size={14} />
-            <span>Editor</span>
-          </button>
-
-          <div className="bst-input-group">
-            <span>Pattern:</span>
-            <select
-              value={arrayPattern}
-              onChange={(e) => {
-                const pattern = e.target.value as ArrayPattern;
-                setArrayPattern(pattern);
-                reset();
-                setInitialArray(generateArray(arraySize, pattern));
-              }}
-              className="bst-select font-bold text-xs"
-            >
-              <option value="random">Random Unsorted</option>
-              <option value="reversed">Worst Case (Reversed)</option>
-              <option value="nearlySorted">Best Case (Nearly Sorted)</option>
-            </select>
-          </div>
-
-          <div className="bst-input-group">
-            <span>Size:</span>
-            <input
-              type="range"
-              min={5}
-              max={30}
-              value={arraySize}
-              onChange={(e) => {
-                const size = parseInt(e.target.value);
-                setArraySize(size);
-                reset();
-                setInitialArray(generateArray(size, arrayPattern));
-              }}
-              className="toolbar-range cursor-pointer accent-amber-400 w-24"
-            />
-            <span className="text-xs font-mono font-bold text-amber-400">{arraySize}</span>
-          </div>
-
-          {/* Dataset Mode Selector Matching BST */}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
-              <Trash2 size={14} className="text-rose-400" />
-              <span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
-              <Layers size={14} className="text-amber-400" />
-              <span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -530,7 +471,17 @@ export const SortingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
-        toolbarControls={renderFloatingControls()}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
@@ -554,15 +505,6 @@ export const SortingPage: React.FC = () => {
           onElementClick={handleBarElementClick}
         />
       </FullScreenCanvasModal>
-
-      {/* Custom Values Input Modal */}
-      {showCustomEditor && (
-        <CustomArrayEditor
-          currentArray={initialArray}
-          onApplyCustomArray={handleApplyCustomArray}
-          onClose={() => setShowCustomEditor(false)}
-        />
-      )}
     </div>
   );
 };

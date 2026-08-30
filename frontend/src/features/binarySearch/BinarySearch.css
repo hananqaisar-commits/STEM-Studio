@@ -41,7 +41,7 @@
 }
 
 .bs-title-text h1 {
-  font-size: 1.35rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
@@ -51,7 +51,7 @@
 }
 
 .bs-title-text p {
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
   margin: 0.15rem 0 0 0;
 }
@@ -84,7 +84,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   color: var(--color-text);
   width: 100%;
 }
@@ -136,7 +136,7 @@
   gap: 0.4rem;
   padding: 0.45rem 0.9rem;
   border-radius: 10px;
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   font-weight: 500;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -192,7 +192,7 @@
   border: none;
   outline: none;
   color: var(--color-text);
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   width: 55px;
   text-align: center;
   font-family: monospace;
@@ -273,14 +273,14 @@
 }
 
 .bs-hud-label {
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: var(--color-text-secondary);
   letter-spacing: 0.05em;
 }
 
 .bs-hud-val {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: 700;
   font-family: monospace;
   color: var(--color-text);
@@ -317,7 +317,7 @@
 }
 
 .bs-pointer-badge {
-  font-size: 0.62rem;
+  font-size: var(--text-xs);
   font-weight: 800;
   padding: 0.12rem 0.45rem;
   border-radius: 9999px;
@@ -354,7 +354,7 @@
   border-radius: 12px;
   background: var(--color-surface);
   border: 2px solid var(--color-border);
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   font-weight: 700;
   font-family: monospace;
   color: var(--color-text);
@@ -383,7 +383,7 @@
 }
 
 .bs-elem-index {
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-secondary);
   font-family: monospace;

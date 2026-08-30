@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '../api/apiClient';
+import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
 
 interface UserData {
   user_id: number;
@@ -15,7 +16,7 @@ interface AuthContextType {
   user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   signup: (
     username: string,
     email: string,
@@ -35,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
+    const token = getAccessToken();
     if (!token) {
       setIsLoading(false);
       return;
@@ -46,8 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
     } catch {
       // Token invalid, clear stored tokens
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      clearTokens();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -58,17 +58,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchUser();
   }, [fetchUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe = false) => {
     const data = await apiClient<{ access_token: string; refresh_token: string }>(
       '/api/auth/login',
       {
         method: 'POST',
-        body: { email, password },
+        body: { email, password, remember_me: rememberMe },
       }
     );
 
-    localStorage.setItem('access_token', data.access_token);
-    localStorage.setItem('refresh_token', data.refresh_token);
+    // Remember me → localStorage (survives browser restarts); otherwise
+    // sessionStorage (cleared when the browser closes).
+    storeTokens(data.access_token, data.refresh_token, rememberMe);
 
     // Fetch user profile after login
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
@@ -95,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = getRefreshToken();
     if (refreshToken) {
       try {
         await apiClient('/api/auth/logout', {
@@ -108,8 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearTokens();
     setUser(null);
   };
 

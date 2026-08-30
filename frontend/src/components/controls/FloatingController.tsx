@@ -69,6 +69,9 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
     y: 24
   });
   const [isDragging, setIsDragging] = useState(false);
+  /* Once the user drags, the controller switches from its default
+     in-flow placement to absolute positioning at the dragged spot. */
+  const [isPositioned, setIsPositioned] = useState(false);
 
   const handleTogglePlay = useCallback(() => {
     if (isPlaying) onPause();
@@ -130,6 +133,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
     );
 
     setPosition({ x: newLeft, y: newTop });
+    setIsPositioned(true);
   }, [quizMode]);
 
   const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -162,7 +166,8 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`floating-controller ${isDragging ? 'is-dragging' : ''} ${className}`}
+      className={`floating-controller ${isDragging ? 'is-dragging' : ''} ${isPositioned ? 'is-positioned' : ''} ${className}`}
+      style={isPositioned ? { left: position.x, top: position.y } : undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
