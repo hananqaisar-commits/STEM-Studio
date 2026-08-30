@@ -490,6 +490,8 @@ export const BinarySearchPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={category}
               title="Binary Search"
+              categoryId="binarySearch"
+              topicId={category}
               snippets={BINARY_SEARCH_SNIPPETS[snippetKey]}
               activeLine={currentStep?.codeLine}
               variables={{

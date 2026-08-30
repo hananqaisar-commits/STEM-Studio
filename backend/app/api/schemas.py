@@ -151,3 +151,23 @@ class ReviewResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+
+# ─── Custom Code Execution Schemas ───────────────────────────────────
+
+class CustomCodeExecutionRequest(BaseModel):
+    algorithm_key: str = Field(..., min_length=3, max_length=120, description="Composite key: categoryId.topicId")
+    language: str = Field(..., pattern="^(python|cpp|c|java|go|csharp)$")
+    code: str = Field(..., min_length=1, max_length=60_000)
+    # Function-style: {"args": {paramName: value}}; stateful: {"ctorArgs": [...], "operations": [...]}
+    state: dict = Field(default_factory=dict)
+
+
+class CustomCodeExecutionResponse(BaseModel):
+    status: str = Field(..., description="ok | compile_error | runtime_error | timeout")
+    error: Optional[str] = None
+    stderr: Optional[str] = None
+    trace_steps: List[dict] = Field(default_factory=list)
+    result: Optional[dict] = None
+    emitted_rows: List[List[int]] = Field(default_factory=list)
+    emitted_pairs: List[List[int]] = Field(default_factory=list)

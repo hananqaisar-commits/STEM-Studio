@@ -423,6 +423,8 @@ export const BacktrackingPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Backtracking"
+              categoryId="backtracking"
+              topicId={selectedAlg}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}

@@ -414,6 +414,8 @@ export const HashMapsPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Hash Map"
+              categoryId="hashMaps"
+              topicId={selectedAlg}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}

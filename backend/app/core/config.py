@@ -79,6 +79,13 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str = "noreply@stemstudio.com"
     EMAILS_FROM_NAME: str = "STEM Studio Support"
 
+    # Judge0 (sandboxed code execution for the Custom Code feature)
+    # Point at any Judge0 CE instance, e.g. https://ce.judge0.com or a
+    # self-hosted docker deployment. Leave empty to disable execution.
+    JUDGE0_URL: str = ""
+    JUDGE0_API_KEY: str = ""
+    JUDGE0_TIMEOUT_SECONDS: int = 20
+
     # App
     APP_NAME: str = "STEM Studio"
     DEBUG: bool = False

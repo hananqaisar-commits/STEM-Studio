@@ -35,6 +35,9 @@ import { generateBucketSortSteps } from './algorithms/bucketSort';
 import './Sorting.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
+import { executeCustomCode } from '../../api/customCode';
+import { mapArrayExecutionToSteps, resultsMatch } from '../../engine/customCodeSteps';
+import type { CustomStubLanguage } from '../../data/customCode';
 
 type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell' | 'counting' | 'radix' | 'bucket';
 type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
@@ -105,6 +108,8 @@ export const SortingPage: React.FC = () => {
 
   // Custom code execution state
   const [customSteps, setCustomSteps] = useState<import('../../engine/types/Step').ArrayStep[] | null>(null);
+  const [sandboxBusy, setSandboxBusy] = useState(false);
+  const [sandboxMessage, setSandboxMessage] = useState<string | null>(null);
 
   // Generate algorithm steps
   const executionData = useMemo(() => {
@@ -171,6 +176,7 @@ export const SortingPage: React.FC = () => {
   // Clear custom steps when algorithm or array changes
   useEffect(() => {
     setCustomSteps(null);
+    setSandboxMessage(null);
   }, [selectedAlg, initialArray]);
 
   // Callback: receive steps from custom code execution
@@ -178,6 +184,48 @@ export const SortingPage: React.FC = () => {
     setCustomSteps(steps);
     reset();
   }, [reset]);
+
+  /* ── Custom Code sandbox execution (function-stub model) ─────────────
+     The user fills in the pre-populated signature stub; the backend wraps it
+     in the array_in harness with the current Values array, runs it in
+     Judge0, and returns trace steps + final result for comparison against
+     the reference sorted output. */
+  const handleCustomExecute = useCallback(async (code: string, lang: CustomStubLanguage) => {
+    if (initialArray.length === 0) {
+      setSandboxMessage('Add array values first — the sandbox runs your code against the current Values input.');
+      return;
+    }
+    setSandboxBusy(true);
+    setSandboxMessage(null);
+    try {
+      const response = await executeCustomCode({
+        algorithm_key: `sorting.${selectedAlg}`,
+        language: lang,
+        code,
+        state: { args: { arr: initialArray } },
+      });
+
+      if (response.status === 'ok') {
+        const expected = [...initialArray].sort((a, b) => a - b);
+        const actual = response.result?.result;
+        const correct = Array.isArray(actual) && resultsMatch(expected, actual);
+        setCustomSteps(mapArrayExecutionToSteps(initialArray, response, expected));
+        reset();
+        setSandboxMessage(
+          correct
+            ? `Correct — your ${lang.toUpperCase()} code produced the expected sorted array.`
+            : 'Ran successfully, but the output does not match the expected sorted array. Check your logic.'
+        );
+      } else {
+        setSandboxMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Execution service unavailable.';
+      setSandboxMessage(`Sandbox unavailable: ${message}`);
+    } finally {
+      setSandboxBusy(false);
+    }
+  }, [initialArray, selectedAlg, reset]);
 
 
 
@@ -450,12 +498,17 @@ export const SortingPage: React.FC = () => {
               callStack={currentStep?.callStack}
               onCustomCodeRun={handleCustomCodeRun}
               currentArray={initialArray}
+              categoryId="sorting"
+              topicId={selectedAlg}
+              onCustomExecute={handleCustomExecute}
+              customBusy={sandboxBusy}
+              customMessage={sandboxMessage}
             />
           )}
 
           <ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
-            steps={executionData.steps}
+            steps={customSteps ?? executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}

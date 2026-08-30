@@ -341,6 +341,8 @@ export const TriePage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Trie"
+              categoryId="trie"
+              topicId={selectedAlg}
               activeLine={trieStep?.codeLine}
               variables={trieStep?.variables}
               onCustomCodeRun={(arraySteps) => {
