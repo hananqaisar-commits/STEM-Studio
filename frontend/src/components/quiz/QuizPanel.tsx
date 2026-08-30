@@ -211,9 +211,10 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
         </div>
       </header>
 
-      <p className="quiz-prompt">{question.prompt}</p>
+      <div key={question.id} className="quiz-content-animate">
+        <p className="quiz-prompt">{question.prompt}</p>
 
-      <div
+        <div
         className="quiz-options"
         role="radiogroup"
         aria-label="Answer choices"
@@ -240,6 +241,12 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
                 {index + 1}
               </span>
               <span className="quiz-option-label">{option}</span>
+              {/* Show checkmark if selected (even before locking), or the correct/wrong marks after locking */}
+              {!locked && checked && (
+                <span className="quiz-option-mark">
+                  <CheckCircle2 size={15} />
+                </span>
+              )}
               {locked && index === question.correctIndex && (
                 <span className="quiz-option-mark">
                   <CheckCircle2 size={15} />
@@ -253,6 +260,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
             </button>
           );
         })}
+        </div>
       </div>
 
       <div className="quiz-feedback-region" aria-live="polite">

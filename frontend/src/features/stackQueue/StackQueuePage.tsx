@@ -1224,45 +1224,6 @@ export const StackQueuePage: React.FC = () => {
       {/* Operations Control Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {/* Problem Selector Dropdown (⌘K search lives in the shared page header) */}
-          <select
-            className="bst-select font-bold text-xs"
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value as StackQueueCategory);
-              setActiveSteps([]);
-              reset();
-            }}
-          >
-            <optgroup label="── Core Primitives ──">
-              <option value="stack">Stack Primitive (LIFO)</option>
-              <option value="queue">Queue Primitive (FIFO)</option>
-            </optgroup>
-            <optgroup label="── Stack Classical Problems (10) ──">
-              <option value="validParentheses">1. Valid Parentheses (#20)</option>
-              <option value="minStack">2. Min Stack O(1) (#155)</option>
-              <option value="postfixEval">3. Evaluate RPN / Postfix (#150)</option>
-              <option value="dailyTemperatures">4. Daily Temperatures / Monotonic (#739)</option>
-              <option value="simplifyPath">5. Simplify Path (#71)</option>
-              <option value="removeAdjacentDuplicates">6. Remove Adjacent Duplicates (#1047)</option>
-              <option value="basicCalculator">7. Basic Calculator Expression (#224)</option>
-              <option value="decodeString">8. Decode String Pattern (#394)</option>
-              <option value="trappingRainWater">9. Trapping Rain Water (#42)</option>
-              <option value="largestRectangle">10. Largest Rectangle in Histogram (#84)</option>
-            </optgroup>
-            <optgroup label="── Queue Classical Problems (10) ──">
-              <option value="queueViaStacks">1. Queue using 2 Stacks (#232)</option>
-              <option value="stackViaQueues">2. Stack using Queues (#225)</option>
-              <option value="circularQueue">3. Circular Queue Ring Buffer (#622)</option>
-              <option value="circularDeque">4. Design Circular Deque (#641)</option>
-              <option value="slidingWindow">5. Sliding Window Maximum (#239)</option>
-              <option value="firstNonRepeating">6. First Non-Repeating in Stream</option>
-              <option value="movingAverage">7. Moving Average Data Stream (#346)</option>
-              <option value="taskScheduler">8. Task Scheduler CPU Queue (#621)</option>
-              <option value="rottingOranges">9. Rotting Oranges BFS Grid (#994)</option>
-              <option value="dota2Senate">10. Dota2 Senate Round-Robin (#649)</option>
-            </optgroup>
-          </select>
 
           {/* Input Group Matching BST */}
             <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">

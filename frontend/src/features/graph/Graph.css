@@ -41,7 +41,7 @@
 }
 
 .graph-title-text h1 {
-  font-size: 1.35rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
@@ -51,7 +51,7 @@
 }
 
 .graph-title-text p {
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
   margin: 0.15rem 0 0 0;
 }
@@ -84,7 +84,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   color: var(--color-text);
   width: 100%;
 }
@@ -136,7 +136,7 @@
   gap: 0.4rem;
   padding: 0.45rem 0.9rem;
   border-radius: 10px;
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   font-weight: 500;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -267,13 +267,13 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.35rem 0.65rem;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-family: monospace;
 }
 
 .graph-hud-badge-title {
   font-weight: 700;
   color: var(--color-text-secondary);
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
 }

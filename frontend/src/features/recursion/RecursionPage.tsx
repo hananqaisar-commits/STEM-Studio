@@ -323,18 +323,7 @@ export const RecursionPage: React.FC = () => {
       />
 
       {/* Category Tabs */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map(a => (
-            <button key={a.key}
-              className={`category-tab ${selectedAlg === a.key ? 'active' : ''}`}
-              onClick={() => handleAlgChange(a.key)}>
-              {a.icon}
-              <span>{a.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
