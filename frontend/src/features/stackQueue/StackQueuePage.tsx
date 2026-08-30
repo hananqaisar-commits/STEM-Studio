@@ -48,10 +48,17 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
-import { StackQueueCodePanel } from './StackQueueCodePanel';
+import { StackQueueCodePanel, type StackQueueCustomState } from './StackQueueCodePanel';
 import './StackQueue.css';
 import { parseNumberList } from '../../utils/batchInputParser';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { executeCustomCode } from '../../api/customCode';
+import { describeStatefulResult } from '../../engine/customCodeSteps';
+
+interface ReplayOp {
+  method: string;
+  args: (number | string)[];
+}
 
 interface ProblemMeta {
   id: StackQueueCategory;
@@ -139,6 +146,60 @@ export const StackQueuePage: React.FC = () => {
   // Code Debugger Visibility State
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
 
+  /* ── Custom Code sandbox state (operation-history replay model) ──────
+     The editor lives in StackQueueCodePanel; it lifts its state up here so
+     the existing Push/Pop/Enqueue/Dequeue buttons can replay the FULL
+     operation history in the sandbox on every click (Judge0 runs are
+     stateless, so continuity comes from replaying, not persisting). */
+  const [customState, setCustomState] = useState<StackQueueCustomState>({
+    active: false,
+    code: '',
+    lang: 'python',
+  });
+  const [stackHistory, setStackHistory] = useState<ReplayOp[]>(
+    () => [10, 25, 30].map((v) => ({ method: 'push', args: [v] }))
+  );
+  const [queueHistory, setQueueHistory] = useState<ReplayOp[]>(
+    () => [15, 28, 40].map((v) => ({ method: 'enqueue', args: [v] }))
+  );
+  const [sandboxBusy, setSandboxBusy] = useState(false);
+  const [sandboxMessage, setSandboxMessage] = useState<string | null>(null);
+
+  const submitReplay = async (
+    algorithmKey: 'stackQueue.stack' | 'stackQueue.queue',
+    history: ReplayOp[],
+    expectedReturned?: number | string
+  ) => {
+    if (!customState.active || !customState.code.trim() || history.length === 0) return;
+    setSandboxBusy(true);
+    setSandboxMessage(null);
+    try {
+      const response = await executeCustomCode({
+        algorithm_key: algorithmKey,
+        language: customState.lang,
+        code: customState.code,
+        state: { ctorArgs: [], operations: history },
+      });
+      if (response.status === 'ok') {
+        const returned = response.result?.returned;
+        if (expectedReturned !== undefined && returned !== expectedReturned) {
+          setSandboxMessage(
+            `Sandbox ran your code, but the last operation returned ${JSON.stringify(returned ?? null)} — expected ${JSON.stringify(expectedReturned)}.`
+          );
+        } else {
+          setSandboxMessage(`Sandbox OK — ${describeStatefulResult(response)}`);
+        }
+      } else {
+        setSandboxMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'service error';
+      setSandboxMessage(`Sandbox unavailable: ${message}`);
+    } finally {
+      setSandboxBusy(false);
+    }
+  };
+
   // Step Player Hook
   const {
     currentStepIndex,
@@ -194,14 +255,28 @@ export const StackQueuePage: React.FC = () => {
     setActiveSteps(allSteps);
     reset();
     play();
+
+    const newHistory = [
+      ...stackHistory,
+      ...rawValues.filter((v): v is number => typeof v === 'number').map((v) => ({ method: 'push', args: [v] })),
+    ];
+    setStackHistory(newHistory);
+    if (customState.active) void submitReplay('stackQueue.stack', newHistory);
   };
 
   const handlePop = () => {
     const steps = generateStackPopSteps(stackData);
+    const expectedReturned = stackData.length > 0 ? stackData[stackData.length - 1] : undefined;
     if (stackData.length > 0) setStackData(stackData.slice(0, -1));
     setActiveSteps(steps);
     reset();
     play();
+
+    if (stackData.length > 0) {
+      const newHistory = [...stackHistory, { method: 'pop', args: [] }];
+      setStackHistory(newHistory);
+      if (customState.active) void submitReplay('stackQueue.stack', newHistory, expectedReturned);
+    }
   };
 
   const handleEnqueue = () => {
@@ -224,14 +299,28 @@ export const StackQueuePage: React.FC = () => {
     setActiveSteps(allSteps);
     reset();
     play();
+
+    const newHistory = [
+      ...queueHistory,
+      ...rawValues.filter((v): v is number => typeof v === 'number').map((v) => ({ method: 'enqueue', args: [v] })),
+    ];
+    setQueueHistory(newHistory);
+    if (customState.active) void submitReplay('stackQueue.queue', newHistory);
   };
 
   const handleDequeue = () => {
     const steps = generateQueueDequeueSteps(queueData);
+    const expectedReturned = queueData.length > 0 ? queueData[0] : undefined;
     if (queueData.length > 0) setQueueData(queueData.slice(1));
     setActiveSteps(steps);
     reset();
     play();
+
+    if (queueData.length > 0) {
+      const newHistory = [...queueHistory, { method: 'dequeue', args: [] }];
+      setQueueHistory(newHistory);
+      if (customState.active) void submitReplay('stackQueue.queue', newHistory, expectedReturned);
+    }
   };
 
   const handleCircularEnqueue = () => {
@@ -311,6 +400,12 @@ export const StackQueuePage: React.FC = () => {
       }
       setStackData(current);
       setActiveSteps(allSteps);
+      const batchOps = rawValues
+        .filter((v): v is number => typeof v === 'number')
+        .map((v) => ({ method: 'push', args: [v] }));
+      const newHistory = [...stackHistory, ...batchOps];
+      setStackHistory(newHistory);
+      if (customState.active) void submitReplay('stackQueue.stack', newHistory);
     } else if (category === 'queue') {
       let current: (number | string)[] = [];
       const allSteps: StackQueueStep[] = [];
@@ -321,6 +416,12 @@ export const StackQueuePage: React.FC = () => {
       }
       setQueueData(current);
       setActiveSteps(allSteps);
+      const batchOps = rawValues
+        .filter((v): v is number => typeof v === 'number')
+        .map((v) => ({ method: 'enqueue', args: [v] }));
+      const newHistory = [...queueHistory, ...batchOps];
+      setQueueHistory(newHistory);
+      if (customState.active) void submitReplay('stackQueue.queue', newHistory);
     } else if (category === 'minStack') {
       let curMain: number[] = [];
       let curMin: number[] = [];
@@ -609,6 +710,7 @@ export const StackQueuePage: React.FC = () => {
   useEffect(() => {
     const steps = getCategoryDefaultSteps(category);
     setActiveSteps(steps);
+    setSandboxMessage(null);
     reset();
   }, [category]);
 
@@ -637,6 +739,11 @@ export const StackQueuePage: React.FC = () => {
     setCdElements(sampleCd);
     setCdFront(0);
     setCdRear(1);
+
+    // Rebuild replay histories so sandbox state matches the sampled datasets.
+    setStackHistory(sampleStack.map((v) => ({ method: 'push', args: [v] })));
+    setQueueHistory(sampleQueue.map((v) => ({ method: 'enqueue', args: [v] })));
+    setSandboxMessage(null);
 
     const steps = getCategoryDefaultSteps(
       category,
@@ -848,6 +955,11 @@ export const StackQueuePage: React.FC = () => {
         setCqFront(0);
         setCqRear(2);
 
+        // Rebuild replay histories so sandbox state matches the rolled datasets.
+        setStackHistory(rndStack.map((v) => ({ method: 'push', args: [v] })));
+        setQueueHistory(rndQueue.map((v) => ({ method: 'enqueue', args: [v] })));
+        setSandboxMessage(null);
+
         setActiveSteps(getCategoryDefaultSteps(category, rndStack, rndQueue, rndCq, 0, 2));
         break;
       }
@@ -881,6 +993,9 @@ export const StackQueuePage: React.FC = () => {
     setCdFront(-1);
     setCdRear(-1);
     setActiveSteps([]);
+    setStackHistory([]);
+    setQueueHistory([]);
+    setSandboxMessage(null);
     reset();
   };
 
@@ -1356,6 +1471,9 @@ export const StackQueuePage: React.FC = () => {
               <StackQueueCodePanel
                 category={category}
                 activeLine={currentStep?.codeLine ?? 1}
+                onCustomStateChange={setCustomState}
+                customBusy={sandboxBusy}
+                customMessage={sandboxMessage}
               />
             )}
 

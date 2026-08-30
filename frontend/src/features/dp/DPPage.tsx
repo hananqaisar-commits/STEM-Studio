@@ -509,6 +509,8 @@ export const DPPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Dynamic Programming"
+              categoryId="dp"
+              topicId={selectedAlg}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}

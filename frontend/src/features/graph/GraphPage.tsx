@@ -425,6 +425,8 @@ export const GraphPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={category}
               title="Graph Traversal"
+              categoryId="graph"
+              topicId={category}
               snippets={GRAPH_SNIPPETS[snippetKey]}
               activeLine={currentStep?.codeLine}
               variables={{

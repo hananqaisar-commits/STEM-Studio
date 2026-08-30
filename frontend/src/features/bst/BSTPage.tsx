@@ -697,6 +697,8 @@ export const BSTPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={treeCategory}
               title="Tree Operations"
+              categoryId="bst"
+              topicId={treeCategory}
               activeLine={bstStep?.codeLine}
               variables={bstStep?.variables}
               onCustomCodeRun={(arraySteps) => {

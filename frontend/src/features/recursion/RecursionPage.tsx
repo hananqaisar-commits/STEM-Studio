@@ -367,6 +367,8 @@ export const RecursionPage: React.FC = () => {
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Recursion"
+              categoryId="recursion"
+              topicId={selectedAlg}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}
