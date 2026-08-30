@@ -145,16 +145,21 @@ def login(
     )
     db.add(success_attempt)
 
-    # Generate tokens
+    # Generate tokens ("Remember me" extends the refresh-token lifetime)
     access_token = create_access_token(user.user_id, user.email)
-    refresh_token = create_refresh_token(user.user_id)
+    refresh_token = create_refresh_token(user.user_id, remember_me=payload.remember_me)
 
     # Store refresh token hash in user_sessions table
+    session_days = (
+        settings.JWT_REMEMBER_ME_EXPIRE_DAYS
+        if payload.remember_me
+        else settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+    )
     refresh_token_hash = hash_token(refresh_token)
     session = UserSession(
         user_id=user.user_id,
         refresh_token_hash=refresh_token_hash,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=session_days),
     )
     db.add(session)
     db.commit()
@@ -222,15 +227,21 @@ def refresh_token(
             detail="User not found or deactivated",
         )
 
-    # Issue new token pair
+    # Issue new token pair (preserve the "remember me" lifetime on rotation)
+    remember_me = bool(token_payload.get("remember", False))
+    session_days = (
+        settings.JWT_REMEMBER_ME_EXPIRE_DAYS
+        if remember_me
+        else settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+    )
     new_access_token = create_access_token(user.user_id, user.email)
-    new_refresh_token = create_refresh_token(user.user_id)
+    new_refresh_token = create_refresh_token(user.user_id, remember_me=remember_me)
 
     # Store new refresh token session
     new_session = UserSession(
         user_id=user.user_id,
         refresh_token_hash=hash_token(new_refresh_token),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=session_days),
     )
     db.add(new_session)
     db.commit()
@@ -302,7 +313,17 @@ def forgot_password(
     db.commit()
 
     reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
-    send_password_reset_email(to_email=payload.email, reset_url=reset_url)
+    sent = send_password_reset_email(to_email=payload.email, reset_url=reset_url)
+
+    # Surface delivery failures instead of silently pretending success.
+    # Previously the return value was ignored, so users saw "reset link
+    # sent" while no email was ever dispatched (missing SMTP credentials,
+    # SMTP outage, etc.) — making this bug invisible.
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to send reset email, please try again",
+        )
 
     return MessageResponse(
         message="If the email exists, a reset link has been sent to your email address",

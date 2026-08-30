@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # Extended refresh-token lifetime when the user checks "Remember me".
+    JWT_REMEMBER_ME_EXPIRE_DAYS: int = 30
 
     # CORS & Frontend
     FRONTEND_URL: str = "http://localhost:5173"
