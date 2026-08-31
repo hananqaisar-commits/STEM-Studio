@@ -291,6 +291,69 @@ export function generateCircularQueueEnqueueSteps(
   return { steps, newFront: nextFront, newRear: nextRear, newElements: updatedArr };
 }
 
+export function generateCircularQueueDequeueSteps(
+  elements: (number | string | null)[],
+  front: number,
+  rear: number,
+  capacity: number
+): { steps: StackQueueStep[]; newFront: number; newRear: number; newElements: (number | string | null)[] } {
+  const steps: StackQueueStep[] = [];
+
+  if (front === -1) {
+    steps.push({
+      stepIndex: 0,
+      description: `Underflow Warning: Circular Queue is Empty! Nothing to dequeue.`,
+      codeLine: 1,
+      elements: elements.map((v, i) => ({ id: `cq-${i}`, value: v ?? '-', state: 'error' })),
+      capacity,
+      frontIndex: front,
+      rearIndex: rear,
+    });
+    return { steps, newFront: front, newRear: rear, newElements: elements };
+  }
+
+  const removedVal = elements[front];
+
+  steps.push({
+    stepIndex: 0,
+    description: `Removing '${removedVal}' from FRONT index [${front}] — dequeue always happens at FRONT.`,
+    codeLine: 2,
+    elements: elements.map((v, i) => ({ id: `cq-${i}`, value: v ?? '-', state: i === front ? 'error' : 'default' })),
+    capacity,
+    frontIndex: front,
+    rearIndex: rear,
+  });
+
+  const updatedArr = [...elements];
+  updatedArr[front] = null;
+
+  let newFront: number;
+  let newRear = rear;
+  let settled: string;
+
+  if (front === rear) {
+    // Last element removed — queue resets to empty.
+    newFront = -1;
+    newRear = -1;
+    settled = `Queue is now empty. FRONT and REAR reset to -1; every slot is reusable.`;
+  } else {
+    newFront = (front + 1) % capacity;
+    settled = `Calculated FRONT = (front + 1) % ${capacity} = ${newFront}${newFront === 0 ? ' — wraparound! FRONT returned to index 0, so earlier slots become reusable.' : '.'}`;
+  }
+
+  steps.push({
+    stepIndex: 1,
+    description: `Dequeued '${removedVal}'. ${settled} FRONT = ${newFront === -1 ? 'None' : newFront}, REAR = ${newRear === -1 ? 'None' : newRear}.`,
+    codeLine: 3,
+    elements: updatedArr.map((v, i) => ({ id: `cq-${i}`, value: v ?? '-', state: 'default' as NodeState })),
+    capacity,
+    frontIndex: newFront,
+    rearIndex: newRear,
+  });
+
+  return { steps, newFront, newRear, newElements: updatedArr };
+}
+
 // ─── VALID PARENTHESES PROBLEM ENGINE ────────────────────────────────
 
 export function generateValidParenthesesSteps(expr: string): StackQueueStep[] {

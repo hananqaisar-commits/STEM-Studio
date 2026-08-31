@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Code, Terminal, Cpu, Code2, Play, RotateCcw, AlertTriangle, Eye, Pencil, Loader2, Check } from 'lucide-react';
-import { getStackQueueSnippets, type LanguageKey } from './stackQueueSnippets';
+import { getStackQueueSnippets, STACKQUEUE_GO_SNIPPETS, type LanguageKey } from './stackQueueSnippets';
 import type { StackQueueCategory } from './stackQueueEngine';
 import {
   getStubEntry,
@@ -27,11 +27,14 @@ interface StackQueueCodePanelProps {
   customMessage?: string | null;
 }
 
-const LANGUAGES: { id: LanguageKey; label: string; icon: React.ReactNode }[] = [
+type ReferenceLang = LanguageKey | 'go';
+
+const LANGUAGES: { id: ReferenceLang; label: string; icon: React.ReactNode }[] = [
   { id: 'javascript', label: 'JavaScript', icon: <Code size={14} /> },
   { id: 'python', label: 'Python', icon: <Terminal size={14} /> },
   { id: 'cpp', label: 'C++', icon: <Cpu size={14} /> },
   { id: 'java', label: 'Java', icon: <Code2 size={14} /> },
+  { id: 'go', label: 'Go', icon: <Cpu size={14} /> },
 ];
 
 export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
@@ -41,7 +44,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   customBusy = false,
   customMessage = null,
 }) => {
-  const [selectedLang, setSelectedLang] = useState<LanguageKey>('javascript');
+  const [selectedLang, setSelectedLang] = useState<ReferenceLang>('javascript');
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
   const [customLang, setCustomLang] = useState<CustomStubLanguage>('python');
 
@@ -70,9 +73,12 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
 
   const snippetObj = getStackQueueSnippets(category);
 
-  const currentSnippet = snippetObj[selectedLang] || snippetObj.javascript;
-  const codeLines = currentSnippet.code.split('\n');
-  const highlightedIdx = currentSnippet.lineMapping[activeLine] ?? 0;
+  // Go references exist for the flagship set; anything else reports the gap
+  // explicitly instead of silently falling back to another language.
+  const goSnippet = STACKQUEUE_GO_SNIPPETS[category];
+  const currentSnippet = selectedLang === 'go' ? goSnippet : snippetObj[selectedLang];
+  const codeLines = currentSnippet?.code.split('\n') ?? [];
+  const highlightedIdx = currentSnippet?.lineMapping[activeLine] ?? 0;
 
   const handleRunCustomCode = () => {
     if (isRunning) return;
@@ -159,7 +165,20 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
       )}
 
       {/* DEFAULT MODE: Read-only viewer */}
-      {codeMode === 'default' && (
+      {codeMode === 'default' && !currentSnippet && (
+        <div className="code-editor-container">
+          <div className="code-error-banner" style={{ margin: '0.75rem' }}>
+            <AlertTriangle size={14} />
+            <span>
+              No Go reference implementation for this topic yet. JavaScript, Python, C++ and Java references
+              are available above, and Custom Mode accepts Go submissions.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* DEFAULT MODE: Read-only viewer */}
+      {codeMode === 'default' && currentSnippet && (
         <div className="code-editor-container">
           {codeLines.map((line, idx) => {
             const lineNumber = idx + 1;
