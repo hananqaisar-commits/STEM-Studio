@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   GitBranch, Calculator, Binary, Sigma, Layers, Maximize2, Sparkles, Trash2,
@@ -17,6 +17,8 @@ import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
 import { buildRecursionCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
+import { executeCustomCode } from '../../api/customCode';
+import type { CustomStubLanguage } from '../../data/customCode';
 
 import { runFactorial } from './algorithms/factorial';
 import { runFibonacci } from './algorithms/fibonacci';
@@ -40,7 +42,7 @@ interface AlgMeta {
 const ALGORITHMS: AlgMeta[] = [
   { key: 'factorial',     name: 'Factorial',        complexity: 'O(n)',   icon: <Calculator size={14} /> },
   { key: 'fibonacci',     name: 'Fibonacci',         complexity: 'O(2^n)', icon: <GitBranch size={14} /> },
-  { key: 'power',         name: 'Power',             complexity: 'O(n)',   icon: <Binary size={14} /> },
+  { key: 'power',         name: 'Power',             complexity: 'O(log n)', icon: <Binary size={14} /> },
   { key: 'arraySum',      name: 'Array Sum',         complexity: 'O(n)',   icon: <Sigma size={14} /> },
   { key: 'towerOfHanoi',  name: 'Tower of Hanoi',    complexity: 'O(2^n)', icon: <Layers size={14} /> },
 ];
@@ -69,6 +71,10 @@ export const RecursionPage: React.FC = () => {
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
+
+  // Custom Code sandbox state
+  const [customBusy, setCustomBusy] = useState(false);
+  const [sandboxMessage, setSandboxMessage] = useState<string | null>(null);
 
   /* ── Generate steps ──────────────────────────────────────────────── */
   const executionData = useMemo(() => {
@@ -118,11 +124,68 @@ export const RecursionPage: React.FC = () => {
     revisionData: buildRevisionData(selectedAlg),
   });
 
-  /* ── Controls ────────────────────────────────────────────────────── */
+  /* ── Custom Code sandbox execution (function-stub model) ─────────────
+     The user fills in the pre-populated signature stub; the backend wraps
+     it in the number_in / array_in harness with the current studio inputs,
+     runs it in Judge0, and returns the result for comparison against the
+     reference value. */
+  const handleCustomExecute = useCallback(async (code: string, lang: CustomStubLanguage) => {
+    const argsFor = (): Record<string, number | number[]> => {
+      switch (selectedAlg) {
+        case 'factorial':    return { n: factorialN };
+        case 'fibonacci':    return { n: fibonacciN };
+        case 'power':        return { base: powerBase, exponent: powerExp };
+        case 'arraySum':     return { arr: arraySumArr };
+        case 'towerOfHanoi': return { n: hanoiN };
+        default:             return { n: 1 };
+      }
+    };
+    const expectedFor = (): number => {
+      switch (selectedAlg) {
+        case 'factorial': { let r = 1; for (let i = 2; i <= factorialN; i++) r *= i; return r; }
+        case 'fibonacci': { let a = 0, b = 1; for (let i = 0; i < fibonacciN; i++) { const t = a + b; a = b; b = t; } return a; }
+        case 'power':        return Math.pow(powerBase, powerExp);
+        case 'arraySum':     return arraySumArr.reduce((s, x) => s + x, 0);
+        case 'towerOfHanoi': return Math.pow(2, hanoiN) - 1;
+        default:             return 0;
+      }
+    };
+
+    setCustomBusy(true);
+    setSandboxMessage(null);
+    try {
+      const response = await executeCustomCode({
+        algorithm_key: `recursion.${selectedAlg}`,
+        language: lang,
+        code,
+        state: { args: argsFor() },
+      });
+
+      if (response.status === 'ok') {
+        const actual = response.result?.result;
+        const expected = expectedFor();
+        setSandboxMessage(
+          actual === expected
+            ? `Correct — your ${lang.toUpperCase()} code returned ${actual}.`
+            : `Ran successfully, but returned ${JSON.stringify(actual)} instead of ${expected}. Check your logic.`
+        );
+      } else {
+        setSandboxMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Execution service unavailable.';
+      setSandboxMessage(`Sandbox unavailable: ${message}`);
+    } finally {
+      setCustomBusy(false);
+    }
+  }, [selectedAlg, factorialN, fibonacciN, powerBase, powerExp, arraySumArr, hanoiN]);
+
+  /* ── Controls ───────────────────────────────────────────────────── */
   const handleAlgChange = (alg: RecursionAlgorithmKey) => {
     setSelectedAlg(alg);
     reset();
     quizSession.resetSession();
+    setSandboxMessage(null);
   };
 
   const handleRandomize = () => {
@@ -230,10 +293,9 @@ export const RecursionPage: React.FC = () => {
             </div>
             <div className="rec-input-group">
               <span>exp =</span>
-              <input type="range" min={1} max={6} value={powerExp}
-                onChange={e => { setPowerExp(+e.target.value); reset(); }}
-                className="toolbar-range cursor-pointer accent-amber-400 w-20" />
-              <span className="rec-val">{powerExp}</span>
+              <input type="number" min={1} max={8} value={powerExp}
+                onChange={e => { setPowerExp(Math.max(1, Math.min(8, +e.target.value || 1))); reset(); }}
+                className="rec-num-input" />
             </div>
           </>
         );
@@ -254,10 +316,9 @@ export const RecursionPage: React.FC = () => {
         return (
           <div className="rec-input-group">
             <span>disks =</span>
-            <input type="range" min={1} max={4} value={hanoiN}
-              onChange={e => { setHanoiN(+e.target.value); reset(); }}
-              className="toolbar-range cursor-pointer accent-amber-400 w-20" />
-            <span className="rec-val">{hanoiN}</span>
+            <input type="number" min={1} max={5} value={hanoiN}
+              onChange={e => { setHanoiN(Math.max(1, Math.min(5, +e.target.value || 1))); reset(); }}
+              className="rec-num-input" />
           </div>
         );
       default: return null;
@@ -369,6 +430,9 @@ export const RecursionPage: React.FC = () => {
               title="Recursion"
               categoryId="recursion"
               topicId={selectedAlg}
+              onCustomExecute={handleCustomExecute}
+              customBusy={customBusy}
+              customMessage={sandboxMessage}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}
