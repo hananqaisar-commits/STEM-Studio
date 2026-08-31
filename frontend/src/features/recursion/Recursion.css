@@ -318,7 +318,7 @@
 }
 
 /* ── Responsive ────────────────────────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .recursion-workspace {
     flex-direction: column;
   }
