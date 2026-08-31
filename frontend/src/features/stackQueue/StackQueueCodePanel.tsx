@@ -52,6 +52,8 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
     stubEntry ? stubEntry.stubs.python : ''
   );
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runSuccess, setRunSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (stubEntry) {
@@ -73,6 +75,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   const highlightedIdx = currentSnippet.lineMapping[activeLine] ?? 0;
 
   const handleRunCustomCode = () => {
+    if (isRunning) return;
     setExecutionError(null);
     if (!customCode.trim()) {
       setExecutionError('The editor is empty. Fill in the method bodies, then trigger an operation.');
@@ -90,6 +93,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   const handleResetTemplate = () => {
     if (stubEntry) setCustomCode(stubEntry.stubs[customLang]);
     setExecutionError(null);
+    setRunSuccess(null);
   };
 
   return (
@@ -142,11 +146,10 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
           {CUSTOM_CODE_LANGUAGES.map((lang) => (
             <button
               key={lang.id}
-              className={`px-2 py-0.5 text-xs rounded transition-all ${
-                customLang === lang.id
+              className={`px-2 py-0.5 text-xs rounded transition-all ${customLang === lang.id
                   ? 'bg-amber-500 text-black font-bold shadow'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
               onClick={() => setCustomLang(lang.id)}
             >
               {lang.label}
@@ -192,7 +195,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
             <textarea
               className="custom-editor-textarea"
               value={customCode}
-              onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); }}
+              onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); setRunSuccess(null); }}
               spellCheck={false}
               placeholder={`Fill in the ${customLang.toUpperCase()} method bodies. Operations from the toolbar replay your code in the sandbox.`}
             />
