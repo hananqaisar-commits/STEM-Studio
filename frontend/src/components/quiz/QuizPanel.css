@@ -78,10 +78,14 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.6rem;
 }
 
 .quiz-head-text {
+  /* Claim a full row when mascot + concept badge crowd the header,
+     so the title wraps at word boundaries instead of mid-word. */
+  flex: 1 1 160px;
   min-width: 0;
 }
 

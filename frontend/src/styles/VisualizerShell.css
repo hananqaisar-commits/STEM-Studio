@@ -183,7 +183,7 @@
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .viz-search-wrapper {
     min-width: 100%;
   }
@@ -344,7 +344,7 @@
   box-sizing: border-box;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .sorting-workspace,
   .ll-workspace,
   .graph-workspace,
