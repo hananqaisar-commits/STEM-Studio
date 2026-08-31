@@ -108,6 +108,37 @@ export function transpileToJS(userCode: string, lang: CustomLanguage): string {
   return jsCode;
 }
 
+/** Escape any regex metacharacters (function names are identifiers, but be safe). */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * If the user pasted a named function declaration but never invokes it, the
+ * sandbox would only define the function and return — leaving the array
+ * untouched and producing no visualization. Detect the first declared function
+ * and, when it is never called in the code, append a call with the live array.
+ */
+function ensureInvocation(js: string): string {
+  const declRe = /\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g;
+  const declared: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = declRe.exec(js)) !== null) declared.push(match[1]);
+  if (declared.length === 0) return js;
+
+  const name = declared[0];
+  const declCount = declared.filter((n) => n === name).length;
+  const mentionRe = new RegExp(`\\b${escapeRegExp(name)}\\s*\\(`, 'g');
+  const mentionCount = (js.match(mentionRe) || []).length;
+
+  // The declaration itself is one `name(` occurrence; anything beyond it is a
+  // real call. If there is none, append an invocation with the live array.
+  if (mentionCount <= declCount) {
+    return `${js}\n;${name}(arr);`;
+  }
+  return js;
+}
+
 /**
  * Execute user-provided custom code in JS, Python, C++, C#, Java, Ruby, Go, or Rust.
  */
@@ -170,7 +201,7 @@ export function executeCustomSortingCode(
   };
 
   try {
-    const executableJS = transpileToJS(userCode, lang);
+    const executableJS = ensureInvocation(transpileToJS(userCode, lang));
 
     // eslint-disable-next-line no-new-func
     const sandboxedFn = new Function(

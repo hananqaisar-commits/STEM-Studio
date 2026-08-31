@@ -76,9 +76,12 @@ const CUSTOM_LANGUAGES: { id: CustomLanguage; label: string }[] = [
 /** Only allow a single function body; reject top-level variables or statements. */
 function validateCustomCode(code: string, lang: CustomLanguage): string | null {
   const trimmed = code.trim();
-  if (!trimmed) return 'Paste a function to visualize. Empty code is not allowed.';
+  if (!trimmed) return 'Paste your algorithm to visualize. Empty code is not allowed.';
 
-  // Count function declarations in a language-agnostic way.
+  // Count function declarations in a language-agnostic way. A bare loop body
+  // (the starter-template style) is also valid — the sandbox runs the pasted
+  // code as a function body with arr/n/compare/swap in scope — so zero
+  // functions is allowed. Multiple functions are rejected to keep the trace readable.
   const functionPatterns: Record<string, RegExp> = {
     javascript: /\bfunction\s+\w+\s*\(/g,
     python: /\bdef\s+\w+\s*\(/g,
@@ -91,11 +94,8 @@ function validateCustomCode(code: string, lang: CustomLanguage): string | null {
   };
 
   const fnMatches = trimmed.match(functionPatterns[lang] || functionPatterns.javascript) || [];
-  if (fnMatches.length === 0) {
-    return 'Only a function can be visualized. Paste your algorithm inside a single function.';
-  }
   if (fnMatches.length > 1) {
-    return 'Paste exactly one function. Multiple functions make the trace hard to follow.';
+    return 'Paste a single function. Multiple functions make the trace hard to follow.';
   }
 
   // Reject obvious top-level variable declarations / statements outside the function.
@@ -174,6 +174,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [stubLang, setStubLang] = useState<CustomStubLanguage>('python');
   const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey, 'javascript'));
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runSuccess, setRunSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
 
@@ -241,23 +243,47 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     const validationError = validateCustomCode(customCode, customLang);
     if (validationError) {
       setExecutionError(validationError);
+      setRunSuccess(null);
       return;
     }
 
     setExecutionError(null);
-    if (onCustomCodeRun && currentArray && currentArray.length > 0) {
-      const result = executeCustomSortingCode(customCode, currentArray, customLang);
-      if (result.error) setExecutionError(result.error.message);
-      onCustomCodeRun(result.steps);
-    } else {
-      // For general algorithms, validate and confirm user custom code
-      setExecutionError(null);
+    setRunSuccess(null);
+
+    if (!onCustomCodeRun || !currentArray || currentArray.length === 0) {
+      // No executor is wired on this page — validation passed, nothing to play.
+      setRunSuccess('Code is valid ✓ — this page has no visualizer wired to play it.');
+      return;
     }
+
+    setIsRunning(true);
+    // Execution is synchronous and near-instant, so defer it by one tick to let
+    // the "Running…" state paint, and keep the indicator visible for at least
+    // MIN_RUN_INDICATOR_MS so the feedback is perceptible. Slow executions do
+    // not add extra delay beyond their own runtime.
+    const MIN_RUN_INDICATOR_MS = 5000;
+    window.setTimeout(() => {
+      const started = performance.now();
+      const result = executeCustomSortingCode(customCode, currentArray, customLang);
+      const finish = () => {
+        setIsRunning(false);
+        if (result.error) {
+          setExecutionError(result.error.message);
+        } else {
+          setRunSuccess(`Code executed ✓ — ${result.steps.length} steps now playing in the visualizer.`);
+        }
+        onCustomCodeRun(result.steps);
+      };
+      const elapsed = performance.now() - started;
+      if (elapsed < MIN_RUN_INDICATOR_MS) window.setTimeout(finish, MIN_RUN_INDICATOR_MS - elapsed);
+      else finish();
+    }, 50);
   };
 
   const handleResetTemplate = () => {
     setCustomCode(stubEntry ? stubEntry.stubs[stubLang] : getStarterTemplate(algorithmKey, customLang));
     setExecutionError(null);
+    setRunSuccess(null);
   };
 
   return (
@@ -416,7 +442,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               <FileCode2 size={22} style={{ color: 'var(--color-primary, #38bdf8)' }} />
               <p className="code-empty-title">Algorithm Code Engine</p>
               <p className="code-empty-sub" style={{ opacity: 0.85 }}>
-                The code implementation for <code>{algorithmKey}</code> is currently being fine-tuned. 
+                The code implementation for <code>{algorithmKey}</code> is currently being fine-tuned.
                 Please explore the interactive execution trace below.
               </p>
             </div>
@@ -436,13 +462,14 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             <textarea
               className="custom-editor-textarea"
               value={customCode}
-              onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); }}
+              onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); setRunSuccess(null); }}
               spellCheck={false}
               placeholder={
                 stubEntry
                   ? `Fill in the ${stubLang.toUpperCase()} body for ${stubEntry.entry}(...). Run sends your code to the sandbox with the current studio inputs.`
                   : `Paste your ${customLang.toUpperCase()} function here. Only one function is allowed — no top-level variables or statements.`
               }
+
             />
           </div>
 
