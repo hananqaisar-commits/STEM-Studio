@@ -1957,8 +1957,7 @@ public class Solution {
 /**
  * Category → snippet-set resolver so every stack/queue problem shows its own
  * reference implementation instead of falling back to the generic Stack class.
- */
-export function getStackQueueSnippets(
+ */export function getStackQueueSnippets(
   category: string
 ): Record<LanguageKey, CodeSnippet> {
   switch (category) {
@@ -2008,3 +2007,296 @@ export function getStackQueueSnippets(
       return STACK_SNIPPETS;
   }
 }
+
+/* ── Go reference implementations ──────────────────────────────────
+   Go references exist for the flagship studio set. Topics without an
+   entry must report the gap in the UI — never fall back silently. */
+export const STACKQUEUE_GO_SNIPPETS: Record<string, CodeSnippet> = {
+  stack: {
+    code: `type Stack struct {
+    items []int
+}
+
+func (s *Stack) Push(val int) {
+    s.items = append(s.items, val)
+}
+
+func (s *Stack) Pop() (int, bool) {
+    if len(s.items) == 0 {
+        return 0, false // Underflow
+    }
+    top := s.items[len(s.items)-1]
+    s.items = s.items[:len(s.items)-1]
+    return top, true
+}
+
+func (s *Stack) Peek() int { return s.items[len(s.items)-1] }`,
+    lineMapping: { 1: 6, 2: 9, 3: 17 },
+  },
+  queue: {
+    code: `type Queue struct {
+    items []int
+}
+
+func (q *Queue) Enqueue(val int) {
+    q.items = append(q.items, val) // joins at REAR
+}
+
+func (q *Queue) Dequeue() (int, bool) {
+    if len(q.items) == 0 {
+        return 0, false // Underflow
+    }
+    front := q.items[0]
+    q.items = q.items[1:] // leaves from FRONT
+    return front, true
+}
+
+func (q *Queue) Front() int { return q.items[0] }`,
+    lineMapping: { 1: 6, 2: 9, 3: 17 },
+  },
+  validParentheses: {
+    code: `func isValid(s string) bool {
+    stack := []byte{}
+    pairs := map[byte]byte{')': '(', ']': '[', '}': '{'}
+    for i := 0; i < len(s); i++ {
+        ch := s[i]
+        if ch == '(' || ch == '[' || ch == '{' {
+            stack = append(stack, ch) // opening: push
+        } else {
+            top := byte(0)
+            if len(stack) > 0 {
+                top = stack[len(stack)-1]
+            }
+            if top != pairs[ch] {
+                return false // mismatch or premature close
+            }
+            stack = stack[:len(stack)-1] // matched: pop
+        }
+    }
+    return len(stack) == 0 // leftover openings are invalid
+}`,
+    lineMapping: { 1: 7, 3: 14, 5: 14, 6: 16, 8: 19, 9: 19 },
+  },
+  postfixEval: {
+    code: `func evalRPN(tokens []string) int {
+    stack := []int{}
+    for _, tok := range tokens {
+        if n, err := strconv.Atoi(tok); err == nil {
+            stack = append(stack, n) // operand: push
+        } else {
+            b, a := stack[len(stack)-1], stack[len(stack)-2]
+            stack = stack[:len(stack)-2] // pop two operands
+            switch tok {
+            case "+":
+                stack = append(stack, a+b) // result pushed back
+            case "-":
+                stack = append(stack, a-b)
+            case "*":
+                stack = append(stack, a*b)
+            case "/":
+                stack = append(stack, a/b)
+            }
+        }
+    }
+    return stack[0]
+}`,
+    lineMapping: { 1: 5, 3: 7, 5: 8, 8: 11 },
+  },
+  minStack: {
+    code: `type MinStack struct {
+    data, mins []int
+}
+
+func (s *MinStack) Push(val int) {
+    s.data = append(s.data, val)
+    if len(s.mins) == 0 || val <= s.mins[len(s.mins)-1] {
+        s.mins = append(s.mins, val) // new min tracked in parallel
+    }
+}
+
+func (s *MinStack) Pop() {
+    top := s.data[len(s.data)-1]
+    s.data = s.data[:len(s.data)-1]
+    if top == s.mins[len(s.mins)-1] {
+        s.mins = s.mins[:len(s.mins)-1] // min track pops too
+    }
+}
+
+func (s *MinStack) GetMin() int {
+    return s.mins[len(s.mins)-1] // O(1): no scan needed
+}`,
+    lineMapping: { 1: 6, 3: 7, 6: 8, 8: 13, 10: 21 },
+  },
+  decodeString: {
+    code: `func decodeString(s string) string {
+    numStk, strStk := []int{}, []string{}
+    cur, k := "", 0
+    for _, ch := range s {
+        switch {
+        case unicode.IsDigit(ch):
+            k = k*10 + int(ch-'0')
+        case ch == '[':
+            numStk = append(numStk, k)   // save repeat count
+            strStk = append(strStk, cur) // save outer context
+            cur, k = "", 0
+        case ch == ']':
+            prev := strStk[len(strStk)-1]
+            times := numStk[len(numStk)-1]
+            strStk = strStk[:len(strStk)-1]
+            numStk = numStk[:len(numStk)-1]
+            cur = prev + strings.Repeat(cur, times) // expand frame
+        default:
+            cur += string(ch)
+        }
+    }
+    return cur
+}`,
+    lineMapping: { 1: 9, 3: 10, 4: 11, 5: 12, 7: 13, 9: 17 },
+  },
+  trappingRainWater: {
+    code: `func trap(height []int) int {
+    total := 0
+    stack := []int{} // indices, decreasing heights
+    for i, h := range height {
+        for len(stack) > 0 && h > height[stack[len(stack)-1]] {
+            bottom := stack[len(stack)-1]
+            stack = stack[:len(stack)-1] // taller bar pops boundary
+            if len(stack) == 0 {
+                break
+            }
+            left := stack[len(stack)-1]
+            width := i - left - 1
+            bounded := min(height[left], h) - height[bottom]
+            total += width * bounded // water over the bottom
+        }
+        stack = append(stack, i)
+    }
+    return total
+}`,
+    lineMapping: { 1: 3, 3: 5, 5: 6, 6: 7, 8: 11, 10: 14 },
+  },
+  circularQueue: {
+    code: `type MyCircularQueue struct {
+    buf         []int
+    front, rear int
+    size, cap   int
+}
+
+func (q *MyCircularQueue) EnQueue(v int) bool {
+    if q.size == q.cap {
+        return false // overflow: full
+    }
+    if q.size == 0 {
+        q.front, q.rear = 0, 0
+    } else {
+        q.rear = (q.rear + 1) % q.cap // wraps last -> 0
+    }
+    q.buf[q.rear] = v
+    q.size++
+    return true
+}
+
+func (q *MyCircularQueue) DeQueue() bool {
+    if q.size == 0 {
+        return false // underflow: empty
+    }
+    if q.size == 1 {
+        q.front, q.rear = 0, 0
+        q.size = 0
+        return true
+    }
+    q.front = (q.front + 1) % q.cap // wraps last -> 0
+    q.size--
+    return true
+}`,
+    lineMapping: { 1: 8, 2: 14, 3: 16 },
+  },
+  circularDeque: {
+    code: `type MyCircularDeque struct {
+    buf         []int
+    front, rear int
+    size, cap   int
+}
+
+func (d *MyCircularDeque) InsertFront(v int) bool {
+    if d.size == d.cap {
+        return false
+    }
+    d.front = (d.front - 1 + d.cap) % d.cap // wraps backwards
+    d.buf[d.front] = v
+    d.size++
+    return true
+}
+
+func (d *MyCircularDeque) InsertLast(v int) bool {
+    if d.size == d.cap {
+        return false
+    }
+    d.rear = (d.rear + 1) % d.cap // wraps forwards
+    d.buf[d.rear] = v
+    d.size++
+    return true
+}
+
+func (d *MyCircularDeque) DeleteFront() bool {
+    if d.size == 0 {
+        return false
+    }
+    d.front = (d.front + 1) % d.cap
+    d.size--
+    return true
+}
+
+func (d *MyCircularDeque) DeleteLast() bool {
+    if d.size == 0 {
+        return false
+    }
+    d.rear = (d.rear - 1 + d.cap) % d.cap
+    d.size--
+    return true
+}`,
+    lineMapping: {},
+  },
+  firstNonRepeating: {
+    code: `func firstUniqChar(s string) int {
+    freq := [26]int{}
+    for i := 0; i < len(s); i++ {
+        freq[s[i]-'a']++ // pass 1: count frequencies
+    }
+    for i := 0; i < len(s); i++ {
+        if freq[s[i]-'a'] == 1 {
+            return i // pass 2: first freq==1 wins
+        }
+    }
+    return -1 // every character repeated
+}`,
+    lineMapping: { 1: 4, 3: 4, 5: 6, 7: 7, 9: 11 },
+  },
+  dota2Senate: {
+    code: `func predictPartyVictory(senate string) string {
+    radiant, dire := []int{}, []int{}
+    n := len(senate)
+    for i, c := range senate {
+        if c == 'R' {
+            radiant = append(radiant, i)
+        } else {
+            dire = append(dire, i)
+        }
+    }
+    for len(radiant) > 0 && len(dire) > 0 {
+        r, d := radiant[0], dire[0]
+        radiant, dire = radiant[1:], dire[1:]
+        if r < d {
+            radiant = append(radiant, r+n) // earlier senator bans, re-enqueues
+        } else {
+            dire = append(dire, d+n)
+        }
+    }
+    if len(radiant) > 0 {
+        return "Radiant"
+    }
+    return "Dire"
+}`,
+    lineMapping: { 1: 2, 4: 5, 6: 12, 8: 15 },
+  },
+};

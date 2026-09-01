@@ -16,6 +16,7 @@ import {
   generateQueueEnqueueSteps,
   generateQueueDequeueSteps,
   generateCircularQueueEnqueueSteps,
+  generateCircularQueueDequeueSteps,
   generateValidParenthesesSteps,
   generateMinStackPushSteps,
   generatePostfixEvalSteps,
@@ -347,6 +348,16 @@ export const StackQueuePage: React.FC = () => {
     setCqFront(currentFront);
     setCqRear(currentRear);
     setActiveSteps(allSteps);
+    reset();
+    play();
+  };
+
+  const handleCircularDequeue = () => {
+    const res = generateCircularQueueDequeueSteps(cqElements, cqFront, cqRear, 6);
+    setCqElements(res.newElements);
+    setCqFront(res.newFront);
+    setCqRear(res.newRear);
+    setActiveSteps(res.steps);
     reset();
     play();
   };
@@ -1044,10 +1055,15 @@ export const StackQueuePage: React.FC = () => {
       )}
 
       {category === 'circularQueue' && (
-        <button className="bst-btn btn-insert" onClick={handleCircularEnqueue}>
-          <Plus size={14} />
-          <span>Enqueue Slot</span>
-        </button>
+        <>
+          <button className="bst-btn btn-insert" onClick={handleCircularEnqueue}>
+            <Plus size={14} />
+            <span>Enqueue Slot</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleCircularDequeue}>
+            <span>Dequeue Slot</span>
+          </button>
+        </>
       )}
 
       {category === 'validParentheses' && (
