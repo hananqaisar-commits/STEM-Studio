@@ -2,114 +2,101 @@
    ResizablePanelRow — global constraint-aware two-panel dock
    (Debugger + Explanation Card).
 
-   Uses re-resizable library for handle-based resizing.
-   Invariant enforced by the component:
-       debuggerWidth + explanationWidth + MIN_GAP ≤ containerWidth
-   Panels never overlap.
+   Uses react-resizable-panels for shared-divider horizontal resizing.
+   Independent heights via custom bottom handles.
    ═══════════════════════════════════════════════════════════════════ */
 
-/* The row keeps its `bottom-row` class (grid-area: bottom) but lays out
-   as flex so panel sizes can be driven in pixels by the component. */
 .bottom-row.rp-row {
   display: flex;
   align-items: flex-start;
   gap: 0;
+  width: 100%;
 }
 
 .bottom-row.rp-row.rp-stacked {
   flex-direction: column;
 }
 
-/* Free space between the two panels; never collapses below the
-   minimum safe gap so the cards can never collide. */
-.rp-spacer {
-  flex: 1 1 auto;
-  min-width: 20px;
-  pointer-events: none;
-}
-
-.bottom-row.rp-row.rp-stacked .rp-spacer {
-  display: none;
-}
-
 .bottom-row.rp-row.rp-stacked .rp-slot ~ .rp-slot {
   margin-top: 1.25rem;
 }
 
-/* The rp-slot class is applied directly to re-resizable's outer wrapper div.
-   re-resizable sets width/height via inline styles — we just set flex/box. */
+/* React Resizable Panels wrapper */
+.rp-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
 .rp-slot {
   position: relative;
-  flex: 0 0 auto;
-  min-width: 0;
+  width: 100%;
   box-sizing: border-box;
   overflow: visible;
 }
 
-/* ── Resize handles ───────────────────────────────────────────────── */
-/*
-   re-resizable renders our handleComponent elements inside its own
-   <span style="position:absolute; ..."> on each edge.
-   Our inner divs fill that span and show a premium grip indicator.
-*/
-
-.rp-handle--ew,
-.rp-handle--ns {
-  position: absolute;
-  inset: 0;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
+/* Shared horizontal divider (react-resizable-panels Handle) */
+.rp-shared-divider {
+  flex: 0 0 20px;
+  position: relative;
+  outline: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: col-resize;
   z-index: 40;
+  touch-action: none;
 }
 
-/* Visual grip pill — appears on hover */
-.rp-handle--ew::after,
-.rp-handle--ns::after {
-  content: '';
+/* Visual grip for shared divider */
+.rp-shared-divider-grip {
+  width: 3px;
+  height: 36px;
   border-radius: 999px;
   background: var(--color-primary, #8b5cf6);
   opacity: 0;
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-.rp-handle--ew:hover::after,
-.rp-handle--ns:hover::after {
+.rp-shared-divider:hover .rp-shared-divider-grip,
+.rp-shared-divider[data-resize-handle-active="true"] .rp-shared-divider-grip {
   opacity: 0.8;
-}
-
-/* East-West handles (left / right edges) → col-resize cursor */
-.rp-handle--ew {
-  cursor: col-resize;
-}
-
-.rp-handle--ew::after {
-  width: 3px;
-  height: 36px;
-}
-
-.rp-handle--ew:hover::after {
   transform: scaleX(1.5);
 }
 
-/* North-South handles (top / bottom edges) → row-resize cursor */
-.rp-handle--ns {
+/* Custom manual height handle (bottom) */
+.rp-handle--bottom {
+  position: absolute;
+  bottom: -5px;
+  left: 14px;
+  right: 14px;
+  height: 9px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: row-resize;
+  z-index: 40;
 }
 
-.rp-handle--ns::after {
+/* Visual grip for bottom handle */
+.rp-handle--bottom::after {
+  content: '';
   width: 36px;
   height: 3px;
+  border-radius: 999px;
+  background: var(--color-primary, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-.rp-handle--ns:hover::after {
+.rp-handle--bottom:hover::after,
+.rp-handle--bottom:active::after {
+  opacity: 0.8;
   transform: scaleY(1.5);
 }
 
-/* In stacked (narrow) layout only height is resizable. */
-.bottom-row.rp-row.rp-stacked .rp-handle--ew {
+.bottom-row.rp-row.rp-stacked .rp-shared-divider {
   display: none;
 }
