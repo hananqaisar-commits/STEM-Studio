@@ -46,6 +46,7 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { StackQueueCodePanel, type StackQueueCustomState } from './StackQueueCodePanel';
@@ -1466,8 +1467,9 @@ export const StackQueuePage: React.FC = () => {
           </div>
         }
         bottomContent={
-          <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-            {showDebugger && (
+          <ResizablePanelRow
+            storageKey="stackQueue"
+            debuggerPanel={showDebugger ? (
               <StackQueueCodePanel
                 category={category}
                 activeLine={currentStep?.codeLine ?? 1}
@@ -1475,14 +1477,15 @@ export const StackQueuePage: React.FC = () => {
                 customBusy={sandboxBusy}
                 customMessage={sandboxMessage}
               />
-            )}
+            ) : null}
 
-            <ExplanationPanel
+            explanationPanel={<ExplanationPanel
               description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
               steps={activeSteps}
               currentStepIndex={currentStepIndex}
             />
-          </div>
+            }
+          />
         }
       />
 

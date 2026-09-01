@@ -1,4 +1,4 @@
-export type ElementState = 'default' | 'comparing' | 'swapping' | 'sorted' | 'pivot' | 'selected';
+export type ElementState = 'default' | 'current' | 'comparing' | 'swapping' | 'sorted' | 'pivot' | 'selected';
 
 export interface ArrayStep {
   array: number[];

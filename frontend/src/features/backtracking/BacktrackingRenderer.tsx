@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
 import { Bar } from '../../components/primitives/Bar';
+import { vizFlash } from '../../components/primitives/vizPalette';
 import { MotionPresets } from '../../engine/motionEngine';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import './Backtracking.css';
@@ -125,7 +126,7 @@ const DecisionTreeCanvas: React.FC<{
       nodes.map((nd) => {
         if (solutionSet.has(nd.idx)) return 'sorted';
         if (prunedSet.has(nd.idx)) return 'swapping';
-        if (currentPathSet.has(nd.idx)) return 'comparing';
+        if (currentPathSet.has(nd.idx)) return 'current';
         return 'default';
       }),
     [tree],
@@ -206,7 +207,7 @@ const DecisionTreeCanvas: React.FC<{
       if (prev.states[i] === states[i]) return;
       const s = states[i];
       if (s === 'sorted') {
-        MotionPresets.flashState(el, '234,179,8'); // gold — solution found
+        MotionPresets.flashState(el, vizFlash('sorted'));
       } else if (s === 'swapping') {
         if (algorithmKey === 'combinationSum') {
           MotionPresets.treePruneCollapse(el);
@@ -214,8 +215,8 @@ const DecisionTreeCanvas: React.FC<{
         } else {
           MotionPresets.shakeReject(el);
         }
-      } else if (s === 'comparing') {
-        MotionPresets.flashState(el, '245,158,11'); // amber — active frontier
+      } else if (s === 'current') {
+        MotionPresets.flashState(el, vizFlash('current'));
       }
     });
     prevTreeRef.current = { size: nodes.length, states: [...states] };
@@ -276,7 +277,7 @@ const DecisionTreeCanvas: React.FC<{
               const p2 = positions[node.idx];
               const onPath = currentPathSet.has(node.idx) && currentPathSet.has(node.parent);
               const edgeState: ElementState = onPath
-                ? 'comparing'
+                ? 'current'
                 : prunedSet.has(node.idx)
                   ? 'swapping'
                   : solutionSet.has(node.idx)
@@ -443,8 +444,8 @@ const ArrayStateView: React.FC<{ step: ArrayStep; algorithmKey: string }> = ({ s
     ) {
       const wrappers = root.querySelectorAll<HTMLElement>('.bt-bar-wrapper');
       wrappers.forEach((w, i) => {
-        const bar = w.querySelector('.bt-bar') ?? w;
-        MotionPresets.flashState(bar, i < fixedCount ? '245,158,11' : '59,130,246');
+        const bar = w.querySelector('.primitive-bar-fill') ?? w;
+        MotionPresets.flashState(bar, i < fixedCount ? vizFlash('sorted') : vizFlash('default'));
       });
     }
     prevFixedRef.current = fixedCount;
