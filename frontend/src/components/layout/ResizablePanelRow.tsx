@@ -1,5 +1,5 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import './ResizablePanelRow.css';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 interface Sizes {
   lh: number;
   rh: number;
-  layout: number[]; // percentages [left, right]
+  layout: Record<string, number>; // percentages {left, right}
 }
 
 interface ResizablePanelRowProps {
@@ -61,7 +61,7 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
 }) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
-  const [sizes, setSizes] = useState<Sizes>({ lh: DEFAULT_H, rh: DEFAULT_H, layout: [50, 50] });
+  const [sizes, setSizes] = useState<Sizes>({ lh: DEFAULT_H, rh: DEFAULT_H, layout: { left: 50, right: 50 } });
   const initializedRef = useRef(false);
 
   const hasDebugger =
@@ -97,7 +97,7 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
         return {
           lh: clamp(saved?.lh ?? DEFAULT_H, MIN_H, MAX_H),
           rh: clamp(saved?.rh ?? DEFAULT_H, MIN_H, MAX_H),
-          layout: saved?.layout && saved.layout.length === 2 ? saved.layout : [50, 50],
+          layout: saved?.layout && Object.keys(saved.layout).length === 2 ? saved.layout : { left: 50, right: 50 },
         };
       }
       return prev;
@@ -105,7 +105,7 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
   }, [containerW, storageKey]);
 
   const onLayout = useCallback(
-    (layout: number[]) => {
+    (layout: Record<string, number>) => {
       setSizes((prev) => {
         const next = { ...prev, layout };
         saveSizes(storageKey, next);
@@ -116,7 +116,7 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
   );
 
   const resetLayout = useCallback(() => {
-    const next: Sizes = { lh: DEFAULT_H, rh: DEFAULT_H, layout: [50, 50] };
+    const next: Sizes = { lh: DEFAULT_H, rh: DEFAULT_H, layout: { left: 50, right: 50 } };
     setSizes(next);
     saveSizes(storageKey, next);
   }, [storageKey]);
@@ -157,8 +157,8 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
       className={`bottom-row rp-row${stacked ? ' rp-stacked' : ''}${!hasDebugger ? ' bottom-row--single' : ''}`}
     >
       {twoUp ? (
-        <PanelGroup direction="horizontal" onLayout={onLayout} autoSaveId={storageKey}>
-          <Panel id="left" order={1} defaultSize={layout[0]} minSize={minPct} className="rp-panel-wrapper">
+        <PanelGroup orientation="horizontal" onLayoutChanged={onLayout} id={storageKey}>
+          <Panel id="left" defaultSize={layout.left ?? 50} minSize={minPct} className="rp-panel-wrapper">
             <div className="rp-slot" style={{ height: lh }}>
               {debuggerPanel}
               <div
@@ -171,7 +171,7 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
           <PanelResizeHandle className="rp-shared-divider">
             <div className="rp-shared-divider-grip" />
           </PanelResizeHandle>
-          <Panel id="right" order={2} defaultSize={layout[1]} minSize={minPct} className="rp-panel-wrapper">
+          <Panel id="right" defaultSize={layout.right ?? 50} minSize={minPct} className="rp-panel-wrapper">
             <div className="rp-slot" style={{ height: rh }}>
               {explanationPanel}
               <div
