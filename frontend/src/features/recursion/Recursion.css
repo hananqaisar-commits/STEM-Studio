@@ -125,22 +125,22 @@
 }
 
 .recursion-return-badge.state-completed {
-  background: rgba(16, 185, 129, 0.25);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: rgba(var(--viz-sorted-glow), 0.25);
+  color: var(--viz-sorted-light);
+  border: 1px solid rgba(var(--viz-sorted-glow), 0.4);
 }
 
 .recursion-return-badge.state-returning {
-  background: rgba(236, 72, 153, 0.25);
-  color: #f472b6;
-  border: 1px solid rgba(236, 72, 153, 0.4);
+  background: rgba(var(--viz-swapping-glow), 0.25);
+  color: var(--viz-swapping-light);
+  border: 1px solid rgba(var(--viz-swapping-glow), 0.4);
   animation: rec-badge-glow 1s ease-in-out infinite alternate;
 }
 
 .recursion-return-badge.state-active {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(var(--viz-current-glow), 0.2);
+  color: var(--viz-current-light);
+  border: 1px solid rgba(var(--viz-current-glow), 0.4);
 }
 
 .recursion-return-badge.state-pending {
@@ -214,9 +214,9 @@
 }
 
 .callstack-frame.frame-top {
-  color: #fbbf24;
-  background: rgba(245, 158, 11, 0.08);
-  border-left-color: #f59e0b;
+  color: var(--viz-current-light);
+  background: rgba(var(--viz-current-glow), 0.08);
+  border-left-color: var(--viz-current-base);
   font-weight: 700;
 }
 
@@ -238,8 +238,8 @@
 }
 
 .frame-top .frame-depth {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
+  background: rgba(var(--viz-current-glow), 0.2);
+  color: var(--viz-current-light);
 }
 
 .frame-label {
@@ -313,8 +313,8 @@
 }
 
 @keyframes rec-badge-glow {
-  from { box-shadow: 0 0 2px rgba(236, 72, 153, 0.2); }
-  to   { box-shadow: 0 0 8px rgba(236, 72, 153, 0.5); }
+  from { box-shadow: 0 0 2px rgba(var(--viz-swapping-glow), 0.2); }
+  to   { box-shadow: 0 0 8px rgba(var(--viz-swapping-glow), 0.5); }
 }
 
 /* ── Responsive ────────────────────────────────────────────────────── */

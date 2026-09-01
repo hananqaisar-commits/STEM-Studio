@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, GitBranch, Layers } from 'lucide-react';
 import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
+import { vizFlash, vizLabelColor } from '../../components/primitives/vizPalette';
 import { MotionPresets } from '../../engine/motionEngine';
 import { HanoiPegBoard, type HanoiPegSnapshot } from './HanoiPegBoard';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
@@ -31,19 +32,10 @@ interface LayoutEdge {
 /* ── Helpers ────────────────────────────────────────────────────────── */
 function toElementState(s: string): ElementState {
   switch (s) {
-    case 'active':    return 'comparing';
+    case 'active':    return 'current';
     case 'returning': return 'swapping';
     case 'completed': return 'sorted';
     default:          return 'default';
-  }
-}
-
-function stateColor(s: string): string {
-  switch (s) {
-    case 'active':    return '#f59e0b';
-    case 'returning': return '#ec4899';
-    case 'completed': return '#10b981';
-    default:          return '#475569';
   }
 }
 
@@ -113,10 +105,10 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
       }
       if (prev.states[i] !== states[i]) {
         if (states[i] === 'active') {
-          MotionPresets.flashState(el, '245,158,11');
+          MotionPresets.flashState(el, vizFlash('current'));
         } else if (states[i] === 'returning') {
           // Return: value resolves bottom-up with a distinct tick.
-          MotionPresets.flashState(el, '236,72,153');
+          MotionPresets.flashState(el, vizFlash('swapping'));
           const badge = el.querySelector<HTMLElement>('.recursion-return-badge');
           const num = Number(retVals[i]);
           if (badge && retVals[i] !== '' && !Number.isNaN(num)) {
@@ -308,7 +300,7 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
                   {/* Call label above */}
                   <span
                     className="recursion-call-label"
-                    style={{ color: stateColor(nd.state) }}
+                    style={{ color: vizLabelColor(toElementState(nd.state)) }}
                   >
                     {nd.label}
                   </span>

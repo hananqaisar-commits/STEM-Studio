@@ -40,6 +40,7 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './Graph.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
@@ -420,8 +421,9 @@ export const GraphPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="graph"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}
               title="Graph Traversal"
@@ -435,14 +437,15 @@ export const GraphPage: React.FC = () => {
                 frontier_size: currentStep?.queueOrStack.length ?? 0,
               }}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)}
             steps={activeSteps}
             currentStepIndex={currentStepIndex}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* ─── FULL SCREEN MODAL ───────────────────────────────────────────────── */}
