@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { Resizable } from 're-resizable';
 import './ResizablePanelRow.css';
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -29,8 +30,7 @@ const STACKED_MAX_W = MIN_W * 2 + MIN_GAP + 40;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-type Edge = 'left' | 'right' | 'top' | 'bottom';
-type PanelId = 'left' | 'right';
+// Edge/PanelId types removed — re-resizable handles all drag machinery internally.
 
 interface Sizes {
   lw: number;
@@ -146,109 +146,23 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
     });
   }, [containerW, twoUp, storageKey]);
 
-  /* ── Drag machinery ─────────────────────────────────────────────── */
-  interface DragInfo {
-    panel: PanelId;
-    edge: Edge;
-    startX: number;
-    startY: number;
-    base: Sizes;
-    pointerId: number;
-  }
-  const dragRef = useRef<DragInfo | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const pendingRef = useRef<{ x: number; y: number } | null>(null);
-  const [activeHandle, setActiveHandle] = useState<string | null>(null);
-
-  const persist = useCallback(() => {
-    try {
-      window.localStorage.setItem(storageId(storageKey), JSON.stringify(sizesRef.current));
-    } catch {
-      /* storage unavailable — resize still works for this session */
-    }
-  }, [storageKey]);
-
-  const applyDrag = useCallback(
-    (x: number, y: number) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const dx = x - d.startX;
-      const dy = y - d.startY;
-
-      setSizes(() => {
-        const { base, panel, edge } = d;
-        let { lw, rw, lh, rh } = base;
-
-        if (edge === 'top' || edge === 'bottom') {
-          const delta = edge === 'top' ? -dy : dy;
-          if (panel === 'left') lh = clamp(base.lh + delta, MIN_H, MAX_H);
-          else rh = clamp(base.rh + delta, MIN_H, MAX_H);
-          return { lw, rw, lh, rh };
-        }
-
-        /* Horizontal — every branch re-derives both widths so the
-           invariant lw + rw ≤ containerW − MIN_GAP cannot break. */
-        const budget = containerW - MIN_GAP;
-        if (panel === 'left' && edge === 'right') {
-          // Grow/shrink the debugger into the free space, stop at the gap.
-          lw = clamp(base.lw + dx, MIN_W, budget - rw);
-        } else if (panel === 'left' && edge === 'left') {
-          // Outer boundary: shrink only (panel is anchored to the row edge).
-          lw = clamp(base.lw - dx, MIN_W, base.lw);
-        } else if (panel === 'right' && edge === 'left') {
-          // Grow/shrink the explanation into the free space, stop at the gap.
-          rw = clamp(base.rw - dx, MIN_W, budget - lw);
-        } else if (panel === 'right' && edge === 'right') {
-          // Outer boundary: shrink only.
-          rw = clamp(base.rw + dx, MIN_W, base.rw);
-        }
-        return { lw, rw, lh, rh };
-      });
-    },
+  /* ── Collision constraint helpers ───────────────────────────────── */
+  /** Maximum width the LEFT panel can be without violating the gap. */
+  const maxLW = useCallback(
+    () => clamp(containerW - MIN_GAP - sizesRef.current.rw, MIN_W, containerW - MIN_GAP - MIN_W),
     [containerW],
   );
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    const d = dragRef.current;
-    if (!d || d.pointerId !== e.pointerId) return;
-    pendingRef.current = { x: e.clientX, y: e.clientY };
-    if (rafRef.current == null) {
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null;
-        if (pendingRef.current) applyDrag(pendingRef.current.x, pendingRef.current.y);
-      });
-    }
-  }, [applyDrag]);
-
-  const endDrag = useCallback((e: React.PointerEvent) => {
-    const d = dragRef.current;
-    if (!d || d.pointerId !== e.pointerId) return;
-    dragRef.current = null;
-    setActiveHandle(null);
-    persist();
-  }, [persist]);
-
-  const startDrag = useCallback(
-    (panel: PanelId, edge: Edge) => (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!twoUp && (edge === 'left' || edge === 'right')) return;
-      e.preventDefault();
-      e.currentTarget.setPointerCapture(e.pointerId);
-      dragRef.current = {
-        panel,
-        edge,
-        startX: e.clientX,
-        startY: e.clientY,
-        base: { ...sizesRef.current },
-        pointerId: e.pointerId,
-      };
-      setActiveHandle(`${panel}-${edge}`);
-    },
-    [twoUp],
+  /** Maximum width the RIGHT panel can be without violating the gap. */
+  const maxRW = useCallback(
+    () => clamp(containerW - MIN_GAP - sizesRef.current.lw, MIN_W, containerW - MIN_GAP - MIN_W),
+    [containerW],
   );
 
   const resetLayout = useCallback(() => {
     const half = Math.max(MIN_W, (containerW - MIN_GAP) / 2);
-    setSizes({ lw: half, rw: half, lh: DEFAULT_H, rh: DEFAULT_H });
+    const next: Sizes = { lw: half, rw: half, lh: DEFAULT_H, rh: DEFAULT_H };
+    setSizes(next);
     try {
       window.localStorage.removeItem(storageId(storageKey));
     } catch {
@@ -256,35 +170,31 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
     }
   }, [containerW, storageKey]);
 
-  useEffect(() => () => {
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-  }, []);
+  /* ── Custom handle elements ─────────────────────────────────────── */
+  /**
+   * re-resizable's `handleComponent` prop lets us pass our own elements
+   * that sit EXACTLY on each edge — these are the ONLY clickable drag targets.
+   * Interior content is completely unaffected.
+   */
+  const makeHandle = (axis: 'ns' | 'ew', label: string) => (
+    <div
+      className={`rp-handle rp-handle--${axis}`}
+      aria-label={label}
+      title="Drag to resize • double-click to reset"
+      onDoubleClick={resetLayout}
+    />
+  );
 
-  /* ── Handle rendering ───────────────────────────────────────────── */
-  const renderHandles = (panel: PanelId) => {
-    const handle = (edge: Edge) => (
-      <div
-        key={edge}
-        className={`rp-handle rp-handle--${edge}${activeHandle === `${panel}-${edge}` ? ' rp-active' : ''}`}
-        role="separator"
-        aria-orientation={edge === 'left' || edge === 'right' ? 'vertical' : 'horizontal'}
-        aria-label={`Resize ${panel === 'left' ? 'debugger' : 'explanation'} panel (${edge} edge)`}
-        title="Drag to resize • double-click to reset layout"
-        onPointerDown={startDrag(panel, edge)}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onDoubleClick={resetLayout}
-      />
-    );
-    return (
-      <>
-        {twoUp && handle('left')}
-        {twoUp && handle('right')}
-        {handle('top')}
-        {handle('bottom')}
-      </>
-    );
+  /* Debugger (left) — resize RIGHT edge (horizontal) + BOTTOM edge (vertical) */
+  const debuggerHandles = {
+    right: makeHandle('ew', 'Resize Debugger panel from right'),
+    bottom: makeHandle('ns', 'Resize Debugger panel from bottom'),
+  };
+
+  /* Explanation (right) — resize LEFT edge (horizontal) + BOTTOM edge (vertical) */
+  const explanationHandles = {
+    left: makeHandle('ew', 'Resize Explanation panel from left'),
+    bottom: makeHandle('ns', 'Resize Explanation panel from bottom'),
   };
 
   const { lw, rw, lh, rh } = sizes;
@@ -294,23 +204,81 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
       ref={rowRef}
       className={`bottom-row rp-row${stacked ? ' rp-stacked' : ''}${hasDebugger ? '' : ' bottom-row--single'}`}
     >
+      {/* ── Debugger Panel ─────────────────────────────────────────── */}
       {hasDebugger && (
-        <div
+        <Resizable
           className="rp-slot"
-          style={twoUp ? { width: lw, height: lh } : { width: '100%', height: lh }}
+          size={twoUp ? { width: lw, height: lh } : { width: '100%', height: lh }}
+          minWidth={MIN_W}
+          minHeight={MIN_H}
+          maxWidth={twoUp ? maxLW() : undefined}
+          maxHeight={MAX_H}
+          enable={{
+            top: false,
+            right: twoUp,   // horizontal resize only when two panels are side-by-side
+            bottom: true,
+            left: false,
+            topRight: false,
+            bottomRight: false,
+            bottomLeft: false,
+            topLeft: false,
+          }}
+          handleComponent={debuggerHandles}
+          onResizeStop={(_e, _dir, _ref, delta) => {
+            setSizes((prev) => {
+              const newLW = clamp(prev.lw + delta.width, MIN_W, maxLW());
+              const newLH = clamp(prev.lh + delta.height, MIN_H, MAX_H);
+              const next = { ...prev, lw: newLW, lh: newLH };
+              try {
+                window.localStorage.setItem(storageId(storageKey), JSON.stringify(next));
+              } catch { /* ignore */ }
+              return next;
+            });
+          }}
         >
           {debuggerPanel}
-          {renderHandles('left')}
-        </div>
+        </Resizable>
       )}
-      {hasDebugger && <div className="rp-spacer" aria-hidden="true" />}
-      <div
+
+      {/* ── Gap spacer ─────────────────────────────────────────────── */}
+      {hasDebugger && twoUp && <div className="rp-spacer" aria-hidden="true" />}
+
+      {/* ── Explanation Card ───────────────────────────────────────── */}
+      <Resizable
         className="rp-slot"
-        style={twoUp ? { width: rw, height: rh } : { width: '100%', height: rh }}
+        size={twoUp ? { width: rw, height: rh } : { width: '100%', height: rh }}
+        minWidth={MIN_W}
+        minHeight={MIN_H}
+        maxWidth={twoUp ? maxRW() : undefined}
+        maxHeight={MAX_H}
+        enable={{
+          top: false,
+          right: false,
+          bottom: true,
+          left: twoUp,    // horizontal resize only when two panels are side-by-side
+          topRight: false,
+          bottomRight: false,
+          bottomLeft: false,
+          topLeft: false,
+        }}
+        handleComponent={explanationHandles}
+        onResizeStop={(_e, _dir, _ref, delta) => {
+          setSizes((prev) => {
+            // left-handle drag: re-resizable reports delta.width as positive when
+            // shrinking from the left. We invert it so the panel grows correctly.
+            const newRW = clamp(prev.rw - delta.width, MIN_W, maxRW());
+            const newRH = clamp(prev.rh + delta.height, MIN_H, MAX_H);
+            const next = { ...prev, rw: newRW, rh: newRH };
+            try {
+              window.localStorage.setItem(storageId(storageKey), JSON.stringify(next));
+            } catch { /* ignore */ }
+            return next;
+          });
+        }}
       >
         {explanationPanel}
-        {renderHandles('right')}
-      </div>
+      </Resizable>
     </div>
   );
 };
+

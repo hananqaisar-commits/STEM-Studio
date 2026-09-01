@@ -2,11 +2,10 @@
    ResizablePanelRow — global constraint-aware two-panel dock
    (Debugger + Explanation Card).
 
-   Invariant enforced by the component at every drag frame:
+   Uses re-resizable library for handle-based resizing.
+   Invariant enforced by the component:
        debuggerWidth + explanationWidth + MIN_GAP ≤ containerWidth
-   Panels never overlap: they are anchored to opposite sides of the
-   row and growth stops at the minimum safe gap; the user must shrink
-   one panel before the other can grow further.
+   Panels never overlap.
    ═══════════════════════════════════════════════════════════════════ */
 
 /* The row keeps its `bottom-row` class (grid-area: bottom) but lays out
@@ -37,92 +36,80 @@
   margin-top: 1.25rem;
 }
 
+/* The rp-slot class is applied directly to re-resizable's outer wrapper div.
+   re-resizable sets width/height via inline styles — we just set flex/box. */
 .rp-slot {
   position: relative;
   flex: 0 0 auto;
   min-width: 0;
   box-sizing: border-box;
-}
-
-/* Whatever panel a slot hosts, it fills the slot exactly — the slot is
-   the single sizing authority. */
-.rp-slot > * {
-  width: 100% !important;
-  max-width: 100% !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  min-width: 0;
-  box-sizing: border-box;
+  overflow: visible;
 }
 
 /* ── Resize handles ───────────────────────────────────────────────── */
+/*
+   re-resizable renders our handleComponent elements inside its own
+   <span style="position:absolute; ..."> on each edge.
+   Our inner divs fill that span and show a premium grip indicator.
+*/
 
-.rp-handle {
+.rp-handle--ew,
+.rp-handle--ns {
   position: absolute;
-  z-index: 40;
+  inset: 0;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
 }
 
-.rp-handle::after {
+/* Visual grip pill — appears on hover */
+.rp-handle--ew::after,
+.rp-handle--ns::after {
   content: '';
-  position: absolute;
   border-radius: 999px;
   background: var(--color-primary, #8b5cf6);
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-.rp-handle:hover::after,
-.rp-handle.rp-active::after {
-  opacity: 0.85;
+.rp-handle--ew:hover::after,
+.rp-handle--ns:hover::after {
+  opacity: 0.8;
 }
 
-/* Vertical handles (resize width) */
-.rp-handle--left,
-.rp-handle--right {
-  top: 14px;
-  bottom: 14px;
-  width: 9px;
+/* East-West handles (left / right edges) → col-resize cursor */
+.rp-handle--ew {
   cursor: col-resize;
 }
 
-.rp-handle--left { left: -5px; }
-.rp-handle--right { right: -5px; }
-
-.rp-handle--left::after,
-.rp-handle--right::after {
-  top: 50%;
-  left: 50%;
+.rp-handle--ew::after {
   width: 3px;
-  height: 34px;
-  transform: translate(-50%, -50%);
+  height: 36px;
 }
 
-/* Horizontal handles (resize height) */
-.rp-handle--top,
-.rp-handle--bottom {
-  left: 14px;
-  right: 14px;
-  height: 9px;
+.rp-handle--ew:hover::after {
+  transform: scaleX(1.5);
+}
+
+/* North-South handles (top / bottom edges) → row-resize cursor */
+.rp-handle--ns {
   cursor: row-resize;
 }
 
-.rp-handle--top { top: -5px; }
-.rp-handle--bottom { bottom: -5px; }
-
-.rp-handle--top::after,
-.rp-handle--bottom::after {
-  left: 50%;
-  top: 50%;
-  width: 34px;
+.rp-handle--ns::after {
+  width: 36px;
   height: 3px;
-  transform: translate(-50%, -50%);
 }
 
-/* Stacked (narrow) layout: width is 100%, only height is resizable. */
-.bottom-row.rp-row.rp-stacked .rp-handle--left,
-.bottom-row.rp-row.rp-stacked .rp-handle--right {
+.rp-handle--ns:hover::after {
+  transform: scaleY(1.5);
+}
+
+/* In stacked (narrow) layout only height is resizable. */
+.bottom-row.rp-row.rp-stacked .rp-handle--ew {
   display: none;
 }
