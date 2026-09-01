@@ -15,6 +15,7 @@
     "re-resizable": "^6.11.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-resizable-panels": "^4.12.3",
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
