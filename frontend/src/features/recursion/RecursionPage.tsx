@@ -9,6 +9,7 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -423,8 +424,9 @@ export const RecursionPage: React.FC = () => {
 
         </div>
 
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="recursion"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Recursion"
@@ -438,9 +440,9 @@ export const RecursionPage: React.FC = () => {
               callStack={currentStep?.callStack}
               currentArray={[]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(
               currentStep?.description || 'Click Play to explore the recursion call tree step by step.',
               quizSession.phase,
@@ -452,7 +454,8 @@ export const RecursionPage: React.FC = () => {
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* Fullscreen Modal */}

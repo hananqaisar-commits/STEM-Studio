@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ResizablePanelRow — global constraint-aware two-panel dock
+   (Debugger + Explanation Card).
+
+   Invariant enforced by the component at every drag frame:
+       debuggerWidth + explanationWidth + MIN_GAP ≤ containerWidth
+   Panels never overlap: they are anchored to opposite sides of the
+   row and growth stops at the minimum safe gap; the user must shrink
+   one panel before the other can grow further.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* The row keeps its `bottom-row` class (grid-area: bottom) but lays out
+   as flex so panel sizes can be driven in pixels by the component. */
+.bottom-row.rp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.bottom-row.rp-row.rp-stacked {
+  flex-direction: column;
+}
+
+/* Free space between the two panels; never collapses below the
+   minimum safe gap so the cards can never collide. */
+.rp-spacer {
+  flex: 1 1 auto;
+  min-width: 20px;
+  pointer-events: none;
+}
+
+.bottom-row.rp-row.rp-stacked .rp-spacer {
+  display: none;
+}
+
+.bottom-row.rp-row.rp-stacked .rp-slot ~ .rp-slot {
+  margin-top: 1.25rem;
+}
+
+.rp-slot {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Whatever panel a slot hosts, it fills the slot exactly — the slot is
+   the single sizing authority. */
+.rp-slot > * {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* ── Resize handles ───────────────────────────────────────────────── */
+
+.rp-handle {
+  position: absolute;
+  z-index: 40;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.rp-handle::after {
+  content: '';
+  position: absolute;
+  border-radius: 999px;
+  background: var(--color-primary, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.rp-handle:hover::after,
+.rp-handle.rp-active::after {
+  opacity: 0.85;
+}
+
+/* Vertical handles (resize width) */
+.rp-handle--left,
+.rp-handle--right {
+  top: 14px;
+  bottom: 14px;
+  width: 9px;
+  cursor: col-resize;
+}
+
+.rp-handle--left { left: -5px; }
+.rp-handle--right { right: -5px; }
+
+.rp-handle--left::after,
+.rp-handle--right::after {
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+}
+
+/* Horizontal handles (resize height) */
+.rp-handle--top,
+.rp-handle--bottom {
+  left: 14px;
+  right: 14px;
+  height: 9px;
+  cursor: row-resize;
+}
+
+.rp-handle--top { top: -5px; }
+.rp-handle--bottom { bottom: -5px; }
+
+.rp-handle--top::after,
+.rp-handle--bottom::after {
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 3px;
+  transform: translate(-50%, -50%);
+}
+
+/* Stacked (narrow) layout: width is 100%, only height is resizable. */
+.bottom-row.rp-row.rp-stacked .rp-handle--left,
+.bottom-row.rp-row.rp-stacked .rp-handle--right {
+  display: none;
+}

@@ -35,6 +35,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './BinarySearch.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
@@ -485,8 +486,9 @@ export const BinarySearchPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="binarySearch"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}
               title="Binary Search"
@@ -501,14 +503,15 @@ export const BinarySearchPage: React.FC = () => {
                 right: currentStep?.right ?? null,
               }}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)}
             steps={activeSteps}
             currentStepIndex={currentStepIndex}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* ─── FULL SCREEN MODAL ───────────────────────────────────────────────── */}
