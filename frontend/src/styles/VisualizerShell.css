@@ -787,6 +787,36 @@
   color: #ffffff;
 }
 
+/* Customize Layout button — active state (indigo/violet gradient) */
+.viz-action-layout.is-active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
+  animation: layoutPulse 2s ease-in-out infinite;
+}
+
+.viz-action-layout.is-active:hover {
+  color: #ffffff;
+}
+
+@keyframes layoutPulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(99, 102, 241, 0.35); }
+  50% { box-shadow: 0 0 24px rgba(99, 102, 241, 0.6); }
+}
+
+/* Reset Layout button */
+.viz-action-reset {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: rgba(239, 68, 68, 0.8);
+}
+
+.viz-action-reset:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  transform: translateY(-1px);
+}
 
 
 /* ─── 9. RENDERER VIEWPORTS — internal scrolling, no clipping ──────

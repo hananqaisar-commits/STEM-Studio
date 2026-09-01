@@ -70,6 +70,7 @@ export const RecursionPage: React.FC = () => {
   // Quiz state
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
 
@@ -368,6 +369,9 @@ export const RecursionPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+          customizeModeEnabled={customizeModeEnabled}
+          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -426,6 +430,7 @@ export const RecursionPage: React.FC = () => {
 
         <ResizablePanelRow
           storageKey="recursion"
+          customizeModeEnabled={customizeModeEnabled}
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}

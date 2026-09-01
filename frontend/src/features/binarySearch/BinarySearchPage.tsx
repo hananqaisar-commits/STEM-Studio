@@ -73,6 +73,7 @@ export const BinarySearchPage: React.FC = () => {
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -415,6 +416,9 @@ export const BinarySearchPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+          customizeModeEnabled={customizeModeEnabled}
+          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -488,6 +492,7 @@ export const BinarySearchPage: React.FC = () => {
         </div>
         <ResizablePanelRow
           storageKey="binarySearch"
+          customizeModeEnabled={customizeModeEnabled}
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}

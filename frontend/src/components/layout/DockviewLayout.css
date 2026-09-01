@@ -1,0 +1,72 @@
+/* ─── Container ──────────────────────────────────────────────────────────── */
+.dockview-layout-container {
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Panel Content Wrapper ──────────────────────────────────────────────── */
+.dockview-panel-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background, #12141a);
+}
+
+/* ─── Theme Override (matches dark studio aesthetic) ─────────────────────── */
+.dockview-theme-abyss {
+  --dv-background-color: #12141a;
+  --dv-tab-background-color: #1a1d26;
+  --dv-activegroup-hiddenpanel-tab-background-color: #1a1d26;
+  --dv-activegroup-visiblepanel-tab-background-color: #22263a;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: #141720;
+  --dv-inactivegroup-visiblepanel-tab-background-color: #1a1d28;
+  --dv-group-view-background-color: #12141a;
+  --dv-tabs-and-actions-container-background-color: #1a1d26;
+  --dv-activegroup-visiblepanel-tab-color: #e2e8f0;
+  --dv-activegroup-hiddenpanel-tab-color: #94a3b8;
+  --dv-inactivegroup-hiddenpanel-tab-color: #64748b;
+  --dv-inactivegroup-visiblepanel-tab-color: #94a3b8;
+  --dv-separator-border: #2d3148;
+  --dv-paneview-header-border-color: #2d3148;
+  --dv-drag-over-border-color: #6366f1;
+  --dv-drag-over-background-color: rgba(99, 102, 241, 0.08);
+  --dv-icon-hover-background-color: rgba(255, 255, 255, 0.08);
+  --dv-floating-box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  --dv-tab-border-color: transparent;
+  --dv-activegroup-visiblepanel-tab-border-color: #6366f1;
+}
+
+/* ─── Customizing Mode ─────────────────────────────────────────────────────── */
+/* When in customize mode show a subtle glowing indicator on tab strips */
+.dockview-layout-container.customizing .dv-tabs-and-actions-container {
+  background: linear-gradient(90deg, #1a1d26, #1e2040);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.5);
+}
+
+/* Animate borders when customizing for clear visual feedback */
+.dockview-layout-container.customizing {
+  border: 1.5px solid rgba(99, 102, 241, 0.3);
+  border-radius: 6px;
+  animation: customizePulse 2s ease-in-out infinite;
+}
+
+@keyframes customizePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.2); }
+  50% { box-shadow: 0 0 16px 4px rgba(99, 102, 241, 0.15); }
+}
+
+/* ─── Not Customizing (view-only mode): lock tabs ──────────────────────────── */
+/* When NOT in customize mode, prevent accidental dragging */
+.dockview-layout-container:not(.customizing) .dv-tab:not(.inactive) {
+  cursor: default;
+}
+
+.dockview-layout-container:not(.customizing) .dv-tab {
+  cursor: default;
+  user-select: none;
+}
