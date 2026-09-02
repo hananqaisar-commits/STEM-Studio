@@ -142,6 +142,32 @@ export function generateStackPopSteps(currentStack: (number | string)[]): StackQ
   return steps;
 }
 
+export function generateStackPeekSteps(currentStack: (number | string)[]): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  if (currentStack.length === 0) {
+    steps.push({
+      stepIndex: 0,
+      description: `Peek operation: Stack is empty.`,
+      codeLine: 1,
+      elements: [],
+    });
+    return steps;
+  }
+  const elements: StackElementData[] = currentStack.map((val, idx) => ({
+    id: `stack-${idx}`,
+    value: val,
+    state: idx === currentStack.length - 1 ? 'active' : 'default',
+  }));
+  const topVal = currentStack[currentStack.length - 1];
+  steps.push({
+    stepIndex: 0,
+    description: `Peek() inspected top element '${topVal}' (index ${currentStack.length - 1}) without removing it.`,
+    codeLine: 1,
+    elements,
+  });
+  return steps;
+}
+
 // ─── QUEUE ENGINE ───────────────────────────────────────────────────
 
 export function generateQueueEnqueueSteps(currentQueue: (number | string)[], newVal: number | string): StackQueueStep[] {
