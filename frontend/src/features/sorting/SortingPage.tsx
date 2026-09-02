@@ -554,6 +554,7 @@ export const SortingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={customSteps ?? executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

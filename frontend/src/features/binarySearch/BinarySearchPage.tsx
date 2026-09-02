@@ -39,6 +39,7 @@ import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './BinarySearch.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList } from '../../utils/batchInputParser';
 
 interface AlgorithmMeta {
   id: BinarySearchCategory;
@@ -182,10 +183,7 @@ export const BinarySearchPage: React.FC = () => {
   };
 
   const handleApplyCustomArray = () => {
-    const parsed = customArrayInput
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => !isNaN(n));
+    const parsed = parseNumberList(customArrayInput).values;
 
     if (parsed.length === 0) return;
 
@@ -525,6 +523,7 @@ export const BinarySearchPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Binary Search Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Logarithmic Search Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

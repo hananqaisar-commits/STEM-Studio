@@ -1,13 +1,13 @@
 /* ─── Application Layout Stylesheet ───────────────────────────────── */
 
-/* 1. App Header Navbar — floating ribbon style */
+/* 1. App Header Navbar — integrated application shell */
 .app-navbar {
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: 0.75rem 1.25rem;
-  background: transparent;
-  pointer-events: none;
+  padding: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .app-navbar > * {
@@ -18,20 +18,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 56px;
-  padding: 0 1rem;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  border-radius: 9999px;
-  box-shadow: var(--shadow-md);
-  max-width: 1200px;
+  height: var(--navbar-height);
+  padding: 0 clamp(1rem, 2.2vw, 2rem);
+  background: transparent;
+  max-width: 1440px;
   margin: 0 auto;
-}
-
-[data-theme="dark"] .navbar-ribbon {
-  background: rgba(15, 23, 42, 0.85);
 }
 
 .navbar-left {
@@ -50,13 +41,13 @@
 .brand-logo-glow {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  border-radius: 10px;
+  background: var(--color-primary);
   display: flex;
   justify-content: center;
   align-items: center;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -430,11 +421,11 @@
   width: 340px !important;
   min-width: 340px !important;
   max-width: 340px !important;
-  background-color: var(--color-app-bg);
+  background-color: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 0.85rem;
+  padding: 1rem 0.85rem;
   height: calc(100vh - var(--navbar-height));
   position: sticky;
   top: var(--navbar-height);
@@ -465,8 +456,8 @@
   gap: 0.6rem;
   width: 100%;
   padding: 0.7rem 0.9rem;
-  background: rgba(168, 85, 247, 0.08);
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  background: var(--color-surface-elevated);
+  border: 1px solid transparent;
   border-radius: 10px;
   color: var(--color-text);
   font-weight: 700;
@@ -476,9 +467,9 @@
 }
 
 .sidebar-dashboard-btn:hover {
-  background: linear-gradient(135deg, rgba(147, 51, 234, 0.18), rgba(99, 102, 241, 0.18));
-  color: #a855f7;
-  border-color: rgba(168, 85, 247, 0.4);
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+  border-color: var(--color-border);
 }
 
 .topic-card.module-card {
@@ -498,8 +489,8 @@
 }
 
 .topic-card.module-card.active {
-  background: rgba(168, 85, 247, 0.1) !important;
-  border-color: rgba(168, 85, 247, 0.25) !important;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)) !important;
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border)) !important;
 }
 
 .module-categories-container {
@@ -554,12 +545,12 @@
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background-color: rgba(168, 85, 247, 0.1);
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #a855f7;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -870,7 +861,7 @@
 }
 
 .dashboard-main {
-  background-color: var(--color-surface);
+  background-color: var(--color-app-bg);
   overflow-y: auto;
   min-width: 0;
   position: relative;

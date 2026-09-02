@@ -17,6 +17,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
+import { parseNumberList } from '../../utils/batchInputParser';
 import { buildDPCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
@@ -316,7 +317,7 @@ export const DPPage: React.FC = () => {
               <span>Coins:</span>
               <input type="text" value={coins.join(',')}
                 onChange={(e) => {
-                  const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                  const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (v.length > 0 && v.length <= 5) { setCoins(v.sort((a, b) => a - b)); reset(); }
                 }} />
             </div>
@@ -334,7 +335,7 @@ export const DPPage: React.FC = () => {
             <span>Houses:</span>
             <input type="text" value={houses.join(',')}
               onChange={(e) => {
-                const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 0);
+                const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n >= 0);
                 if (v.length > 0 && v.length <= 10) { setHouses(v); reset(); }
               }} />
           </div>
@@ -346,7 +347,7 @@ export const DPPage: React.FC = () => {
               <span>W:</span>
               <input type="text" value={weights.join(',')}
                 onChange={(e) => {
-                  const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                  const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (v.length > 0 && v.length <= 6) { setWeights(v); reset(); }
                 }} />
             </div>
@@ -354,7 +355,7 @@ export const DPPage: React.FC = () => {
               <span>V:</span>
               <input type="text" value={values.join(',')}
                 onChange={(e) => {
-                  const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                  const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (v.length > 0 && v.length <= 6) { setValues(v); reset(); }
                 }} />
             </div>
@@ -387,7 +388,7 @@ export const DPPage: React.FC = () => {
             <span>Array:</span>
             <input type="text" value={lisArr.join(',')}
               onChange={(e) => {
-                const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+                const v = parseNumberList(e.target.value, { integerOnly: true }).values;
                 if (v.length > 0 && v.length <= 12) { setLisArr(v); reset(); }
               }} />
           </div>
@@ -542,6 +543,7 @@ export const DPPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Dynamic Programming | ${selectedAlg.toUpperCase()}`}
         subtitle="DP Table Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}
