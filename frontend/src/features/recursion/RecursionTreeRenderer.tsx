@@ -124,7 +124,7 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
   /* ── Empty state ─────────────────────────────────────────────────── */
   if (!currentStep || !hasTree) {
     return (
-      <div className="sorting-canvas-empty">
+      <div className="shared-canvas-empty">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
           <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style={{ opacity: 0.35, marginBottom: '0.4rem' }}>
             <circle cx="22" cy="10" r="5" stroke="#64748b" strokeWidth="1.5" fill="none" />
@@ -133,7 +133,7 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
             <line x1="22" y1="15" x2="12" y2="23" stroke="#64748b" strokeWidth="1.2" />
             <line x1="22" y1="15" x2="32" y2="23" stroke="#64748b" strokeWidth="1.2" />
           </svg>
-          <span style={{ fontWeight: 600, opacity: 0.7 }}>Recursion Tree Canvas</span>
+          <span style={{ fontWeight: 600, opacity: 0.7 }}>Recursion Call Tree Canvas</span>
           <span style={{ fontSize: '0.78rem', opacity: 0.5 }}>Click Play to visualize the call tree</span>
         </div>
       </div>
