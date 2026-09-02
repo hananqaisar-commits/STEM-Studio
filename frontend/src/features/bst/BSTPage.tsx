@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Maximize2, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
+import { Plus, Search, Maximize2, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary, DatabaseZap, TreePine } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
+import { IntervalTreeRenderer } from '../../components/renderers/IntervalTreeRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
@@ -33,12 +34,20 @@ import { generateHeapInsertSteps, generateHeapExtractSteps } from './heapEngine'
 import type { HeapType } from './heapEngine';
 import { generateTrieInsertSteps, generateTrieSearchSteps, createTrieRoot } from './trieEngine';
 import type { TrieNodeStructure } from './trieEngine';
+import { generateRBInsertSteps, buildSampleRBTree } from './rbTreeEngine';
+import type { RBNodeStructure } from './rbTreeEngine';
+import {
+  generateSegTreeBuildSteps,
+  generateSegTreeQuerySteps,
+  generateSegTreeUpdateSteps,
+} from './segmentTreeEngine';
+import type { SegTreeNode, SegTreeStep } from './segmentTreeEngine';
 
 import './BST.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList, parseStringList } from '../../utils/batchInputParser';
 
-type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie';
+type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie' | 'rbt' | 'segTree';
 
 const DEFAULT_BST_TREE: BSTTreeStructure = {
   value: 50,
@@ -67,13 +76,17 @@ export const BSTPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   useEffect(() => {
     const topic = searchParams.get('topic');
-    if (topic && ['bst', 'avl', 'heap', 'trie'].includes(topic)) {
+    if (topic && ['bst', 'avl', 'heap', 'trie', 'rbt', 'segTree'].includes(topic)) {
       setTreeCategory(topic as TreeCategory);
     }
   }, [searchParams]);
 
   const [inputValue, setInputValue] = useState<string>('20, 10, 30, 5, 15');
   const [wordValue, setWordValue] = useState<string>('cat, car, dog');
+  const [segInputValue, setSegInputValue] = useState<string>('1, 3, 5, 7, 9, 11');
+  const [segQueryRange, setSegQueryRange] = useState<{ start: number; end: number }>({ start: 1, end: 4 });
+  const [segUpdateIndex, setSegUpdateIndex] = useState<number>(2);
+  const [segUpdateValue, setSegUpdateValue] = useState<number>(6);
   const [inputError, setInputError] = useState<string | null>(null);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
@@ -88,6 +101,15 @@ export const BSTPage: React.FC = () => {
   const [heapArray, setHeapArray] = useState<number[]>([90, 75, 60, 40, 55, 20]);
   const [heapType, setHeapType] = useState<HeapType>('max');
   const [trieRoot, setTrieRoot] = useState<TrieNodeStructure>(createTrieRoot());
+  // RBT state
+  const [rbtTree, setRbtTree] = useState<RBNodeStructure | undefined>(() => buildSampleRBTree());
+  // Segment Tree state
+  const [segArray, setSegArray] = useState<number[]>([1, 3, 5, 7, 9, 11]);
+  const [segTree, setSegTree] = useState<SegTreeNode | undefined>(undefined);
+  const [segTreeSteps, setSegTreeSteps] = useState<SegTreeStep[]>([]);
+  const [activeSegStep, setActiveSegStep] = useState<SegTreeStep | null>(null);
+  const isSegTreeMode = treeCategory === 'segTree';
+
 
   // Initialize steps when switching category
   useEffect(() => {
@@ -110,8 +132,30 @@ export const BSTPage: React.FC = () => {
       setTrieRoot(root);
       const { steps } = generateTrieInsertSteps(root, 'cat');
       setActiveOperationSteps(steps);
+    } else if (treeCategory === 'rbt') {
+      // Show insertion of 25 into sample tree
+      const sampleTree = buildSampleRBTree();
+      setRbtTree(sampleTree);
+      const { steps, newTree } = generateRBInsertSteps(sampleTree, 25);
+      setRbtTree(newTree);
+      setActiveOperationSteps(steps);
+    } else if (treeCategory === 'segTree') {
+      const arr = [1, 3, 5, 7, 9, 11];
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
   }, [treeCategory]);
+
+  // Sync SegTree steps length into the standard player via proxy array
+  const segTreePlayerProxy = React.useMemo(
+    () => segTreeSteps.map(() => ({} as BSTStep)),
+    [segTreeSteps]
+  );
+  const effectiveSteps = isSegTreeMode ? segTreePlayerProxy : activeOperationSteps;
 
   const {
     currentStepIndex,
@@ -124,9 +168,12 @@ export const BSTPage: React.FC = () => {
     stepBack,
     reset,
   seekTo,
-    } = useStepPlayer({ steps: activeOperationSteps });
+    } = useStepPlayer({ steps: effectiveSteps });
 
-  const bstStep = currentStep as BSTStep | null;
+  const bstStep = isSegTreeMode ? null : (currentStep as BSTStep | null);
+  // The actual SegTree step is derived from the unified index
+  const currentSegStep = isSegTreeMode ? (segTreeSteps[currentStepIndex] ?? activeSegStep) : null;
+
 
   usePlaybackShortcuts({
     handlers: {
@@ -300,6 +347,70 @@ export const BSTPage: React.FC = () => {
     if (!quizEnabled) play();
   };
 
+  // ─── RBT OPERATIONS ───────────────────────────────────────────────────────
+  const handleRBTInsert = () => {
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) { setInputError('Please enter valid numeric values'); return; }
+    setInputError(null);
+    setRevisionKey('insert');
+
+    let currentTree = rbtTree;
+    const allSteps: BSTStep[] = [];
+    for (const num of nums) {
+      const { steps, newTree } = generateRBInsertSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+    setRbtTree(currentTree);
+    setActiveOperationSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  // ─── SEGMENT TREE OPERATIONS ──────────────────────────────────────────────
+  const handleSegBuild = () => {
+    const parseRes = parseNumberList(segInputValue);
+    const arr = parseRes.isValid ? parseRes.values : [1, 3, 5, 7, 9, 11];
+    if (arr.length === 0) { setInputError('Enter array values'); return; }
+    setInputError(null);
+    setSegArray(arr);
+    const { steps, tree } = generateSegTreeBuildSteps(arr);
+    setSegTree(tree);
+    setSegTreeSteps(steps);
+    setActiveSegStep(steps[steps.length - 1] ?? null);
+    setActiveOperationSteps([]);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  const handleSegQuery = () => {
+    if (!segTree) { handleSegBuild(); return; }
+    const steps = generateSegTreeQuerySteps(segTree, segArray, segQueryRange.start, segQueryRange.end);
+    setSegTreeSteps(steps);
+    setActiveSegStep(steps[0] ?? null);
+    setActiveOperationSteps([]);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  const handleSegUpdate = () => {
+    if (!segTree) { handleSegBuild(); return; }
+    const { steps, newTree, newArr } = generateSegTreeUpdateSteps(segTree, segArray, segUpdateIndex, segUpdateValue);
+    setSegTree(newTree);
+    setSegArray(newArr);
+    setSegTreeSteps(steps);
+    setActiveSegStep(steps[0] ?? null);
+    setActiveOperationSteps([]);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+
   // ─── BATCH BUILD COMPLETE DATASET FROM SCRATCH ────────────────────────────
   const handleBuildTreeFromScratch = () => {
     setInputError(null);
@@ -351,6 +462,27 @@ export const BSTPage: React.FC = () => {
       }
       setTrieRoot(currentRoot);
       setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'rbt') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [10, 20, 30, 15, 5];
+      let currentTree: RBNodeStructure | undefined = undefined;
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newTree } = generateRBInsertSteps(currentTree, num);
+        allSteps.push(...steps);
+        currentTree = newTree;
+      }
+      setRbtTree(currentTree);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'segTree') {
+      const parseRes = parseNumberList(segInputValue);
+      const arr = parseRes.isValid ? parseRes.values : [1, 3, 5, 7, 9, 11];
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
     reset();
     quizSession.resetSession();
@@ -363,6 +495,8 @@ export const BSTPage: React.FC = () => {
     if (treeCategory === 'avl') setAvlTree(undefined);
     if (treeCategory === 'heap') setHeapArray([]);
     if (treeCategory === 'trie') setTrieRoot(createTrieRoot());
+    if (treeCategory === 'rbt') setRbtTree(undefined);
+    if (treeCategory === 'segTree') { setSegTree(undefined); setSegArray([]); setSegTreeSteps([]); setActiveSegStep(null); }
     setActiveOperationSteps([]);
     reset();
     quizSession.resetSession();
@@ -394,6 +528,20 @@ export const BSTPage: React.FC = () => {
       });
       setTrieRoot(root);
       setActiveOperationSteps(generateTrieInsertSteps(root, 'cat').steps);
+    } else if (treeCategory === 'rbt') {
+      const sample = buildSampleRBTree();
+      setRbtTree(sample);
+      const { steps, newTree } = generateRBInsertSteps(sample, 25);
+      setRbtTree(newTree);
+      setActiveOperationSteps(steps);
+    } else if (treeCategory === 'segTree') {
+      const arr = [1, 3, 5, 7, 9, 11];
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
     reset();
     quizSession.resetSession();
@@ -429,6 +577,25 @@ export const BSTPage: React.FC = () => {
       });
       setTrieRoot(root);
       setActiveOperationSteps(generateTrieInsertSteps(root, shuffled[0]).steps);
+    } else if (treeCategory === 'rbt') {
+      let tree: RBNodeStructure | undefined = undefined;
+      let lastSteps: BSTStep[] = [];
+      for (let i = 0; i < 5; i++) {
+        const v = Math.floor(Math.random() * 80) + 10;
+        const res = generateRBInsertSteps(tree, v);
+        tree = res.newTree;
+        lastSteps = res.steps;
+      }
+      setRbtTree(tree);
+      setActiveOperationSteps(lastSteps);
+    } else if (treeCategory === 'segTree') {
+      const arr = Array.from({ length: 6 }, () => Math.floor(Math.random() * 20) + 1);
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
     reset();
   };
@@ -450,7 +617,24 @@ export const BSTPage: React.FC = () => {
      never drift out of sync. */
   const renderToolbarControls = () => (
     <>
-      {treeCategory !== 'trie' ? (
+      {treeCategory === 'segTree' ? (
+        <>
+          <div className="bst-input-group" title="Enter array of values (e.g. 1, 3, 5, 7, 9, 11)">
+            <span style={{ fontWeight: 600 }}>Array:</span>
+            <input
+              type="text"
+              value={segInputValue}
+              onChange={(e) => {
+                setSegInputValue(e.target.value);
+                if (inputError) setInputError(null);
+              }}
+              className="bst-input"
+              placeholder="e.g. 1, 3, 5, 7"
+              style={{ minWidth: '130px' }}
+            />
+          </div>
+        </>
+      ) : treeCategory !== 'trie' ? (
         <div className="bst-input-group" title="Enter comma-separated values (e.g. 20, 10, 30, 5, 15)">
           <span style={{ fontWeight: 600 }}>Values:</span>
           <input
@@ -486,6 +670,39 @@ export const BSTPage: React.FC = () => {
         <Sparkles size={14} className="text-amber-400" />
         <span>Build Dataset</span>
       </button>
+
+      {treeCategory === 'segTree' && (
+        <>
+          <div className="bst-input-group" style={{ marginLeft: '8px' }}>
+            <span style={{ fontSize: '0.75rem' }}>Query [</span>
+            <input type="number" className="bst-input" style={{ width: '40px', padding: '2px 4px' }} value={segQueryRange.start} onChange={e => setSegQueryRange({ ...segQueryRange, start: parseInt(e.target.value) || 0 })} />
+            <span style={{ fontSize: '0.75rem' }}>,</span>
+            <input type="number" className="bst-input" style={{ width: '40px', padding: '2px 4px' }} value={segQueryRange.end} onChange={e => setSegQueryRange({ ...segQueryRange, end: parseInt(e.target.value) || 0 })} />
+            <span style={{ fontSize: '0.75rem' }}>]</span>
+          </div>
+          <button className="bst-btn btn-search" onClick={handleSegQuery}>
+            <Search size={16} />
+            <span>Range Query</span>
+          </button>
+          <div className="bst-input-group" style={{ marginLeft: '8px' }}>
+            <span style={{ fontSize: '0.75rem' }}>Idx:</span>
+            <input type="number" className="bst-input" style={{ width: '40px', padding: '2px 4px' }} value={segUpdateIndex} onChange={e => setSegUpdateIndex(parseInt(e.target.value) || 0)} />
+            <span style={{ fontSize: '0.75rem', marginLeft: '4px' }}>Val:</span>
+            <input type="number" className="bst-input" style={{ width: '50px', padding: '2px 4px' }} value={segUpdateValue} onChange={e => setSegUpdateValue(parseInt(e.target.value) || 0)} />
+          </div>
+          <button className="bst-btn btn-insert" onClick={handleSegUpdate}>
+            <Plus size={16} />
+            <span>Point Update</span>
+          </button>
+        </>
+      )}
+
+      {treeCategory === 'rbt' && (
+        <button className="bst-btn btn-insert" onClick={handleRBTInsert}>
+          <Plus size={16} />
+          <span>Insert & Fix-up</span>
+        </button>
+      )}
 
       {treeCategory === 'bst' && (
         <>
@@ -614,7 +831,9 @@ export const BSTPage: React.FC = () => {
         items={[
           { id: 'bst', name: 'Binary Search Tree (BST)', description: 'Ordered insert, search, and depth-first traversals', group: 'Trees' },
           { id: 'avl', name: 'AVL Tree (Self-Balancing)', description: 'Height-balanced tree with LL/RR/LR/RL rotations', group: 'Balanced' },
+          { id: 'rbt', name: 'Red-Black Tree', description: 'Self-balancing tree with complex color-flip and rotation fixups', group: 'Balanced' },
           { id: 'heap', name: 'Binary Heap (Priority Queue)', description: 'Array-backed complete tree with sift-up and sift-down', group: 'Heaps' },
+          { id: 'segTree', name: 'Segment Tree', description: 'Array-backed tree for O(log n) range queries and point updates', group: 'Advanced' },
           { id: 'trie', name: 'Trie (Prefix Tree)', description: 'Character-indexed prefix tree for word lookup', group: 'Strings' },
         ]}
         activeId={treeCategory}
@@ -655,13 +874,20 @@ export const BSTPage: React.FC = () => {
       {/* Main Learning Workspace */}
       <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
-          <BSTRenderer
-            currentStep={bstStep}
-            onToggleFullscreen={() => setIsFullScreenOpen(true)}
-          />
+          {isSegTreeMode ? (
+            <IntervalTreeRenderer
+              step={currentSegStep}
+              onToggleFullscreen={() => setIsFullScreenOpen(true)}
+            />
+          ) : (
+            <BSTRenderer
+              currentStep={bstStep}
+              onToggleFullscreen={() => setIsFullScreenOpen(true)}
+            />
+          )}
 
           {/* Traversal Log Banner */}
-          {bstStep?.traversalLog && bstStep.traversalLog.length > 0 && (
+          {!isSegTreeMode && bstStep?.traversalLog && bstStep.traversalLog.length > 0 && (
             <div className="traversal-log-banner animate-fade-in">
               <span className="log-title">TRAVERSAL LOG:</span>
               <div className="log-nodes font-mono">
@@ -674,8 +900,8 @@ export const BSTPage: React.FC = () => {
 
           <FloatingController
             isPlaying={isPlaying}
-            canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < totalSteps - 1}
+            canStepBack={isSegTreeMode ? currentStepIndex > 0 : currentStepIndex > 0}
+            canStepForward={isSegTreeMode ? currentStepIndex < segTreeSteps.length - 1 : currentStepIndex < totalSteps - 1}
             onPlay={play}
             onPause={pause}
             onReset={reset}
@@ -724,8 +950,13 @@ export const BSTPage: React.FC = () => {
           ) : null}
 
           explanationPanel={<ExplanationPanel
-            description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)}
-            steps={activeOperationSteps}
+            description={maskNarration(
+              isSegTreeMode
+                ? (currentSegStep?.explanation || 'Click Play to observe Segment Tree operations.')
+                : (bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.'),
+              quizSession.phase
+            )}
+            steps={isSegTreeMode ? [] : activeOperationSteps}
             currentStepIndex={currentStepIndex}
             timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
             spaceComplexity="O(H)"
@@ -760,7 +991,7 @@ export const BSTPage: React.FC = () => {
           <FloatingController
             isPlaying={isPlaying}
             canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < totalSteps - 1}
+            canStepForward={isSegTreeMode ? currentStepIndex < segTreeSteps.length - 1 : currentStepIndex < totalSteps - 1}
             onPlay={play}
             onPause={pause}
             onReset={reset}
@@ -772,7 +1003,13 @@ export const BSTPage: React.FC = () => {
           />
         }
       >
-        <BSTRenderer currentStep={bstStep} />
+        {isSegTreeMode ? (
+          <IntervalTreeRenderer
+            step={currentSegStep}
+          />
+        ) : (
+          <BSTRenderer currentStep={bstStep} />
+        )}
       </FullScreenCanvasModal>
     </div>
   );

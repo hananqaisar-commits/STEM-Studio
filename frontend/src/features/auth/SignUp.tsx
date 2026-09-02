@@ -19,20 +19,58 @@ export const SignUp: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { state: mascotState, setExpression, setContext } = useMascot();
 
+  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with real ID
+
   useEffect(() => {
     setContext('signup');
+    // Initialize Google Sign-In
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+        context: 'signup',
+        ux_mode: 'popup',
+      });
+      window.google.accounts.id.renderButton(
+        document.getElementById('google-signup-btn') as HTMLElement,
+        { theme: 'outline', size: 'large', type: 'standard', shape: 'pill', text: 'signup_with' }
+      );
+    }
   }, [setContext]);
+
+  const handleGoogleResponse = async (response: any) => {
+    setError('');
+    setIsSubmitting(true);
+    setExpression('focused');
+    try {
+      await loginWithGoogle(response.credential, GOOGLE_CLIENT_ID, false);
+      setExpression('happy', { temporary: true, durationMs: 900 });
+      setTimeout(() => navigate('/dashboard'), 300);
+    } catch (err: any) {
+      setError(err?.message || 'Google Sign-Up failed.');
+      setExpression('confused', { temporary: true, durationMs: 1500 });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Client-side check: the two passwords must match before we hit the API
+    // Regex for Email Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      setExpression('confused', { temporary: true, durationMs: 1500, message: 'Invalid email' });
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please re-enter them.');
       return;
@@ -68,6 +106,14 @@ export const SignUp: React.FC = () => {
           <img src="/logo.png" alt="STEM Studio" className="auth-logo" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
           <h1 className="auth-title">Create an account</h1>
           <p className="auth-subtitle">Join STEM Studio to start your journey</p>
+        </div>
+
+        <div className="google-btn-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+          <div id="google-signup-btn"></div>
+        </div>
+
+        <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
+          <span>or create an account with email</span>
         </div>
 
         {error && (

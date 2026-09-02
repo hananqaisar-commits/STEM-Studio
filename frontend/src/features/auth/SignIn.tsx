@@ -7,7 +7,7 @@ import '../../components/mascot/Mascot.css';
 import './Auth.css';
 
 export const SignIn: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +22,40 @@ export const SignIn: React.FC = () => {
     setContext('signin');
   }, [setContext]);
 
+  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with real ID
+
+  useEffect(() => {
+    // Initialize Google Sign-In
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+        context: 'signin',
+        ux_mode: 'popup',
+      });
+      window.google.accounts.id.renderButton(
+        document.getElementById('google-signin-btn') as HTMLElement,
+        { theme: 'outline', size: 'large', type: 'standard', shape: 'pill', text: 'signin_with' }
+      );
+    }
+  }, []);
+
+  const handleGoogleResponse = async (response: any) => {
+    setError('');
+    setIsSubmitting(true);
+    setExpression('focused');
+    try {
+      await loginWithGoogle(response.credential, GOOGLE_CLIENT_ID, rememberMe);
+      setExpression('happy', { temporary: true, durationMs: 900 });
+      setTimeout(() => navigate('/dashboard'), 300);
+    } catch (err: any) {
+      setError(err?.message || 'Google Sign-In failed.');
+      setExpression('confused', { temporary: true, durationMs: 1500 });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -29,7 +63,7 @@ export const SignIn: React.FC = () => {
     setExpression('focused');
 
     try {
-      await login(email, password, rememberMe);
+      await login(identifier, password, rememberMe);
       setExpression('happy', { temporary: true, durationMs: 900 });
       setTimeout(() => navigate('/dashboard'), 300);
     } catch (err: any) {
@@ -56,6 +90,14 @@ export const SignIn: React.FC = () => {
           <p className="auth-subtitle">Sign in to your STEM Studio account</p>
         </div>
 
+        <div className="google-btn-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+          <div id="google-signin-btn"></div>
+        </div>
+
+        <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
+          <span>or continue with email</span>
+        </div>
+
         {error && (
           <div className="auth-error animate-fade-in">
             <AlertCircle size={16} />
@@ -65,16 +107,16 @@ export const SignIn: React.FC = () => {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="identifier">Email or Username</label>
             <div className="input-wrapper">
               <Mail className="input-icon" size={18} />
               <input
-                type="email"
-                id="email"
+                type="text"
+                id="identifier"
                 className="auth-input"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email or Username"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
                 required
                 disabled={isSubmitting}
