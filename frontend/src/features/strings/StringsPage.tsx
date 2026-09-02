@@ -366,6 +366,7 @@ export const StringsPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`String Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="String Character Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

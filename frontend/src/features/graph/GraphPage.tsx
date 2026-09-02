@@ -459,6 +459,7 @@ export const GraphPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Graph Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Network Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

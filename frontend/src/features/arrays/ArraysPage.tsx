@@ -549,6 +549,7 @@ export const ArraysPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Array Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="Array Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} stepNumber={currentStepIndex + 1} totalSteps={totalSteps} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

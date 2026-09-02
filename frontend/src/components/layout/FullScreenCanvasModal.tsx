@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Minimize2 } from 'lucide-react';
+import { Info, Minimize2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import './FullScreenCanvasModal.css';
 
@@ -11,6 +11,8 @@ interface FullScreenCanvasModalProps {
   subtitle?: string;
   toolbarControls?: React.ReactNode;
   playbackControls?: React.ReactNode;
+  /** The normal-state explanation card, reused unchanged in fullscreen. */
+  explanationPanel?: React.ReactNode;
   /** Optional floating controller rendered inside the fullscreen body. */
   floatingControls?: React.ReactNode;
   children: React.ReactNode;
@@ -23,10 +25,12 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   subtitle = 'Interactive DSA Inspector',
   toolbarControls,
   playbackControls,
+  explanationPanel,
   floatingControls,
   children,
 }) => {
   const { actualTheme } = useTheme();
+  const [isExplanationVisible, setIsExplanationVisible] = useState(false);
 
   // Trigger native browser fullscreen
   useEffect(() => {
@@ -70,6 +74,18 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
           </div>
         )}
 
+        {explanationPanel && (
+          <button
+            className="fs-icon-btn fs-explanation-toggle"
+            type="button"
+            onClick={() => setIsExplanationVisible((visible) => !visible)}
+            aria-pressed={isExplanationVisible}
+          >
+            <Info size={15} />
+            <span>{isExplanationVisible ? 'Hide Explanation Card' : 'Show Explanation Card'}</span>
+          </button>
+        )}
+
         <div className="fs-header-actions">
           {/* Exit Fullscreen Button */}
           <button className="fs-icon-btn exit-fs-btn" onClick={onClose} title="Exit Fullscreen Mode">
@@ -83,6 +99,11 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
       <main className="fs-modal-body">
         {floatingControls}
         <div className="fs-workspace-scrollable">
+          {isExplanationVisible && explanationPanel && (
+            <section className="fs-explanation-card" aria-label="Explanation card">
+              {explanationPanel}
+            </section>
+          )}
           {children}
         </div>
       </main>

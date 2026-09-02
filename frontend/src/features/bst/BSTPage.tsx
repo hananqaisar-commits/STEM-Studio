@@ -742,6 +742,7 @@ export const BSTPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Tree Studio | ${treeCategory.toUpperCase()}`}
         subtitle="Interactive Dynamic Tree Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)} steps={activeOperationSteps} currentStepIndex={currentStepIndex} timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }} spaceComplexity="O(H)" />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}
