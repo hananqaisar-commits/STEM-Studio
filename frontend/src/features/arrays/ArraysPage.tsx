@@ -9,6 +9,7 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -84,6 +85,7 @@ export const ArraysPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Algorithm-specific parameters
@@ -454,6 +456,9 @@ export const ArraysPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+          customizeModeEnabled={customizeModeEnabled}
+          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -512,8 +517,10 @@ export const ArraysPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="arrays"
+          customizeModeEnabled={customizeModeEnabled}
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Array Technique"
@@ -521,16 +528,17 @@ export const ArraysPage: React.FC = () => {
               categoryId="arrays"
               topicId={selectedAlg}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             stepNumber={currentStepIndex + 1}
             totalSteps={totalSteps}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       <TheoryPanel categoryId="arrays" activeTopic={selectedAlg} />

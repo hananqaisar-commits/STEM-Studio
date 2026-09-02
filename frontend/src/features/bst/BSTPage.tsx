@@ -9,6 +9,7 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
@@ -76,6 +77,7 @@ export const BSTPage: React.FC = () => {
   const [inputError, setInputError] = useState<string | null>(null);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
@@ -624,6 +626,9 @@ export const BSTPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+          customizeModeEnabled={customizeModeEnabled}
+          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -692,8 +697,10 @@ export const BSTPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="bst"
+          customizeModeEnabled={customizeModeEnabled}
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={treeCategory}
               title="Tree Operations"
@@ -714,16 +721,17 @@ export const BSTPage: React.FC = () => {
               }}
               currentArray={[10, 20, 30, 40, 50]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)}
             steps={activeOperationSteps}
             currentStepIndex={currentStepIndex}
             timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
             spaceComplexity="O(H)"
           />
-        </div>
+          }
+        />
       </div>
 
       <TheoryPanel categoryId="bst" activeTopic={treeCategory} />

@@ -380,6 +380,15 @@
   flex-direction: column !important;
 }
 
+/* Backtracking decision-tree canvas fills the modal body in both axes */
+.fs-workspace-scrollable .bt-renderer {
+  min-height: calc(100vh - 160px) !important;
+  height: 100% !important;
+  max-height: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 .fs-workspace-scrollable .bst-canvas-workspace,
 .fs-workspace-scrollable .bars-canvas {
   flex: 1 !important;

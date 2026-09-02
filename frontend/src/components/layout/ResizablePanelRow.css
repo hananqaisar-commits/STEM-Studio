@@ -1,0 +1,114 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ResizablePanelRow — global constraint-aware two-panel dock
+   (Debugger + Explanation Card).
+
+   Uses react-resizable-panels for shared-divider horizontal resizing.
+   Independent heights via custom bottom handles.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.bottom-row.rp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+}
+
+.bottom-row.rp-row.rp-stacked {
+  flex-direction: column;
+}
+
+.bottom-row.rp-row.rp-stacked .rp-slot ~ .rp-slot {
+  margin-top: 1.25rem;
+}
+
+/* React Resizable Panels wrapper */
+.rp-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.rp-slot {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* Shared horizontal divider (react-resizable-panels Handle) */
+.rp-shared-divider {
+  flex: 0 0 20px;
+  position: relative;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  z-index: 40;
+  touch-action: none;
+}
+
+/* Visual grip for shared divider */
+.rp-shared-divider-grip {
+  width: 3px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--color-primary, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.rp-shared-divider:hover .rp-shared-divider-grip,
+.rp-shared-divider[data-resize-handle-active="true"] .rp-shared-divider-grip {
+  opacity: 0.8;
+  transform: scaleX(1.5);
+}
+
+/* Custom manual height handle (bottom) */
+.rp-handle--bottom {
+  position: absolute;
+  bottom: -5px;
+  left: 14px;
+  right: 14px;
+  height: 9px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: row-resize;
+  z-index: 40;
+}
+
+/* Visual grip for bottom handle */
+.rp-handle--bottom::after {
+  content: '';
+  width: 36px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-primary, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.rp-handle--bottom:hover::after,
+.rp-handle--bottom:active::after {
+  opacity: 0.8;
+  transform: scaleY(1.5);
+}
+
+.bottom-row.rp-row.rp-stacked .rp-shared-divider {
+  display: none;
+}
+
+/* ── Dockview full-area overlay (customize mode) ─────────────────────────── */
+.rp-dockview-overlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  /* Span entire workspace grid including the canvas area */
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}

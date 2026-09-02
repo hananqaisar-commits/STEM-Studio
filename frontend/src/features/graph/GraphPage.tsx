@@ -40,6 +40,7 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './Graph.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
@@ -77,6 +78,7 @@ export const GraphPage: React.FC = () => {
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = React.useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -348,6 +350,9 @@ export const GraphPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+          customizeModeEnabled={customizeModeEnabled}
+          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -420,8 +425,10 @@ export const GraphPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="graph"
+          customizeModeEnabled={customizeModeEnabled}
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}
               title="Graph Traversal"
@@ -435,14 +442,15 @@ export const GraphPage: React.FC = () => {
                 frontier_size: currentStep?.queueOrStack.length ?? 0,
               }}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)}
             steps={activeSteps}
             currentStepIndex={currentStepIndex}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* ─── FULL SCREEN MODAL ───────────────────────────────────────────────── */}

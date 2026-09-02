@@ -5,6 +5,7 @@
   min-height: 100vh;
   padding: 2rem;
   background-color: var(--color-surface);
+  overflow-x: clip;
 }
 
 .auth-card {
@@ -20,7 +21,8 @@
 }
 
 .auth-card-with-mascot {
-  margin-top: 1.75rem;
+  /* Reserve vertical room for the mascot floating above the card */
+  margin-top: 6rem;
 }
 
 .auth-header {
@@ -69,7 +71,15 @@
   min-width: 0;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
+  .auth-page-container {
+    padding: 1.25rem;
+  }
+
+  .auth-card {
+    padding: 2rem 1.25rem;
+  }
+
   .input-row {
     flex-direction: column;
     gap: 1.25rem;

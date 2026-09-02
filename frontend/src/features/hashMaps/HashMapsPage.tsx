@@ -9,6 +9,7 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -71,6 +72,7 @@ export const HashMapsPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Sync inputs when algorithm changes
@@ -350,6 +352,9 @@ export const HashMapsPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+          customizeModeEnabled={customizeModeEnabled}
+          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -409,8 +414,10 @@ export const HashMapsPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="hashMaps"
+          customizeModeEnabled={customizeModeEnabled}
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Hash Map"
@@ -421,9 +428,9 @@ export const HashMapsPage: React.FC = () => {
               callStack={currentStep?.callStack}
               currentArray={inputArr}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             stepNumber={currentStepIndex + 1}
             totalSteps={totalSteps}
@@ -432,7 +439,8 @@ export const HashMapsPage: React.FC = () => {
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
           />
-        </div>
+          }
+        />
       </div>
 
       <TheoryPanel categoryId="hashMaps" activeTopic={selectedAlg} />

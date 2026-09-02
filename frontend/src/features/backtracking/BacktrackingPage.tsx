@@ -9,6 +9,7 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -56,6 +57,7 @@ export const BacktrackingPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Algorithm-specific inputs
@@ -359,6 +361,9 @@ export const BacktrackingPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+            customizeModeEnabled={customizeModeEnabled}
+            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -418,8 +423,32 @@ export const BacktrackingPage: React.FC = () => {
         </div>
 
 
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="backtracking"
+          customizeModeEnabled={customizeModeEnabled}
+          visualizerPanel={
+            <>
+              <BacktrackingRenderer
+                currentStep={currentStep}
+                algorithmKey={selectedAlg}
+                onToggleFullscreen={() => setIsFullScreenOpen(true)}
+              />
+              <FloatingController
+                isPlaying={isPlaying}
+                canStepBack={currentStepIndex > 0}
+                canStepForward={currentStepIndex < totalSteps - 1}
+                onPlay={play}
+                onPause={pause}
+                onReset={reset}
+                onStepBack={stepBack}
+                onStepForward={stepForward}
+                onStop={() => { pause(); reset(); }}
+                onResume={play}
+                quizMode={quizEnabled}
+              />
+            </>
+          }
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Backtracking"
@@ -430,16 +459,17 @@ export const BacktrackingPage: React.FC = () => {
               callStack={currentStep?.callStack}
               currentArray={[]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* FullScreen Modal */}

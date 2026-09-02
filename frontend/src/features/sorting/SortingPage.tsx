@@ -12,6 +12,7 @@ import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -104,6 +105,7 @@ export const SortingPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Custom code execution state
@@ -430,6 +432,9 @@ export const SortingPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+            customizeModeEnabled={customizeModeEnabled}
+            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -488,8 +493,32 @@ export const SortingPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizablePanelRow
+          storageKey="sorting"
+          customizeModeEnabled={customizeModeEnabled}
+          visualizerPanel={
+            <>
+              <SortingRenderer
+                currentStep={currentStep}
+                onElementClick={handleBarElementClick}
+                onToggleFullscreen={() => setIsFullScreenOpen(true)}
+              />
+              <FloatingController
+                isPlaying={isPlaying}
+                canStepBack={currentStepIndex > 0}
+                canStepForward={currentStepIndex < totalSteps - 1}
+                onPlay={play}
+                onPause={pause}
+                onReset={reset}
+                onStepBack={stepBack}
+                onStepForward={stepForward}
+                onStop={() => { pause(); reset(); }}
+                onResume={play}
+                quizMode={quizEnabled}
+              />
+            </>
+          }
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Sorting Algorithm"
@@ -504,16 +533,17 @@ export const SortingPage: React.FC = () => {
               customBusy={sandboxBusy}
               customMessage={sandboxMessage}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             steps={customSteps ?? executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       <TheoryPanel categoryId="sorting" activeTopic={selectedAlg} />

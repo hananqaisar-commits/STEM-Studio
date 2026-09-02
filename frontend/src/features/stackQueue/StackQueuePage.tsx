@@ -16,6 +16,7 @@ import {
   generateQueueEnqueueSteps,
   generateQueueDequeueSteps,
   generateCircularQueueEnqueueSteps,
+  generateCircularQueueDequeueSteps,
   generateValidParenthesesSteps,
   generateMinStackPushSteps,
   generatePostfixEvalSteps,
@@ -46,6 +47,7 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { StackQueueCodePanel, type StackQueueCustomState } from './StackQueueCodePanel';
@@ -114,6 +116,8 @@ export const StackQueuePage: React.FC = () => {
 
   // Modes & Modals matching BST
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -143,8 +147,6 @@ export const StackQueuePage: React.FC = () => {
   const [cdFront, setCdFront] = useState<number>(0);
   const [cdRear, setCdRear] = useState<number>(1);
 
-  // Code Debugger Visibility State
-  const [showDebugger, setShowDebugger] = useState<boolean>(true);
 
   /* ── Custom Code sandbox state (operation-history replay model) ──────
      The editor lives in StackQueueCodePanel; it lifts its state up here so
@@ -347,6 +349,16 @@ export const StackQueuePage: React.FC = () => {
     setCqFront(currentFront);
     setCqRear(currentRear);
     setActiveSteps(allSteps);
+    reset();
+    play();
+  };
+
+  const handleCircularDequeue = () => {
+    const res = generateCircularQueueDequeueSteps(cqElements, cqFront, cqRear, 6);
+    setCqElements(res.newElements);
+    setCqFront(res.newFront);
+    setCqRear(res.newRear);
+    setActiveSteps(res.steps);
     reset();
     play();
   };
@@ -1044,10 +1056,15 @@ export const StackQueuePage: React.FC = () => {
       )}
 
       {category === 'circularQueue' && (
-        <button className="bst-btn btn-insert" onClick={handleCircularEnqueue}>
-          <Plus size={14} />
-          <span>Enqueue Slot</span>
-        </button>
+        <>
+          <button className="bst-btn btn-insert" onClick={handleCircularEnqueue}>
+            <Plus size={14} />
+            <span>Enqueue Slot</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleCircularDequeue}>
+            <span>Dequeue Slot</span>
+          </button>
+        </>
       )}
 
       {category === 'validParentheses' && (
@@ -1360,6 +1377,9 @@ export const StackQueuePage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+            customizeModeEnabled={customizeModeEnabled}
+            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -1466,8 +1486,45 @@ export const StackQueuePage: React.FC = () => {
           </div>
         }
         bottomContent={
-          <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-            {showDebugger && (
+          <ResizablePanelRow
+            storageKey="stackQueue"
+            customizeModeEnabled={customizeModeEnabled}
+            visualizerPanel={
+              <div className="renderer-section" style={{ height: '100%', minHeight: 400 }}>
+                <div className="bst-canvas-card">
+                  <div className="bst-canvas-header">
+                    <div className="ll-canvas-title">
+                      <Layers size={16} className="text-accent" />
+                      <span>
+                        {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
+                      </span>
+                    </div>
+                    <button
+                      className="bst-btn btn-fullscreen"
+                      onClick={() => setIsFullScreenOpen(true)}
+                      title="Full Screen Canvas View"
+                    >
+                      <Maximize2 size={14} />
+                    </button>
+                  </div>
+                  {renderCanvas()}
+                </div>
+                <FloatingController
+                  isPlaying={isPlaying}
+                  canStepBack={currentStepIndex > 0}
+                  canStepForward={currentStepIndex < totalSteps - 1}
+                  onPlay={play}
+                  onPause={pause}
+                  onReset={reset}
+                  onStepBack={stepBack}
+                  onStepForward={stepForward}
+                  onStop={() => { pause(); reset(); }}
+                  onResume={play}
+                  quizMode={quizEnabled}
+                />
+              </div>
+            }
+            debuggerPanel={showDebugger ? (
               <StackQueueCodePanel
                 category={category}
                 activeLine={currentStep?.codeLine ?? 1}
@@ -1475,14 +1532,15 @@ export const StackQueuePage: React.FC = () => {
                 customBusy={sandboxBusy}
                 customMessage={sandboxMessage}
               />
-            )}
+            ) : null}
 
-            <ExplanationPanel
+            explanationPanel={<ExplanationPanel
               description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
               steps={activeSteps}
               currentStepIndex={currentStepIndex}
             />
-          </div>
+            }
+          />
         }
       />
 
