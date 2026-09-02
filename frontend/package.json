@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "dockview": "^8.2.0",
+    "dockview-react": "^8.2.0",
     "gsap": "^3.15.0",
     "lucide-react": "^1.33.0",
     "re-resizable": "^6.11.2",

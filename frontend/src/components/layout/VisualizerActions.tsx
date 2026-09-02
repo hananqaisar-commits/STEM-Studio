@@ -1,5 +1,5 @@
 import React from 'react';
-import { HelpCircle, Terminal, Sparkles } from 'lucide-react';
+import { HelpCircle, Terminal, Sparkles, Layout, RefreshCw } from 'lucide-react';
 
 interface VisualizerActionsProps {
   /** Whether Quiz Mode is currently on. */
@@ -10,6 +10,12 @@ interface VisualizerActionsProps {
   /** Omit both debugger props on pages without a debugger panel. */
   debuggerVisible?: boolean;
   onToggleDebugger?: () => void;
+  
+  /** Layout customization props */
+  customizeModeEnabled?: boolean;
+  onToggleCustomizeMode?: () => void;
+  onResetLayout?: () => void;
+
   /** Extra page-level buttons (e.g. fullscreen) rendered in the same group. */
   children?: React.ReactNode;
 }
@@ -28,6 +34,9 @@ export const VisualizerActions: React.FC<VisualizerActionsProps> = ({
   onStartQuiz,
   debuggerVisible,
   onToggleDebugger,
+  customizeModeEnabled,
+  onToggleCustomizeMode,
+  onResetLayout,
   children,
 }) => {
   return (
@@ -53,6 +62,31 @@ export const VisualizerActions: React.FC<VisualizerActionsProps> = ({
         >
           <Terminal size={14} />
           <span>{debuggerVisible ? 'Hide Debugger' : 'Show Debugger'}</span>
+        </button>
+      )}
+
+      {onToggleCustomizeMode && (
+        <button
+          type="button"
+          className={`viz-action-btn viz-action-layout ${customizeModeEnabled ? 'is-active' : ''}`}
+          aria-pressed={customizeModeEnabled}
+          onClick={onToggleCustomizeMode}
+          title={customizeModeEnabled ? 'Exit layout customization' : 'Customize layout'}
+        >
+          <Layout size={14} />
+          <span>{customizeModeEnabled ? 'Done Customizing' : 'Customize Layout'}</span>
+        </button>
+      )}
+
+      {customizeModeEnabled && onResetLayout && (
+        <button
+          type="button"
+          className="viz-action-btn viz-action-reset"
+          onClick={onResetLayout}
+          title="Reset to default layout"
+        >
+          <RefreshCw size={14} />
+          <span>Reset Layout</span>
         </button>
       )}
 
