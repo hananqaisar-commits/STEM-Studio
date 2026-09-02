@@ -105,6 +105,7 @@ export const SortingPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Custom code execution state
@@ -431,6 +432,9 @@ export const SortingPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+            customizeModeEnabled={customizeModeEnabled}
+            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -491,6 +495,29 @@ export const SortingPage: React.FC = () => {
         </div>
         <ResizablePanelRow
           storageKey="sorting"
+          customizeModeEnabled={customizeModeEnabled}
+          visualizerPanel={
+            <>
+              <SortingRenderer
+                currentStep={currentStep}
+                onElementClick={handleBarElementClick}
+                onToggleFullscreen={() => setIsFullScreenOpen(true)}
+              />
+              <FloatingController
+                isPlaying={isPlaying}
+                canStepBack={currentStepIndex > 0}
+                canStepForward={currentStepIndex < totalSteps - 1}
+                onPlay={play}
+                onPause={pause}
+                onReset={reset}
+                onStepBack={stepBack}
+                onStepForward={stepForward}
+                onStop={() => { pause(); reset(); }}
+                onResume={play}
+                quizMode={quizEnabled}
+              />
+            </>
+          }
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}

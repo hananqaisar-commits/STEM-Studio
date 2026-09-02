@@ -100,3 +100,15 @@
 .bottom-row.rp-row.rp-stacked .rp-shared-divider {
   display: none;
 }
+
+/* ── Dockview full-area overlay (customize mode) ─────────────────────────── */
+.rp-dockview-overlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  /* Span entire workspace grid including the canvas area */
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}

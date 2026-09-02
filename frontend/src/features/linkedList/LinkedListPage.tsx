@@ -78,6 +78,7 @@ export const LinkedListPage: React.FC = () => {
   // Interactive & Quiz Modes
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -495,6 +496,9 @@ export const LinkedListPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
+            customizeModeEnabled={customizeModeEnabled}
+            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
+            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -568,6 +572,42 @@ export const LinkedListPage: React.FC = () => {
         </div>
         <ResizablePanelRow
           storageKey="linkedList"
+          customizeModeEnabled={customizeModeEnabled}
+          visualizerPanel={
+            <>
+              <div className="ll-canvas-card">
+                <div className="ll-canvas-header">
+                  <div className="ll-canvas-title">
+                    <Link2 size={16} className="text-accent" />
+                    <span>
+                      {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
+                    </span>
+                  </div>
+                  <button
+                    className="bst-btn btn-fullscreen"
+                    onClick={() => setIsFullScreenOpen(true)}
+                    title="Full Screen Canvas"
+                  >
+                    <Maximize2 size={14} />
+                  </button>
+                </div>
+                <LinkedListRenderer step={currentStep} nodes={baseNodes} />
+              </div>
+              <FloatingController
+                isPlaying={isPlaying}
+                canStepBack={currentStepIndex > 0}
+                canStepForward={currentStepIndex < totalSteps - 1}
+                onPlay={play}
+                onPause={pause}
+                onReset={reset}
+                onStepBack={stepBack}
+                onStepForward={stepForward}
+                onStop={() => { pause(); reset(); }}
+                onResume={play}
+                quizMode={quizEnabled}
+              />
+            </>
+          }
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}

@@ -1,5 +1,6 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import { DockviewLayout, resetDockviewLayout } from './DockviewLayout';
 import './ResizablePanelRow.css';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -32,6 +33,12 @@ interface ResizablePanelRowProps {
   storageKey: string;
   debuggerPanel: React.ReactNode;
   explanationPanel: React.ReactNode;
+  /** Optional visualizer content. Required for Dockview customize mode. */
+  visualizerPanel?: React.ReactNode;
+  /** When true and screen >= 1024px, replaces normal layout with Dockview. */
+  customizeModeEnabled?: boolean;
+  /** Callback for when user clicks Reset Layout in Dockview mode. */
+  onResetLayout?: () => void;
 }
 
 const storageId = (key: string) => `stemstudio.rp.${key}`;
@@ -58,7 +65,22 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
   storageKey,
   debuggerPanel,
   explanationPanel,
+  visualizerPanel,
+  customizeModeEnabled = false,
+  onResetLayout,
 }) => {
+  const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsLargeScreen(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleResetLayout = useCallback(() => {
+    resetDockviewLayout();
+    onResetLayout?.();
+  }, [onResetLayout]);
   const rowRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
   const [sizes, setSizes] = useState<Sizes>({ lh: DEFAULT_H, rh: DEFAULT_H, layout: { left: 50, right: 50 } });
@@ -151,11 +173,39 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
   const { lh, rh, layout } = sizes;
   const minPct = containerW > 0 ? (MIN_W_PX / containerW) * 100 : 20;
 
+  // ── Dockview Customize Mode ────────────────────────────────────────────────
+  // When customize mode is enabled on a large screen, render a full-width
+  // Dockview container that replaces the normal static 3-area layout.
+  // We occupy the full grid-column "bottom" area and add a full-page overlay.
+  if (customizeModeEnabled && isLargeScreen && visualizerPanel !== undefined) {
+    return (
+      <div
+        className="rp-dockview-overlay"
+        style={{
+          // Full-width row spanning the entire workspace grid (bottom + canvas)
+          gridColumn: '1 / -1',
+          gridRow: '1 / -1',
+          height: '82vh',
+          minHeight: 520,
+        }}
+      >
+        <DockviewLayout
+          visualizerContent={visualizerPanel}
+          debuggerContent={debuggerPanel}
+          explanationContent={explanationPanel}
+          customizeModeEnabled={customizeModeEnabled}
+          onResetLayout={handleResetLayout}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       ref={rowRef}
       className={`bottom-row rp-row${stacked ? ' rp-stacked' : ''}${!hasDebugger ? ' bottom-row--single' : ''}`}
     >
+
       {twoUp ? (
         <PanelGroup orientation="horizontal" onLayoutChanged={onLayout} id={storageKey}>
           <Panel id="left" defaultSize={layout.left ?? 50} minSize={minPct} className="rp-panel-wrapper">
