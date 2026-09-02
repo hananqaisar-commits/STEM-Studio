@@ -13,6 +13,7 @@ import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateStackPushSteps,
   generateStackPopSteps,
+  generateStackPeekSteps,
   generateQueueEnqueueSteps,
   generateQueueDequeueSteps,
   generateCircularQueueEnqueueSteps,
@@ -279,6 +280,13 @@ export const StackQueuePage: React.FC = () => {
       setStackHistory(newHistory);
       if (customState.active) void submitReplay('stackQueue.stack', newHistory, expectedReturned);
     }
+  };
+
+  const handlePeek = () => {
+    const steps = generateStackPeekSteps(stackData);
+    setActiveSteps(steps);
+    reset();
+    play();
   };
 
   const handleEnqueue = () => {
@@ -1035,6 +1043,9 @@ export const StackQueuePage: React.FC = () => {
           </button>
           <button className="bst-btn btn-search" onClick={handlePop}>
             <span>Pop</span>
+          </button>
+          <button className="bst-btn btn-mode" onClick={handlePeek} title="Peek top element of stack">
+            <span>Peek</span>
           </button>
         </>
       )}
