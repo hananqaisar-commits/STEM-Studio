@@ -526,6 +526,7 @@ export const GreedyPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Greedy Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="Greedy Choice Visualizer"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step greedy execution.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

@@ -16,6 +16,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
+import { parseStringList } from '../../utils/batchInputParser';
 import { buildTrieCheckpoints, buildRevisionData } from './quizAdapter';
 import type { TrieAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
@@ -86,7 +87,7 @@ export const TriePage: React.FC = () => {
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
-    const words = wordsInput.split(/[\s,]+/).filter(w => w.length > 0);
+    const words = parseStringList(wordsInput).values;
     switch (selectedAlg) {
       case 'trieInsert':
         return { steps: runTrieInsert(words), timeComplexity: { best: 'O(m)', average: 'O(m)', worst: 'O(m)' }, spaceComplexity: 'O(n·m)' };
@@ -384,6 +385,7 @@ export const TriePage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Trie Studio | ${selectedAlg.toUpperCase()}`}
         subtitle="Prefix Tree Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

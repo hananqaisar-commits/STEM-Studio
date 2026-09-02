@@ -16,6 +16,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
+import { parseNumberList } from '../../utils/batchInputParser';
 import { buildBacktrackingCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
@@ -251,7 +252,7 @@ export const BacktrackingPage: React.FC = () => {
               type="text"
               value={subsetArr.join(',')}
               onChange={(e) => {
-                const vals = e.target.value.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+                const vals = parseNumberList(e.target.value, { integerOnly: true }).values;
                 if (vals.length > 0 && vals.length <= 4) {
                   setSubsetArr(vals);
                   reset();
@@ -269,7 +270,7 @@ export const BacktrackingPage: React.FC = () => {
               type="text"
               value={permArr.join(',')}
               onChange={(e) => {
-                const vals = e.target.value.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+                const vals = parseNumberList(e.target.value, { integerOnly: true }).values;
                 if (vals.length > 0 && vals.length <= 4) {
                   setPermArr(vals);
                   reset();
@@ -306,7 +307,7 @@ export const BacktrackingPage: React.FC = () => {
                 type="text"
                 value={comboCandidates.join(',')}
                 onChange={(e) => {
-                  const vals = e.target.value.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n) && n > 0);
+                  const vals = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (vals.length > 0 && vals.length <= 5) {
                     setComboCandidates(vals.sort((a, b) => a - b));
                     reset();
@@ -478,6 +479,7 @@ export const BacktrackingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Backtracking | ${selectedAlg.toUpperCase()}`}
         subtitle="Decision Tree Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}
