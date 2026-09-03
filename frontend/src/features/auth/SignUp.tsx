@@ -6,6 +6,12 @@ import { Octa, useMascot } from '../../components/mascot';
 import '../../components/mascot/Mascot.css';
 import './Auth.css';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export const SignUp: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');

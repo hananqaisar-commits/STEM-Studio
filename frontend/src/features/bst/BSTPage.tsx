@@ -948,11 +948,11 @@ export const BSTPage: React.FC = () => {
               currentArray={[10, 20, 30, 40, 50]}
             />
           ) : null}
-
-          explanationPanel={<ExplanationPanel
-            description={maskNarration(
+          explanationPanel={
+            <ExplanationPanel
+              description={maskNarration(
               isSegTreeMode
-                ? (currentSegStep?.explanation || 'Click Play to observe Segment Tree operations.')
+                ? (currentSegStep?.description || 'Click Play to observe Segment Tree operations.')
                 : (bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.'),
               quizSession.phase
             )}

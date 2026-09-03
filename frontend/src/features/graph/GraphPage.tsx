@@ -56,7 +56,7 @@ import { TheoryPanel } from '../../components/layout/TheoryPanel';
 interface AlgorithmMeta {
   id: GraphCategory;
   name: string;
-  group: 'Traversals' | 'Shortest Path' | 'MST' | 'Ordering';
+  group: 'Traversals' | 'Shortest Path' | 'MST' | 'Ordering' | 'Pathfinding';
   description: string;
 }
 

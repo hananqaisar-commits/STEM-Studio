@@ -777,12 +777,12 @@ export function generateKruskalSteps(
     .filter((e) => e.weight !== undefined)
     .sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
 
-  const sortedPanel = weightedEdges.map((e) => ({
+  const sortedPanel: { edgeId: string; from: string; to: string; weight: number; state: 'pending' | 'current' | 'accepted' | 'rejected' }[] = weightedEdges.map((e) => ({
     edgeId: e.id,
     from: e.from,
     to: e.to,
     weight: e.weight ?? 0,
-    state: 'pending' as const,
+    state: 'pending',
   }));
 
   const mstEdges: string[] = [];
