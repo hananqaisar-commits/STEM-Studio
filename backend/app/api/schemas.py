@@ -171,3 +171,34 @@ class CustomCodeExecutionResponse(BaseModel):
     result: Optional[dict] = None
     emitted_rows: List[List[int]] = Field(default_factory=list)
     emitted_pairs: List[List[int]] = Field(default_factory=list)
+
+
+# ─── Octa AI Tutor Schemas ───────────────────────────────────────────
+
+class OctaTutorMessage(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant|system)$")
+    content: str = Field(..., min_length=1)
+
+
+class OctaTutorRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=5000)
+    algorithm_name: str = Field(default="")
+    algorithm_id: str = Field(default="")
+    category: str = Field(default="")
+    current_step_description: str = Field(default="")
+    current_step_index: int = Field(default=0)
+    total_steps: int = Field(default=0)
+    step_data: str = Field(default="")
+    conversation_history: List[OctaTutorMessage] = Field(default_factory=list)
+
+
+class OctaTutorFunctionCall(BaseModel):
+    name: str
+    args: dict = Field(default_factory=dict)
+
+
+class OctaTutorResponse(BaseModel):
+    reply: str
+    function_calls: List[OctaTutorFunctionCall] = Field(default_factory=list)
+    mascot_expression: str = Field(default="helping")
+

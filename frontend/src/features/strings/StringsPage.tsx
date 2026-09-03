@@ -50,6 +50,7 @@ const SAMPLE_STRINGS: Record<StringAlgorithmKey, { primary: string; secondary: s
 };
 
 export const StringsPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<StringAlgorithmKey>('palindrome');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -94,8 +95,30 @@ export const StringsPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
+    seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'strings',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildStringsCheckpoints(executionData.steps, selectedAlg),

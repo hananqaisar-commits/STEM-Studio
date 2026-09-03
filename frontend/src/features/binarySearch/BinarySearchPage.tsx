@@ -56,6 +56,7 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 ];
 
 export const BinarySearchPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<BinarySearchCategory>('binarySearch');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -91,8 +92,35 @@ export const BinarySearchPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
+    seekTo,
     } = useStepPlayer<BinarySearchStep>({ steps: activeSteps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS_LIST.find((a) => a.id === category);
+
+    setTutorContext({
+      algorithmName: algObj?.name || category,
+      algorithmId: category,
+      category: 'binarySearch',
+      currentStepDescription: currentStep?.explanation || currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      onSetInput: (newArr: number[]) => {
+        reset();
+        setArray(newArr);
+        setCustomArrayInput(newArr.join(', '));
+      },
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
   usePlaybackShortcuts({
     handlers: {

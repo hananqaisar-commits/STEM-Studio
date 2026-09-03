@@ -33,6 +33,8 @@ import { generateCountingSortSteps } from './algorithms/countingSort';
 import { generateRadixSortSteps } from './algorithms/radixSort';
 import { generateBucketSortSteps } from './algorithms/bucketSort';
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 import './Sorting.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
@@ -86,6 +88,7 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 }
 
 export const SortingPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -156,24 +159,46 @@ export const SortingPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer({ steps: customSteps ?? executionData.steps });
 
-  // Build quiz checkpoints from the current execution steps
-  const quizCheckpoints = useMemo(
-    () => buildSortingCheckpoints(customSteps ?? executionData.steps, selectedAlg),
-    [customSteps, executionData.steps, selectedAlg]
-  );
+  // Publish active algorithm context to Octa AI Tutor dynamically
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    const activeSteps = customSteps ?? executionData.steps;
 
-  const quizSession = useQuizSession({
-    enabled: quizEnabled,
-    checkpoints: quizCheckpoints,
-    cadence,
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'sorting',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      onSetInput: (newArr: number[]) => {
+        reset();
+        setArraySize(newArr.length);
+        setInitialArray(newArr);
+        setRawArrayInput(newArr.join(', '));
+      },
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [
+    selectedAlg,
     currentStepIndex,
-    isPlaying,
+    totalSteps,
+    currentStep,
+    customSteps,
+    executionData.steps,
+    setTutorContext,
+    play,
     pause,
     stepForward,
-    module: 'sorting',
-    algorithmId: selectedAlg,
-    revisionData: buildRevisionData(selectedAlg),
-  });
+    reset,
+  ]);
 
   // Clear custom steps when algorithm or array changes
   useEffect(() => {

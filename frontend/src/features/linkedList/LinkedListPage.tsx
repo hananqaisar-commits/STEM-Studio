@@ -63,6 +63,7 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 ];
 
 export const LinkedListPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<LinkedListCategory>('singly');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -99,8 +100,30 @@ export const LinkedListPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
-    } = useStepPlayer<LinkedListStep>({ steps: activeSteps });
+    seekTo,
+  } = useStepPlayer<LinkedListStep>({ steps: activeSteps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS_LIST.find((a) => a.id === category);
+
+    setTutorContext({
+      algorithmName: algObj?.name || category,
+      algorithmId: category,
+      category: 'linkedList',
+      currentStepDescription: currentStep?.explanation || currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
   usePlaybackShortcuts({
     handlers: {

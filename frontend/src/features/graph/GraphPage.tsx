@@ -61,6 +61,7 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 ];
 
 export const GraphPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<GraphCategory>('bfs');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -70,10 +71,14 @@ export const GraphPage: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Graph Data State
+  const defaultGraph = getPresetGraph('standard');
+  const [nodes, setNodes] = useState<GraphNode[]>(defaultGraph.nodes);
+  const [edges, setEdges] = useState<GraphEdge[]>(defaultGraph.edges);
 
-  const [startNode, setStartNode] = useState<string>('A');
-  const [nodes, setNodes] = useState<GraphNode[]>(() => getPresetGraph('standard').nodes);
-  const [edges, setEdges] = useState<GraphEdge[]>(() => getPresetGraph('standard').edges);
+  // Control Inputs
+  const [startNodeId, setStartNodeId] = useState<string>('A');
+  const [targetNodeId, setTargetNodeId] = useState<string>('F');
 
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -96,8 +101,30 @@ export const GraphPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
-    } = useStepPlayer<GraphStep>({ steps: activeSteps });
+    seekTo,
+  } = useStepPlayer<GraphStep>({ steps: activeSteps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS_LIST.find((a) => a.id === category);
+
+    setTutorContext({
+      algorithmName: algObj?.name || category.toUpperCase(),
+      algorithmId: category,
+      category: 'graph',
+      currentStepDescription: currentStep?.explanation || currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
