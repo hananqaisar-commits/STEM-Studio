@@ -170,8 +170,10 @@ export const BSTPage: React.FC = () => {
     stepBack,
     reset,
     seekTo,
-    } = useStepPlayer({ steps: activeOperationSteps });
+    } = useStepPlayer({ steps: effectiveSteps });
 
+  const bstStep = isSegTreeMode ? null : (currentStep as BSTStep | null);
+  const currentSegStep = isSegTreeMode ? (segTreeSteps[currentStepIndex] ?? activeSegStep) : null;
 
   // Publish active context to Octa AI Tutor
   useEffect(() => {

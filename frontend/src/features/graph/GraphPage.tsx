@@ -241,9 +241,9 @@ export const GraphPage: React.FC = () => {
     }
     let steps: GraphStep[] = [];
     if (category === 'bfs') {
-      steps = generateBFSSteps(nodes, edges, startNodeId);
+      steps = generateBFSSteps(nodes, edges, startNode);
     } else if (category === 'dfs') {
-      steps = generateDFSSteps(nodes, edges, startNodeId);
+      steps = generateDFSSteps(nodes, edges, startNode);
     } else if (category === 'dijkstra') {
       steps = generateDijkstraSteps(nodes, edges, startNode, 'F');
     } else if (category === 'bellmanFord') {
@@ -387,8 +387,8 @@ export const GraphPage: React.FC = () => {
               fontWeight: 700,
               cursor: 'pointer',
             }}
-            value={startNodeId}
-            onChange={(e) => setStartNodeId(e.target.value)}
+            value={startNode}
+            onChange={(e) => setStartNode(e.target.value)}
           >
             {nodes.map((n) => (
               <option key={n.id} value={n.id} style={{ background: 'var(--color-surface)' }}>
