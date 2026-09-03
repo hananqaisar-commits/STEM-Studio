@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, Sun, Moon, Cpu, Mic, Eye, EyeOff, Check, AlertCircle, ShieldCheck, RefreshCw } from 'lucide-react';
+import { X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
@@ -10,12 +10,12 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-const PROVIDERS: { id: LLMProvider; name: string; icon: string; desc: string }[] = [
-  { id: 'dashscope', name: 'Alibaba Qwen', icon: '⚡', desc: 'System Free Default' },
-  { id: 'openai', name: 'OpenAI', icon: '🤖', desc: 'GPT-4o & GPT-4o-mini' },
-  { id: 'openrouter', name: 'OpenRouter', icon: '🌐', desc: '100+ Models Unified' },
-  { id: 'anthropic', name: 'Claude', icon: '🧠', desc: 'Claude 3.5 Sonnet' },
-  { id: 'custom', name: 'Custom / Local', icon: '⚙️', desc: 'Ollama, LMStudio' },
+const PROVIDER_OPTIONS: { id: LLMProvider; name: string }[] = [
+  { id: 'dashscope', name: 'Alibaba Cloud Qwen (System Default)' },
+  { id: 'openai', name: 'OpenAI (GPT-4o / GPT-4o-mini)' },
+  { id: 'openrouter', name: 'OpenRouter (Unified API)' },
+  { id: 'anthropic', name: 'Anthropic Claude' },
+  { id: 'custom', name: 'Custom OpenAI-Compatible (Ollama, Local)' },
 ];
 
 const DEFAULT_CONFIG: UserLLMConfig = {
@@ -27,9 +27,8 @@ const DEFAULT_CONFIG: UserLLMConfig = {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { theme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'theme' | 'ai' | 'voice'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'appearance'>('ai');
 
-  // LLM Config State
   const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
     try {
       const saved = localStorage.getItem('octa_llm_config');
@@ -74,21 +73,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await testTutorConnection({
-        provider,
-        apiKey,
-        baseUrl,
-        modelName,
-      });
-      setTestResult({
-        success: res.success,
-        message: res.message,
-      });
+      const res = await testTutorConnection({ provider, apiKey, baseUrl, modelName });
+      setTestResult({ success: res.success, message: res.message });
     } catch (err: any) {
-      setTestResult({
-        success: false,
-        message: err?.message || 'Failed to connect to API endpoint.',
-      });
+      setTestResult({ success: false, message: err?.message || 'Connection failed.' });
     } finally {
       setTesting(false);
     }
@@ -120,187 +108,134 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         {/* Header */}
         <div className="settings-modal-header">
           <div className="settings-header-title">
-            <div className="brand-logo-glow">
-              <Settings size={22} className="text-purple-600" />
-            </div>
-            <div>
-              <h3>STEM Studio Settings</h3>
-              <p>Configure interface theme, custom AI models (BYOK), & voice settings</p>
-            </div>
+            <h3>Settings</h3>
+            <p>Configure model API keys and preferences</p>
           </div>
-          <button className="tutor-icon-btn" onClick={onClose} title="Close Settings">
-            <X size={18} />
+          <button className="settings-close-btn" onClick={onClose} aria-label="Close">
+            <X size={16} />
           </button>
         </div>
 
-        {/* Tabs Bar */}
+        {/* Tabs */}
         <div className="settings-tabs-bar">
           <button
             className={`settings-tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
             onClick={() => setActiveTab('ai')}
           >
-            <Cpu size={15} /> AI Tutor (BYOK)
+            AI Model (BYOK)
           </button>
           <button
-            className={`settings-tab-btn ${activeTab === 'theme' ? 'active' : ''}`}
-            onClick={() => setActiveTab('theme')}
+            className={`settings-tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('appearance')}
           >
-            <Sun size={15} /> Appearance
-          </button>
-          <button
-            className={`settings-tab-btn ${activeTab === 'voice' ? 'active' : ''}`}
-            onClick={() => setActiveTab('voice')}
-          >
-            <Mic size={15} /> Voice & Audio
+            Appearance
           </button>
         </div>
 
         {/* Body */}
         <div className="settings-modal-body">
-          {/* TAB 1: AI TUTOR SETUP */}
           {activeTab === 'ai' && (
             <>
-              <div className="tutor-field-group">
-                <label className="tutor-field-label">
-                  <span>Select AI Provider</span>
-                  <span style={{ fontSize: '0.7rem', color: '#a855f7' }}>Bring Your Own Key (BYOK)</span>
-                </label>
-                <div className="tutor-provider-grid">
-                  {PROVIDERS.map((p) => (
-                    <div
-                      key={p.id}
-                      className={`tutor-provider-card ${provider === p.id ? 'selected' : ''}`}
-                      onClick={() => handleProviderSelect(p.id)}
-                    >
-                      <span style={{ fontSize: '1.2rem' }}>{p.icon}</span>
-                      <span>{p.name}</span>
-                    </div>
+              <div className="settings-field">
+                <label className="settings-label">Provider</label>
+                <select
+                  className="settings-select"
+                  value={provider}
+                  onChange={(e) => handleProviderSelect(e.target.value as LLMProvider)}
+                >
+                  {PROVIDER_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.name}
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
               {provider !== 'custom' && (
-                <div className="tutor-field-group">
-                  <label className="tutor-field-label">
-                    <span>API Key</span>
-                    {provider === 'dashscope' && (
-                      <span style={{ fontSize: '0.72rem', color: '#34d399' }}>
-                        <ShieldCheck size={12} style={{ display: 'inline', marginRight: 2 }} />
-                        System Free Key Active
-                      </span>
-                    )}
-                  </label>
-                  <div className="tutor-input-with-icon">
+                <div className="settings-field">
+                  <label className="settings-label">API Key</label>
+                  <div className="settings-input-wrapper">
                     <input
                       type={showKey ? 'text' : 'password'}
-                      className="tutor-setting-input"
+                      className="settings-input"
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={provider === 'dashscope' ? 'Optional — enter custom key or leave blank' : `Enter ${provider.toUpperCase()} API Key`}
+                      placeholder={provider === 'dashscope' ? 'Optional (system key active)' : `Enter ${provider.toUpperCase()} API Key`}
                     />
                     <button
                       type="button"
-                      className="tutor-eye-btn"
+                      className="settings-eye-btn"
                       onClick={() => setShowKey(!showKey)}
-                      title={showKey ? 'Hide key' : 'Show key'}
                     >
-                      {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
                 </div>
               )}
 
-              <div className="tutor-field-group">
-                <label className="tutor-field-label">
-                  <span>Model Name</span>
-                </label>
+              <div className="settings-field">
+                <label className="settings-label">Model Name</label>
                 <input
                   type="text"
-                  className="tutor-setting-input"
+                  className="settings-input"
                   value={modelName}
                   onChange={(e) => setModelName(e.target.value)}
-                  placeholder="qwen-plus, gpt-4o-mini, claude-3-5-sonnet"
+                  placeholder="e.g. qwen-plus, gpt-4o-mini"
                 />
               </div>
 
-              <div className="tutor-field-group">
-                <label className="tutor-field-label">
-                  <span>Base API Endpoint URL</span>
-                </label>
+              <div className="settings-field">
+                <label className="settings-label">Base Endpoint URL</label>
                 <input
                   type="text"
-                  className="tutor-setting-input"
+                  className="settings-input"
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="https://api.openai.com/v1/chat/completions"
                 />
               </div>
 
               {testResult && (
-                <div className={`tutor-status-banner ${testResult.success ? 'success' : 'error'}`}>
-                  {testResult.success ? <Check size={16} /> : <AlertCircle size={16} />}
+                <div className={`settings-status-banner ${testResult.success ? 'success' : 'error'}`}>
+                  {testResult.success ? <Check size={14} /> : <AlertCircle size={14} />}
                   <span>{testResult.message}</span>
                 </div>
               )}
             </>
           )}
 
-          {/* TAB 2: APPEARANCE */}
-          {activeTab === 'theme' && (
-            <div className="settings-section-card">
-              <span className="tutor-field-label">Theme Mode</span>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  className={`tutor-provider-card ${theme === 'light' ? 'selected' : ''}`}
-                  onClick={() => setTheme('light')}
-                  style={{ flex: 1, padding: '16px' }}
-                >
-                  <Sun size={24} />
-                  <span>Clean Light</span>
-                </button>
-                <button
-                  type="button"
-                  className={`tutor-provider-card ${theme === 'dark' ? 'selected' : ''}`}
-                  onClick={() => setTheme('dark')}
-                  style={{ flex: 1, padding: '16px' }}
-                >
-                  <Moon size={24} />
-                  <span>Midnight Dark</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: VOICE & AUDIO */}
-          {activeTab === 'voice' && (
-            <div className="settings-section-card">
-              <span className="tutor-field-label">Speech Recognition Language</span>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Speech input operates via browser-native Web Speech API with auto multi-lingual matching in English, Urdu, or Chinese.
-              </p>
+          {activeTab === 'appearance' && (
+            <div className="settings-field">
+              <label className="settings-label">Interface Theme</label>
+              <select
+                className="settings-select"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as any)}
+              >
+                <option value="light">Light Mode</option>
+                <option value="dark">Dark Mode</option>
+              </select>
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="settings-footer">
-          <button type="button" className="tutor-btn-secondary" onClick={handleReset}>
-            Reset Default
+          <button type="button" className="btn-secondary" onClick={handleReset}>
+            Reset Defaults
           </button>
           <div style={{ display: 'flex', gap: '8px' }}>
             {activeTab === 'ai' && (
               <button
                 type="button"
-                className="tutor-btn-secondary"
+                className="btn-secondary"
                 onClick={handleTestConnection}
                 disabled={testing}
               >
                 {testing ? 'Testing...' : 'Test Connection'}
               </button>
             )}
-            <button type="button" className="tutor-btn-primary" onClick={handleSave}>
-              <Check size={16} /> Save & Apply
+            <button type="button" className="btn-primary" onClick={handleSave}>
+              Save Changes
             </button>
           </div>
         </div>
