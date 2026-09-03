@@ -699,9 +699,33 @@
 }
 
 .topic-item.active .topic-dot {
-  background-color: #a855f7;
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+  background-color: var(--color-primary);
+  box-shadow: 0 0 6px var(--color-primary);
 }
+
+.topic-badge {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.module-chevron,
+.category-chevron {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.module-chevron.rotated,
+.category-chevron.rotated {
+  transform: rotate(180deg);
+}
+
 
 .sidebar-title {
   font-size: var(--text-xs);
