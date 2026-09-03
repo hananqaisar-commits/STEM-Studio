@@ -33,6 +33,8 @@ import { generateCountingSortSteps } from './algorithms/countingSort';
 import { generateRadixSortSteps } from './algorithms/radixSort';
 import { generateBucketSortSteps } from './algorithms/bucketSort';
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 import './Sorting.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
@@ -86,6 +88,7 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 }
 
 export const SortingPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -155,6 +158,47 @@ export const SortingPage: React.FC = () => {
     seekTo,
     setSpeed,
   } = useStepPlayer({ steps: customSteps ?? executionData.steps });
+
+  // Publish active algorithm context to Octa AI Tutor dynamically
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    const activeSteps = customSteps ?? executionData.steps;
+
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'sorting',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      onSetInput: (newArr: number[]) => {
+        reset();
+        setArraySize(newArr.length);
+        setInitialArray(newArr);
+        setRawArrayInput(newArr.join(', '));
+      },
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [
+    selectedAlg,
+    currentStepIndex,
+    totalSteps,
+    currentStep,
+    customSteps,
+    executionData.steps,
+    setTutorContext,
+    play,
+    pause,
+    stepForward,
+    reset,
+  ]);
 
   // Build quiz checkpoints from the current execution steps
   const quizCheckpoints = useMemo(
@@ -554,6 +598,7 @@ export const SortingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={customSteps ?? executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

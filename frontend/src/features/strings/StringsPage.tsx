@@ -27,6 +27,8 @@ import { generateFrequencyCountSteps } from './algorithms/frequencyCount';
 import '../sorting/Sorting.css';
 import './Strings.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
+
 
 interface AlgMeta {
   key: StringAlgorithmKey;
@@ -50,6 +52,7 @@ const SAMPLE_STRINGS: Record<StringAlgorithmKey, { primary: string; secondary: s
 };
 
 export const StringsPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<StringAlgorithmKey>('palindrome');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -94,8 +97,30 @@ export const StringsPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
+    seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'strings',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildStringsCheckpoints(executionData.steps, selectedAlg),
@@ -366,6 +391,7 @@ export const StringsPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`String Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="String Character Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

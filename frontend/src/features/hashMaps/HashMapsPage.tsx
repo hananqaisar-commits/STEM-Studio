@@ -451,6 +451,7 @@ export const HashMapsPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Hash Map Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="HashMap Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} stepNumber={currentStepIndex + 1} totalSteps={totalSteps} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} steps={executionData.steps} currentStepIndex={currentStepIndex} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

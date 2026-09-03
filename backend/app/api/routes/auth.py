@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.api.dependencies import get_current_user
@@ -65,35 +66,104 @@ def signup(
     # Enforce password complexity before any DB work
     _validate_password_strength(payload.password)
 
-    # Check if email already exists
-    existing_email = db.query(User).filter(User.email == payload.email).first()
+    # Normalize inputs
+    clean_email = payload.email.strip().lower()
+    clean_username = payload.username.strip()
+
+    if "@" in clean_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username cannot contain '@' symbol",
+        )
+
+    # Check if email already exists (case-insensitive)
+    existing_email = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with this email already exists",
         )
 
-    # Check if username already exists
-    existing_username = db.query(User).filter(User.username == payload.username).first()
+    # Check if username already exists (case-insensitive)
+    existing_username = db.query(User).filter(func.lower(User.username) == clean_username.lower()).first()
     if existing_username:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This username is already taken",
         )
 
-    # Create user with hashed password
+    # If SMTP is not configured, auto-verify account so local/demo users are not trapped
+    smtp_enabled = bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
     new_user = User(
-        username=payload.username,
-        email=payload.email,
+        username=clean_username,
+        email=clean_email,
         password_hash=hash_password(payload.password),
         first_name=payload.first_name,
         last_name=payload.last_name,
+        is_verified=not smtp_enabled,
     )
     db.add(new_user)
+    db.flush() # get user_id
+
+    # Generate verification token
+    from backend.infrastructure.database.models import EmailVerification
+    from backend.app.core.email import send_verification_email
+
+    raw_token = generate_secure_token()
+    verification = EmailVerification(
+        user_id=new_user.user_id,
+        token_hash=hash_token(raw_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+    )
+    db.add(verification)
     db.commit()
     db.refresh(new_user)
 
+    verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
+    send_verification_email(to_email=new_user.email, verify_url=verify_url)
+
     return new_user
+
+
+# ─── GET /api/auth/verify-email ─────────────────────────────────────
+
+@router.get("/verify-email", response_model=MessageResponse)
+def verify_email(
+    token: str,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
+    from backend.infrastructure.database.models import EmailVerification
+    token_hash = hash_token(token)
+
+    verification = (
+        db.query(EmailVerification)
+        .filter(
+            EmailVerification.token_hash == token_hash,
+            EmailVerification.verified_at.is_(None),
+        )
+        .first()
+    )
+
+    if not verification:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or already used verification token",
+        )
+
+    if verification.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification token has expired",
+        )
+
+    user = db.query(User).filter(User.user_id == verification.user_id).first()
+    if user:
+        user.is_verified = True
+        verification.verified_at = datetime.now(timezone.utc)
+        db.commit()
+    
+    return MessageResponse(message="Email verified successfully")
 
 
 # ─── POST /api/auth/login ───────────────────────────────────────────
@@ -109,25 +179,28 @@ def login(
 
     # Get client IP for login attempt logging
     client_ip = request.client.host if request.client else None
+    clean_identifier = (payload.identifier or '').strip().lower()
 
-    # Find user by email (indexed column → fast lookup)
-    user = db.query(User).filter(User.email == payload.email).first()
+    # Find user by case-insensitive email or username
+    user = db.query(User).filter(
+        (func.lower(User.email) == clean_identifier) | (func.lower(User.username) == clean_identifier)
+    ).first()
 
     if user is None or not verify_password(payload.password, user.password_hash):
         # Log failed attempt
         failed_attempt = LoginAttempt(
             user_id=user.user_id if user else None,
-            email=payload.email,
+            email=payload.identifier,
             ip_address=client_ip,
             successful=False,
-            failure_reason="Invalid email or password",
+            failure_reason="Invalid username or password",
         )
         db.add(failed_attempt)
         db.commit()
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid username or password",
         )
 
     if not user.is_active:
@@ -136,10 +209,21 @@ def login(
             detail="Account is deactivated",
         )
 
+    if not user.is_verified:
+        if not bool(settings.SMTP_USER and settings.SMTP_PASSWORD):
+            # Auto-verify in local/demo environment without SMTP setup
+            user.is_verified = True
+            db.commit()
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Please verify your email address before signing in. Check your inbox for the verification link.",
+            )
+
     # Log successful attempt
     success_attempt = LoginAttempt(
         user_id=user.user_id,
-        email=payload.email,
+        email=user.email,
         ip_address=client_ip,
         successful=True,
     )
@@ -169,6 +253,93 @@ def login(
         refresh_token=refresh_token,
     )
 
+# ─── POST /api/auth/google ──────────────────────────────────────────
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from backend.app.api.schemas import GoogleSignInRequest
+
+@router.post("/google", response_model=TokenResponse)
+def google_login(
+    payload: GoogleSignInRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
+    """Authenticate a user via Google Identity Services."""
+    try:
+        # Verify the Google ID token
+        id_info = id_token.verify_oauth2_token(
+            payload.credential,
+            google_requests.Request(),
+            payload.client_id,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Google token: {e}"
+        )
+    
+    email = id_info.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="No email found in Google token")
+
+    first_name = id_info.get("given_name")
+    last_name = id_info.get("family_name")
+
+    # Check if user exists by email
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # Create a new user since they don't exist
+        # We generate a random password for them and a username based on their email
+        username_base = email.split("@")[0]
+        username = username_base
+        counter = 1
+        while db.query(User).filter(User.username == username).first():
+            username = f"{username_base}{counter}"
+            counter += 1
+            
+        user = User(
+            username=username,
+            email=email,
+            password_hash=hash_password(generate_secure_token()), # random unguessable password
+            first_name=first_name,
+            last_name=last_name,
+            is_verified=True, # Google verified their email
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated",
+        )
+
+    # Generate tokens
+    access_token = create_access_token(user.user_id, user.email)
+    refresh_token = create_refresh_token(user.user_id, remember_me=payload.remember_me)
+
+    session_days = (
+        settings.JWT_REMEMBER_ME_EXPIRE_DAYS
+        if payload.remember_me
+        else settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+    )
+    refresh_token_hash = hash_token(refresh_token)
+    session = UserSession(
+        user_id=user.user_id,
+        refresh_token_hash=refresh_token_hash,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=session_days),
+    )
+    db.add(session)
+    db.commit()
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
 
 # ─── POST /api/auth/refresh ─────────────────────────────────────────
 

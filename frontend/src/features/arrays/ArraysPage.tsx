@@ -30,6 +30,8 @@ import '../sorting/Sorting.css';
 import './Arrays.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
+import { useTutorContext } from '../../contexts/TutorContext';
+
 
 type AlgorithmKey = 'linearSearch' | 'kadane' | 'twoPointer' | 'slidingWindow' | 'rotation' | 'prefixSum';
 type ArrayPattern = 'random' | 'sorted' | 'reversed';
@@ -66,6 +68,7 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 }
 
 export const ArraysPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('linearSearch');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -139,8 +142,36 @@ export const ArraysPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
+    seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'arrays',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      onSetInput: (newArr: number[]) => {
+        reset();
+        setArraySize(newArr.length);
+        setInitialArray(newArr);
+        setRawArrayInput(newArr.join(', '));
+      },
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints from the current execution steps
   const quizCheckpoints = useMemo(
@@ -549,6 +580,7 @@ export const ArraysPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Array Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="Array Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} stepNumber={currentStepIndex + 1} totalSteps={totalSteps} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

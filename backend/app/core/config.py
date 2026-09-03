@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost/stem_studio"
 
+    # Supabase (Postgres & API)
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def format_database_url(cls, v: str) -> str:
@@ -19,10 +24,12 @@ class Settings(BaseSettings):
             if v.startswith("mysql://"):
                 v = v.replace("mysql://", "mysql+pymysql://", 1)
             elif v.startswith("postgres://"):
-                v = v.replace("postgres://", "postgresql://", 1)
+                v = v.replace("postgres://", "postgresql+psycopg2://", 1)
+            elif v.startswith("postgresql://") and not v.startswith("postgresql+"):
+                v = v.replace("postgresql://", "postgresql+psycopg2://", 1)
             
-            # Clean Aiven/cloud query parameters like ssl-mode which PyMySQL rejects
-            if "?" in v:
+            # Clean cloud query parameters like ssl-mode which PyMySQL rejects (keep sslmode for Postgres)
+            if "?" in v and "mysql" in v:
                 base_url, query_str = v.split("?", 1)
                 params = [p for p in query_str.split("&") if not p.lower().startswith(("ssl-mode", "ssl_mode"))]
                 v = f"{base_url}?{'&'.join(params)}" if params else base_url
@@ -86,14 +93,18 @@ class Settings(BaseSettings):
     JUDGE0_API_KEY: str = ""
     JUDGE0_TIMEOUT_SECONDS: int = 20
 
+    # Alibaba Cloud Model Studio (Qwen API Key for Octa AI Tutor)
+    DASHSCOPE_API_KEY: str = ""
+
     # App
     APP_NAME: str = "STEM Studio"
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=("backend/.env", ".env", "../.env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
 

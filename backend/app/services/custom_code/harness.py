@@ -477,6 +477,8 @@ def _c_param_decls(params: List[Tuple[str, str, Any]]) -> List[str]:
 
 
 def _c_call_arg(name: str, ptype: str) -> str:
+    if ptype in ("intArray", "intMatrix"):
+        return f"{name}, {name}Size"
     return name
 
 

@@ -16,7 +16,8 @@ interface AuthContextType {
   user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  login: (identifier: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithGoogle: (credential: string, clientId: string, rememberMe?: boolean) => Promise<void>;
   signup: (
     username: string,
     email: string,
@@ -58,12 +59,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchUser();
   }, [fetchUser]);
 
-  const login = async (email: string, password: string, rememberMe = false) => {
+  const login = async (identifier: string, password: string, rememberMe = false) => {
+    const cleanId = identifier ? identifier.trim() : '';
     const data = await apiClient<{ access_token: string; refresh_token: string }>(
       '/api/auth/login',
       {
         method: 'POST',
-        body: { email, password, remember_me: rememberMe },
+        body: {
+          identifier: cleanId,
+          username: cleanId,
+          email: cleanId,
+          password,
+          remember_me: rememberMe,
+        },
       }
     );
 
@@ -129,6 +137,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data.message;
   };
 
+  const loginWithGoogle = async (credential: string, clientId: string, rememberMe = false) => {
+    const data = await apiClient<{ access_token: string; refresh_token: string }>(
+      '/api/auth/google',
+      {
+        method: 'POST',
+        body: { credential, client_id: clientId, remember_me: rememberMe },
+      }
+    );
+    storeTokens(data.access_token, data.refresh_token, rememberMe);
+    const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    setUser(userData);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -136,6 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginWithGoogle,
         signup,
         logout,
         forgotPassword,

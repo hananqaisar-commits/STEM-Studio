@@ -701,9 +701,11 @@ export function buildGraphCheckpoints(
         return primCandidates(steps);
       case 'topoSort':
         return topoCandidates(steps);
-      /* `kruskal` is in `GraphCategory` but has no generator in
-         graphEngine.ts, so it never reaches here with steps. */
+      /* `kruskal`, `bellmanFord`, and `aStar` have generators, but no
+         derived quiz questions are authored for them yet. */
       case 'kruskal':
+      case 'bellmanFord':
+      case 'aStar':
         return [];
     }
   })();
@@ -765,6 +767,22 @@ const REVISION_DATA: Record<GraphCategory, QuizRevisionData> = {
     watchFor: ['In-degree tracking', 'Ready queue', 'Cycle detection (not all emitted)'],
     quickTip: 'If the topological sort has fewer than V vertices, the graph has a cycle',
     example: 'DAG A→B, A→C, B→D, C→D: in-degrees A=0,B=1,C=1,D=2. Emit A→B,C ready→emit B→D=1→emit C→D=0→emit D. Order: A,B,C,D.',
+  },
+  bellmanFord: {
+    description: 'Find shortest paths allowing negative weights, detecting negative cycles',
+    complexity: 'O(V × E) time, O(V) space',
+    keyIdea: 'Relax every edge V-1 times. A Vth relaxation means a negative cycle exists.',
+    watchFor: ['V-1 passes', 'Negative cycle detection on Vth pass', 'Relaxation formula'],
+    quickTip: 'Unlike Dijkstra, Bellman-Ford blindly relaxes all edges rather than picking the greedily closest vertex.',
+    example: 'Relax all edges pass 1, pass 2... if distances still update on pass V, there is a negative cycle.',
+  },
+  aStar: {
+    description: 'Find shortest path using a heuristic to guide the search',
+    complexity: 'O(E) time in best cases, O(b^d) worst case, O(V) space',
+    keyIdea: 'F = G + H. G is cost from start, H is estimated cost to goal. Explores lowest F first.',
+    watchFor: ['Heuristic admissibility (never overestimates)', 'Open list vs Closed list', 'Early exit when goal reached'],
+    quickTip: 'A* is Dijkstra with a compass. It prioritizes nodes closer to the goal using the heuristic.',
+    example: 'In a grid, use Manhattan distance for H. Prioritize cells with the lowest G + H.',
   },
 };
 

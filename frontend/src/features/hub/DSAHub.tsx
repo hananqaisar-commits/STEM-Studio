@@ -82,8 +82,11 @@ interface ReviewItem {
   created_at: string;
 }
 
+import { LegalModal, type LegalDocType } from '../../components/layout/LegalModal';
+
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
+  const [legalDoc, setLegalDoc] = useState<LegalDocType>(null);
   const { state: mascotState, setExpression, setContext } = useMascot();
 
   useEffect(() => {
@@ -192,8 +195,8 @@ export const DSAHub: React.FC = () => {
             <span className="hero-accent">Interactive Visualization</span>
           </h1>
           <p className="hero-subtitle">
-            Learn, visualize, and master data structures and algorithms through
-            step-by-step execution, quiz-based learning, and multi-language code support.
+            Build algorithm intuition by tracing each operation, checking your understanding,
+            and comparing implementations across languages.
           </p>
           <div className="hero-cta">
             <button className="hero-btn hero-btn-primary" onClick={() => navigate('/dashboard/dsa')}>
@@ -319,7 +322,7 @@ export const DSAHub: React.FC = () => {
       {/* ── Features Section ───────────────────────────────────────── */}
       <section id="features" className="landing-section">
         <h2 className="section-title">Features We Offer</h2>
-        <p className="section-subtitle">Everything you need to master DSA interactively</p>
+        <p className="section-subtitle">Tools that turn algorithm practice into visible, testable understanding.</p>
         <div className="features-grid">
           {FEATURES.map((f) => (
             <div key={f.title} className="feature-card">
@@ -357,8 +360,8 @@ export const DSAHub: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="review-card review-card-placeholder">
-              <p className="review-text">No approved reviews yet. Be the first to share your experience!</p>
+            <div className="review-card review-card-placeholder" role="status">
+              <p className="review-text">Student feedback will appear here after review. Share your learning experience to help shape STEM Studio.</p>
             </div>
           )}
         </div>
@@ -371,12 +374,17 @@ export const DSAHub: React.FC = () => {
         <div className="faq-list">
           {FAQS.map((faq, i) => (
             <div key={i} className={`faq-item${openFaq === i ? ' is-open' : ''}`}>
-              <button className="faq-question" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+              <button
+                className="faq-question"
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                aria-expanded={openFaq === i}
+                aria-controls={`faq-answer-${i}`}
+              >
                 <span>{faq.q}</span>
                 <ChevronDown size={16} className="faq-chevron" />
               </button>
               {openFaq === i && (
-                <div className="faq-answer">
+                <div id={`faq-answer-${i}`} className="faq-answer" role="region" aria-label={faq.q}>
                   <p>{faq.a}</p>
                 </div>
               )}
@@ -519,8 +527,8 @@ export const DSAHub: React.FC = () => {
                 Octa Team
               </span>
             </p>
-            <a href="mailto:hello@dsavisualizer.in" className="footer-email">
-              <Mail size={15} /> hello@dsavisualizer.in
+            <a href="mailto:hanankaesar316@gmail.com" className="footer-email">
+              <Mail size={15} /> hanankaesar316@gmail.com
             </a>
 
           </div>
@@ -551,9 +559,9 @@ export const DSAHub: React.FC = () => {
           <div className="footer-col">
             <h3 className="footer-heading">Legal</h3>
             <div className="footer-links">
-              <button className="footer-link-btn" onClick={() => navigate('/privacy')}>Privacy Policy</button>
-              <button className="footer-link-btn" onClick={() => navigate('/terms')}>Terms of Service</button>
-              <button className="footer-link-btn" onClick={() => navigate('/cookies')}>Cookies</button>
+              <button className="footer-link-btn" onClick={() => setLegalDoc('privacy')}>Privacy Policy</button>
+              <button className="footer-link-btn" onClick={() => setLegalDoc('terms')}>Terms of Service</button>
+              <button className="footer-link-btn" onClick={() => setLegalDoc('cookies')}>Cookies</button>
             </div>
           </div>
 
@@ -629,7 +637,8 @@ export const DSAHub: React.FC = () => {
           </div>
         </div>
       </footer>
+      {/* Legal Modal */}
+      <LegalModal docType={legalDoc} onClose={() => setLegalDoc(null)} />
     </div>
   );
 };
-

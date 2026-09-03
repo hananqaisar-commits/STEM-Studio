@@ -1,3 +1,11 @@
 export { Grid2D, type Grid2DProps } from './Grid2D';
 export { DecisionTree, type DecisionTreeNode, type DecisionTreeProps } from './DecisionTree';
 export { TrieRadial, type TrieRadialNode, type TrieRadialEdge, type TrieRadialProps } from './TrieRadial';
+export { NumberLine, type NumberLineItem, type NumberLineProps } from './NumberLine';
+export { HashBuckets, type HashBucket, type HashBucketItem, type HashBucketsProps } from './HashBuckets';
+export { GrowthCurve, type CurveData, type GrowthCurveProps } from './GrowthCurve';
+export { TimelineInterval, type IntervalItem, type TimelineIntervalProps } from './TimelineInterval';
+export { ReferenceTable, type TableColumn, type TableRow, type ReferenceTableProps } from './ReferenceTable';
+export { PegTower, type PegDisk, type PegState, type PegTowerProps } from './PegTower';
+export { WeightedMergeTree, type MergeTreeNode, type WeightedMergeTreeProps } from './WeightedMergeTree';
+export { QueueTrack, type QueueTrackItem, type QueueTrackProps } from './QueueTrack';

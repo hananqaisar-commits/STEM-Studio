@@ -5,9 +5,9 @@ html {
 
 .dsa-hub {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: clamp(2rem, 4vw, 4rem) clamp(1rem, 3vw, 2rem) 0;
 }
 
 .hub-header {
@@ -166,10 +166,10 @@ html {
 .hero-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 3rem;
+  gap: clamp(2rem, 5vw, 5rem);
   align-items: center;
   min-height: 500px;
-  padding: 2rem 0 3rem;
+  padding: 0 0 clamp(3rem, 6vw, 5rem);
 }
 
 .hero-text {
@@ -179,7 +179,7 @@ html {
 }
 
 .hero-title {
-  font-size: var(--text-3xl);
+  font-size: clamp(2.2rem, 4vw, 3.45rem);
   font-weight: 900;
   line-height: 1.15;
   color: var(--color-text);
@@ -198,7 +198,7 @@ html {
   line-height: 1.6;
   color: var(--color-text-muted);
   margin: 0;
-  max-width: 480px;
+  max-width: 550px;
 }
 
 .hero-cta {
@@ -215,20 +215,21 @@ html {
   font-size: var(--text-base);
   font-weight: 700;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
 
 .hero-btn-primary {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  background: var(--color-primary);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .hero-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  background: var(--color-primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .hero-btn-secondary {
@@ -515,29 +516,34 @@ html {
    ═══════════════════════════════════════════════════════════════════ */
 
 .landing-section {
-  padding: 3rem 0;
+  padding: clamp(3rem, 6vw, 5rem) 0;
   border-top: 1px solid var(--color-border);
-  animation: fadeIn 0.6s ease;
+  animation: section-enter 480ms ease both;
 }
 
 .landing-section .section-title {
   display: block;
-  font-size: var(--text-3xl);
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
   font-weight: 800;
   color: var(--color-text);
-  text-align: center;
+  text-align: left;
   margin: 0 0 0.5rem 0;
 }
 
 .landing-section .section-subtitle {
   font-size: var(--text-base);
   color: var(--color-text-muted);
-  text-align: center;
+  text-align: left;
   margin: 0 0 2rem 0;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes section-enter {
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -554,15 +560,16 @@ html {
 .feature-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  padding: 1.5rem;
-  transition: all 0.2s ease;
+  border-radius: 12px;
+  padding: 1.4rem;
+  min-height: 190px;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
 .feature-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  box-shadow: var(--shadow-md);
 }
 
 .feature-icon {
@@ -571,9 +578,9 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
   border-radius: 10px;
-  color: #fff;
+  color: var(--color-primary);
   margin-bottom: 1rem;
 }
 
@@ -982,6 +989,8 @@ html {
   justify-content: center;
   text-align: center;
   min-height: 180px;
+  background: var(--color-surface-elevated);
+  border-style: dashed;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -989,11 +998,12 @@ html {
    ═══════════════════════════════════════════════════════════════════ */
 
 .landing-footer {
-  background: var(--color-text);
+  background: var(--color-surface);
   color: #f8fafc;
-  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
   padding: 3rem 2.5rem 1.5rem;
-  margin: 3rem -1.5rem -2rem;
+  margin: clamp(3rem, 6vw, 5rem) calc(clamp(1rem, 3vw, 2rem) * -1) 0;
 }
 
 .footer-grid {
@@ -1031,7 +1041,7 @@ html {
 .footer-brand-title {
   font-size: var(--text-xl);
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--color-text);
   letter-spacing: -0.5px;
 }
 
@@ -1041,7 +1051,7 @@ html {
 
 .footer-desc {
   font-size: var(--text-base);
-  color: #94a3b8;
+  color: var(--color-text-muted);
   line-height: 1.55;
   margin: 0;
   max-width: 320px;
@@ -1052,7 +1062,7 @@ html {
   align-items: center;
   gap: 0.35rem;
   font-size: var(--text-base);
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
@@ -1071,7 +1081,7 @@ html {
   align-items: center;
   gap: 0.5rem;
   font-size: var(--text-base);
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
   text-decoration: none;
   transition: color 0.15s ease;
 }
@@ -1143,7 +1153,7 @@ html {
 .footer-heading {
   font-size: var(--text-base);
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0 0 1.1rem 0;
@@ -1180,7 +1190,7 @@ html {
   gap: 0.5rem;
   font-size: var(--text-base);
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   background: none;
   border: none;
   cursor: pointer;
@@ -1202,9 +1212,9 @@ html {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: #cbd5e1;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1226,12 +1236,12 @@ html {
   max-width: 1200px;
   margin: 2.5rem auto 0;
   padding-top: 1.25rem;
-  border-top: 1px solid #334155;
+  border-top: 1px solid var(--color-border);
 }
 
 .footer-bottom p {
   font-size: var(--text-xs);
-  color: #64748b;
+  color: var(--color-text-muted);
   margin: 0;
 }
 
@@ -1242,7 +1252,7 @@ html {
 
 .footer-bottom-links button {
   font-size: var(--text-xs);
-  color: #64748b;
+  color: var(--color-text-muted);
   background: none;
   border: none;
   cursor: pointer;
@@ -1279,18 +1289,18 @@ html {
   flex-direction: column;
   gap: 0.25rem;
   padding: 1.1rem;
-  background: rgba(15, 23, 42, 0.85) !important;
-  border: 1.5px solid rgba(51, 65, 85, 0.8) !important;
+  background: var(--color-surface-elevated) !important;
+  border: 1px solid var(--color-border) !important;
   border-radius: 14px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .footer-team-card:hover {
-  border-color: #a855f7 !important;
-  background: rgba(15, 23, 42, 0.95) !important;
+  border-color: var(--color-primary) !important;
+  background: var(--color-surface-muted) !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 .team-role {
@@ -1304,12 +1314,12 @@ html {
 .team-name {
   font-size: var(--text-base);
   font-weight: 800;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .team-desc {
   font-size: var(--text-xs);
-  color: #94a3b8;
+  color: var(--color-text-muted);
   margin: 0.25rem 0 0.5rem 0;
   line-height: 1.4;
 }
@@ -1327,9 +1337,9 @@ html {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: #cbd5e1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   text-decoration: none;
   transition: all 0.2s ease;
 }
@@ -1480,11 +1490,12 @@ html {
    ═══════════════════════════════════════════════════════════════════ */
 
 .hub-modules-section {
-  margin-bottom: 3rem;
+  padding: clamp(2.5rem, 5vw, 4rem) 0;
+  border-top: 1px solid var(--color-border);
 }
 
 .hub-modules-section .hub-header h2 {
-  font-size: var(--text-3xl);
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
   font-weight: 800;
   color: var(--color-text);
   margin: 0 0 0.5rem 0;
@@ -1501,25 +1512,25 @@ html {
 .module-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .module-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 1.75rem;
+  border-radius: 12px;
+  padding: 1.4rem;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
 .module-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--color-primary);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  box-shadow: var(--shadow-md);
 }
 
 .module-card-disabled {
@@ -1529,14 +1540,14 @@ html {
 }
 
 .module-card-icon {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
-  border-radius: 12px;
-  color: #fff;
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  border-radius: 10px;
+  color: var(--color-primary);
 }
 
 .module-card-body h3 {

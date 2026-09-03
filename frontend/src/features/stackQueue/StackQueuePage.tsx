@@ -13,6 +13,7 @@ import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateStackPushSteps,
   generateStackPopSteps,
+  generateStackPeekSteps,
   generateQueueEnqueueSteps,
   generateQueueDequeueSteps,
   generateCircularQueueEnqueueSteps,
@@ -52,7 +53,7 @@ import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { StackQueueCodePanel, type StackQueueCustomState } from './StackQueueCodePanel';
 import './StackQueue.css';
-import { parseNumberList } from '../../utils/batchInputParser';
+import { parseNumberList, parseStringList } from '../../utils/batchInputParser';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { executeCustomCode } from '../../api/customCode';
 import { describeStatefulResult } from '../../engine/customCodeSteps';
@@ -61,6 +62,8 @@ interface ReplayOp {
   method: string;
   args: (number | string)[];
 }
+
+import { useTutorContext } from '../../contexts/TutorContext';
 
 interface ProblemMeta {
   id: StackQueueCategory;
@@ -103,6 +106,7 @@ const PROBLEMS_LIST: ProblemMeta[] = [
 const CD_CAPACITY = 5;
 
 export const StackQueuePage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<StackQueueCategory>('stack');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -213,8 +217,30 @@ export const StackQueuePage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
-    } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
+    seekTo,
+  } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const probObj = PROBLEMS_LIST.find((p) => p.id === category);
+
+    setTutorContext({
+      algorithmName: probObj?.name || category,
+      algorithmId: category,
+      category: 'stackQueue',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
@@ -279,6 +305,13 @@ export const StackQueuePage: React.FC = () => {
       setStackHistory(newHistory);
       if (customState.active) void submitReplay('stackQueue.stack', newHistory, expectedReturned);
     }
+  };
+
+  const handlePeek = () => {
+    const steps = generateStackPeekSteps(stackData);
+    setActiveSteps(steps);
+    reset();
+    play();
   };
 
   const handleEnqueue = () => {
@@ -481,7 +514,7 @@ export const StackQueuePage: React.FC = () => {
 
   const handleDailyTemperatures = () => {
     const inputTemps = inputValue.trim()
-      ? inputValue.split(/[\s,]+/).map(Number).filter((n) => !isNaN(n))
+      ? parseNumberList(inputValue).values
       : [73, 74, 75, 71, 69, 72, 76, 73];
     const steps = generateDailyTemperaturesSteps(inputTemps);
     setActiveSteps(steps);
@@ -507,7 +540,7 @@ export const StackQueuePage: React.FC = () => {
 
   const handleSlidingWindow = () => {
     const nums = inputValue.trim()
-      ? inputValue.split(/[\s,]+/).map(Number).filter((n) => !isNaN(n))
+      ? parseNumberList(inputValue).values
       : [1, 3, -1, -3, 5, 3, 6, 7];
     const steps = generateSlidingWindowSteps(nums, 3);
     setActiveSteps(steps);
@@ -516,7 +549,7 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const parseNumArray = (fallback: number[]): number[] => {
-    const nums = inputValue.trim().split(/[\s,]+/).map(Number).filter((n) => !isNaN(n));
+    const nums = parseNumberList(inputValue).values;
     return nums.length > 0 ? nums : fallback;
   };
 
@@ -594,7 +627,7 @@ export const StackQueuePage: React.FC = () => {
 
   const handleMovingAverage = () => {
     const parts = inputValue.split('|');
-    const nums = parts[0].trim().split(/[\s,]+/).map(Number).filter((n) => !isNaN(n));
+    const nums = parseNumberList(parts[0]).values;
     const k = parts[1] ? Math.max(1, Number(parts[1]) || 3) : 3;
     setActiveSteps(generateMovingAverageSteps(nums.length > 0 ? nums : [1, 10, 3, 5], k));
     reset();
@@ -602,7 +635,7 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleTaskScheduler = () => {
-    const tokens = inputValue.trim().split(/[\s,]+/).filter(Boolean);
+    const tokens = parseStringList(inputValue).values;
     let cooldown = 2;
     let taskStr = tokens.join('');
     if (tokens.length > 1 && !isNaN(Number(tokens[tokens.length - 1]))) {
@@ -621,7 +654,7 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleRottingOranges = () => {
-    const rows = inputValue.trim().split(';').map((r) => r.trim().split(/[\s,]+/).map(Number));
+    const rows = inputValue.trim().split(';').map((row) => parseNumberList(row).values);
     const valid =
       rows.length > 0 && rows.every((r) => r.length > 0 && r.every((c) => !isNaN(c) && c >= 0 && c <= 2));
     setActiveSteps(
@@ -1035,6 +1068,9 @@ export const StackQueuePage: React.FC = () => {
           </button>
           <button className="bst-btn btn-search" onClick={handlePop}>
             <span>Pop</span>
+          </button>
+          <button className="bst-btn btn-mode" onClick={handlePeek} title="Peek top element of stack">
+            <span>Peek</span>
           </button>
         </>
       )}
@@ -1550,6 +1586,7 @@ export const StackQueuePage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Stack & Queue Studio | ${(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? 'Visualizer').toUpperCase()}`}
         subtitle="Interactive LIFO / FIFO Inspector"
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

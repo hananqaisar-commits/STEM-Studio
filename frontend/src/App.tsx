@@ -30,6 +30,9 @@ import { BacktrackingPage } from './features/backtracking/BacktrackingPage';
 import { DPPage } from './features/dp/DPPage';
 import { TriePage } from './features/trie/TriePage';
 
+import { TutorProvider } from './contexts/TutorContext';
+import { OctaTutor } from './components/tutor/OctaTutor';
+
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
  */
@@ -57,12 +60,13 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 
 /**
- * Main STEM Studio Dashboard Layout with Navbar & Sidebar
+ * Main STEM Studio Dashboard Layout with Navbar & Sidebar & Octa AI Tutor
  */
 const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(340);
 
   const pathSegment = location.pathname.split('/')[2] || '';
 
@@ -71,6 +75,7 @@ const DashboardLayout = () => {
   };
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
 
   // Determine active module and category from path.
@@ -92,6 +97,9 @@ const DashboardLayout = () => {
           onSelectModule={handleSelectModule}
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
+          onOpen={openSidebar}
+          sidebarWidth={sidebarWidth}
+          onWidthChange={setSidebarWidth}
         />
         <main className="dashboard-main">
           <Routes>
@@ -115,6 +123,7 @@ const DashboardLayout = () => {
           </Routes>
         </main>
       </div>
+      <OctaTutor />
     </div>
   );
 };
@@ -146,13 +155,16 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <MascotProvider>
-          <Router>
-            <AppContent />
-          </Router>
+          <TutorProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </TutorProvider>
         </MascotProvider>
       </AuthProvider>
     </ThemeProvider>
   );
 }
+
 
 export default App;
