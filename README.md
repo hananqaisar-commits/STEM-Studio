@@ -46,7 +46,7 @@ STEM Studio bridges abstract theoretical computer science concepts and practical
 
 ### 3. Enterprise Authentication & Security
 * **JSON Web Token (JWT)**: Secure user login, session validation, and refresh mechanics.
-* **Database Compatibility**: Built-in support for MySQL 8+ (PyMySQL) and SQLite, with SSL parameter stripping and connection pooling.
+* **Database Compatibility**: Persistent storage using **Supabase (PostgreSQL)**, with backwards compatibility for MySQL 8+ and SQLite. Render's free tier filesystem is ephemeral; using Supabase Postgres prevents data loss across server restarts and spin-downs.
 * **CORS & Environment Control**: Production-hardened origin policies and environment validation endpoints (`/api/health`, `/api/db-check`).
 
 ---
