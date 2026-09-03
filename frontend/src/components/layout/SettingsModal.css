@@ -1,0 +1,153 @@
+/* ─── STEM Studio Unified Navbar Settings Modal ─────────────────────────
+   Premium Glassmorphism Design
+   ─────────────────────────────────────────────────────────────────── */
+
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10090;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: settingsFadeIn 0.2s ease-out;
+}
+
+@keyframes settingsFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.settings-modal-card {
+  width: 580px;
+  max-width: 95vw;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--purple-300, #d8b4fe);
+  border-radius: 24px;
+  box-shadow: 0 25px 60px -15px rgba(88, 28, 135, 0.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="dark"] .settings-modal-card {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8);
+}
+
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--purple-200, #e9d5ff);
+  background: linear-gradient(135deg, rgba(243, 232, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+[data-theme="dark"] .settings-modal-header {
+  border-bottom-color: rgba(168, 85, 247, 0.2);
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.25) 0%, rgba(15, 23, 42, 0) 100%);
+}
+
+.settings-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-header-title h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--purple-900, #581c87);
+}
+
+[data-theme="dark"] .settings-header-title h3 {
+  color: #f3e8ff;
+}
+
+.settings-header-title p {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+}
+
+.settings-tabs-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px 0 24px;
+  border-bottom: 1px solid var(--purple-200, #e9d5ff);
+  background: rgba(248, 250, 252, 0.5);
+}
+
+[data-theme="dark"] .settings-tabs-bar {
+  border-bottom-color: rgba(168, 85, 247, 0.2);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.settings-tab-btn {
+  padding: 8px 16px;
+  border-radius: 12px 12px 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.settings-tab-btn:hover {
+  color: var(--purple-700, #7e22ce);
+}
+
+.settings-tab-btn.active {
+  color: #a855f7;
+  border-bottom-color: #a855f7;
+  background: rgba(168, 85, 247, 0.08);
+}
+
+.settings-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.settings-section-card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--purple-200, #e9d5ff);
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-theme="dark"] .settings-section-card {
+  border-color: rgba(168, 85, 247, 0.2);
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid var(--purple-200, #e9d5ff);
+  background: rgba(248, 250, 252, 0.5);
+}
+
+[data-theme="dark"] .settings-footer {
+  border-top-color: rgba(168, 85, 247, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+}
