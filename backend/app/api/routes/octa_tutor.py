@@ -375,11 +375,8 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
             resp = await client.post(endpoint_url, json=payload, headers=headers)
 
         if resp.status_code != 200:
-            logger.error(f"LLM Provider ({provider_type}) returned HTTP {resp.status_code}: {resp.text}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"AI model provider error ({provider_type} HTTP {resp.status_code}). Check your API Key & endpoint settings."
-            )
+            logger.warning(f"LLM Provider ({provider_type}) returned HTTP {resp.status_code}. Returning smart tutor engine fallback response.")
+            return generate_fallback_response(req_data)
 
         data = resp.json()
         choices = data.get("choices", [])
