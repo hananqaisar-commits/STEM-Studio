@@ -54,7 +54,17 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'An error occurred' }));
-    throw new ApiError(response.status, errorData.detail || 'Request failed');
+    // FastAPI validation errors return detail as an array of objects;
+    // ensure we always produce a human-readable string.
+    let detail = errorData.detail ?? 'Request failed';
+    if (typeof detail !== 'string') {
+      if (Array.isArray(detail)) {
+        detail = detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ');
+      } else {
+        detail = JSON.stringify(detail);
+      }
+    }
+    throw new ApiError(response.status, detail);
   }
 
   return response.json();
