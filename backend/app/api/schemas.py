@@ -203,6 +203,7 @@ class OctaTutorRequest(BaseModel):
     total_steps: int = Field(default=0)
     step_data: str = Field(default="")
     conversation_history: List[OctaTutorMessage] = Field(default_factory=list)
+    conversation_mode: str = Field(default="guided", pattern="^(guided|dialogue)$")
     # Custom LLM provider configuration (Bring Your Own Key / BYOK)
     provider: str = Field(default="dashscope", description="dashscope | openai | openrouter | custom | anthropic")
     api_key: str = Field(default="")

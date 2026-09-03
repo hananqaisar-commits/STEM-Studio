@@ -24,6 +24,7 @@ export interface OctaTutorRequest {
   total_steps?: number;
   step_data?: string;
   conversation_history?: OctaTutorMessage[];
+  conversation_mode?: 'guided' | 'dialogue';
   // BYOK LLM Config
   provider?: string;
   api_key?: string;

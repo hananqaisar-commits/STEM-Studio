@@ -105,3 +105,16 @@ def test_tutor_roman_urdu_greetings():
     data = response.json()
     assert "theek hoon" in data["reply"].lower() or "kaise hain" in data["reply"].lower()
 
+
+def test_open_dialogue_teaches_tower_of_hanoi_without_an_api_key():
+    response = client.post("/api/octa-tutor", json={
+        "message": "Tell me what the algorithm of Tower of Hanoi does",
+        "conversation_mode": "dialogue",
+        "category": "recursion",
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert "Tower of Hanoi is a recursion puzzle" in data["reply"]
+    assert "7 moves" in data["reply"]
+    assert data["function_calls"] == []
+

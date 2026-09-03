@@ -21,6 +21,8 @@ export interface TutorSuggestion {
   text: string;
 }
 
+export type TutorConversationMode = 'guided' | 'dialogue';
+
 export interface UseOctaTutorReturn {
   messages: ChatMessage[];
   inputText: string;
@@ -47,6 +49,8 @@ export interface UseOctaTutorReturn {
   setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   // Context-aware suggestions
   suggestions: TutorSuggestion[];
+  conversationMode: TutorConversationMode;
+  setConversationMode: React.Dispatch<React.SetStateAction<TutorConversationMode>>;
 }
 
 const DEFAULT_LLM_CONFIG: UserLLMConfig = {
@@ -104,6 +108,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
   const [mascotExpression, setMascotExpression] = useState<MascotExpression>('neutral');
   const [isGuidedMode, setIsGuidedMode] = useState<boolean>(false);
   const [guidedStepIndex, setGuidedStepIndex] = useState<number | null>(null);
+  const [conversationMode, setConversationMode] = useState<TutorConversationMode>('guided');
 
   const recognitionRef = useRef<any>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,10 +217,15 @@ export function useOctaTutor(): UseOctaTutorReturn {
     const totalSteps = contextState.totalSteps || 1;
     const category = contextState.category || '';
 
-    const base: TutorSuggestion[] = [
-      { label: '💡 Explain', text: `Explain what ${algName} does and how it works` },
-      { label: `📖 Step ${stepNum}`, text: `Explain step ${stepNum} of ${totalSteps}` },
-    ];
+    const base: TutorSuggestion[] = conversationMode === 'dialogue'
+      ? [
+          { label: 'Teach me', text: `Teach me ${algName} from the beginning with an example` },
+          { label: 'Why it works', text: `Why does ${algName} work?` },
+        ]
+      : [
+          { label: 'Explain', text: `Explain what ${algName} does and how it works` },
+          { label: `Step ${stepNum}`, text: `Explain step ${stepNum} of ${totalSteps}` },
+        ];
 
     // Category-specific suggestions
     if (category === 'sorting') {
@@ -233,7 +243,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     base.push({ label: '📝 Quiz me', text: `Generate a quiz on ${algName}` });
 
     return base;
-  }, [contextState.algorithmName, contextState.currentStepIndex, contextState.totalSteps, contextState.category]);
+  }, [contextState.algorithmName, contextState.currentStepIndex, contextState.totalSteps, contextState.category, conversationMode]);
 
   // ── Handle tool/function call dispatching ──
   const dispatchFunctionCalls = useCallback((functionCalls: Array<{ name: string; args: Record<string, any> }>) => {
@@ -373,6 +383,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
           total_steps: contextState.totalSteps,
           step_data: targetStepData,
           conversation_history: historyPayload,
+          conversation_mode: conversationMode,
           // BYOK Custom LLM configuration
           provider: llmConfig.provider,
           api_key: llmConfig.apiKey,
@@ -418,7 +429,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         setIsLoading(false);
       }
     },
-    [inputText, isLoading, messages, contextState, setTheme, llmConfig, navigate, dispatchFunctionCalls]
+    [inputText, isLoading, messages, contextState, setTheme, llmConfig, navigate, dispatchFunctionCalls, conversationMode]
   );
 
   return {
@@ -445,5 +456,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     isSettingsOpen,
     setIsSettingsOpen,
     suggestions,
+    conversationMode,
+    setConversationMode,
   };
 }

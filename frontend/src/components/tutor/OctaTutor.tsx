@@ -24,6 +24,8 @@ export const OctaTutor: React.FC = () => {
     llmConfig,
     setIsSettingsOpen,
     suggestions,
+    conversationMode,
+    setConversationMode,
   } = useOctaTutor();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -101,6 +103,25 @@ export const OctaTutor: React.FC = () => {
       <div className="tutor-context-ribbon">
         <span>Context: {contextState.algorithmName || 'General DSA'}</span>
         <span>Step {contextState.currentStepIndex + 1} / {contextState.totalSteps || 1}</span>
+      </div>
+
+      <div className="tutor-mode-switcher" aria-label="Tutoring style">
+        <button
+          type="button"
+          className={`tutor-mode-button ${conversationMode === 'guided' ? 'active' : ''}`}
+          onClick={() => setConversationMode('guided')}
+        >
+          Guided Path
+          <small>Visual learning</small>
+        </button>
+        <button
+          type="button"
+          className={`tutor-mode-button ${conversationMode === 'dialogue' ? 'active' : ''}`}
+          onClick={() => setConversationMode('dialogue')}
+        >
+          Open Dialogue
+          <small>Natural tutoring</small>
+        </button>
       </div>
 
       {/* Message Output Box */}

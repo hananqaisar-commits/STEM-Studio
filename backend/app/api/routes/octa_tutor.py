@@ -391,6 +391,50 @@ def get_real_world_explanation(alg_name: str, category: str) -> str:
         )
 
 
+CATEGORY_TEACHING_FOCUS: Dict[str, str] = {
+    "complexity": "how input size affects runtime and memory",
+    "sorting": "how to arrange data efficiently and choose the right trade-off",
+    "arrays": "how indexed data is stored, scanned, and transformed",
+    "strings": "how to process text precisely and efficiently",
+    "linkedList": "how nodes connect and how pointers change the structure",
+    "stackQueue": "how LIFO and FIFO ordering solve real processing problems",
+    "binarySearch": "how a sorted search space can be halved at every decision",
+    "hashMaps": "how keys map to values for fast lookup",
+    "bst": "how tree structure keeps hierarchical data searchable",
+    "graph": "how nodes and connections model networks and paths",
+    "recursion": "how a problem can be expressed as smaller versions of itself",
+    "backtracking": "how to explore choices, undo a bad choice, and continue",
+    "greedy": "how locally best decisions can produce an efficient solution",
+    "dp": "how to reuse answers to overlapping smaller problems",
+    "trie": "how shared prefixes make word lookup and autocomplete fast",
+}
+
+
+def generate_natural_lesson(alg_name: str, category: str) -> str:
+    """Give an educational answer when an LLM is unavailable instead of narrating a fixed visualizer step."""
+    if "tower of hanoi" in alg_name.lower():
+        return (
+            "Tower of Hanoi is a recursion puzzle: move a stack of disks from one peg to another, "
+            "without ever placing a larger disk on a smaller one.\n\n"
+            "The key idea is beautifully simple. To move n disks:\n"
+            "1. Move the top n−1 disks to the spare peg.\n"
+            "2. Move the largest disk to the destination peg.\n"
+            "3. Move the n−1 disks from the spare peg onto it.\n\n"
+            "The base case is one disk: move it directly. Because each level makes two smaller calls, "
+            "the minimum number of moves is 2ⁿ − 1. For 3 disks, that is 7 moves.\n\n"
+            "Think of it as temporarily clearing the smaller disks so the one disk that matters now can move. "
+            "Would you like a 3-disk walkthrough or the recursive pseudocode next?"
+        )
+
+    focus = CATEGORY_TEACHING_FOCUS.get(category, "the core idea, a concrete example, and the trade-offs")
+    return (
+        f"Let's unpack {alg_name}. In this part of DSA, we focus on {focus}.\n\n"
+        f"A good way to learn {alg_name} is to identify the input, the invariant that stays true while it runs, "
+        "and the work done at each step. Then we can connect that to its time and space complexity.\n\n"
+        "Tell me whether you would like an intuitive example, pseudocode, or a complexity breakdown, and I'll teach it in that direction."
+    )
+
+
 def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
     """Intelligent intent-based fallback response for offline / unconfigured API states."""
     msg = req_data.message or ""
@@ -417,6 +461,18 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
     intent = classify_intent(msg)
     function_calls: List[OctaTutorFunctionCall] = []
     mascot_expr = "happy"
+
+    # Open Dialogue deliberately teaches concepts rather than treating a question as a visualizer command.
+    asks_for_lesson = any(phrase in msg_lower for phrase in [
+        "tell me", "what is", "what does", "how does", "how do", "why does", "explain",
+    ])
+    if req_data.conversation_mode == "dialogue" and (intent == "explain" or asks_for_lesson):
+        category = alg_match[0] if alg_match else req_data.category
+        return OctaTutorResponse(
+            reply=generate_natural_lesson(alg_name, category),
+            function_calls=[],
+            mascot_expression="reading",
+        )
 
     # ── GREETING ──
     if intent == "greeting":
@@ -1122,8 +1178,18 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
         step_num=step_num,
         total_steps=req_data.total_steps or 0,
         current_step_description=req_data.current_step_description or "No step selected",
-        step_data=req_data.step_data or "{}"
+        step_data=req_data.step_data or "{}",
+        conversation_mode="Guided Path" if req_data.conversation_mode == "guided" else "Open Dialogue",
     )
+    if req_data.conversation_mode == "dialogue":
+        system_content += (
+            "\n\nTEACHING STYLE: Open Dialogue. Give a direct, natural lesson with an example and complexity when useful. "
+            "Do not navigate or control the visualizer unless the student explicitly asks you to."
+        )
+    else:
+        system_content += (
+            "\n\nTEACHING STYLE: Guided Path. Anchor explanations in the active visualizer and offer controls when useful."
+        )
 
     # Build message list
     messages: List[Dict[str, Any]] = [{"role": "system", "content": system_content}]

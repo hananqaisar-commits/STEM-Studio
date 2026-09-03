@@ -156,6 +156,40 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+.tutor-mode-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tutor-mode-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.tutor-mode-button small { font-size: .64rem; font-weight: 500; opacity: .75; }
+.tutor-mode-button:hover { border-color: #38bdf8; color: #0f172a; transform: translateY(-1px); }
+.tutor-mode-button.active { background: #0f172a; border-color: #0f172a; color: #ffffff; box-shadow: 0 5px 12px rgba(15, 23, 42, .16); }
+[data-theme="dark"] .tutor-mode-switcher { background: #0b1120; border-bottom-color: #1e293b; }
+[data-theme="dark"] .tutor-mode-button { background: #111827; border-color: #334155; color: #cbd5e1; }
+[data-theme="dark"] .tutor-mode-button:hover { border-color: #38bdf8; color: #f8fafc; }
+[data-theme="dark"] .tutor-mode-button.active { background: #38bdf8; border-color: #38bdf8; color: #0f172a; }
+
 [data-theme="dark"] .tutor-context-ribbon {
   background: #0f172a;
   border-bottom-color: #1e293b;
