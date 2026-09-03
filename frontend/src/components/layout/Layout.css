@@ -898,25 +898,25 @@
   text-overflow: ellipsis;
 }
 
-/* Vertical Draggable Resizer Splitter Bar */
+/* Vertical Draggable Resizer Splitter Bar — Right-side Border Handle */
 .sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
   width: 6px;
-  height: calc(100vh - var(--navbar-height));
-  position: sticky;
-  top: var(--navbar-height);
-  background-color: var(--color-border);
   cursor: col-resize;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s ease;
   z-index: 101;
+  background-color: transparent;
 }
 
 .sidebar-resizer:hover,
 .dashboard-shell.is-resizing .sidebar-resizer {
-  background-color: var(--color-primary-hover);
+  background-color: var(--color-primary);
 }
 
 .resizer-handle-grip {

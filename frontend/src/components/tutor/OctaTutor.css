@@ -286,11 +286,11 @@
   border-top-color: #1e293b;
 }
 
-/* MASCOT SITS ~1 INCH RIGHT OF INPUT BOX TOP-LEFT CORNER WITH FEET TOUCHING TOP EDGE */
+/* MASCOT PERCHED ON TOP-RIGHT CORNER EDGE OF INPUT CONTAINER, SHIFTED ~1 INCH (48px) LEFT */
 .tutor-perched-mascot {
   position: absolute;
-  top: -30px;
-  left: 80px;
+  top: -26px;
+  right: 48px;
   z-index: 10;
   pointer-events: auto;
 }
