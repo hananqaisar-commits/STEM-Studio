@@ -199,7 +199,11 @@ export type BSTAlgorithmKey =
   | 'heapInsert'
   | 'heapExtract'
   | 'trieInsert'
-  | 'trieSearch';
+  | 'trieSearch'
+  | 'rbtInsert'
+  | 'segBuild'
+  | 'segQuery'
+  | 'segUpdate';
 
 const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
   insert: {
@@ -281,6 +285,38 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     watchFor: ['Missing child = fail fast', 'isEnd check at the end', 'Prefix vs full word'],
     quickTip: 'Reaching the last character is not enough—the isEnd flag distinguishes "car" from "card"',
     example: 'Trie with "car": searching "ca" walks fine but returns false—no isEnd on a.',
+  },
+  rbtInsert: {
+    description: 'Insert into a Red-Black Tree and recolor/rotate',
+    complexity: 'O(log n) time, O(log n) space',
+    keyIdea: 'Nodes are colored red or black to ensure the longest path is no more than twice the shortest',
+    watchFor: ['Uncle color determines fix', 'Red uncle → recolor', 'Black uncle → rotate'],
+    quickTip: 'New nodes are always red. If the parent is red, a violation occurs.',
+    example: 'Insert 25. Parent 30 is red, uncle 10 is black. Rotate and recolor.',
+  },
+  segBuild: {
+    description: 'Build a Segment Tree from an array',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'Bottom-up construction: leaves hold array values, internal nodes hold aggregated data (e.g. sum)',
+    watchFor: ['Recursion splits range in half', 'Mid = (start+end)/2', 'Left child = 2i+1'],
+    quickTip: 'The root covers [0, n-1]. Each child covers half the range.',
+    example: 'Array [1,3,5]: root sum=9, left sum=4 [1,3], right sum=5.',
+  },
+  segQuery: {
+    description: 'Query a range in a Segment Tree',
+    complexity: 'O(log n) time, O(log n) space',
+    keyIdea: 'Traverse down the tree, aggregating exact coverage and skipping disjoint ranges',
+    watchFor: ['Complete overlap → return value', 'Partial overlap → recurse both sides', 'Disjoint → return neutral (0)'],
+    quickTip: 'If the node range is fully inside the query range, return immediately without going to leaves.',
+    example: 'Query [1,2] on tree [0,3]. Recurse to [0,1] and [2,3] and sum the exact overlaps.',
+  },
+  segUpdate: {
+    description: 'Point update in a Segment Tree',
+    complexity: 'O(log n) time, O(log n) space',
+    keyIdea: 'Update the leaf, then recalculate all ancestor sums on the way back up',
+    watchFor: ['Traverse exactly one path to leaf', 'Update value at leaf', 'Recalculate parent values'],
+    quickTip: 'You only visit O(log n) nodes because you just trace the path to the leaf and back.',
+    example: 'Update index 2. Traverse down to leaf 2, update it, then update its parent, and root.',
   },
 };
 

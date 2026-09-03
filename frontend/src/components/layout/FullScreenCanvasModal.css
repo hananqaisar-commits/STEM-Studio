@@ -461,3 +461,12 @@
   backdrop-filter: blur(12px);
   z-index: 100;
 }
+
+/* Phase 6: Mobile Fullscreen horizontal scroll fix */
+@media (max-width: 1024px) {
+  .fs-modal-body,
+  .fs-workspace-scrollable {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}

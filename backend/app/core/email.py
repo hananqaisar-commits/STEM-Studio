@@ -164,3 +164,48 @@ The STEM Studio Team
         logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {e}")
         print(f"❌ Failed to send SMTP email to [{to_email}]: {e}")
         return False
+
+def send_verification_email(to_email: str, verify_url: str) -> bool:
+    """Sends a verification email upon signup."""
+    settings = get_settings()
+
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning(
+            "Verification email NOT sent to %s. Link printed for local dev: %s",
+            to_email, verify_url
+        )
+        print(f"\n📧 VERIFICATION LINK FOR [{to_email}]:\n👉 {verify_url}\n")
+        return False
+
+    sender_email = settings.SMTP_USER
+    sender_name = settings.EMAILS_FROM_NAME
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"✅ Verify your email — {settings.APP_NAME}"
+    msg["From"] = f"{sender_name} <{sender_email}>"
+    msg["To"] = to_email
+
+    text_content = f"Please verify your email by clicking the link: {verify_url}"
+    html_content = f"""
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2>Welcome to STEM Studio!</h2>
+      <p>Please verify your email address by clicking the link below:</p>
+      <a href="{verify_url}" style="display:inline-block; padding:10px 20px; background-color:#3b82f6; color:#fff; text-decoration:none; border-radius:5px;">Verify Email</a>
+      <p>If you didn't create an account, you can ignore this email.</p>
+    </div>
+    """
+
+    msg.attach(MIMEText(text_content, "plain"))
+    msg.attach(MIMEText(html_content, "html"))
+
+    try:
+        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+        if settings.SMTP_TLS:
+            server.starttls()
+        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        server.sendmail(sender_email, [to_email], msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {to_email}: {e}")
+        return False

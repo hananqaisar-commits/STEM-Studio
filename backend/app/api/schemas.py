@@ -15,10 +15,15 @@ class SignUpRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    identifier: str
     password: str
     # "Remember me" extends the refresh-token/session lifetime so the user
     # stays signed in across browser restarts.
+    remember_me: bool = False
+
+class GoogleSignInRequest(BaseModel):
+    credential: str
+    client_id: str
     remember_me: bool = False
 
 

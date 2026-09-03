@@ -26,13 +26,21 @@ import {
   generateDFSSteps,
   generateDijkstraSteps,
   generatePrimsSteps,
+  generateKruskalSteps,
+  generateBellmanFordSteps,
+  generateAStarSteps,
+  getDefaultAStarGrid,
   generateTopoSortSteps,
   type GraphCategory,
   type GraphStep,
   type GraphNode,
   type GraphEdge,
+  type AStarStep,
+  type AStarCell,
 } from './graphEngine';
 import { GraphRenderer } from './GraphRenderer';
+import { GridPathfindingRenderer } from '../../components/renderers/GridPathfindingRenderer';
+import { SortedEdgePanel } from '../../components/renderers/SortedEdgePanel';
 import { GRAPH_SNIPPETS } from './graphSnippets';
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
@@ -49,7 +57,7 @@ import { useTutorContext } from '../../contexts/TutorContext';
 interface AlgorithmMeta {
   id: GraphCategory;
   name: string;
-  group: 'Traversals' | 'Shortest Path' | 'MST' | 'Ordering';
+  group: 'Traversals' | 'Shortest Path' | 'MST' | 'Ordering' | 'Pathfinding';
   description: string;
 }
 
@@ -57,7 +65,10 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
   { id: 'bfs', name: 'Breadth-First Search (BFS)', group: 'Traversals', description: 'Level-by-level queue traversal across reachable nodes' },
   { id: 'dfs', name: 'Depth-First Search (DFS)', group: 'Traversals', description: 'Deep recursion call-stack exploration with backtracking' },
   { id: 'dijkstra', name: "Dijkstra's Shortest Path", group: 'Shortest Path', description: 'Greedy min-priority queue edge relaxation for optimal paths' },
+  { id: 'bellmanFord', name: 'Bellman-Ford Algorithm', group: 'Shortest Path', description: 'V-1 relaxation passes with negative cycle detection' },
   { id: 'prim', name: "Prim's Minimum Spanning Tree", group: 'MST', description: 'Greedy cut-set growing tree spanning all graph vertices' },
+  { id: 'kruskal', name: "Kruskal's Minimum Spanning Tree", group: 'MST', description: 'DSU-based greedy edge selection for minimum spanning tree' },
+  { id: 'aStar', name: 'A* Pathfinding', group: 'Pathfinding', description: 'f = g + h heuristic grid search for optimal shortest path' },
   { id: 'topoSort', name: 'Topological Sort (Kahn)', group: 'Ordering', description: 'Linear vertex dependency ordering using in-degree queue' },
 ];
 
@@ -72,14 +83,14 @@ export const GraphPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Graph Data State
-  const defaultGraph = getPresetGraph('standard');
-  const [nodes, setNodes] = useState<GraphNode[]>(defaultGraph.nodes);
-  const [edges, setEdges] = useState<GraphEdge[]>(defaultGraph.edges);
+  const [startNode, setStartNode] = useState<string>('A');
+  const [nodes, setNodes] = useState<GraphNode[]>(() => getPresetGraph('standard').nodes);
+  const [edges, setEdges] = useState<GraphEdge[]>(() => getPresetGraph('standard').edges);
 
-  // Control Inputs
-  const [startNodeId, setStartNodeId] = useState<string>('A');
-  const [targetNodeId, setTargetNodeId] = useState<string>('F');
+  // A* specific state
+  const [aStarGrid, setAStarGrid] = useState<AStarCell[][]>(() => getDefaultAStarGrid());
+  const [aStarSteps, setAStarSteps] = useState<AStarStep[]>([]);
+  const isAStarMode = category === 'aStar';
 
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -91,7 +102,7 @@ export const GraphPage: React.FC = () => {
   // Active steps dataset
   const [activeSteps, setActiveSteps] = useState<GraphStep[]>([]);
 
-  // Step Player Hook
+  // Step Player Hook — feeds either graph steps or A* steps (same length-based index)
   const {
     currentStepIndex,
     currentStep,
@@ -127,6 +138,42 @@ export const GraphPage: React.FC = () => {
     });
   }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
+  // A* steps have a different type; derive current A* step from same index
+  const aStarCurrentStep = isAStarMode ? (aStarSteps[currentStepIndex] ?? null) : null;
+  const aStarTotalSteps = aStarSteps.length;
+
+  // Sync A* steps length into the graph step player via fake GraphStep array
+  const aStarPlayerProxy = React.useMemo(
+    () => aStarSteps.map(() => ({} as GraphStep)),
+    [aStarSteps]
+  );
+  // Use the proxy when in A* mode
+  const effectiveSteps = isAStarMode ? aStarPlayerProxy : activeSteps;
+
+  const {
+    currentStepIndex: aStarIndex,
+    totalSteps: aStarTotal,
+    isPlaying: aStarPlaying,
+    play: aStarPlay,
+    pause: aStarPause,
+    stepForward: aStarStepForward,
+    stepBack: aStarStepBack,
+    reset: aStarReset,
+    seekTo: aStarSeekTo,
+  } = useStepPlayer<GraphStep>({ steps: aStarPlayerProxy });
+
+  // Unified control surface
+  const unifiedIndex = isAStarMode ? aStarIndex : currentStepIndex;
+  const unifiedTotal = isAStarMode ? aStarTotal : totalSteps;
+  const unifiedPlaying = isAStarMode ? aStarPlaying : isPlaying;
+  const unifiedPlay = isAStarMode ? aStarPlay : play;
+  const unifiedPause = isAStarMode ? aStarPause : pause;
+  const unifiedStepForward = isAStarMode ? aStarStepForward : stepForward;
+  const unifiedStepBack = isAStarMode ? aStarStepBack : stepBack;
+  const unifiedReset = isAStarMode ? aStarReset : reset;
+  const unifiedSeekTo = isAStarMode ? aStarSeekTo : seekTo;
+
+
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
     () => buildGraphCheckpoints(activeSteps, category),
@@ -152,6 +199,14 @@ export const GraphPage: React.FC = () => {
     reset();
     quizSession.resetSession();
 
+    if (cat === 'aStar') {
+      const grid = getDefaultAStarGrid();
+      setAStarGrid(grid);
+      setAStarSteps(generateAStarSteps(grid));
+      setActiveSteps([]);
+      return;
+    }
+
     const topologyType = cat === 'topoSort' ? 'dag' : 'standard';
     const preset = getPresetGraph(topologyType);
     setNodes(preset.nodes);
@@ -164,8 +219,12 @@ export const GraphPage: React.FC = () => {
       steps = generateDFSSteps(preset.nodes, preset.edges, 'A');
     } else if (cat === 'dijkstra') {
       steps = generateDijkstraSteps(preset.nodes, preset.edges, 'A', 'F');
+    } else if (cat === 'bellmanFord') {
+      steps = generateBellmanFordSteps(preset.nodes, preset.edges, 'A');
     } else if (cat === 'prim') {
       steps = generatePrimsSteps(preset.nodes, preset.edges, 'A');
+    } else if (cat === 'kruskal') {
+      steps = generateKruskalSteps(preset.nodes, preset.edges);
     } else if (cat === 'topoSort') {
       steps = generateTopoSortSteps(preset.nodes, preset.edges);
     }
@@ -174,15 +233,25 @@ export const GraphPage: React.FC = () => {
 
   // Run Traversal on Demand
   const handleRunAlgorithm = () => {
+    if (category === 'aStar') {
+      const newSteps = generateAStarSteps(aStarGrid);
+      setAStarSteps(newSteps);
+      quizSession.resetSession();
+      return;
+    }
     let steps: GraphStep[] = [];
     if (category === 'bfs') {
-      steps = generateBFSSteps(nodes, edges, startNodeId);
+      steps = generateBFSSteps(nodes, edges, startNode);
     } else if (category === 'dfs') {
-      steps = generateDFSSteps(nodes, edges, startNodeId);
+      steps = generateDFSSteps(nodes, edges, startNode);
     } else if (category === 'dijkstra') {
-      steps = generateDijkstraSteps(nodes, edges, startNodeId, 'F');
+      steps = generateDijkstraSteps(nodes, edges, startNode, 'F');
+    } else if (category === 'bellmanFord') {
+      steps = generateBellmanFordSteps(nodes, edges, startNode);
     } else if (category === 'prim') {
-      steps = generatePrimsSteps(nodes, edges, startNodeId);
+      steps = generatePrimsSteps(nodes, edges, startNode);
+    } else if (category === 'kruskal') {
+      steps = generateKruskalSteps(nodes, edges);
     } else if (category === 'topoSort') {
       steps = generateTopoSortSteps(nodes, edges);
     }
@@ -198,9 +267,13 @@ export const GraphPage: React.FC = () => {
     setEdges(updatedEdges);
 
     if (category === 'dijkstra') {
-      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNodeId, 'F'));
+      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNode, 'F'));
+    } else if (category === 'bellmanFord') {
+      setActiveSteps(generateBellmanFordSteps(nodes, updatedEdges, startNode));
     } else if (category === 'prim') {
-      setActiveSteps(generatePrimsSteps(nodes, updatedEdges, startNodeId));
+      setActiveSteps(generatePrimsSteps(nodes, updatedEdges, startNode));
+    } else if (category === 'kruskal') {
+      setActiveSteps(generateKruskalSteps(nodes, updatedEdges));
     }
   };
 
@@ -314,8 +387,8 @@ export const GraphPage: React.FC = () => {
               fontWeight: 700,
               cursor: 'pointer',
             }}
-            value={startNodeId}
-            onChange={(e) => setStartNodeId(e.target.value)}
+            value={startNode}
+            onChange={(e) => setStartNode(e.target.value)}
           >
             {nodes.map((n) => (
               <option key={n.id} value={n.id} style={{ background: 'var(--color-surface)' }}>
@@ -335,7 +408,7 @@ export const GraphPage: React.FC = () => {
         <span>Run Traversal</span>
       </button>
 
-      {(category === 'dijkstra' || category === 'prim') && (
+      {(category === 'dijkstra' || category === 'bellmanFord' || category === 'prim' || category === 'kruskal') && (
         <button className="ll-btn ll-btn-secondary" onClick={handleRandomizeWeights}>
           <Shuffle size={14} />
           <span>Random Weights</span>
@@ -425,20 +498,38 @@ export const GraphPage: React.FC = () => {
               </button>
             </div>
 
-            <GraphRenderer step={currentStep} nodes={nodes} edges={edges} onToggleFullscreen={() => setIsFullScreenOpen(true)} />
+            {isAStarMode ? (
+              <GridPathfindingRenderer
+                step={aStarSteps[aStarIndex] ?? null}
+                onToggleFullscreen={() => setIsFullScreenOpen(true)}
+              />
+            ) : (
+              <>
+                <GraphRenderer step={currentStep} nodes={nodes} edges={edges} onToggleFullscreen={() => setIsFullScreenOpen(true)} />
+                {/* Kruskal edge panel overlay */}
+                {category === 'kruskal' && currentStep?.sortedEdges && (
+                  <div style={{ padding: '0 12px 8px' }}>
+                    <SortedEdgePanel
+                      edges={currentStep.sortedEdges}
+                      dsuComponents={currentStep.dsuComponents}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <FloatingController
-            isPlaying={isPlaying}
-            canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < totalSteps - 1}
-            onPlay={play}
-            onPause={pause}
-            onReset={reset}
-            onStepBack={stepBack}
-            onStepForward={stepForward}
-            onStop={() => { pause(); reset(); }}
-            onResume={play}
+            isPlaying={unifiedPlaying}
+            canStepBack={unifiedIndex > 0}
+            canStepForward={unifiedIndex < unifiedTotal - 1}
+            onPlay={unifiedPlay}
+            onPause={unifiedPause}
+            onReset={unifiedReset}
+            onStepBack={unifiedStepBack}
+            onStepForward={unifiedStepForward}
+            onStop={() => { unifiedPause(); unifiedReset(); }}
+            onResume={unifiedPlay}
             quizMode={quizEnabled}
           />
         </div>
@@ -473,9 +564,14 @@ export const GraphPage: React.FC = () => {
           ) : null}
 
           explanationPanel={<ExplanationPanel
-            description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)}
-            steps={activeSteps}
-            currentStepIndex={currentStepIndex}
+            description={maskNarration(
+              isAStarMode
+                ? (aStarSteps[aStarIndex]?.explanation || 'Click Play to start A* Search.')
+                : (currentStep?.explanation || 'Click Play to observe step-by-step execution.'),
+              quizSession.phase
+            )}
+            steps={isAStarMode ? [] : activeSteps}
+            currentStepIndex={isAStarMode ? aStarIndex : currentStepIndex}
           />
           }
         />
@@ -503,21 +599,25 @@ export const GraphPage: React.FC = () => {
 
         floatingControls={
           <FloatingController
-            isPlaying={isPlaying}
-            canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < totalSteps - 1}
-            onPlay={play}
-            onPause={pause}
-            onReset={reset}
-            onStepBack={stepBack}
-            onStepForward={stepForward}
-            onStop={() => { pause(); reset(); }}
-            onResume={play}
+            isPlaying={unifiedPlaying}
+            canStepBack={unifiedIndex > 0}
+            canStepForward={unifiedIndex < unifiedTotal - 1}
+            onPlay={unifiedPlay}
+            onPause={unifiedPause}
+            onReset={unifiedReset}
+            onStepBack={unifiedStepBack}
+            onStepForward={unifiedStepForward}
+            onStop={() => { unifiedPause(); unifiedReset(); }}
+            onResume={unifiedPlay}
             quizMode={quizEnabled}
           />
         }
       >
-        <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
+        {isAStarMode ? (
+          <GridPathfindingRenderer step={aStarSteps[aStarIndex] ?? null} />
+        ) : (
+          <GraphRenderer step={currentStep} nodes={nodes} edges={edges} />
+        )}
       </FullScreenCanvasModal>
       <TheoryPanel categoryId="graph" activeTopic={category} />
 
