@@ -82,8 +82,11 @@ interface ReviewItem {
   created_at: string;
 }
 
+import { LegalModal, type LegalDocType } from '../../components/layout/LegalModal';
+
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
+  const [legalDoc, setLegalDoc] = useState<LegalDocType>(null);
   const { state: mascotState, setExpression, setContext } = useMascot();
 
   useEffect(() => {
@@ -524,8 +527,8 @@ export const DSAHub: React.FC = () => {
                 Octa Team
               </span>
             </p>
-            <a href="mailto:hello@dsavisualizer.in" className="footer-email">
-              <Mail size={15} /> hello@dsavisualizer.in
+            <a href="mailto:hanankaesar316@gmail.com" className="footer-email">
+              <Mail size={15} /> hanankaesar316@gmail.com
             </a>
 
           </div>
@@ -556,9 +559,9 @@ export const DSAHub: React.FC = () => {
           <div className="footer-col">
             <h3 className="footer-heading">Legal</h3>
             <div className="footer-links">
-              <button className="footer-link-btn" onClick={() => navigate('/privacy')}>Privacy Policy</button>
-              <button className="footer-link-btn" onClick={() => navigate('/terms')}>Terms of Service</button>
-              <button className="footer-link-btn" onClick={() => navigate('/cookies')}>Cookies</button>
+              <button className="footer-link-btn" onClick={() => setLegalDoc('privacy')}>Privacy Policy</button>
+              <button className="footer-link-btn" onClick={() => setLegalDoc('terms')}>Terms of Service</button>
+              <button className="footer-link-btn" onClick={() => setLegalDoc('cookies')}>Cookies</button>
             </div>
           </div>
 
@@ -634,6 +637,8 @@ export const DSAHub: React.FC = () => {
           </div>
         </div>
       </footer>
+      {/* Legal Modal */}
+      <LegalModal docType={legalDoc} onClose={() => setLegalDoc(null)} />
     </div>
   );
 };

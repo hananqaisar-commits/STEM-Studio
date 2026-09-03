@@ -4,7 +4,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 20000 !important;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -46,7 +46,7 @@
   bottom: 0;
   width: 420px;
   max-width: 100vw;
-  z-index: 10040;
+  z-index: 20050 !important;
   background: #ffffff;
   border-left: 1px solid #e2e8f0;
   box-shadow: -10px 0 30px -10px rgba(0, 0, 0, 0.08);
@@ -286,11 +286,11 @@
   border-top-color: #1e293b;
 }
 
-/* MASCOT SITS ~1 INCH RIGHT OF INPUT BOX TOP-LEFT CORNER WITH FEET TOUCHING TOP EDGE */
+/* MASCOT PERCHED ON TOP-RIGHT CORNER EDGE OF INPUT CONTAINER, SHIFTED ~1 INCH (48px) LEFT */
 .tutor-perched-mascot {
   position: absolute;
-  top: -30px;
-  left: 80px;
+  top: -26px;
+  right: 48px;
   z-index: 10;
   pointer-events: auto;
 }

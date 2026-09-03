@@ -6,7 +6,7 @@
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  z-index: 999999 !important;
+  z-index: 10000 !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
@@ -16,7 +16,12 @@
   padding: 0 !important;
   background-color: var(--color-app-bg);
   color: var(--color-text);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), margin-right 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, color 0.3s ease !important;
+}
+
+.fs-modal-overlay.tutor-open {
+  width: calc(100vw - 420px) !important;
+  margin-right: 420px !important;
 }
 
 .fs-modal-overlay .fs-modal-header {
