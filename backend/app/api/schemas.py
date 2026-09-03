@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
 # ─── Auth Request Schemas ────────────────────────────────────────────
@@ -15,11 +15,19 @@ class SignUpRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    identifier: str
+    identifier: Optional[str] = None
+    email: Optional[str] = None
+    username: Optional[str] = None
     password: str
-    # "Remember me" extends the refresh-token/session lifetime so the user
-    # stays signed in across browser restarts.
     remember_me: bool = False
+
+    @model_validator(mode="after")
+    def resolve_identifier(self) -> "LoginRequest":
+        if not self.identifier or not self.identifier.strip():
+            self.identifier = self.email or self.username
+        if not self.identifier or not self.identifier.strip():
+            raise ValueError("Email or username is required to sign in")
+        return self
 
 class GoogleSignInRequest(BaseModel):
     credential: str
