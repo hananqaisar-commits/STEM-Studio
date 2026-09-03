@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     JUDGE0_API_KEY: str = ""
     JUDGE0_TIMEOUT_SECONDS: int = 20
 
+    # Alibaba Cloud Model Studio (Qwen API Key for Octa AI Tutor)
+    DASHSCOPE_API_KEY: str = ""
+
     # App
     APP_NAME: str = "STEM Studio"
     DEBUG: bool = False

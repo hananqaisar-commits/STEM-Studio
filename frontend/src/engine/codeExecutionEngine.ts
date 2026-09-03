@@ -1,10 +1,10 @@
 /**
  * Custom Code Execution Sandbox Engine
- * 
+ *
  * Executes user-provided JavaScript sorting/stack/queue code in a sandboxed
  * environment. Uses an instrumented wrapper that intercepts array operations
  * and generates visualization steps for the step player.
- * 
+ *
  * Safety: Runs via Function() constructor (no eval). Max 5000 steps and
  * 3-second timeout guard to prevent infinite loops.
  */
@@ -215,7 +215,7 @@ export function executeCustomSortingCode(
     steps.push({
       array: [...arr],
       sortedIndices: allIndices,
-    description: `Custom ${lang.toUpperCase()} code complete. Final array state.`,
+      description: `Custom ${lang.toUpperCase()} code complete. Final array state.`,
       codeLine: 7,
       variables: { status: 'COMPLETE', totalSteps: steps.length },
       callStack: [`custom_sort_${lang}(arr) [TERMINATED]`],
@@ -235,7 +235,7 @@ export function executeCustomSortingCode(
 
     steps.push({
       array: [...arr],
-    description: `Error in ${lang.toUpperCase()}: ${errorMessage}`,
+      description: `Error in ${lang.toUpperCase()}: ${errorMessage}`,
       codeLine: errorLine,
       variables: { error: errorMessage },
       callStack: [`custom_sort_${lang}(arr) [ERROR]`],

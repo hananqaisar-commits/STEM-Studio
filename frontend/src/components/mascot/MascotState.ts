@@ -15,7 +15,8 @@ export type MascotExpression =
   | 'tired'
   | 'sad'
   | 'helping'
-  | 'review';
+  | 'review'
+  | 'listening';
 
 export type MascotContext =
   | 'dashboard'
@@ -29,7 +30,8 @@ export type MascotContext =
   | 'projects'
   | 'tools'
   | 'loading'
-  | 'success';
+  | 'success'
+  | 'tutor';
 
 export type MascotSize = 'tiny' | 'small' | 'medium' | 'large' | 'xl';
 
@@ -56,6 +58,7 @@ export const EXPRESSION_PRIORITY: Record<MascotExpression, number> = {
   surprised: 85,
   happy: 80,
   confused: 70,
+  listening: 65,
   thinking: 60,
   focused: 50,
   reading: 45,
@@ -75,5 +78,6 @@ export const DEFAULT_MASCOT_STATE: MascotState = {
 /** All available expressions (for iteration/validation). */
 export const ALL_EXPRESSIONS: readonly MascotExpression[] = [
   'neutral', 'happy', 'focused', 'thinking', 'reading', 'excited',
-  'confused', 'surprised', 'tired', 'sad', 'helping', 'review',
+  'confused', 'surprised', 'tired', 'sad', 'helping', 'review', 'listening',
 ];
+
