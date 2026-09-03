@@ -249,13 +249,13 @@ export function useQuizSession({
     setWasCorrect(false);
     setPhase('asking');
 
-    /* Every quiz question has the same 10-second response window. */
-    setTimeRemaining(10);
+    /* Every quiz question has the same 15-second response window. */
+    setTimeRemaining(15);
   }, [enabled, phase, active, currentStepIndex]);
 
   /* Challenge mode timer countdown. */
   useEffect(() => {
-    if (phase !== 'asking' || timeRemaining === null) {
+    if ((phase !== 'asking' && phase !== 'retrying') || timeRemaining === null) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -266,22 +266,27 @@ export function useQuizSession({
     timerRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev === null || prev <= 1) {
-          /* Time's up — auto-reveal as wrong. */
+          /* Time's up — auto-fail this attempt. */
           if (timerRef.current) clearInterval(timerRef.current);
           timerRef.current = null;
           /* Schedule the auto-answer outside the setState. */
           setTimeout(() => {
             setPhase((currentPhase) => {
               if (currentPhase === 'asking') {
+                // First timeout -> go to retrying (hint) and reset timer
+                setTimeRemaining(15);
+                return 'retrying';
+              } else if (currentPhase === 'retrying') {
+                // Second timeout -> reveal
                 setWasCorrect(false);
                 setInspectPending(true);
                 setAnsweredCount((n) => n + 1);
                 setStreak(0);
+                setTimeRemaining(null);
                 return 'revealed';
               }
               return currentPhase;
             });
-            setTimeRemaining(null);
           }, 0);
           return 0;
         }
