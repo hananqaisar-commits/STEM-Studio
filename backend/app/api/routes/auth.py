@@ -81,13 +81,15 @@ def signup(
             detail="This username is already taken",
         )
 
-    # Create user with hashed password (default is_verified=False)
+    # If SMTP is not configured, auto-verify account so local/demo users are not trapped
+    smtp_enabled = bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
     new_user = User(
         username=payload.username,
         email=payload.email,
         password_hash=hash_password(payload.password),
         first_name=payload.first_name,
         last_name=payload.last_name,
+        is_verified=not smtp_enabled,
     )
     db.add(new_user)
     db.flush() # get user_id
@@ -196,10 +198,15 @@ def login(
         )
 
     if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please verify your email address before signing in. Check your inbox for the verification link.",
-        )
+        if not bool(settings.SMTP_USER and settings.SMTP_PASSWORD):
+            # Auto-verify in local/demo environment without SMTP setup
+            user.is_verified = True
+            db.commit()
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Please verify your email address before signing in. Check your inbox for the verification link.",
+            )
 
     # Log successful attempt
     success_attempt = LoginAttempt(
