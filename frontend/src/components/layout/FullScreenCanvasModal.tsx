@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info, Minimize2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTutorContext } from '../../contexts/TutorContext';
 import './FullScreenCanvasModal.css';
 
 interface FullScreenCanvasModalProps {
@@ -30,6 +31,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   children,
 }) => {
   const { actualTheme } = useTheme();
+  const { isTutorOpen } = useTutorContext();
   const [isExplanationVisible, setIsExplanationVisible] = useState(false);
 
   // Trigger native browser fullscreen
@@ -59,7 +61,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={`fs-modal-overlay theme-${actualTheme} animate-fade-in`}>
+    <div className={`fs-modal-overlay theme-${actualTheme} ${isTutorOpen ? 'tutor-open' : ''} animate-fade-in`}>
       {/* Top Floating Glassmorphic Header Toolbar */}
       <header className="fs-modal-header">
         <div className="fs-header-branding">

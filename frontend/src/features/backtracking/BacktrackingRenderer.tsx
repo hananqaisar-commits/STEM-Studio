@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Layers, GitBranch, Columns, Maximize2 } from 'lucide-react';
 import type { ArrayStep } from '../../engine/types/Step';
 import { Grid2D } from '../../components/renderers/Grid2D';
 import { DecisionTree, type DecisionTreeNode } from '../../components/renderers/DecisionTree';
@@ -15,6 +16,8 @@ export const BacktrackingRenderer: React.FC<BacktrackingRendererProps> = ({
   algorithmKey,
   onToggleFullscreen,
 }) => {
+  const [viewMode, setViewMode] = useState<'visualizer' | 'tree' | 'split'>('split');
+
   const treeNodes = useMemo(() => {
     if (!currentStep?.variables?.treeNodes) return [];
     const vars = currentStep.variables;
@@ -35,7 +38,7 @@ export const BacktrackingRenderer: React.FC<BacktrackingRendererProps> = ({
         label,
         parentId: parents[idx] ?? -1,
         state,
-        returnValue: solutionNodes.has(idx) ? '\u2713' : prunedNodes.has(idx) ? '\u2715' : '?',
+        returnValue: solutionNodes.has(idx) ? '✓' : prunedNodes.has(idx) ? '✕' : '?',
       };
     });
   }, [currentStep?.variables]);
@@ -56,39 +59,72 @@ export const BacktrackingRenderer: React.FC<BacktrackingRendererProps> = ({
   const queenIndices = queenPosStr.split(',').filter(Boolean).map(Number);
   const queenPositions: [number, number][] = queenIndices.map(idx => [Math.floor(idx / n), idx % n]);
 
-  if (isNQueens) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <Grid2D
-          mode="2D"
-          rows={n}
-          cols={n}
-          queenPositions={queenPositions}
-          isChessboard={true}
-          activeIndices={currentStep.comparingIndices}
-          title="N-QUEENS CHESSBOARD"
-          subtitle={`${queenPositions.length}/${n} queens placed`}
-          onToggleFullscreen={onToggleFullscreen}
-        />
-        {treeNodes.length > 0 && (
-          <DecisionTree
-            nodes={treeNodes}
-            callStack={currentStep.callStack}
-            title="N-QUEENS DECISION TREE"
-            subtitle={`${treeNodes.length} search nodes`}
-          />
-        )}
-      </div>
-    );
-  }
+  const hasBothViews = isNQueens && treeNodes.length > 0;
 
   return (
-    <DecisionTree
-      nodes={treeNodes}
-      callStack={currentStep.callStack}
-      title="BACKTRACKING DECISION TREE"
-      subtitle={`${treeNodes.length} nodes`}
-      onToggleFullscreen={onToggleFullscreen}
-    />
+    <div className="backtracking-container animate-fade-in">
+      {/* Header with Hanoi-style View Switcher Tabs */}
+      {hasBothViews && (
+        <div className="bt-view-header">
+          <span className="bt-view-title">N-QUEENS BACKTRACKING INSPECTOR</span>
+          <div className="bt-view-toggle">
+            <button
+              className={`bt-view-btn ${viewMode === 'visualizer' ? 'active' : ''}`}
+              onClick={() => setViewMode('visualizer')}
+              title="Show Board Visualizer Only"
+            >
+              <Layers size={13} />
+              <span>Board Only</span>
+            </button>
+            <button
+              className={`bt-view-btn ${viewMode === 'tree' ? 'active' : ''}`}
+              onClick={() => setViewMode('tree')}
+              title="Show Decision Tree & Call Stack Only"
+            >
+              <GitBranch size={13} />
+              <span>Tree & Stack</span>
+            </button>
+            <button
+              className={`bt-view-btn ${viewMode === 'split' ? 'active' : ''}`}
+              onClick={() => setViewMode('split')}
+              title="Show Both Side-by-Side"
+            >
+              <Columns size={13} />
+              <span>Split View</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={`bt-workspace mode-${viewMode}`}>
+        {(viewMode === 'visualizer' || viewMode === 'split' || !hasBothViews) && isNQueens && (
+          <div className="bt-canvas-section">
+            <Grid2D
+              mode="2D"
+              rows={n}
+              cols={n}
+              queenPositions={queenPositions}
+              isChessboard={true}
+              activeIndices={currentStep.comparingIndices}
+              title="N-QUEENS CHESSBOARD"
+              subtitle={`${queenPositions.length}/${n} queens placed`}
+              onToggleFullscreen={onToggleFullscreen}
+            />
+          </div>
+        )}
+
+        {(viewMode === 'tree' || viewMode === 'split' || !isNQueens) && (
+          <div className="bt-tree-section">
+            <DecisionTree
+              nodes={treeNodes}
+              callStack={currentStep.callStack}
+              title={isNQueens ? "N-QUEENS DECISION TREE" : "BACKTRACKING DECISION TREE"}
+              subtitle={`${treeNodes.length} search nodes`}
+              onToggleFullscreen={!isNQueens ? onToggleFullscreen : undefined}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
