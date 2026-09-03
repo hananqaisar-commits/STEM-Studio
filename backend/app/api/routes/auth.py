@@ -195,6 +195,12 @@ def login(
             detail="Account is deactivated",
         )
 
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email address before signing in. Check your inbox for the verification link.",
+        )
+
     # Log successful attempt
     success_attempt = LoginAttempt(
         user_id=user.user_id,

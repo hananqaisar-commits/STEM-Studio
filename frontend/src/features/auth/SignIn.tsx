@@ -28,21 +28,23 @@ export const SignIn: React.FC = () => {
     setContext('signin');
   }, [setContext]);
 
-  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with real ID
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   useEffect(() => {
-    // Initialize Google Sign-In
-    if (window.google?.accounts?.id) {
+    // Initialize Google Sign-In only if a valid client ID is configured
+    if (GOOGLE_CLIENT_ID && window.google?.accounts?.id) {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
         context: 'signin',
         ux_mode: 'popup',
       });
-      window.google.accounts.id.renderButton(
-        document.getElementById('google-signin-btn') as HTMLElement,
-        { theme: 'outline', size: 'large', type: 'standard', shape: 'pill', text: 'signin_with' }
-      );
+      const btnEl = document.getElementById('google-signin-btn');
+      if (btnEl) {
+        window.google.accounts.id.renderButton(btnEl, {
+          theme: 'outline', size: 'large', type: 'standard', shape: 'pill', text: 'signin_with',
+        });
+      }
     }
   }, []);
 
@@ -55,7 +57,8 @@ export const SignIn: React.FC = () => {
       setExpression('happy', { temporary: true, durationMs: 900 });
       setTimeout(() => navigate('/dashboard'), 300);
     } catch (err: any) {
-      setError(err?.message || 'Google Sign-In failed.');
+      const msg = typeof err?.message === 'string' ? err.message : 'Google Sign-In failed.';
+      setError(msg);
       setExpression('confused', { temporary: true, durationMs: 1500 });
     } finally {
       setIsSubmitting(false);
@@ -73,7 +76,7 @@ export const SignIn: React.FC = () => {
       setExpression('happy', { temporary: true, durationMs: 900 });
       setTimeout(() => navigate('/dashboard'), 300);
     } catch (err: any) {
-      const message = err?.message || 'Something went wrong. Please try again.';
+      const message = typeof err?.message === 'string' ? err.message : 'Something went wrong. Please try again.';
       setError(message);
       setExpression('confused', { temporary: true, durationMs: 1500, message: 'Oops.' });
     } finally {
@@ -96,13 +99,17 @@ export const SignIn: React.FC = () => {
           <p className="auth-subtitle">Sign in to your STEM Studio account</p>
         </div>
 
-        <div className="google-btn-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-          <div id="google-signin-btn"></div>
-        </div>
+        {GOOGLE_CLIENT_ID && (
+          <div className="google-btn-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <div id="google-signin-btn"></div>
+          </div>
+        )}
 
-        <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
-          <span>or continue with email</span>
-        </div>
+        {GOOGLE_CLIENT_ID && (
+          <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
+            <span>or continue with email</span>
+          </div>
+        )}
 
         {error && (
           <div className="auth-error animate-fade-in">
