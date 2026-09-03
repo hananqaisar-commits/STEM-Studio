@@ -30,6 +30,7 @@ const SVG_MAP: Record<MascotExpression, string> = {
   sad: sadSvg,
   helping: helpingSvg,
   review: reviewSvg,
+  listening: focusedSvg,
 };
 
 const SIZE_PX: Record<MascotSize, number> = {

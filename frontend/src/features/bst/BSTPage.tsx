@@ -37,6 +37,7 @@ import type { TrieNodeStructure } from './trieEngine';
 import './BST.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList, parseStringList } from '../../utils/batchInputParser';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie';
 
@@ -61,6 +62,7 @@ const SAMPLE_TRIE_WORDS = ['cat', 'car', 'card', 'dog', 'dot'];
 const RANDOM_WORD_POOL = ['apple', 'app', 'code', 'coder', 'tree', 'trie', 'data', 'algo', 'node', 'heap'];
 
 export const BSTPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
   // Tracks the last-run operation so the quiz revision card matches what is visualized.
   const [revisionKey, setRevisionKey] = useState<BSTAlgorithmKey>('insert');
@@ -123,10 +125,30 @@ export const BSTPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
+    seekTo,
     } = useStepPlayer({ steps: activeOperationSteps });
 
   const bstStep = currentStep as BSTStep | null;
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    setTutorContext({
+      algorithmName: `${treeCategory.toUpperCase()} Trees`,
+      algorithmId: treeCategory,
+      category: 'bst',
+      currentStepDescription: bstStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep: bstStep,
+      steps: activeOperationSteps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [treeCategory, currentStepIndex, totalSteps, bstStep, activeOperationSteps, setTutorContext, play, pause, stepForward, reset]);
 
   usePlaybackShortcuts({
     handlers: {

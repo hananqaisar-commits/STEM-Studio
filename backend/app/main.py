@@ -14,12 +14,14 @@ try:
     from backend.app.api.routes.execute import router as execute_router
     from backend.app.api.routes.progress import router as progress_router
     from backend.app.api.routes.stats import router as stats_router
+    from backend.app.api.routes.octa_tutor import router as octa_tutor_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
     from app.api.routes.execute import router as execute_router
     from app.api.routes.progress import router as progress_router
     from app.api.routes.stats import router as stats_router
+    from app.api.routes.octa_tutor import router as octa_tutor_router
     from app.core.config import get_settings
 
 
@@ -113,7 +115,7 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(self), camera=()"
     response.headers["X-XSS-Protection"] = "0"  # Disabled in favour of CSP / framework escaping
     return response
 
@@ -132,6 +134,8 @@ app.include_router(auth_router)
 app.include_router(progress_router)
 app.include_router(stats_router)
 app.include_router(execute_router)
+app.include_router(octa_tutor_router)
+
 
 
 
