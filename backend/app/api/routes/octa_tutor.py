@@ -287,10 +287,17 @@ INPUT_PATTERNS = [
 ]
 
 GREETING_PATTERNS = [
-    "hi", "hello", "hey", "yo", "howdy", "sup",
+    "hi", "hello", "hlo", "hey", "yo", "howdy", "sup",
     "who are you", "what can you do", "help", "how to use",
-    "salam", "kya hal", "kaisa hai", "aoa",
+    "salam", "kya hal", "kaisa hai", "kaisa ho", "kaise ho", "kya haal", "kaise hain", "kese ho", "aoa",
     "你好", "你是谁", "帮助",
+]
+
+REALWORLD_PATTERNS = [
+    "real world", "real life", "real-world", "application", "applications",
+    "where is it used", "use case", "use cases", "practical use", "used in",
+    "kahan use hota", "asli zindagi", "real world mein",
+    "实际应用", "应用场景",
 ]
 
 
@@ -301,6 +308,7 @@ def classify_intent(text: str) -> str:
     # Check patterns in priority order
     intent_map = [
         ("recommend", RECOMMEND_PATTERNS),
+        ("real_world", REALWORLD_PATTERNS),
         ("navigate", NAVIGATE_PATTERNS),
         ("compare", COMPARE_PATTERNS),
         ("speed", SPEED_PATTERNS),
@@ -340,11 +348,68 @@ def classify_intent(text: str) -> str:
     return "general"
 
 
+def get_real_world_explanation(alg_name: str, category: str) -> str:
+    """Generate detailed real-world application breakdown for algorithms."""
+    alg_lower = alg_name.lower()
+    cat_lower = (category or "").lower()
+
+    if "palindrome" in alg_lower or "string" in cat_lower:
+        return (
+            f"**Real-World Applications of {alg_name}:** 🌐\n\n"
+            f"1. **Bioinformatics & Genetics**: DNA sequence analysis — finding palindromic sequences where restriction enzymes cut DNA.\n"
+            f"2. **Natural Language Processing (NLP)**: Spell checkers, pattern matching, and text processing algorithms.\n"
+            f"3. **Data Integrity & Cryptography**: Symmetric packet verification and cryptographic hash checks.\n"
+            f"4. **Text Editors & Search Engines**: Fast pattern symmetry checks using two pointers."
+        )
+    elif "hanoi" in alg_lower or "recursion" in cat_lower:
+        return (
+            f"**Real-World Applications of {alg_name}:** 🗼\n\n"
+            f"1. **Call Stack & Compiler Design**: Recursive function execution and stack frame allocation in operating systems.\n"
+            f"2. **Backup & Disaster Recovery**: Moving multi-tiered data storage volumes without overwriting active data.\n"
+            f"3. **Robotics & Automated Warehouses**: Moving stacked cargo items between limited holding pegs or bays."
+        )
+    elif "graph" in cat_lower or "dijkstra" in alg_lower or "bfs" in alg_lower or "dfs" in alg_lower:
+        return (
+            f"**Real-World Applications of {alg_name}:** 🗺️\n\n"
+            f"1. **GPS & Navigation Systems**: Finding shortest routes on Google Maps / Apple Maps.\n"
+            f"2. **Social Networks**: LinkedIn / Facebook friend recommendation engines ('people you may know').\n"
+            f"3. **Network Packet Routing**: OSPF protocol routing internet traffic between routers."
+        )
+    elif "sort" in alg_lower or "sorting" in cat_lower:
+        return (
+            f"**Real-World Applications of {alg_name}:** 📊\n\n"
+            f"1. **E-Commerce**: Sorting millions of products by price, rating, or relevance.\n"
+            f"2. **Database Systems**: Indexing and quick retrieval in SQL/NoSQL databases.\n"
+            f"3. **3D Graphics Rendering**: Sorting polygons by depth (Z-buffer algorithm)."
+        )
+    else:
+        return (
+            f"**Real-World Applications of {alg_name}:** 🚀\n\n"
+            f"1. **High-Performance Software**: Optimizing time and memory efficiency in production backend APIs.\n"
+            f"2. **Database Querying**: Fast searching, indexing, and data filtering.\n"
+            f"3. **System Engineering**: Operating system task scheduling and memory management."
+        )
+
+
 def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
     """Intelligent intent-based fallback response for offline / unconfigured API states."""
     msg = req_data.message or ""
     msg_lower = msg.lower().strip()
-    alg_name = req_data.algorithm_name or "this algorithm"
+
+    # Extract algorithm mentioned in user prompt if present
+    alg_match = resolve_algorithm_name(msg)
+    if alg_match:
+        cat_id, topic_id = alg_match
+        alg_name = (topic_id or cat_id).replace("_", " ").replace("-", " ").title()
+        if topic_id == "towerOfHanoi":
+            alg_name = "Tower of Hanoi"
+        elif topic_id == "palindrome":
+            alg_name = "Palindrome Check"
+        elif topic_id == "avl":
+            alg_name = "AVL Tree"
+    else:
+        alg_name = req_data.algorithm_name or "this algorithm"
+
     step_num = (req_data.current_step_index + 1) if req_data.total_steps > 0 else 1
     total_steps = req_data.total_steps or 1
     step_desc = req_data.current_step_description or "evaluating elements"
@@ -355,32 +420,45 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 
     # ── GREETING ──
     if intent == "greeting":
-        reply = (
-            f"Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\n"
-            f"Here's what I can do for you:\n"
-            f"• **Navigate**: Say 'open merge sort' or 'show me graphs'\n"
-            f"• **Explain**: Ask 'what is {alg_name}?' or 'explain step {step_num}'\n"
-            f"• **Control**: Say 'play', 'pause', 'next step', 'slow down'\n"
-            f"• **Compare**: Ask 'compare bubble sort vs quick sort'\n"
-            f"• **Quiz**: Say 'test me' or 'generate quiz'\n"
-            f"• **Theme**: Say 'dark mode' or 'light mode'\n"
-            f"• **Voice**: Use the 🎤 mic button (English, Urdu, Chinese)\n"
-            f"• **API Setup**: Ask 'how do I connect my API?'\n\n"
-            f"Currently viewing: **{alg_name}** (step {step_num}/{total_steps})"
-        )
+        if any(w in msg_lower for w in ["kaisa", "kaise", "kese", "haal", "hlo", "bhai", "kya haal", "kaisa ho"]):
+            reply = "Main bilkul theek hoon! Aap kaise hain? Aaj konsa algorithm seekhein? 🐙"
+        elif any(char for char in msg_lower if '\u4e00' <= char <= '\u9fff'):
+            reply = "您好！我很好，谢谢！今天想学习什么算法呢？ 🐙"
+        else:
+            reply = (
+                f"Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\n"
+                f"Here's what I can do for you:\n"
+                f"• **Navigate**: Say 'open merge sort' or 'show me graphs'\n"
+                f"• **Explain**: Ask 'what is {alg_name}?' or 'explain step {step_num}'\n"
+                f"• **Control**: Say 'play', 'pause', 'next step', 'slow down'\n"
+                f"• **Compare**: Ask 'compare bubble sort vs quick sort'\n"
+                f"• **Quiz**: Say 'test me' or 'generate quiz'\n"
+                f"• **Theme**: Say 'dark mode' or 'light mode'\n"
+                f"• **Voice**: Use the 🎤 mic button (English, Urdu, Chinese)\n"
+                f"• **API Setup**: Ask 'how do I connect my API?'\n\n"
+                f"Currently viewing: **{alg_name}** (step {step_num}/{total_steps})"
+            )
         mascot_expr = "happy"
+
+    # ── REAL WORLD APPLICATIONS ──
+    elif intent == "real_world":
+        reply = get_real_world_explanation(alg_name, req_data.category)
+        mascot_expr = "reading"
 
     # ── NAVIGATE ──
     elif intent == "navigate":
-        alg_match = resolve_algorithm_name(msg)
         if alg_match:
             cat_id, topic_id = alg_match
             function_calls.append(OctaTutorFunctionCall(
                 name="navigate_to_algorithm",
                 args={"category_id": cat_id, "topic_id": topic_id or ""}
             ))
-            topic_display = topic_id or cat_id
-            reply = f"Taking you to **{topic_display}** right now! 🚀"
+            # If user also asked to run/visualize/play
+            if any(w in msg_lower for w in ["play", "run", "visualize", "step", "chalao"]):
+                function_calls.append(OctaTutorFunctionCall(name="control_playback", args={"action": "play"}))
+                reply = f"Opening **{alg_name}** and starting visualization step-by-step for you! 🚀"
+            else:
+                reply = f"Taking you to **{alg_name}** right now! 🚀"
             mascot_expr = "excited"
         else:
             reply = (
@@ -399,10 +477,38 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
         elif any(w in msg_lower for w in ["reset", "restart", "over", "again", "phir", "重置"]):
             action = "reset"
 
+        # If an algorithm was specified (e.g. "run palindrome and visualize me")
+        if alg_match:
+            cat_id, topic_id = alg_match
+            function_calls.append(OctaTutorFunctionCall(
+                name="navigate_to_algorithm",
+                args={"category_id": cat_id, "topic_id": topic_id or ""}
+            ))
+
         function_calls.append(OctaTutorFunctionCall(name="control_playback", args={"action": action}))
         action_text = {"play": "Playing", "pause": "Pausing", "step_forward": "Moving to next step", "reset": "Resetting"}
-        reply = f"{action_text.get(action, 'Controlling')} the visualization for you! ▶️"
+        reply = f"{action_text.get(action, 'Controlling')} **{alg_name}** visualization for you! ▶️"
         mascot_expr = "excited"
+
+    # ── QUIZ ──
+    elif intent == "quiz":
+        difficulty = "medium"
+        if any(w in msg_lower for w in ["easy", "simple", "basic", "aasan"]):
+            difficulty = "easy"
+        elif any(w in msg_lower for w in ["hard", "difficult", "tough", "challenge", "mushkil"]):
+            difficulty = "hard"
+
+        # If user specified an algorithm (e.g., "quiz lo mera for Tower of hanoi")
+        if alg_match:
+            cat_id, topic_id = alg_match
+            function_calls.append(OctaTutorFunctionCall(
+                name="navigate_to_algorithm",
+                args={"category_id": cat_id, "topic_id": topic_id or ""}
+            ))
+
+        function_calls.append(OctaTutorFunctionCall(name="generate_quiz", args={"count": 5, "difficulty": difficulty}))
+        reply = f"Awesome! Creating a **{difficulty}** practice quiz on **{alg_name}** right now! 📝"
+        mascot_expr = "review"
 
     # ── SPEED ──
     elif intent == "speed":
@@ -416,14 +522,12 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 
     # ── INPUT ──
     elif intent == "input":
-        # Try to extract numbers from the message
         numbers = re.findall(r'\d+', msg)
         if numbers:
-            values = [int(n) for n in numbers[:20]]  # Cap at 20 values
+            values = [int(n) for n in numbers[:20]]
             function_calls.append(OctaTutorFunctionCall(name="set_input", args={"values": values}))
             reply = f"Setting input to [{', '.join(map(str, values))}] and getting ready! 🎯"
         else:
-            # Generate random input
             function_calls.append(OctaTutorFunctionCall(name="set_input", args={"values": [8, 3, 5, 1, 9, 2, 7, 4]}))
             reply = "Using a sample array [8, 3, 5, 1, 9, 2, 7, 4] for you! 🎲"
         mascot_expr = "excited"
@@ -448,17 +552,6 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
         function_calls.append(OctaTutorFunctionCall(name="toggle_fullscreen", args={"enter": enter}))
         reply = f"{'Entering' if enter else 'Exiting'} fullscreen mode! {'🖥️' if enter else '📱'}"
         mascot_expr = "excited"
-
-    # ── QUIZ ──
-    elif intent == "quiz":
-        difficulty = "medium"
-        if any(w in msg_lower for w in ["easy", "simple", "basic", "aasan"]):
-            difficulty = "easy"
-        elif any(w in msg_lower for w in ["hard", "difficult", "tough", "challenge", "mushkil"]):
-            difficulty = "hard"
-        function_calls.append(OctaTutorFunctionCall(name="generate_quiz", args={"count": 5, "difficulty": difficulty}))
-        reply = f"Creating a **{difficulty}** quiz on {alg_name}! Let's test your knowledge! 📝"
-        mascot_expr = "review"
 
     # ── COMPARE ──
     elif intent == "compare":
@@ -487,8 +580,8 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
             f"• **OpenAI**: `gpt-4o-mini` — great balance of quality and speed\n"
             f"• **Anthropic**: `claude-3-haiku` — fast and affordable\n"
             f"• **OpenRouter**: Access 100+ models with one key\n"
-            f"• **DashScope**: `qwen-plus` — our default, solid performance\n\n"
-            f"Once connected, I can give you much deeper explanations, comparisons, and personalized help!"
+            f"• **DashScope**: `qwen-plus` — solid default performance\n\n"
+            f"Once connected, I can give you deep AI explanations, comparisons, and personalized help!"
         )
         mascot_expr = "helping"
 
@@ -520,7 +613,6 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 
     # ── EXPLAIN ──
     elif intent == "explain":
-        # Check for specific step reference
         step_match = re.search(r'step\s*(\d+)', msg_lower)
         if step_match:
             s_idx = int(step_match.group(1))
@@ -543,9 +635,9 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
         mascot_expr = "reading"
 
     # ── ROMAN URDU catch-all ──
-    elif any(w in msg_lower for w in ["kya", "kaise", "batao", "samjhao", "kaam", "yeh", "kia", "hai", "mein"]):
+    elif any(w in msg_lower for w in ["kya", "kaise", "batao", "samjhao", "kaam", "yeh", "kia", "hai", "mein", "hlo", "kaisa", "kese"]):
         reply = (
-            f"Yeh **{alg_name}** ka step {step_num} hai ({step_desc}).\n\n"
+            f"Main bilkul theek hoon! Yeh **{alg_name}** ka step {step_num} hai ({step_desc}).\n\n"
             f"Is step mein algorithm data ko process kar raha hai. "
             f"Aap mujhse kuch bhi pooch sakte hain — koi step explain karwana ho, "
             f"quiz chahiye, ya koi aur algorithm dekhna ho, bas bol dein! 🐙"
