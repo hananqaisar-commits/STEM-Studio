@@ -163,7 +163,20 @@ export function useOctaTutor(): UseOctaTutorReturn {
   }, []);
 
   const startListening = useCallback(() => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current) {
+      setMascotExpression('confused');
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `speech-unsupported-${Date.now()}`,
+          role: 'assistant',
+          content: 'Voice speech recognition is active in Chrome, Edge, Brave, and Safari! Please use a supported browser or type your question.',
+          expression: 'confused',
+          timestamp: new Date(),
+        },
+      ]);
+      return;
+    }
     try {
       recognitionRef.current.lang = speechLang;
       recognitionRef.current.start();

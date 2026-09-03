@@ -180,16 +180,14 @@ export const OctaTutor: React.FC = () => {
             className="tutor-textarea"
             rows={1}
           />
-          {isSpeechSupported && (
-            <button
-              className={`tutor-mic-btn ${isListening ? 'listening' : ''}`}
-              onClick={isListening ? stopListening : startListening}
-              type="button"
-              title="Voice Input (EN, Urdu, Chinese)"
-            >
-              {isListening ? <MicOff size={14} /> : <Mic size={14} />}
-            </button>
-          )}
+          <button
+            className={`tutor-mic-btn ${isListening ? 'listening' : ''}`}
+            onClick={isListening ? stopListening : startListening}
+            type="button"
+            title={isSpeechSupported ? "Voice Input (English, Urdu, Chinese)" : "Voice Input (Speech Recognition active in supported browsers)"}
+          >
+            {isListening ? <MicOff size={14} /> : <Mic size={14} />}
+          </button>
           <button
             className="tutor-send-btn"
             onClick={() => sendMessage()}

@@ -669,8 +669,6 @@ export const LinkedListPage: React.FC = () => {
             <VisualizerActions
               quizEnabled={quizEnabled}
               onToggleQuiz={() => setQuizEnabled((v) => !v)}
-              debuggerVisible={showDebugger}
-              onToggleDebugger={() => setShowDebugger((v) => !v)}
             />
           </div>
         }

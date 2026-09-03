@@ -73,3 +73,35 @@ def test_tutor_connection_test_endpoint():
     data = response.json()
     assert data["success"] is False
     assert "missing" in data["message"].lower()
+
+def test_tutor_specific_algorithm_quiz_intent():
+    payload = {
+        "message": "quiz lo mera for Tower of hanoi",
+        "algorithm_name": "DSA Concept",
+    }
+    response = client.post("/api/octa-tutor", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "Tower of Hanoi" in data["reply"]
+    fn_names = [f["name"] for f in data["function_calls"]]
+    assert "navigate_to_algorithm" in fn_names
+    assert "generate_quiz" in fn_names
+
+def test_tutor_real_world_application_intent():
+    payload = {
+        "message": "Where is Palindrome Check used in real-world applications?",
+        "algorithm_name": "Palindrome Check",
+        "category": "strings",
+    }
+    response = client.post("/api/octa-tutor", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "Bioinformatics" in data["reply"] or "DNA" in data["reply"]
+
+def test_tutor_roman_urdu_greetings():
+    payload = {"message": "kaisa ho?"}
+    response = client.post("/api/octa-tutor", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "theek hoon" in data["reply"].lower() or "kaise hain" in data["reply"].lower()
+

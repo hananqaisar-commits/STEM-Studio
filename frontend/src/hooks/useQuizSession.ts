@@ -209,14 +209,15 @@ export function useQuizSession({
       setChallengeMode(false);
     }
     consumedRef.current = new Set();
+    revisionAutoShown.current = false;
     setQuestionResults([]);
     dismiss();
-  }, [activeSignature, dismiss]);
+  }, [activeSignature, algorithmId, module, dismiss]);
 
-  /* Reset the auto-shown flag whenever the revision content changes. */
+  /* Reset the auto-shown flag whenever the revision content, algorithmId, or module changes. */
   useEffect(() => {
     revisionAutoShown.current = false;
-  }, [externalRevisionData]);
+  }, [externalRevisionData, algorithmId, module]);
 
   /* When quiz mode is on and revision notes exist, show them once before
      the first checkpoint fires — but never mid transfer challenge: the
