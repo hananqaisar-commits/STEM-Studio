@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.api.dependencies import get_current_user
@@ -65,16 +66,26 @@ def signup(
     # Enforce password complexity before any DB work
     _validate_password_strength(payload.password)
 
-    # Check if email already exists
-    existing_email = db.query(User).filter(User.email == payload.email).first()
+    # Normalize inputs
+    clean_email = payload.email.strip().lower()
+    clean_username = payload.username.strip()
+
+    if "@" in clean_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username cannot contain '@' symbol",
+        )
+
+    # Check if email already exists (case-insensitive)
+    existing_email = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with this email already exists",
         )
 
-    # Check if username already exists
-    existing_username = db.query(User).filter(User.username == payload.username).first()
+    # Check if username already exists (case-insensitive)
+    existing_username = db.query(User).filter(func.lower(User.username) == clean_username.lower()).first()
     if existing_username:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -84,8 +95,8 @@ def signup(
     # If SMTP is not configured, auto-verify account so local/demo users are not trapped
     smtp_enabled = bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
     new_user = User(
-        username=payload.username,
-        email=payload.email,
+        username=clean_username,
+        email=clean_email,
         password_hash=hash_password(payload.password),
         first_name=payload.first_name,
         last_name=payload.last_name,
@@ -95,7 +106,7 @@ def signup(
     db.flush() # get user_id
 
     # Generate verification token
-    from backend.app.infrastructure.database.models import EmailVerification
+    from backend.infrastructure.database.models import EmailVerification
     from backend.app.core.email import send_verification_email
 
     raw_token = generate_secure_token()
@@ -122,7 +133,7 @@ def verify_email(
     db: Session = Depends(get_db),
     _rate: None = Depends(strict),
 ):
-    from backend.app.infrastructure.database.models import EmailVerification
+    from backend.infrastructure.database.models import EmailVerification
     token_hash = hash_token(token)
 
     verification = (
@@ -168,10 +179,11 @@ def login(
 
     # Get client IP for login attempt logging
     client_ip = request.client.host if request.client else None
+    clean_identifier = (payload.identifier or '').strip().lower()
 
-    # Find user by email or username
+    # Find user by case-insensitive email or username
     user = db.query(User).filter(
-        (User.email == payload.identifier) | (User.username == payload.identifier)
+        (func.lower(User.email) == clean_identifier) | (func.lower(User.username) == clean_identifier)
     ).first()
 
     if user is None or not verify_password(payload.password, user.password_hash):
@@ -181,14 +193,14 @@ def login(
             email=payload.identifier,
             ip_address=client_ip,
             successful=False,
-            failure_reason="Invalid email/username or password",
+            failure_reason="Invalid email or password",
         )
         db.add(failed_attempt)
         db.commit()
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email/username or password",
+            detail="Invalid email or password",
         )
 
     if not user.is_active:
