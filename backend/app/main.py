@@ -138,7 +138,6 @@ app.include_router(octa_tutor_router)
 
 
 
-
 # ─── Health & DB Check ───────────────────────────────────────────────
 @app.get("/api/health", tags=["Health"])
 def health_check():

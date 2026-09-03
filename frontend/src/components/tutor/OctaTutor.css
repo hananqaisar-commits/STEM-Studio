@@ -4,7 +4,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 20000 !important;
+  z-index: 9999;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -46,7 +46,7 @@
   bottom: 0;
   width: 420px;
   max-width: 100vw;
-  z-index: 20050 !important;
+  z-index: 10040;
   background: #ffffff;
   border-left: 1px solid #e2e8f0;
   box-shadow: -10px 0 30px -10px rgba(0, 0, 0, 0.08);
@@ -239,8 +239,8 @@
 /* Suggestion Pills */
 .tutor-suggestions {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
+  overflow-x: auto;
   padding: 0 20px 8px 20px;
 }
 
@@ -273,7 +273,7 @@
   color: #f8fafc;
 }
 
-/* ── Input Bar & Perched Mascot ───────────────────────── */
+/* ── Input Bar & Top-Right Perched Mascot ───────────────────────── */
 .tutor-input-container {
   position: relative;
   padding: 16px 20px 20px 20px;
@@ -286,13 +286,12 @@
   border-top-color: #1e293b;
 }
 
-/* MASCOT PERCHED ON TOP-RIGHT CORNER EDGE OF INPUT CONTAINER, SHIFTED ~1 INCH (48px) LEFT */
+/* PERCHED MASCOT EXACTLY ON TOP-RIGHT EDGE OF INPUT BOX */
 .tutor-perched-mascot {
   position: absolute;
   top: -26px;
-  right: 48px;
+  right: 24px;
   z-index: 10;
-  pointer-events: auto;
 }
 
 .tutor-input-tools {

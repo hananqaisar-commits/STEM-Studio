@@ -61,9 +61,20 @@ export const BacktrackingRenderer: React.FC<BacktrackingRendererProps> = ({
 
   const hasBothViews = isNQueens && treeNodes.length > 0;
 
+  if (!isNQueens) {
+    return (
+      <DecisionTree
+        nodes={treeNodes}
+        callStack={currentStep.callStack}
+        title="BACKTRACKING DECISION TREE"
+        subtitle={`${treeNodes.length} search nodes`}
+        onToggleFullscreen={onToggleFullscreen}
+      />
+    );
+  }
+
   return (
     <div className="backtracking-container animate-fade-in">
-      {/* Header with Hanoi-style View Switcher Tabs */}
       {hasBothViews && (
         <div className="bt-view-header">
           <span className="bt-view-title">N-QUEENS BACKTRACKING INSPECTOR</span>
@@ -97,7 +108,7 @@ export const BacktrackingRenderer: React.FC<BacktrackingRendererProps> = ({
       )}
 
       <div className={`bt-workspace mode-${viewMode}`}>
-        {(viewMode === 'visualizer' || viewMode === 'split' || !hasBothViews) && isNQueens && (
+        {(viewMode === 'visualizer' || viewMode === 'split' || !hasBothViews) && (
           <div className="bt-canvas-section">
             <Grid2D
               mode="2D"
@@ -113,14 +124,14 @@ export const BacktrackingRenderer: React.FC<BacktrackingRendererProps> = ({
           </div>
         )}
 
-        {(viewMode === 'tree' || viewMode === 'split' || !isNQueens) && (
+        {(viewMode === 'tree' || viewMode === 'split') && (
           <div className="bt-tree-section">
             <DecisionTree
               nodes={treeNodes}
               callStack={currentStep.callStack}
-              title={isNQueens ? "N-QUEENS DECISION TREE" : "BACKTRACKING DECISION TREE"}
+              title="N-QUEENS DECISION TREE"
               subtitle={`${treeNodes.length} search nodes`}
-              onToggleFullscreen={!isNQueens ? onToggleFullscreen : undefined}
+              onToggleFullscreen={onToggleFullscreen}
             />
           </div>
         )}

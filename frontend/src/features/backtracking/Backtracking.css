@@ -1,14 +1,17 @@
 /* ── Backtracking Category Styles ─────────────────────────────────── */
 
 /* ── Main Renderer ────────────────────────────────────────────────── */
-.bt-container {
+.bt-container,
+.backtracking-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 460px;
-  background: var(--color-surface, #0f172a);
-  border: 1px solid var(--color-border, #1e293b);
-  border-radius: 12px;
+  height: 440px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(255, 255, 255, 0.03);
   overflow: hidden;
 }
 
