@@ -193,14 +193,14 @@ def login(
             email=payload.identifier,
             ip_address=client_ip,
             successful=False,
-            failure_reason="Invalid email or password",
+            failure_reason="Invalid username or password",
         )
         db.add(failed_attempt)
         db.commit()
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid username or password",
         )
 
     if not user.is_active:
