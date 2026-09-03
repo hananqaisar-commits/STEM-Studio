@@ -91,9 +91,6 @@ export const OctaTutor: React.FC = () => {
           <span className="tutor-header-model">{llmConfig.modelName || 'qwen-plus'}</span>
         </div>
         <div className="tutor-header-actions">
-          <button className="tutor-icon-btn" onClick={() => setIsSettingsOpen(true)} title="Settings">
-            <Settings size={14} />
-          </button>
           <button className="tutor-icon-btn" onClick={clearHistory} title="Clear Chat">
             <Trash2 size={14} />
           </button>

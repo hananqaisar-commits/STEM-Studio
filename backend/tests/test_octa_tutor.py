@@ -7,8 +7,8 @@ from backend.tests.conftest import ASGITestClient
 def test_client(db_session):
     return ASGITestClient(app)
 
-def test_octa_tutor_missing_key_returns_503(test_client):
-    """When DASHSCOPE_API_KEY is empty and no custom key provided, server should return HTTP 503."""
+def test_octa_tutor_missing_key_returns_fallback(test_client):
+    """When DASHSCOPE_API_KEY is empty and no custom key provided, server should return HTTP 200 with smart fallback reply."""
     with patch("backend.app.api.routes.octa_tutor.get_settings") as mock_settings:
         mock_settings.return_value.DASHSCOPE_API_KEY = ""
         payload = {
@@ -21,8 +21,8 @@ def test_octa_tutor_missing_key_returns_503(test_client):
             "total_steps": 10,
         }
         res = test_client.post("/api/octa-tutor", json=payload)
-        assert res.status_code == 503
-        assert "not configured" in res.json()["detail"].lower()
+        assert res.status_code == 200
+        assert "Bubble Sort" in res.json()["reply"]
 
 def test_octa_tutor_successful_mock_response(test_client):
     """Mock successful DashScope Qwen call."""
