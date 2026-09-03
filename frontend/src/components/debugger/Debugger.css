@@ -3,11 +3,12 @@
 .multi-lang-code-panel {
   display: flex;
   flex-direction: column;
-  background-color: #ffffff !important;
-  border: 1.5px solid var(--purple-300, #d8b4fe) !important;
+  background-color: var(--color-surface) !important;
+  border: 1.5px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border)) !important;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--shadow-md);
+  color: var(--color-text) !important;
 }
 
 /* In the two-row scene layout the debugger fills the bottom rail and its
@@ -35,9 +36,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 0.85rem;
-  background-color: rgba(250, 245, 255, 0.4);
-  border-bottom: 1px solid var(--purple-200, #e9d5ff);
+  background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)) !important;
+  border-bottom: 1px solid var(--color-border) !important;
   gap: 0.5rem;
+  color: var(--color-text) !important;
 }
 
 .header-title-group {
