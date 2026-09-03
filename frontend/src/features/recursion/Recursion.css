@@ -55,6 +55,16 @@
   overflow: auto;
 }
 
+.recursion-workspace.mode-stack .recursion-callstack-sidebar {
+  width: 100%;
+  border-left: none;
+  max-width: none;
+}
+
+.recursion-workspace.mode-tree .recursion-tree-area {
+  width: 100%;
+}
+
 .recursion-tree-area {
   position: relative;
   flex: 1;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Maximize2, GitBranch, Layers } from 'lucide-react';
+import { Maximize2, GitBranch, Layers, Columns } from 'lucide-react';
 import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
 import { vizFlash, vizLabelColor } from '../../components/primitives/vizPalette';
@@ -65,6 +65,7 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
   onToggleFullscreen,
 }) => {
   const [hanoiView, setHanoiView] = useState<'pegs' | 'tree'>('pegs');
+  const [viewMode, setViewMode] = useState<'split' | 'tree' | 'stack'>('split');
   const treeAreaRef = useRef<HTMLDivElement>(null);
   const prevTreeRef = useRef<{ size: number; states: string[] } | null>(null);
 
@@ -232,28 +233,50 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
           <span className="tree-subtitle">{n} call{n !== 1 ? 's' : ''} &bull; depth {maxDepth + 1}</span>
         </div>
         <div className="canvas-header-right">
-          {hanoiSnapshot && (
-            <div className="rec-view-toggle" role="tablist" aria-label="Hanoi view">
+          <div className="rec-view-toggle" role="tablist" aria-label="Recursion view modes">
+            {hanoiSnapshot && (
               <button
                 role="tab"
-                aria-selected={hanoiView === 'pegs'}
+                aria-selected={hanoiView === 'pegs' && viewMode !== 'stack'}
                 className={`rec-view-btn ${hanoiView === 'pegs' ? 'active' : ''}`}
-                onClick={() => setHanoiView('pegs')}
+                onClick={() => setHanoiView(v => v === 'pegs' ? 'tree' : 'pegs')}
+                title="Toggle Hanoi Peg Board vs Tree"
               >
                 <Layers size={12} />
-                <span>3-Peg Board</span>
+                <span>{hanoiView === 'pegs' ? '3-Peg Board' : 'Tree Diagram'}</span>
               </button>
-              <button
-                role="tab"
-                aria-selected={hanoiView === 'tree'}
-                className={`rec-view-btn ${hanoiView === 'tree' ? 'active' : ''}`}
-                onClick={() => setHanoiView('tree')}
-              >
-                <GitBranch size={12} />
-                <span>Call Tree</span>
-              </button>
-            </div>
-          )}
+            )}
+            <button
+              role="tab"
+              aria-selected={viewMode === 'tree'}
+              className={`rec-view-btn ${viewMode === 'tree' ? 'active' : ''}`}
+              onClick={() => setViewMode('tree')}
+              title="Show Visualizer Tree/Pegs Only"
+            >
+              <GitBranch size={12} />
+              <span>Tree Only</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={viewMode === 'stack'}
+              className={`rec-view-btn ${viewMode === 'stack' ? 'active' : ''}`}
+              onClick={() => setViewMode('stack')}
+              title="Show Call Stack Only"
+            >
+              <Layers size={12} />
+              <span>Stack Only</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={viewMode === 'split'}
+              className={`rec-view-btn ${viewMode === 'split' ? 'active' : ''}`}
+              onClick={() => setViewMode('split')}
+              title="Show Split View (Both)"
+            >
+              <Columns size={12} />
+              <span>Split View</span>
+            </button>
+          </div>
           {onToggleFullscreen && (
             <button className="fullscreen-toggle-btn" onClick={onToggleFullscreen} title="Enter Full Screen">
               <Maximize2 size={14} />
@@ -264,91 +287,95 @@ export const RecursionTreeRenderer: React.FC<RecursionTreeRendererProps> = ({
       </div>
 
       {/* ── Main workspace: tree/pegs + sidebar ────────────────────── */}
-      <div className="recursion-workspace">
-        {showPegs ? (
-          <div className="recursion-tree-area hanoi-area">
-            <HanoiPegBoard
-              snapshot={hanoiSnapshot}
-              totalDisks={Object.values(hanoiSnapshot.pegs).reduce((s, arr) => s + arr.length, 0)}
-            />
-          </div>
-        ) : (
-          <div className="recursion-tree-area" style={{ minHeight: canvasHeight }} ref={treeAreaRef}>
-            {/* SVG edge layer */}
-            <svg className="recursion-svg-layer" width="100%" height={canvasHeight}>
-              {layoutEdges.map((e, i) => (
-                <Line
-                  key={i}
-                  x1={`${e.x1}%`}
-                  y1={e.y1}
-                  x2={`${e.x2}%`}
-                  y2={e.y2}
-                  state={toElementState(e.state)}
-                  strokeWidth={e.state === 'pending' ? 1.5 : 2.5}
-                />
-              ))}
-            </svg>
-
-            {/* Node layer */}
-            <div className="recursion-nodes-layer">
-              {layoutNodes.map((nd) => (
-                <div
-                  key={nd.idx}
-                  className={`recursion-node-wrapper state-${nd.state}`}
-                  style={{ left: `${nd.x}%`, top: `${nd.y}px` }}
-                >
-                  {/* Call label above */}
-                  <span
-                    className="recursion-call-label"
-                    style={{ color: vizLabelColor(toElementState(nd.state)) }}
-                  >
-                    {nd.label}
-                  </span>
-
-                  {/* Circle node */}
-                  <CircleNode
-                    value={nd.returnValue !== '?' && nd.returnValue !== 'done' ? nd.returnValue : '·'}
-                    state={toElementState(nd.state)}
-                    size={44}
-                  />
-
-                  {/* Return value badge below */}
-                  {nd.returnValue !== '?' && nd.returnValue !== '·' && (
-                    <span
-                      className={`recursion-return-badge state-${nd.state}`}
-                    >
-                      {nd.returnValue}
-                    </span>
-                  )}
-                </div>
-              ))}
+      <div className={`recursion-workspace mode-${viewMode}`}>
+        {(viewMode === 'tree' || viewMode === 'split') && (
+          showPegs ? (
+            <div className="recursion-tree-area hanoi-area">
+              <HanoiPegBoard
+                snapshot={hanoiSnapshot}
+                totalDisks={Object.values(hanoiSnapshot.pegs).reduce((s, arr) => s + arr.length, 0)}
+              />
             </div>
-          </div>
+          ) : (
+            <div className="recursion-tree-area" style={{ minHeight: canvasHeight }} ref={treeAreaRef}>
+              {/* SVG edge layer */}
+              <svg className="recursion-svg-layer" width="100%" height={canvasHeight}>
+                {layoutEdges.map((e, i) => (
+                  <Line
+                    key={i}
+                    x1={`${e.x1}%`}
+                    y1={e.y1}
+                    x2={`${e.x2}%`}
+                    y2={e.y2}
+                    state={toElementState(e.state)}
+                    strokeWidth={e.state === 'pending' ? 1.5 : 2.5}
+                  />
+                ))}
+              </svg>
+
+              {/* Node layer */}
+              <div className="recursion-nodes-layer">
+                {layoutNodes.map((nd) => (
+                  <div
+                    key={nd.idx}
+                    className={`recursion-node-wrapper state-${nd.state}`}
+                    style={{ left: `${nd.x}%`, top: `${nd.y}px` }}
+                  >
+                    {/* Call label above */}
+                    <span
+                      className="recursion-call-label"
+                      style={{ color: vizLabelColor(toElementState(nd.state)) }}
+                    >
+                      {nd.label}
+                    </span>
+
+                    {/* Circle node */}
+                    <CircleNode
+                      value={nd.returnValue !== '?' && nd.returnValue !== 'done' ? nd.returnValue : '·'}
+                      state={toElementState(nd.state)}
+                      size={44}
+                    />
+
+                    {/* Return value badge below */}
+                    {nd.returnValue !== '?' && nd.returnValue !== '·' && (
+                      <span
+                        className={`recursion-return-badge state-${nd.state}`}
+                      >
+                        {nd.returnValue}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
         )}
 
         {/* ── Call stack sidebar ────────────────────────────────────── */}
-        <div className="recursion-callstack-sidebar">
-          <div className="callstack-header">
-            <span className="callstack-icon">⊞</span>
-            <span>Call Stack</span>
-            <span className="callstack-count">{callStack.length}</span>
+        {(viewMode === 'stack' || viewMode === 'split') && (
+          <div className="recursion-callstack-sidebar">
+            <div className="callstack-header">
+              <span className="callstack-icon">⊞</span>
+              <span>Call Stack</span>
+              <span className="callstack-count">{callStack.length}</span>
+            </div>
+            <div className="callstack-body">
+              {callStack.length === 0 ? (
+                <div className="callstack-empty">Stack empty</div>
+              ) : (
+                [...callStack].reverse().map((frame, i) => (
+                  <div
+                    key={i}
+                    className={`callstack-frame ${i === 0 ? 'frame-top' : ''}`}
+                  >
+                    <span className="frame-depth">{callStack.length - i}</span>
+                    <span className="frame-label">{frame}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <div className="callstack-body">
-            {callStack.length === 0 ? (
-              <div className="callstack-empty">Stack empty</div>
-            ) : (
-              [...callStack].reverse().map((frame, i) => (
-                <div
-                  key={i}
-                  className={`callstack-frame ${i === 0 ? 'frame-top' : ''}`}
-                >
-                  <span className="frame-depth">{callStack.length - i}</span>
-                  <span className="frame-label">{frame}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ── Step description ──────────────────────────────────────── */}
