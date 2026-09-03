@@ -1,41 +1,33 @@
-import React from 'react';
-import { Target, BookOpen, Compass, Zap, RotateCcw, Eye, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Target, BookOpen, Zap, RotateCcw, Eye, Sparkles } from 'lucide-react';
 import { QuizPanel } from './QuizPanel';
+import { QuizEngine } from './QuizEngine';
 import { QuizRevision } from './QuizRevision';
 import { QuizReport } from './QuizReport';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
-import {
-  CADENCE_LABELS,
-  CADENCE_IDENTITIES,
-  CADENCE_DESCRIPTIONS,
-  type QuizCadence,
-} from '../../engine/types/Quiz';
+import { type QuizCadence } from '../../engine/types/Quiz';
 import type { QuizSessionState } from '../../hooks/useQuizSession';
 import './QuizPanel.css';
 
 /* ── Quiz dock ─────────────────────────────────────────────────────────
-   The slot the quiz lives in. Mounted once per page as the first card of
-   the right-hand rail. Handles all quiz phases:
+   Handles the full quiz UI. Three entry points from the idle screen:
 
-   off        → Observation Mode card (guidance for free watching + the
-                 one-click path back into Quiz mode)
-   idle       → mode cards + cadence selector + score summary
-   revision   → QuizRevision card (pre-quiz review)
-   asking     → QuizPanel (question active, timer if Challenge)
-   retrying   → QuizPanel (hint shown, second attempt)
-   revealed   → QuizPanel (answer locked, explanation shown)
-   report     → QuizReport (post-quiz analysis, or the transfer verdict
-                 when it concludes a "Prove You Understand" challenge)
+     1. Concept Mode  → QuizEngine (standalone MCQ, no step playback)
+     2. Flow Mode     → existing QuizPanel / useQuizSession pipeline
+                        (live step prediction with 15s timer)
+     3. Revision Mode → QuizEngine focused on weak areas from history
+
+   No "Checkpoint" language anywhere. Smooth natural flow throughout.
    ─────────────────────────────────────────────────────────────────── */
 
-const CADENCES: QuizCadence[] = ['light', 'normal', 'intensive'];
+type ActiveMode = 'concept' | 'flow' | 'revision' | null;
 
-const MODE_ICONS: Record<QuizCadence, React.ReactNode> = {
-  light: <BookOpen size={16} />,
-  normal: <Compass size={16} />,
-  intensive: <Zap size={16} />,
-};
+const MODES: { id: ActiveMode; label: string; desc: string; icon: React.ReactNode }[] = [
+  { id: 'concept',  label: 'Concept Mode',  desc: 'Test your understanding with 10-15 questions',  icon: <BookOpen size={16} /> },
+  { id: 'flow',     label: 'Flow Mode',     desc: 'Predict each step as the algorithm runs, live', icon: <Zap size={16} /> },
+  { id: 'revision', label: 'Revision Mode', desc: "Focus on the topics you've struggled with",      icon: <RotateCcw size={16} /> },
+];
 
 export interface QuizDockProps {
   session: QuizSessionState;
@@ -43,19 +35,13 @@ export interface QuizDockProps {
   onCadenceChange: (cadence: QuizCadence) => void;
   /** Per-category wording for the resume button, e.g. "Resume traversal". */
   continueLabel?: string;
-  /** Shown when the current selection has no authored checkpoints. */
+  /** Shown when the current algorithm has no step checkpoints. */
   emptyMessage?: string;
   /** Algorithm display name for the revision card. */
   algorithmName?: string;
-  /** Callback to retry quiz (resets session). */
   onRetry?: () => void;
-  /** Callback to bump cadence up one level. */
   onHarderMode?: () => void;
-  /** Callback to dismiss report and return to learning. */
   onBackToLearning?: () => void;
-  /** Starts the transfer challenge ("Prove You Understand"): the page
-   *  regenerates a fresh input and the session arms the first steps of
-   *  the new execution as cold predictions. */
   onProveIt?: () => void;
   /** Turns quiz mode on from the Observation Mode card. */
   onEnableQuiz?: () => void;
@@ -64,9 +50,8 @@ export interface QuizDockProps {
 export const QuizDock: React.FC<QuizDockProps> = ({
   session,
   cadence,
-  onCadenceChange,
   continueLabel,
-  emptyMessage = 'This selection has no prediction checkpoints yet.',
+  emptyMessage = 'No step checkpoints for this selection yet.',
   algorithmName = 'This algorithm',
   onRetry,
   onHarderMode,
@@ -76,10 +61,12 @@ export const QuizDock: React.FC<QuizDockProps> = ({
 }) => {
   const { phase, checkpoint, enabled } = session;
 
-  /* ── Observation Mode (quiz off) ──────────────────────────────────
-     Quiz mode off must not render a broken-looking empty quiz card.
-     The dock becomes a watching guide: how to get real learning out of
-     free playback, plus the one-click way back into the loop. */
+  /** Which of the 3 entry modes the user has picked (null = selection screen). */
+  const [activeMode, setActiveMode] = useState<ActiveMode>(null);
+
+  const handleBack = () => setActiveMode(null);
+
+  /* ── Observation Mode (quiz off) ─────────────────────────────────── */
   if (!enabled) {
     return (
       <div className="quiz-dock">
@@ -89,14 +76,10 @@ export const QuizDock: React.FC<QuizDockProps> = ({
         <section className="quiz-panel" aria-label="Observation mode">
           <header className="quiz-head">
             <div className="quiz-head-text">
-              <span className="quiz-eyebrow">
-                <Eye size={13} />
-                Free watching
-              </span>
+              <span className="quiz-eyebrow"><Eye size={13} /> Free watching</span>
               <h3 className="quiz-title">Observation mode</h3>
             </div>
           </header>
-
           <div className="quiz-idle-body">
             <p className="quiz-observation-desc">
               Playback never pauses — watch the algorithm unfold at your own pace.
@@ -109,12 +92,10 @@ export const QuizDock: React.FC<QuizDockProps> = ({
             <p className="quiz-observation-cta-text">Ready to test your mental model?</p>
             {onEnableQuiz && (
               <button type="button" className="quiz-action" onClick={onEnableQuiz}>
-                <Zap size={14} />
-                Turn on Quiz mode
+                <Zap size={14} /> Turn on Quiz mode
               </button>
             )}
           </div>
-
           <footer className="quiz-foot">
             <span className="quiz-score">Quiz mode is off</span>
           </footer>
@@ -123,8 +104,18 @@ export const QuizDock: React.FC<QuizDockProps> = ({
     );
   }
 
-  /* ── Revision phase ─────────────────────────────────────────────── */
-  if (phase === 'revision' && session.revisionData) {
+  /* ── Concept Mode ────────────────────────────────────────────────── */
+  if (activeMode === 'concept') {
+    return <QuizEngine mode="concept" onBack={handleBack} />;
+  }
+
+  /* ── Revision Mode ───────────────────────────────────────────────── */
+  if (activeMode === 'revision') {
+    return <QuizEngine mode="revision" onBack={handleBack} />;
+  }
+
+  /* ── Flow Mode: revision pre-card ────────────────────────────────── */
+  if (activeMode === 'flow' && phase === 'revision' && session.revisionData) {
     return (
       <div className="quiz-dock">
         <QuizRevision
@@ -136,8 +127,8 @@ export const QuizDock: React.FC<QuizDockProps> = ({
     );
   }
 
-  /* ── Report phase ───────────────────────────────────────────────── */
-  if (phase === 'report') {
+  /* ── Flow Mode: post-quiz report ─────────────────────────────────── */
+  if (activeMode === 'flow' && phase === 'report') {
     return (
       <div className="quiz-dock">
         <div className="quiz-dock-mascot">
@@ -157,8 +148,6 @@ export const QuizDock: React.FC<QuizDockProps> = ({
           challengeMode={session.challengeMode}
           onProveIt={onProveIt}
           onRetry={() => {
-            /* Retrying the transfer challenge wants a brand-new input,
-             * which is exactly what the Prove It flow regenerates. */
             if (session.challengeMode && onProveIt) {
               onProveIt();
             } else {
@@ -169,6 +158,7 @@ export const QuizDock: React.FC<QuizDockProps> = ({
           onHarderMode={() => onHarderMode?.()}
           onBackToLearning={() => {
             session.dismissReport();
+            setActiveMode(null);
             onBackToLearning?.();
           }}
           canGoHarder={cadence !== 'intensive'}
@@ -177,8 +167,8 @@ export const QuizDock: React.FC<QuizDockProps> = ({
     );
   }
 
-  /* ── Active question phase ──────────────────────────────────────── */
-  if (phase !== 'idle' && checkpoint) {
+  /* ── Flow Mode: active prediction question ───────────────────────── */
+  if (activeMode === 'flow' && phase !== 'idle' && checkpoint) {
     return (
       <div className="quiz-dock">
         <QuizPanel
@@ -196,7 +186,6 @@ export const QuizDock: React.FC<QuizDockProps> = ({
           timeRemaining={session.timeRemaining}
           streakMultiplier={session.streakMultiplier}
           challengeMode={session.challengeMode}
-          inspectPending={session.inspectPending}
           onAnswer={session.answer}
           onContinue={session.continueExecution}
           continueLabel={continueLabel}
@@ -205,10 +194,61 @@ export const QuizDock: React.FC<QuizDockProps> = ({
     );
   }
 
-  /* ── Idle phase ─────────────────────────────────────────────────── */
-  const { totalCheckpoints, answeredCount, correctCount, lifetimeAccuracy, lifetimeStreak, quizCompleted } =
-    session;
+  /* ── Flow Mode idle: watching, waiting for a step checkpoint ─────── */
+  if (activeMode === 'flow') {
+    const { totalCheckpoints, answeredCount, correctCount, lifetimeAccuracy, lifetimeStreak, quizCompleted } = session;
+    return (
+      <div className="quiz-dock">
+        <div className="quiz-dock-mascot">
+          <Octa expression="focused" size="small" interactive={false} />
+        </div>
+        <section className="quiz-panel" aria-label="Flow mode active">
+          <header className="quiz-head">
+            <div className="quiz-head-text">
+              <span className="quiz-eyebrow"><Zap size={13} /> Flow Mode</span>
+              <h3 className="quiz-title">Predicting live steps</h3>
+            </div>
+          </header>
+          <div className="quiz-idle-body">
+            {session.challengeMode && (
+              <div className="quiz-challenge-armed">
+                <Sparkles size={14} />
+                <span>Fresh input loaded — press play and predict the first steps cold.</span>
+              </div>
+            )}
+            {totalCheckpoints === 0 ? (
+              <p className="quiz-idle-empty">{emptyMessage}</p>
+            ) : (
+              <p className="quiz-idle-line">
+                Press play — the algorithm will pause at key decision points for your predictions.
+                {quizCompleted && session.questionResults.length > 0 && ' Session complete!'}
+              </p>
+            )}
+            {quizCompleted && session.questionResults.length > 0 && (
+              <button type="button" className="quiz-action quiz-action-secondary" onClick={session.showReport}>
+                View results
+              </button>
+            )}
+          </div>
+          <footer className="quiz-foot">
+            <span className="quiz-score">
+              {answeredCount === 0 ? 'Waiting for first question…' : `${correctCount}/${answeredCount} correct`}
+            </span>
+            {lifetimeAccuracy !== null && (
+              <span className="quiz-score">
+                {Math.round(lifetimeAccuracy)}% overall{lifetimeStreak ? ` · streak ${lifetimeStreak}` : ''}
+              </span>
+            )}
+            <button type="button" className="quiz-score" style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }} onClick={handleBack}>
+              ← Back
+            </button>
+          </footer>
+        </section>
+      </div>
+    );
+  }
 
+  /* ── Mode selection screen (default idle) ────────────────────────── */
   return (
     <div className="quiz-dock">
       <div className="quiz-dock-mascot">
@@ -217,111 +257,44 @@ export const QuizDock: React.FC<QuizDockProps> = ({
       <section className="quiz-panel" aria-label="Quiz mode">
         <header className="quiz-head">
           <div className="quiz-head-text">
-            <span className="quiz-eyebrow">
-              <Target size={13} />
-              Interactive learning
-            </span>
+            <span className="quiz-eyebrow"><Target size={13} /> Interactive learning</span>
             <h3 className="quiz-title">Quiz mode</h3>
           </div>
         </header>
 
         <div className="quiz-idle-body">
-          {/* Transfer challenge armed — tell the student what to do next:
-              the fresh input is on the canvas, they start the playback. */}
-          {session.challengeMode && (
-            <div className="quiz-challenge-armed">
-              <Sparkles size={14} />
-              <span>
-                Transfer challenge armed — a fresh input is loaded. Press play and
-                predict the first steps cold.
-              </span>
-            </div>
-          )}
-          {totalCheckpoints === 0 ? (
-            <p className="quiz-idle-empty">{emptyMessage}</p>
-          ) : (
-            <>
-              {/* Mode cards — visual identity for each cadence level */}
-              <div className="quiz-mode-cards">
-                {CADENCES.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={`quiz-mode-card${option === cadence ? ' is-active' : ''}`}
-                    aria-pressed={option === cadence}
-                    onClick={() => onCadenceChange(option)}
-                  >
-                    <span className="quiz-mode-icon">{MODE_ICONS[option]}</span>
-                    <div className="quiz-mode-text">
-                      <span className="quiz-mode-name">{CADENCE_LABELS[option]}</span>
-                      <span className="quiz-mode-identity">{CADENCE_IDENTITIES[option]}</span>
-                    </div>
-                    {option === cadence && (
-                      <span className="quiz-mode-check">
-                        <Target size={12} />
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Selected mode description */}
-              <p className="quiz-mode-desc">{CADENCE_DESCRIPTIONS[cadence]}</p>
-
-              {/* Checkpoint info */}
-              <p className="quiz-idle-line">
-                {totalCheckpoints} decision {totalCheckpoints === 1 ? 'point' : 'points'} at this level.
-                Playback pauses so you can reason about each step.
-              </p>
-
-              {/* Start revision button */}
-              {session.revisionData && (
-                <button
-                  type="button"
-                  className="quiz-action quiz-action-secondary"
-                  onClick={session.startRevision}
-                >
-                  <Eye size={14} />
-                  Last-Minute Revision
-                </button>
-              )}
-
-              {/* View report button if quiz was completed */}
-              {quizCompleted && session.questionResults.length > 0 && (
-                <button
-                  type="button"
-                  className="quiz-action quiz-action-secondary"
-                  onClick={session.showReport}
-                >
-                  View Performance Report
-                </button>
-              )}
-            </>
-          )}
+          <div className="quiz-mode-cards" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {MODES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="quiz-mode-card"
+                onClick={() => setActiveMode(option.id)}
+                style={{
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 14px',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  background: 'var(--bg-card)',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+              >
+                <span className="quiz-mode-icon" style={{ color: 'var(--quiz-accent)' }}>{option.icon}</span>
+                <div className="quiz-mode-text" style={{ flex: 1 }}>
+                  <span className="quiz-mode-name" style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>{option.label}</span>
+                  <span className="quiz-mode-identity" style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)' }}>{option.desc}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
         <footer className="quiz-foot">
-          <span className="quiz-score">
-            {answeredCount === 0
-              ? 'No answers yet this run'
-              : `${correctCount}/${answeredCount} correct this run`}
-          </span>
-          {lifetimeAccuracy !== null && (
-            <span className="quiz-score">
-              {Math.round(lifetimeAccuracy)}% overall
-              {lifetimeStreak ? ` \u00b7 streak ${lifetimeStreak}` : ''}
-            </span>
-          )}
-          {answeredCount > 0 && (
-            <button
-              type="button"
-              className="quiz-score quiz-reset-mini"
-              onClick={session.resetSession}
-              title="Reset quiz"
-            >
-              <RotateCcw size={12} />
-            </button>
-          )}
+          <span className="quiz-score">Choose a mode to begin</span>
         </footer>
       </section>
     </div>
