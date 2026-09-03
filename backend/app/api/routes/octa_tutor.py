@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import List, Dict, Any, Tuple
 import httpx
 from fastapi import APIRouter, HTTPException, Request, status
@@ -30,6 +31,73 @@ logger = logging.getLogger("octa_tutor")
 tutor_rate_limiter = RateLimiter(max_requests=20, window_seconds=60)
 
 DEFAULT_DASHSCOPE_ENDPOINT = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+
+def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
+    """Intelligent fallback response generator for offline or unconfigured API key states."""
+    msg_lower = (req_data.message or "").lower().strip()
+    alg_name = req_data.algorithm_name or "this algorithm"
+    step_num = (req_data.current_step_index + 1) if req_data.total_steps > 0 else 1
+    total_steps = req_data.total_steps or 1
+    step_desc = req_data.current_step_description or "evaluating elements"
+
+    function_calls: List[OctaTutorFunctionCall] = []
+    mascot_expr = "happy"
+
+    if any(w in msg_lower for w in ["dark mode", "light mode", "theme", "dark", "light"]):
+        target_mode = "dark" if any(w in msg_lower for w in ["dark", "dark mode"]) else "light"
+        function_calls.append(OctaTutorFunctionCall(name="switch_theme", args={"mode": target_mode}))
+        reply = f"Sure thing! Switching interface theme to {target_mode} mode for you."
+        mascot_expr = "excited"
+
+    elif any(w in msg_lower for w in ["debugger", "code panel", "hide debugger", "show debugger"]):
+        vis = not any(w in msg_lower for w in ["hide", "close", "off"])
+        function_calls.append(OctaTutorFunctionCall(name="toggle_debugger", args={"visible": vis}))
+        reply = f"Done! I have {'shown' if vis else 'hidden'} the code debugger panel."
+        mascot_expr = "happy"
+
+    elif any(w in msg_lower for w in ["quiz", "test", "practice", "questions", "generate quiz"]):
+        function_calls.append(OctaTutorFunctionCall(name="generate_quiz", args={"count": 5, "difficulty": "medium"}))
+        reply = f"Awesome! Creating a custom practice quiz on {alg_name} right now."
+        mascot_expr = "review"
+
+    elif any(w in msg_lower for w in ["explain step", "step", "current step", "samjha do"]):
+        step_match = re.search(r'step\s*(\d+)', msg_lower)
+        if step_match:
+            s_idx = int(step_match.group(1))
+            reply = f"In Step {s_idx} of {alg_name}: The algorithm processes current data structures and updates the visualizer layout. {step_desc}"
+        else:
+            reply = f"In Step {step_num} of {total_steps} for {alg_name}: {step_desc}. Every step brings you closer to mastering DSA!"
+        mascot_expr = "reading"
+
+    elif any(w in msg_lower for w in ["how to use", "who are you", "what can you do", "help"]):
+        reply = (
+            f"Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\n"
+            f"Here is how I can help you:\n"
+            f"• Explain steps of {alg_name} (e.g. 'explain step {step_num}')\n"
+            f"• Control theme: say 'dark mode' or 'light mode'\n"
+            f"• Toggle debugger panel: say 'hide debugger'\n"
+            f"• Practice quiz: say 'generate quiz'\n"
+            f"• Multilingual support: English, Roman Urdu, Urdu, Chinese!"
+        )
+        mascot_expr = "happy"
+
+    elif any(w in msg_lower for w in ["kya", "kaise", "batao", "samjhao", "kaam", "yeh", "kia"]):
+        reply = f"Yeh {alg_name} ka step {step_num} hai ({step_desc}). Is step mein algorithm data ko process kar raha hai. Aap koi bhi question pooch sakte hain!"
+        mascot_expr = "helping"
+
+    elif any(char for char in msg_lower if '\u4e00' <= char <= '\u9fff'):
+        reply = f"您好！我是 Octa Tutor。关于 {alg_name} 的第 {step_num} 步：{step_desc}。随时告诉我您的疑问！"
+        mascot_expr = "happy"
+
+    else:
+        reply = f"Great question about {alg_name}! We are currently at step {step_num} of {total_steps} ({step_desc}). Ask me to explain specific steps, switch themes, or create a quiz!"
+        mascot_expr = "helping"
+
+    return OctaTutorResponse(
+        reply=reply,
+        function_calls=function_calls,
+        mascot_expression=mascot_expr
+    )
 
 SYSTEM_PROMPT_TEMPLATE = """You are Octa Tutor, a friendly, patient, and expert Data Structures & Algorithms (DSA) teaching assistant for STEM Studio.
 You speak directly to the student as Octa Tutor.
@@ -263,10 +331,8 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
     )
 
     if not api_key and provider_type != "custom":
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Octa AI Tutor is not configured for '{provider_type}'. Please set your API key in Octa settings or configure DASHSCOPE_API_KEY in backend .env."
-        )
+        logger.info(f"API key not configured for '{provider_type}'. Returning smart fallback response.")
+        return generate_fallback_response(req_data)
 
     # Format system prompt
     step_num = req_data.current_step_index + 1 if req_data.total_steps > 0 else 0
@@ -385,16 +451,10 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
         )
 
     except httpx.TimeoutException:
-        logger.error(f"LLM Provider API call to {provider_type} timed out.")
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail=f"Octa AI Tutor timed out waiting for {provider_type} response. Please retry."
-        )
+        logger.warning(f"LLM Provider API call to {provider_type} timed out. Falling back to smart tutor engine.")
+        return generate_fallback_response(req_data)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in octa_tutor endpoint: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred while processing your tutor request."
-        )
+        logger.warning(f"Error in LLM call ({str(e)}). Falling back to smart tutor engine.")
+        return generate_fallback_response(req_data)

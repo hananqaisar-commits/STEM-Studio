@@ -239,8 +239,8 @@
 /* Suggestion Pills */
 .tutor-suggestions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
   padding: 0 20px 8px 20px;
 }
 
@@ -273,7 +273,7 @@
   color: #f8fafc;
 }
 
-/* ── Input Bar & Top-Right Perched Mascot ───────────────────────── */
+/* ── Input Bar & Perched Mascot ───────────────────────── */
 .tutor-input-container {
   position: relative;
   padding: 16px 20px 20px 20px;
@@ -286,12 +286,13 @@
   border-top-color: #1e293b;
 }
 
-/* PERCHED MASCOT EXACTLY ON TOP-RIGHT EDGE OF INPUT BOX */
+/* MASCOT SITS ~1 INCH RIGHT OF INPUT BOX TOP-LEFT CORNER WITH FEET TOUCHING TOP EDGE */
 .tutor-perched-mascot {
   position: absolute;
-  top: -26px;
-  right: 24px;
+  top: -30px;
+  left: 80px;
   z-index: 10;
+  pointer-events: auto;
 }
 
 .tutor-input-tools {
