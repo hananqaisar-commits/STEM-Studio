@@ -503,8 +503,12 @@
 .bs-canvas-card,
 .bst-canvas-card,
 .bt-renderer,
+.bt-container,
+.backtracking-container,
+.shared-canvas-container,
 .tree-canvas-container,
 .sorting-canvas-container,
+.graph-canvas-container,
 .stack-container,
 .queue-container,
 .circular-queue-container,
@@ -512,19 +516,20 @@
 .dp-container,
 .array-container,
 .hashmap-container,
+.hashmap-renderer-root,
 .trie-container,
 .complexity-container,
 .recursion-canvas-container,
 .strings-canvas-card {
   display: flex;
   flex-direction: column;
-  background: var(--color-surface) !important;
-  border: 1.5px solid var(--purple-300, #d8b4fe) !important;
+  background: var(--color-app-bg);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  box-shadow: var(--shadow-md);
-  height: 100%;
-  min-height: 320px;
-  max-height: 480px;
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  height: 440px;
+  width: 100%;
+  box-sizing: border-box;
   overflow: auto !important;
 }
 
@@ -663,24 +668,37 @@
 .fs-workspace-scrollable .queue-container,
 .fs-workspace-scrollable .circular-queue-container,
 .fs-workspace-scrollable .problem-container,
-.fs-workspace-scrollable .tree-canvas-container {
-  height: 100% !important;
-  min-height: calc(100vh - 190px) !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
+.fs-workspace-scrollable .tree-canvas-container,
 .fs-workspace-scrollable .ll-canvas-card,
 .fs-workspace-scrollable .graph-canvas-card,
+.fs-workspace-scrollable .graph-canvas-container,
 .fs-workspace-scrollable .bs-canvas-card,
-.fs-workspace-scrollable .bst-canvas-card {
+.fs-workspace-scrollable .bst-canvas-card,
+.fs-workspace-scrollable .bst-canvas-container,
+.fs-workspace-scrollable .sorting-canvas-container,
+.fs-workspace-scrollable .shared-canvas-container,
+.fs-workspace-scrollable .recursion-canvas-container,
+.fs-workspace-scrollable .bt-container,
+.fs-workspace-scrollable .bt-renderer,
+.fs-workspace-scrollable .backtracking-container,
+.fs-workspace-scrollable .hashmap-renderer-root {
   height: 100% !important;
   min-height: calc(100vh - 190px) !important;
+  max-height: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: none !important;
 }
 
 .fs-workspace-scrollable .ll-canvas-body,
 .fs-workspace-scrollable .graph-canvas-body,
-.fs-workspace-scrollable .bs-canvas-body {
+.fs-workspace-scrollable .bs-canvas-body,
+.fs-workspace-scrollable .decisiontree-canvas-area,
+.fs-workspace-scrollable .grid2d-workspace,
+.fs-workspace-scrollable .bars-canvas,
+.fs-workspace-scrollable .bst-canvas-workspace {
   flex: 1 !important;
   min-height: calc(100vh - 260px) !important;
 }

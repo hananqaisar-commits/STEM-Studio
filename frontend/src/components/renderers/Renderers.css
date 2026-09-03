@@ -2,7 +2,9 @@
 
 /* Main Canvas Card Container */
 .shared-canvas-container {
-  min-height: 440px;
+  height: 440px;
+  width: 100%;
+  box-sizing: border-box;
   background-color: var(--color-app-bg);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -88,12 +90,25 @@
 
 .grid2d-workspace {
   flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 1rem 0;
-  overflow-x: auto;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--purple-400, #c084fc) transparent;
+}
+
+.grid2d-workspace::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.grid2d-workspace::-webkit-scrollbar-thumb {
+  background: var(--purple-400, #c084fc);
+  border-radius: 4px;
 }
 
 /* 1D Grid Row Layout */
@@ -104,6 +119,7 @@
   gap: 0.5rem;
   width: 100%;
   padding: 1rem 0;
+  overflow-x: auto;
 }
 
 .grid2d-1d-cell {
@@ -159,6 +175,7 @@
   flex-direction: column;
   align-items: center;
   margin: 0 auto;
+  padding: 0.5rem;
 }
 
 .grid2d-row-header-wrap {
@@ -253,14 +270,28 @@
   position: relative;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 .decisiontree-canvas-area {
   flex: 1;
   position: relative;
   width: 100%;
-  min-height: 380px;
+  height: 100%;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--purple-400, #c084fc) transparent;
+  padding-bottom: 2rem;
+}
+
+.decisiontree-canvas-area::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.decisiontree-canvas-area::-webkit-scrollbar-thumb {
+  background: var(--purple-400, #c084fc);
+  border-radius: 4px;
 }
 
 .decisiontree-svg-layer {
@@ -298,6 +329,9 @@
   margin-bottom: 0.25rem;
   white-space: nowrap;
   letter-spacing: 0.3px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .decisiontree-return-badge {
@@ -336,7 +370,7 @@
 
 /* Call Stack Sidebar */
 .decisiontree-callstack-sidebar {
-  width: 190px;
+  width: 200px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -344,7 +378,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 380px;
+  max-height: 440px;
 }
 
 .callstack-header {
@@ -415,8 +449,21 @@
   flex: 1;
   position: relative;
   width: 100%;
-  min-height: 400px;
+  min-height: 420px;
+  max-height: 480px;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--purple-400, #c084fc) transparent;
+}
+
+.trieradial-workspace::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.trieradial-workspace::-webkit-scrollbar-thumb {
+  background: var(--purple-400, #c084fc);
+  border-radius: 4px;
 }
 
 .trieradial-svg-layer {
@@ -532,7 +579,7 @@
 
   .decisiontree-callstack-sidebar {
     width: 100%;
-    max-height: 120px;
+    max-height: 140px;
   }
 
   .grid2d-matrix-cell {
@@ -540,4 +587,77 @@
     height: 38px;
     font-size: var(--text-xs);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. PHASE 2 RENDERERS STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* NumberLine Renderer */
+.numberline-workspace {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+}
+
+/* HashBuckets Renderer */
+.hashbuckets-workspace {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+/* GrowthCurve Renderer */
+.growthcurve-workspace {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* TimelineInterval Renderer */
+.timeline-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem;
+}
+
+/* ReferenceTable Renderer */
+.referencetable-workspace {
+  flex: 1;
+  width: 100%;
+  overflow: auto;
+  padding: 1rem;
+}
+
+/* PegTower Renderer */
+.pegtower-workspace {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2rem;
+  padding: 2rem;
+  height: 100%;
+}
+
+/* WeightedMergeTree Renderer */
+.weightedmergetree-workspace {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
 }

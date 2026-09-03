@@ -5,8 +5,9 @@
 
 /* String cell grid for character display */
 .string-cells-canvas {
-  display: flex; flex-wrap: wrap; gap: 4px; padding: 1.25rem;
-  justify-content: center; align-items: center; min-height: 120px;
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 1.25rem;
+  justify-content: center; align-items: center; flex: 1; width: 100%;
+  box-sizing: border-box; overflow: auto;
 }
 
 .string-cell {

@@ -7,13 +7,15 @@
 .recursion-canvas-container {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: var(--color-surface, #0f172a);
-  border: 1px solid var(--color-border, #1e293b);
-  border-radius: 12px;
+  height: 440px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--color-app-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(255, 255, 255, 0.03);
   overflow: hidden;
-  min-height: 0;
-  flex: 1;
 }
 
 .recursion-canvas-header {
@@ -50,14 +52,24 @@
   display: flex;
   gap: 0;
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 420px;
+  overflow: auto;
+}
+
+.recursion-workspace.mode-stack .recursion-callstack-sidebar {
+  width: 100%;
+  border-left: none;
+  max-width: none;
+}
+
+.recursion-workspace.mode-tree .recursion-tree-area {
+  width: 100%;
 }
 
 .recursion-tree-area {
   position: relative;
   flex: 1;
-  min-height: 320px;
+  min-height: 420px;
   overflow: auto;
 }
 

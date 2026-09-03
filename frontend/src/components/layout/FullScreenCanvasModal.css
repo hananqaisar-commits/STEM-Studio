@@ -373,24 +373,36 @@
 
 /* Force canvas container inside modal body to stretch full size */
 .fs-workspace-scrollable .bst-canvas-container,
-.fs-workspace-scrollable .sorting-canvas-container {
+.fs-workspace-scrollable .sorting-canvas-container,
+.fs-workspace-scrollable .shared-canvas-container,
+.fs-workspace-scrollable .graph-canvas-container,
+.fs-workspace-scrollable .recursion-canvas-container,
+.fs-workspace-scrollable .tree-canvas-container,
+.fs-workspace-scrollable .bt-container,
+.fs-workspace-scrollable .bt-renderer,
+.fs-workspace-scrollable .backtracking-container,
+.fs-workspace-scrollable .ll-canvas-card,
+.fs-workspace-scrollable .bs-canvas-card,
+.fs-workspace-scrollable .bst-canvas-card,
+.fs-workspace-scrollable .hashmap-renderer-root {
   min-height: calc(100vh - 160px) !important;
   height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* Backtracking decision-tree canvas fills the modal body in both axes */
-.fs-workspace-scrollable .bt-renderer {
-  min-height: calc(100vh - 160px) !important;
-  height: 100% !important;
+  width: 100% !important;
   max-height: none !important;
   display: flex !important;
   flex-direction: column !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .fs-workspace-scrollable .bst-canvas-workspace,
-.fs-workspace-scrollable .bars-canvas {
+.fs-workspace-scrollable .bars-canvas,
+.fs-workspace-scrollable .decisiontree-workspace,
+.fs-workspace-scrollable .decisiontree-canvas-area,
+.fs-workspace-scrollable .grid2d-workspace,
+.fs-workspace-scrollable .graph-canvas-body,
+.fs-workspace-scrollable .recursion-tree-workspace,
+.fs-workspace-scrollable .string-cells-canvas {
   flex: 1 !important;
   min-height: calc(100vh - 230px) !important;
 }
