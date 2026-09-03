@@ -81,7 +81,7 @@ def signup(
             detail="This username is already taken",
         )
 
-    # Create user with hashed password
+    # Create user with hashed password (default is_verified=False)
     new_user = User(
         username=payload.username,
         email=payload.email,
@@ -90,10 +90,67 @@ def signup(
         last_name=payload.last_name,
     )
     db.add(new_user)
+    db.flush() # get user_id
+
+    # Generate verification token
+    from backend.app.infrastructure.database.models import EmailVerification
+    from backend.app.core.email import send_verification_email
+
+    raw_token = generate_secure_token()
+    verification = EmailVerification(
+        user_id=new_user.user_id,
+        token_hash=hash_token(raw_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+    )
+    db.add(verification)
     db.commit()
     db.refresh(new_user)
 
+    verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
+    send_verification_email(to_email=new_user.email, verify_url=verify_url)
+
     return new_user
+
+
+# ─── GET /api/auth/verify-email ─────────────────────────────────────
+
+@router.get("/verify-email", response_model=MessageResponse)
+def verify_email(
+    token: str,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
+    from backend.app.infrastructure.database.models import EmailVerification
+    token_hash = hash_token(token)
+
+    verification = (
+        db.query(EmailVerification)
+        .filter(
+            EmailVerification.token_hash == token_hash,
+            EmailVerification.verified_at.is_(None),
+        )
+        .first()
+    )
+
+    if not verification:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or already used verification token",
+        )
+
+    if verification.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification token has expired",
+        )
+
+    user = db.query(User).filter(User.user_id == verification.user_id).first()
+    if user:
+        user.is_verified = True
+        verification.verified_at = datetime.now(timezone.utc)
+        db.commit()
+    
+    return MessageResponse(message="Email verified successfully")
 
 
 # ─── POST /api/auth/login ───────────────────────────────────────────
@@ -110,24 +167,26 @@ def login(
     # Get client IP for login attempt logging
     client_ip = request.client.host if request.client else None
 
-    # Find user by email (indexed column → fast lookup)
-    user = db.query(User).filter(User.email == payload.email).first()
+    # Find user by email or username
+    user = db.query(User).filter(
+        (User.email == payload.identifier) | (User.username == payload.identifier)
+    ).first()
 
     if user is None or not verify_password(payload.password, user.password_hash):
         # Log failed attempt
         failed_attempt = LoginAttempt(
             user_id=user.user_id if user else None,
-            email=payload.email,
+            email=payload.identifier,
             ip_address=client_ip,
             successful=False,
-            failure_reason="Invalid email or password",
+            failure_reason="Invalid email/username or password",
         )
         db.add(failed_attempt)
         db.commit()
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid email/username or password",
         )
 
     if not user.is_active:
@@ -139,7 +198,7 @@ def login(
     # Log successful attempt
     success_attempt = LoginAttempt(
         user_id=user.user_id,
-        email=payload.email,
+        email=user.email,
         ip_address=client_ip,
         successful=True,
     )
@@ -169,6 +228,93 @@ def login(
         refresh_token=refresh_token,
     )
 
+# ─── POST /api/auth/google ──────────────────────────────────────────
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from backend.app.api.schemas import GoogleSignInRequest
+
+@router.post("/google", response_model=TokenResponse)
+def google_login(
+    payload: GoogleSignInRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
+    """Authenticate a user via Google Identity Services."""
+    try:
+        # Verify the Google ID token
+        id_info = id_token.verify_oauth2_token(
+            payload.credential,
+            google_requests.Request(),
+            payload.client_id,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Google token: {e}"
+        )
+    
+    email = id_info.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="No email found in Google token")
+
+    first_name = id_info.get("given_name")
+    last_name = id_info.get("family_name")
+
+    # Check if user exists by email
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # Create a new user since they don't exist
+        # We generate a random password for them and a username based on their email
+        username_base = email.split("@")[0]
+        username = username_base
+        counter = 1
+        while db.query(User).filter(User.username == username).first():
+            username = f"{username_base}{counter}"
+            counter += 1
+            
+        user = User(
+            username=username,
+            email=email,
+            password_hash=hash_password(generate_secure_token()), # random unguessable password
+            first_name=first_name,
+            last_name=last_name,
+            is_verified=True, # Google verified their email
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated",
+        )
+
+    # Generate tokens
+    access_token = create_access_token(user.user_id, user.email)
+    refresh_token = create_refresh_token(user.user_id, remember_me=payload.remember_me)
+
+    session_days = (
+        settings.JWT_REMEMBER_ME_EXPIRE_DAYS
+        if payload.remember_me
+        else settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+    )
+    refresh_token_hash = hash_token(refresh_token)
+    session = UserSession(
+        user_id=user.user_id,
+        refresh_token_hash=refresh_token_hash,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=session_days),
+    )
+    db.add(session)
+    db.commit()
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
 
 # ─── POST /api/auth/refresh ─────────────────────────────────────────
 
