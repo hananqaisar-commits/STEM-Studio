@@ -71,15 +71,17 @@ export function runJobScheduling(
       scheduledCount++;
       selectedIndices.push(i);
 
-      const slotsStr = slotOccupied
+      const scheduledSlots = slotOccupied
         .slice(1, maxDeadline + 1)
-        .map((_occ, idx) => `[${idx + 1}]: ${slotJobLabel[idx + 1]}`)
-        .join(', ');
+        .map((occ, idx) => (occ ? `Slot ${idx + 1} (${slotJobLabel[idx + 1]})` : null))
+        .filter(Boolean);
+
+      const slotsStr = scheduledSlots.length > 0 ? scheduledSlots.join(', ') : 'None';
 
       steps.push({
         array: [...baseArray],
         sortedIndices: [...selectedIndices],
-        description: `Job ${i + 1} scheduled in slot ${assignedSlot}. Slots: ${slotsStr}. Total profit: ${totalProfit}.`,
+        description: `Job ${i + 1} scheduled in slot ${assignedSlot}. Scheduled slots: ${slotsStr}. Total profit: ${totalProfit}.`,
         codeLine: 3,
         variables: {
           i,
@@ -111,15 +113,17 @@ export function runJobScheduling(
   }
 
   // Final step
-  const finalSlots = slotOccupied
+  const finalScheduledSlots = slotOccupied
     .slice(1, maxDeadline + 1)
-    .map((_occ, idx) => `[${idx + 1}]: ${slotJobLabel[idx + 1]}`)
-    .join(', ');
+    .map((occ, idx) => (occ ? `Slot ${idx + 1} (${slotJobLabel[idx + 1]})` : null))
+    .filter(Boolean);
+
+  const finalSlots = finalScheduledSlots.length > 0 ? finalScheduledSlots.join(', ') : 'None';
 
   steps.push({
     array: [...baseArray],
     sortedIndices: [...selectedIndices],
-    description: `Job Scheduling complete. ${scheduledCount} jobs scheduled. Total profit: ${totalProfit}. Slots: ${finalSlots}.`,
+    description: `Job Scheduling complete. ${scheduledCount} jobs scheduled. Total profit: ${totalProfit}. Scheduled slots: ${finalSlots}.`,
     codeLine: 5,
     variables: { totalProfit, scheduled: scheduledCount, slots: finalSlots },
     callStack: ['main() -> jobScheduling(jobs) [DONE]'],

@@ -66,6 +66,7 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(340);
 
   const pathSegment = location.pathname.split('/')[2] || '';
 
@@ -74,6 +75,7 @@ const DashboardLayout = () => {
   };
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
 
   // Determine active module and category from path.
@@ -95,6 +97,9 @@ const DashboardLayout = () => {
           onSelectModule={handleSelectModule}
           isOpen={isSidebarOpen}
           onClose={closeSidebar}
+          onOpen={openSidebar}
+          sidebarWidth={sidebarWidth}
+          onWidthChange={setSidebarWidth}
         />
         <main className="dashboard-main">
           <Routes>
