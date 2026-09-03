@@ -55,11 +55,17 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'An error occurred' }));
     // FastAPI validation errors return detail as an array of objects;
-    // ensure we always produce a human-readable string.
+    // ensure we always produce a human-readable string with field context.
     let detail = errorData.detail ?? 'Request failed';
     if (typeof detail !== 'string') {
       if (Array.isArray(detail)) {
-        detail = detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ');
+        detail = detail
+          .map((d: any) => {
+            const loc = Array.isArray(d?.loc) ? d.loc.filter((item: any) => item !== 'body').join('.') : '';
+            const msg = d?.msg || JSON.stringify(d);
+            return loc ? `${loc}: ${msg}` : msg;
+          })
+          .join('; ');
       } else {
         detail = JSON.stringify(detail);
       }
