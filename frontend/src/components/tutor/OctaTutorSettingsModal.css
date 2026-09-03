@@ -1,0 +1,293 @@
+/* ─── Octa AI Tutor — Custom LLM Settings Modal Styling ───────────────
+   Luxury white-purple glassmorphism design.
+   ─────────────────────────────────────────────────────────────────── */
+
+.tutor-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tutor-settings-modal {
+  width: 520px;
+  max-width: 100%;
+  background: var(--card-bg, rgba(255, 255, 255, 0.96));
+  border: 1.5px solid var(--purple-300, #d8b4fe);
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(88, 28, 135, 0.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="dark"] .tutor-settings-modal {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+.tutor-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--purple-200, #e9d5ff);
+  background: linear-gradient(135deg, rgba(243, 232, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+[data-theme="dark"] .tutor-settings-header {
+  border-bottom-color: rgba(168, 85, 247, 0.2);
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.3) 0%, rgba(15, 23, 42, 0) 100%);
+}
+
+.tutor-settings-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tutor-settings-title h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--purple-900, #581c87);
+}
+
+[data-theme="dark"] .tutor-settings-title h3 {
+  color: #f3e8ff;
+}
+
+.tutor-settings-title p {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+}
+
+.tutor-settings-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.tutor-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tutor-field-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--purple-900, #581c87);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+[data-theme="dark"] .tutor-field-label {
+  color: #e9d5ff;
+}
+
+.tutor-provider-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.tutor-provider-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 1.5px solid var(--purple-200, #e9d5ff);
+  background: var(--card-bg, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main, #334155);
+}
+
+[data-theme="dark"] .tutor-provider-card {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(168, 85, 247, 0.2);
+  color: #cbd5e1;
+}
+
+.tutor-provider-card:hover {
+  border-color: #a855f7;
+  transform: translateY(-2px);
+}
+
+.tutor-provider-card.selected {
+  border-color: #a855f7;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(126, 34, 206, 0.18) 100%);
+  color: #9333ea;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
+}
+
+[data-theme="dark"] .tutor-provider-card.selected {
+  color: #e9d5ff;
+}
+
+.tutor-input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tutor-setting-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--purple-300, #d8b4fe);
+  background: var(--card-bg, #ffffff);
+  font-size: 0.88rem;
+  color: var(--text-main, #1e293b);
+  outline: none;
+  transition: all 0.2s;
+}
+
+[data-theme="dark"] .tutor-setting-input {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(168, 85, 247, 0.35);
+  color: #f8fafc;
+}
+
+.tutor-setting-input:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+}
+
+.tutor-eye-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.tutor-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tutor-preset-chip {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid var(--purple-200, #e9d5ff);
+  background: rgba(168, 85, 247, 0.06);
+  color: var(--purple-700, #7e22ce);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+[data-theme="dark"] .tutor-preset-chip {
+  border-color: rgba(168, 85, 247, 0.25);
+  color: #e9d5ff;
+}
+
+.tutor-preset-chip:hover {
+  background: #a855f7;
+  color: #ffffff;
+}
+
+/* Status Banner */
+.tutor-status-banner {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tutor-status-banner.success {
+  background: rgba(52, 211, 153, 0.15);
+  color: #059669;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.tutor-status-banner.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.tutor-settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid var(--purple-200, #e9d5ff);
+  background: rgba(248, 250, 252, 0.5);
+}
+
+[data-theme="dark"] .tutor-settings-footer {
+  border-top-color: rgba(168, 85, 247, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.tutor-btn-secondary {
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--purple-300, #d8b4fe);
+  background: transparent;
+  color: var(--purple-800, #6b21a8);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+[data-theme="dark"] .tutor-btn-secondary {
+  color: #e9d5ff;
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.tutor-btn-secondary:hover {
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.tutor-btn-primary {
+  padding: 9px 20px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tutor-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(168, 85, 247, 0.4);
+}

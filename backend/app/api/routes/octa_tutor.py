@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import httpx
 from fastapi import APIRouter, HTTPException, Request, status
 
@@ -9,6 +9,8 @@ try:
         OctaTutorRequest,
         OctaTutorResponse,
         OctaTutorFunctionCall,
+        OctaTutorTestRequest,
+        OctaTutorTestResponse,
     )
     from backend.app.core.config import get_settings
     from backend.app.core.rate_limit import RateLimiter
@@ -17,15 +19,17 @@ except ModuleNotFoundError:
         OctaTutorRequest,
         OctaTutorResponse,
         OctaTutorFunctionCall,
+        OctaTutorTestRequest,
+        OctaTutorTestResponse,
     )
     from app.core.config import get_settings
     from app.core.rate_limit import RateLimiter
 
 router = APIRouter(prefix="/api/octa-tutor", tags=["Octa AI Tutor"])
 logger = logging.getLogger("octa_tutor")
-tutor_rate_limiter = RateLimiter(max_requests=15, window_seconds=60)
+tutor_rate_limiter = RateLimiter(max_requests=20, window_seconds=60)
 
-DASHSCOPE_ENDPOINT = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+DEFAULT_DASHSCOPE_ENDPOINT = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
 
 SYSTEM_PROMPT_TEMPLATE = """You are Octa Tutor, a friendly, patient, and expert Data Structures & Algorithms (DSA) teaching assistant for STEM Studio.
 You speak directly to the student as Octa Tutor.
@@ -134,15 +138,116 @@ TOOLS_SPEC = [
 ]
 
 
+def resolve_llm_config(
+    provider: str,
+    user_api_key: str,
+    user_base_url: str,
+    user_model_name: str
+) -> Tuple[str, str, str, str]:
+    """
+    Resolves (endpoint_url, api_key, model_name, provider_type) based on user's BYOK settings or system defaults.
+    """
+    settings = get_settings()
+    provider_clean = (provider or "dashscope").lower().strip()
+
+    # Determine API key
+    if user_api_key and user_api_key.strip():
+        api_key = user_api_key.strip()
+    elif provider_clean == "dashscope":
+        api_key = settings.DASHSCOPE_API_KEY
+    else:
+        api_key = ""
+
+    # Determine Base URL and Model Name
+    if provider_clean == "openai":
+        base_url = user_base_url.strip() if user_base_url else "https://api.openai.com/v1/chat/completions"
+        model_name = user_model_name.strip() if user_model_name else "gpt-4o-mini"
+    elif provider_clean == "openrouter":
+        base_url = user_base_url.strip() if user_base_url else "https://openrouter.ai/api/v1/chat/completions"
+        model_name = user_model_name.strip() if user_model_name else "openai/gpt-4o-mini"
+    elif provider_clean == "anthropic":
+        base_url = user_base_url.strip() if user_base_url else "https://api.anthropic.com/v1/messages"
+        model_name = user_model_name.strip() if user_model_name else "claude-3-haiku-20240307"
+    elif provider_clean == "custom":
+        base_url = user_base_url.strip() if user_base_url else "http://localhost:11434/v1/chat/completions"
+        model_name = user_model_name.strip() if user_model_name else "llama3"
+    else:
+        # Default: DashScope / Qwen
+        provider_clean = "dashscope"
+        base_url = user_base_url.strip() if user_base_url else DEFAULT_DASHSCOPE_ENDPOINT
+        model_name = user_model_name.strip() if user_model_name else "qwen-plus"
+
+    # Ensure full URL for chat completions if user provided base host
+    if base_url.endswith("/v1") or base_url.endswith("/v1/"):
+        base_url = base_url.rstrip("/") + "/chat/completions"
+
+    return base_url, api_key, model_name, provider_clean
+
+
+@router.post("/test", response_model=OctaTutorTestResponse)
+async def test_octa_tutor_connection(req_data: OctaTutorTestRequest, request: Request):
+    """
+    Test connection to user's configured LLM provider & API key.
+    """
+    endpoint_url, api_key, model_name, provider_type = resolve_llm_config(
+        req_data.provider,
+        req_data.api_key,
+        req_data.base_url,
+        req_data.model_name
+    )
+
+    if not api_key and provider_type != "custom":
+        return OctaTutorTestResponse(
+            success=False,
+            message=f"API key is missing for provider '{provider_type}'. Please enter your API key.",
+            model_used=model_name
+        )
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "user", "content": "Hi Octa Tutor! Please respond with 'OK'."}
+        ],
+        "max_tokens": 15,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(endpoint_url, json=payload, headers=headers)
+
+        if resp.status_code == 200:
+            return OctaTutorTestResponse(
+                success=True,
+                message=f"Connection successful! Connected to {provider_type.upper()} ({model_name}).",
+                model_used=model_name
+            )
+        else:
+            err_msg = resp.text[:200]
+            return OctaTutorTestResponse(
+                success=False,
+                message=f"Provider returned HTTP {resp.status_code}: {err_msg}",
+                model_used=model_name
+            )
+    except Exception as e:
+        return OctaTutorTestResponse(
+            success=False,
+            message=f"Connection failed: {str(e)}",
+            model_used=model_name
+        )
+
+
 @router.post("", response_model=OctaTutorResponse)
 async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
     """
-    Context-aware AI Tutor powered by Alibaba Cloud Model Studio (Qwen, qwen-plus).
-    Supports multi-lingual responses and safe tool calling for UI control.
+    Context-aware AI Tutor. Supports Bring-Your-Own-Key (BYOK) for OpenAI, Qwen, OpenRouter, Anthropic, or Custom LLMs.
     """
     settings = get_settings()
 
-    # Rate limiting: 15 requests per minute per IP
+    # Rate limiting: 20 requests per minute per IP
     client_ip = request.client.host if request.client else "unknown"
     if not tutor_rate_limiter.is_allowed(f"tutor:{client_ip}"):
         raise HTTPException(
@@ -150,11 +255,17 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
             detail="Too many requests to Octa AI Tutor. Please wait a minute before asking again."
         )
 
-    api_key = settings.DASHSCOPE_API_KEY
-    if not api_key:
+    endpoint_url, api_key, model_name, provider_type = resolve_llm_config(
+        req_data.provider,
+        req_data.api_key,
+        req_data.base_url,
+        req_data.model_name
+    )
+
+    if not api_key and provider_type != "custom":
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Octa AI Tutor service is not configured. DASHSCOPE_API_KEY environment variable is missing on backend server."
+            detail=f"Octa AI Tutor is not configured for '{provider_type}'. Please set your API key in Octa settings or configure DASHSCOPE_API_KEY in backend .env."
         )
 
     # Format system prompt
@@ -169,50 +280,50 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
         step_data=req_data.step_data or "{}"
     )
 
-    # Build message list for Qwen
+    # Build message list
     messages: List[Dict[str, Any]] = [{"role": "system", "content": system_content}]
 
-    # Append past conversation history (last 10 messages for context efficiency)
     for msg in req_data.conversation_history[-10:]:
         messages.append({"role": msg.role, "content": msg.content})
 
-    # Append current user prompt
     messages.append({"role": "user", "content": req_data.message})
 
-    payload = {
-        "model": "qwen-plus",
+    payload: Dict[str, Any] = {
+        "model": model_name,
         "messages": messages,
-        "tools": TOOLS_SPEC,
-        "tool_choice": "auto",
         "temperature": 0.7,
         "max_tokens": 1024,
     }
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
+    # Attach tool spec for OpenAI-compatible providers
+    if provider_type in ["dashscope", "openai", "openrouter", "custom"]:
+        payload["tools"] = TOOLS_SPEC
+        payload["tool_choice"] = "auto"
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(DASHSCOPE_ENDPOINT, json=payload, headers=headers)
+        async with httpx.AsyncClient(timeout=35.0) as client:
+            resp = await client.post(endpoint_url, json=payload, headers=headers)
 
         if resp.status_code != 200:
-            logger.error(f"DashScope Qwen API returned HTTP {resp.status_code}: {resp.text}")
+            logger.error(f"LLM Provider ({provider_type}) returned HTTP {resp.status_code}: {resp.text}")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"AI model provider error (HTTP {resp.status_code}). Please try again."
+                detail=f"AI model provider error ({provider_type} HTTP {resp.status_code}). Check your API Key & endpoint settings."
             )
 
         data = resp.json()
         choices = data.get("choices", [])
-        if not choices:
+        if not choices and "content" not in data:
             return OctaTutorResponse(
                 reply="I'm having a brief moment of confusion. Could you ask me that again?",
                 mascot_expression="confused"
             )
 
-        message_obj = choices[0].get("message", {})
+        message_obj = choices[0].get("message", {}) if choices else data
         reply_text = message_obj.get("content") or ""
         tool_calls_raw = message_obj.get("tool_calls", [])
 
@@ -274,10 +385,10 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
         )
 
     except httpx.TimeoutException:
-        logger.error("DashScope API call timed out after 30 seconds.")
+        logger.error(f"LLM Provider API call to {provider_type} timed out.")
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Octa AI Tutor timed out waiting for AI response. Please retry."
+            detail=f"Octa AI Tutor timed out waiting for {provider_type} response. Please retry."
         )
     except HTTPException:
         raise

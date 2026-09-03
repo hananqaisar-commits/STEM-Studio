@@ -190,6 +190,24 @@ class OctaTutorRequest(BaseModel):
     total_steps: int = Field(default=0)
     step_data: str = Field(default="")
     conversation_history: List[OctaTutorMessage] = Field(default_factory=list)
+    # Custom LLM provider configuration (Bring Your Own Key / BYOK)
+    provider: str = Field(default="dashscope", description="dashscope | openai | openrouter | custom | anthropic")
+    api_key: str = Field(default="")
+    base_url: str = Field(default="")
+    model_name: str = Field(default="")
+
+
+class OctaTutorTestRequest(BaseModel):
+    provider: str = Field(default="dashscope")
+    api_key: str = Field(default="")
+    base_url: str = Field(default="")
+    model_name: str = Field(default="")
+
+
+class OctaTutorTestResponse(BaseModel):
+    success: bool
+    message: str
+    model_used: str = Field(default="")
 
 
 class OctaTutorFunctionCall(BaseModel):
@@ -201,4 +219,5 @@ class OctaTutorResponse(BaseModel):
     reply: str
     function_calls: List[OctaTutorFunctionCall] = Field(default_factory=list)
     mascot_expression: str = Field(default="helping")
+
 

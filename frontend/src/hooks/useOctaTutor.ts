@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse } from '../api/octaTutorApi';
+import { sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type UserLLMConfig } from '../api/octaTutorApi';
 import { useTutorContext } from '../contexts/TutorContext';
 import { useTheme } from '../contexts/ThemeContext';
 import type { MascotExpression } from '../components/mascot/MascotState';
@@ -33,11 +33,50 @@ export interface UseOctaTutorReturn {
   guidedStepIndex: number | null;
   isGuidedMode: boolean;
   setIsGuidedMode: React.Dispatch<React.SetStateAction<boolean>>;
+  // BYOK LLM config state & controls
+  llmConfig: UserLLMConfig;
+  saveLLMConfig: (config: UserLLMConfig) => void;
+  resetLLMConfig: () => void;
+  isSettingsOpen: boolean;
+  setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
+
+const DEFAULT_LLM_CONFIG: UserLLMConfig = {
+  provider: 'dashscope',
+  apiKey: '',
+  baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
+  modelName: 'qwen-plus',
+};
 
 export function useOctaTutor(): UseOctaTutorReturn {
   const { contextState } = useTutorContext();
   const { setTheme } = useTheme();
+
+  // Load custom LLM config from localStorage
+  const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
+    try {
+      const saved = localStorage.getItem('octa_llm_config');
+      return saved ? JSON.parse(saved) : DEFAULT_LLM_CONFIG;
+    } catch {
+      return DEFAULT_LLM_CONFIG;
+    }
+  });
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  const saveLLMConfig = useCallback((newConfig: UserLLMConfig) => {
+    setLlmConfig(newConfig);
+    try {
+      localStorage.setItem('octa_llm_config', JSON.stringify(newConfig));
+    } catch {}
+  }, []);
+
+  const resetLLMConfig = useCallback(() => {
+    setLlmConfig(DEFAULT_LLM_CONFIG);
+    try {
+      localStorage.removeItem('octa_llm_config');
+    } catch {}
+  }, []);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
@@ -201,6 +240,11 @@ export function useOctaTutor(): UseOctaTutorReturn {
           total_steps: contextState.totalSteps,
           step_data: targetStepData,
           conversation_history: historyPayload,
+          // BYOK Custom LLM configuration
+          provider: llmConfig.provider,
+          api_key: llmConfig.apiKey,
+          base_url: llmConfig.baseUrl,
+          model_name: llmConfig.modelName,
         });
 
         // Update mascot mood
@@ -250,7 +294,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
           {
             id: `err-${Date.now()}`,
             role: 'assistant',
-            content: `Oops! ${errorDetail} Please make sure backend is running and DASHSCOPE_API_KEY is configured.`,
+            content: `Oops! ${errorDetail} Please check your AI Settings ⚙️ or server key configuration.`,
             expression: 'confused',
             timestamp: new Date(),
           },
@@ -259,7 +303,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         setIsLoading(false);
       }
     },
-    [inputText, isLoading, messages, contextState, setTheme]
+    [inputText, isLoading, messages, contextState, setTheme, llmConfig]
   );
 
   return {
@@ -280,5 +324,10 @@ export function useOctaTutor(): UseOctaTutorReturn {
     guidedStepIndex,
     isGuidedMode,
     setIsGuidedMode,
+    llmConfig,
+    saveLLMConfig,
+    resetLLMConfig,
+    isSettingsOpen,
+    setIsSettingsOpen,
   };
 }
