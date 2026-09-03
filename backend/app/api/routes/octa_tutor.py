@@ -428,15 +428,15 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
             reply = (
                 f"Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\n"
                 f"Here's what I can do for you:\n"
-                f"• **Navigate**: Say 'open merge sort' or 'show me graphs'\n"
-                f"• **Explain**: Ask 'what is {alg_name}?' or 'explain step {step_num}'\n"
-                f"• **Control**: Say 'play', 'pause', 'next step', 'slow down'\n"
-                f"• **Compare**: Ask 'compare bubble sort vs quick sort'\n"
-                f"• **Quiz**: Say 'test me' or 'generate quiz'\n"
-                f"• **Theme**: Say 'dark mode' or 'light mode'\n"
-                f"• **Voice**: Use the 🎤 mic button (English, Urdu, Chinese)\n"
-                f"• **API Setup**: Ask 'how do I connect my API?'\n\n"
-                f"Currently viewing: **{alg_name}** (step {step_num}/{total_steps})"
+                f"• Navigate: Say 'open merge sort' or 'show me graphs'\n"
+                f"• Explain: Ask 'what is {alg_name}?' or 'explain step {step_num}'\n"
+                f"• Control: Say 'play', 'pause', 'next step', 'slow down'\n"
+                f"• Compare: Ask 'compare bubble sort vs quick sort'\n"
+                f"• Quiz: Say 'test me' or 'generate quiz'\n"
+                f"• Theme: Say 'dark mode' or 'light mode'\n"
+                f"• Voice: Use the 🎤 mic button (English, Urdu, Chinese)\n"
+                f"• API Setup: Ask 'how do I connect my API?'\n\n"
+                f"Currently viewing: {alg_name} (step {step_num}/{total_steps})"
             )
         mascot_expr = "happy"
 
@@ -456,9 +456,9 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
             # If user also asked to run/visualize/play
             if any(w in msg_lower for w in ["play", "run", "visualize", "step", "chalao"]):
                 function_calls.append(OctaTutorFunctionCall(name="control_playback", args={"action": "play"}))
-                reply = f"Opening **{alg_name}** and starting visualization step-by-step for you! 🚀"
+                reply = f"Opening {alg_name} and starting visualization step-by-step for you! 🚀"
             else:
-                reply = f"Taking you to **{alg_name}** right now! 🚀"
+                reply = f"Taking you to {alg_name} right now! 🚀"
             mascot_expr = "excited"
         else:
             reply = (
@@ -487,7 +487,7 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 
         function_calls.append(OctaTutorFunctionCall(name="control_playback", args={"action": action}))
         action_text = {"play": "Playing", "pause": "Pausing", "step_forward": "Moving to next step", "reset": "Resetting"}
-        reply = f"{action_text.get(action, 'Controlling')} **{alg_name}** visualization for you! ▶️"
+        reply = f"{action_text.get(action, 'Controlling')} {alg_name} visualization for you! ▶️"
         mascot_expr = "excited"
 
     # ── QUIZ ──
@@ -507,7 +507,7 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
             ))
 
         function_calls.append(OctaTutorFunctionCall(name="generate_quiz", args={"count": 5, "difficulty": difficulty}))
-        reply = f"Awesome! Creating a **{difficulty}** practice quiz on **{alg_name}** right now! 📝"
+        reply = f"Awesome! Creating a {difficulty} practice quiz on {alg_name} right now! 📝"
         mascot_expr = "review"
 
     # ── SPEED ──
@@ -536,7 +536,7 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
     elif intent == "theme":
         target_mode = "dark" if any(w in msg_lower for w in ["dark", "night", "andhera", "暗", "深色"]) else "light"
         function_calls.append(OctaTutorFunctionCall(name="switch_theme", args={"mode": target_mode}))
-        reply = f"Switching to **{target_mode} mode** for you! {'🌙' if target_mode == 'dark' else '☀️'}"
+        reply = f"Switching to {target_mode} mode for you! {'🌙' if target_mode == 'dark' else '☀️'}"
         mascot_expr = "happy"
 
     # ── DEBUGGER ──
@@ -1241,8 +1241,10 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
             elif any(w in reply_lower for w in ["step ", "index ", "comparison", "complexity", "time:"]):
                 mascot_expr = "reading"
 
+        clean_reply = reply_text.replace("**", "")
+
         return OctaTutorResponse(
-            reply=reply_text,
+            reply=clean_reply,
             function_calls=function_calls,
             mascot_expression=mascot_expr
         )
