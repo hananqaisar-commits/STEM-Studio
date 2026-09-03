@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Octa, useMascot } from '../../components/mascot';
 import '../../components/mascot/Mascot.css';
@@ -120,14 +120,14 @@ export const SignIn: React.FC = () => {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="identifier">Email or Username</label>
+            <label htmlFor="username">Username</label>
             <div className="input-wrapper">
-              <Mail className="input-icon" size={18} />
+              <User className="input-icon" size={18} />
               <input
                 type="text"
-                id="identifier"
+                id="username"
                 className="auth-input"
-                placeholder="Email or Username"
+                placeholder="Enter your username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
