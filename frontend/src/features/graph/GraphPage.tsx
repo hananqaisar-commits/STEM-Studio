@@ -44,6 +44,7 @@ import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './Graph.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 interface AlgorithmMeta {
   id: GraphCategory;
@@ -112,7 +113,7 @@ export const GraphPage: React.FC = () => {
       algorithmName: algObj?.name || category.toUpperCase(),
       algorithmId: category,
       category: 'graph',
-      currentStepDescription: currentStep?.explanation || currentStep?.description || '',
+      currentStepDescription: currentStep?.explanation || '',
       currentStepIndex,
       totalSteps,
       currentStep,
@@ -175,13 +176,13 @@ export const GraphPage: React.FC = () => {
   const handleRunAlgorithm = () => {
     let steps: GraphStep[] = [];
     if (category === 'bfs') {
-      steps = generateBFSSteps(nodes, edges, startNode);
+      steps = generateBFSSteps(nodes, edges, startNodeId);
     } else if (category === 'dfs') {
-      steps = generateDFSSteps(nodes, edges, startNode);
+      steps = generateDFSSteps(nodes, edges, startNodeId);
     } else if (category === 'dijkstra') {
-      steps = generateDijkstraSteps(nodes, edges, startNode, 'F');
+      steps = generateDijkstraSteps(nodes, edges, startNodeId, 'F');
     } else if (category === 'prim') {
-      steps = generatePrimsSteps(nodes, edges, startNode);
+      steps = generatePrimsSteps(nodes, edges, startNodeId);
     } else if (category === 'topoSort') {
       steps = generateTopoSortSteps(nodes, edges);
     }
@@ -197,9 +198,9 @@ export const GraphPage: React.FC = () => {
     setEdges(updatedEdges);
 
     if (category === 'dijkstra') {
-      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNode, 'F'));
+      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNodeId, 'F'));
     } else if (category === 'prim') {
-      setActiveSteps(generatePrimsSteps(nodes, updatedEdges, startNode));
+      setActiveSteps(generatePrimsSteps(nodes, updatedEdges, startNodeId));
     }
   };
 
@@ -313,8 +314,8 @@ export const GraphPage: React.FC = () => {
               fontWeight: 700,
               cursor: 'pointer',
             }}
-            value={startNode}
-            onChange={(e) => setStartNode(e.target.value)}
+            value={startNodeId}
+            onChange={(e) => setStartNodeId(e.target.value)}
           >
             {nodes.map((n) => (
               <option key={n.id} value={n.id} style={{ background: 'var(--color-surface)' }}>

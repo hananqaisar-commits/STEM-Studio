@@ -200,6 +200,25 @@ export const SortingPage: React.FC = () => {
     reset,
   ]);
 
+  // Build quiz checkpoints from the current execution steps
+  const quizCheckpoints = useMemo(
+    () => buildSortingCheckpoints(customSteps ?? executionData.steps, selectedAlg),
+    [customSteps, executionData.steps, selectedAlg]
+  );
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints: quizCheckpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause,
+    stepForward,
+    module: 'sorting',
+    algorithmId: selectedAlg,
+    revisionData: buildRevisionData(selectedAlg),
+  });
+
   // Clear custom steps when algorithm or array changes
   useEffect(() => {
     setCustomSteps(null);

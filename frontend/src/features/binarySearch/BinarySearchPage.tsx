@@ -37,7 +37,9 @@ import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
+import { useTutorContext } from '../../contexts/TutorContext';
 import './BinarySearch.css';
+
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 interface AlgorithmMeta {
@@ -103,7 +105,7 @@ export const BinarySearchPage: React.FC = () => {
       algorithmName: algObj?.name || category,
       algorithmId: category,
       category: 'binarySearch',
-      currentStepDescription: currentStep?.explanation || currentStep?.description || '',
+      currentStepDescription: currentStep?.explanation || '',
       currentStepIndex,
       totalSteps,
       currentStep,

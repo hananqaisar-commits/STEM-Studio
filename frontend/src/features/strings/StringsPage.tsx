@@ -27,6 +27,8 @@ import { generateFrequencyCountSteps } from './algorithms/frequencyCount';
 import '../sorting/Sorting.css';
 import './Strings.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
+
 
 interface AlgMeta {
   key: StringAlgorithmKey;

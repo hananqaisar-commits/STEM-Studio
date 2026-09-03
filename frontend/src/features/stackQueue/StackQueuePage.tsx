@@ -63,6 +63,8 @@ interface ReplayOp {
   args: (number | string)[];
 }
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 interface ProblemMeta {
   id: StackQueueCategory;
   name: string;
@@ -103,8 +105,6 @@ const PROBLEMS_LIST: ProblemMeta[] = [
 // Circular Deque ring capacity shared by state, handlers and the engine
 const CD_CAPACITY = 5;
 
-import { useTutorContext } from '../../contexts/TutorContext';
-
 export const StackQueuePage: React.FC = () => {
   const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<StackQueueCategory>('stack');
@@ -115,53 +115,6 @@ export const StackQueuePage: React.FC = () => {
       setCategory(topic as StackQueueCategory);
     }
   }, [searchParams]);
-
-  // Modes & Modals
-  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
-  const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
-  const [cadence, setCadence] = useState<QuizCadence>('normal');
-  const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
-
-  // Active step dataset
-  const [activeSteps, setActiveSteps] = useState<StackQueueStep[]>([]);
-
-  // Step Player Hook
-  const {
-    currentStepIndex,
-    currentStep,
-    totalSteps,
-    isPlaying,
-    play,
-    pause,
-    stepForward,
-    stepBack,
-    reset,
-    seekTo,
-  } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
-
-  // Publish active context to Octa AI Tutor
-  useEffect(() => {
-    const probObj = PROBLEMS_LIST.find((p) => p.id === category);
-
-    setTutorContext({
-      algorithmName: probObj?.name || category,
-      algorithmId: category,
-      category: 'stackQueue',
-      currentStepDescription: currentStep?.explanation || currentStep?.description || '',
-      currentStepIndex,
-      totalSteps,
-      currentStep,
-      steps: activeSteps,
-      play,
-      pause,
-      stepForward,
-      reset,
-      setShowDebugger,
-      onLaunchQuiz: () => setQuizEnabled(true),
-    });
-  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
-
 
   const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40, 50');
 
@@ -264,8 +217,30 @@ export const StackQueuePage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
-    } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
+    seekTo,
+  } = useStepPlayer<StackQueueStep>({ steps: activeSteps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const probObj = PROBLEMS_LIST.find((p) => p.id === category);
+
+    setTutorContext({
+      algorithmName: probObj?.name || category,
+      algorithmId: category,
+      category: 'stackQueue',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(

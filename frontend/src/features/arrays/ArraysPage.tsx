@@ -30,6 +30,8 @@ import '../sorting/Sorting.css';
 import './Arrays.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
+import { useTutorContext } from '../../contexts/TutorContext';
+
 
 type AlgorithmKey = 'linearSearch' | 'kadane' | 'twoPointer' | 'slidingWindow' | 'rotation' | 'prefixSum';
 type ArrayPattern = 'random' | 'sorted' | 'reversed';

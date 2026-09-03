@@ -269,7 +269,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
                 setGuidedStepIndex(0);
               }
             } else if (call.name === 'generate_quiz' && contextState.onLaunchQuiz) {
-              contextState.onLaunchQuiz(call.args);
+              const questions = Array.isArray(call.args?.questions) ? call.args.questions : undefined;
+              contextState.onLaunchQuiz(questions);
             }
           }
         }

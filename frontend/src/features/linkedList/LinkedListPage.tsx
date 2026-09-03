@@ -45,6 +45,7 @@ import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageC
 import './LinkedList.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 interface AlgorithmMeta {
   id: LinkedListCategory;
@@ -111,7 +112,7 @@ export const LinkedListPage: React.FC = () => {
       algorithmName: algObj?.name || category,
       algorithmId: category,
       category: 'linkedList',
-      currentStepDescription: currentStep?.explanation || currentStep?.description || '',
+      currentStepDescription: currentStep?.explanation || '',
       currentStepIndex,
       totalSteps,
       currentStep,

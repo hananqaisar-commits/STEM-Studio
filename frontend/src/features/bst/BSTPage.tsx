@@ -37,6 +37,7 @@ import type { TrieNodeStructure } from './trieEngine';
 import './BST.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList, parseStringList } from '../../utils/batchInputParser';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie';
 
@@ -135,7 +136,7 @@ export const BSTPage: React.FC = () => {
       algorithmName: `${treeCategory.toUpperCase()} Trees`,
       algorithmId: treeCategory,
       category: 'bst',
-      currentStepDescription: bstStep?.description || bstStep?.explanation || '',
+      currentStepDescription: bstStep?.description || '',
       currentStepIndex,
       totalSteps,
       currentStep: bstStep,
