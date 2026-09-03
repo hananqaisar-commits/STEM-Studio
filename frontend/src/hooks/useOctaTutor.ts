@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type UserLLMConfig } from '../api/octaTutorApi';
 import { useTutorContext } from '../contexts/TutorContext';
@@ -15,6 +15,11 @@ export interface ChatMessage {
 }
 
 export type SupportedSpeechLang = 'en-US' | 'ur-PK' | 'zh-CN';
+
+export interface TutorSuggestion {
+  label: string;
+  text: string;
+}
 
 export interface UseOctaTutorReturn {
   messages: ChatMessage[];
@@ -40,6 +45,8 @@ export interface UseOctaTutorReturn {
   resetLLMConfig: () => void;
   isSettingsOpen: boolean;
   setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  // Context-aware suggestions
+  suggestions: TutorSuggestion[];
 }
 
 const DEFAULT_LLM_CONFIG: UserLLMConfig = {
@@ -84,7 +91,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     {
       id: 'welcome-1',
       role: 'assistant',
-      content: `Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\nI can explain ${contextState.algorithmName || 'algorithms'}, break down specific step numbers, switch themes, or create custom quizzes. How can I help you today?`,
+      content: `Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\nI can do much more than just answer questions:\n• **Navigate**: "open merge sort", "show me AVL tree"\n• **Explain**: "what's happening?", "explain step 3"\n• **Control**: "play", "pause", "slow down"\n• **Compare**: "compare quick sort vs merge sort"\n• **Quiz**: "test me on ${contextState.algorithmName || 'this algorithm'}"\n• **Voice**: Use the 🎤 mic button!\n\nWhat would you like to learn today?`,
       expression: 'happy',
       timestamp: new Date(),
     },
@@ -115,7 +122,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
 
     recognition.onstart = () => {
       setIsListening(true);
-      setMascotExpression('listening');
+      setMascotExpression('focused');
     };
 
     recognition.onresult = (event: any) => {
@@ -178,12 +185,123 @@ export function useOctaTutor(): UseOctaTutorReturn {
       {
         id: 'welcome-reset',
         role: 'assistant',
-        content: `Conversation reset! What shall we learn about ${contextState.algorithmName || 'DSA'} next?`,
+        content: `Conversation reset! What shall we learn about ${contextState.algorithmName || 'DSA'} next? 🐙`,
         expression: 'excited',
         timestamp: new Date(),
       },
     ]);
   }, [contextState.algorithmName]);
+
+  // ── Context-aware smart suggestions ──
+  const suggestions = useMemo<TutorSuggestion[]>(() => {
+    const algName = contextState.algorithmName || 'this algorithm';
+    const stepNum = contextState.currentStepIndex + 1;
+    const totalSteps = contextState.totalSteps || 1;
+    const category = contextState.category || '';
+
+    const base: TutorSuggestion[] = [
+      { label: '💡 Explain', text: `Explain what ${algName} does and how it works` },
+      { label: `📖 Step ${stepNum}`, text: `Explain step ${stepNum} of ${totalSteps}` },
+    ];
+
+    // Category-specific suggestions
+    if (category === 'sorting') {
+      base.push({ label: '⚖️ Compare', text: `Compare ${algName} with other sorting algorithms` });
+    } else if (category === 'graph') {
+      base.push({ label: '🌐 Real-world', text: `Where is ${algName} used in real life?` });
+    } else if (category === 'dp') {
+      base.push({ label: '🧩 Approach', text: `What is the DP approach for ${algName}?` });
+    } else if (category === 'bst') {
+      base.push({ label: '🌳 Traverse', text: `Show me the traversal order for this tree` });
+    } else {
+      base.push({ label: '🌍 Use cases', text: `Where is ${algName} used in real-world applications?` });
+    }
+
+    base.push({ label: '📝 Quiz me', text: `Generate a quiz on ${algName}` });
+
+    return base;
+  }, [contextState.algorithmName, contextState.currentStepIndex, contextState.totalSteps, contextState.category]);
+
+  // ── Handle tool/function call dispatching ──
+  const dispatchFunctionCalls = useCallback((functionCalls: Array<{ name: string; args: Record<string, any> }>) => {
+    for (const call of functionCalls) {
+      switch (call.name) {
+        case 'navigate_to_algorithm': {
+          const catId = call.args?.category_id;
+          const topicId = call.args?.topic_id;
+          if (catId) {
+            navigate(`/dashboard/${catId}`, {
+              state: topicId ? { selectedTopic: topicId } : undefined,
+            });
+          }
+          break;
+        }
+
+        case 'control_playback': {
+          const action = call.args?.action;
+          if (action === 'play' && contextState.play) contextState.play();
+          else if (action === 'pause' && contextState.pause) contextState.pause();
+          else if (action === 'step_forward' && contextState.stepForward) contextState.stepForward();
+          else if (action === 'reset' && contextState.reset) contextState.reset();
+          break;
+        }
+
+        case 'set_speed': {
+          const speed = call.args?.speed;
+          if (typeof speed === 'number' && contextState.setSpeed) {
+            contextState.setSpeed(speed);
+          }
+          break;
+        }
+
+        case 'set_input': {
+          const vals = call.args?.values;
+          if (Array.isArray(vals) && vals.length > 0 && contextState.onSetInput) {
+            contextState.onSetInput(vals);
+            if (contextState.reset) contextState.reset();
+            if (contextState.play) contextState.play();
+            setIsGuidedMode(true);
+            setGuidedStepIndex(0);
+          }
+          break;
+        }
+
+        case 'switch_theme': {
+          if (call.args?.mode) {
+            setTheme(call.args.mode);
+          }
+          break;
+        }
+
+        case 'toggle_debugger': {
+          if (contextState.setShowDebugger) {
+            const vis = call.args?.visible !== undefined ? call.args.visible : true;
+            contextState.setShowDebugger(vis);
+          }
+          break;
+        }
+
+        case 'toggle_fullscreen': {
+          if (contextState.toggleFullscreen) {
+            const enter = call.args?.enter !== undefined ? call.args.enter : true;
+            contextState.toggleFullscreen(enter);
+          }
+          break;
+        }
+
+        case 'generate_quiz': {
+          if (contextState.onLaunchQuiz) {
+            const questions = Array.isArray(call.args?.questions) ? call.args.questions : undefined;
+            contextState.onLaunchQuiz(questions);
+          }
+          break;
+        }
+
+        default:
+          console.warn(`[OctaTutor] Unknown function call: ${call.name}`);
+      }
+    }
+  }, [contextState, navigate, setTheme]);
 
   // Handle send message
   const sendMessage = useCallback(
@@ -255,31 +373,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
 
         // Handle tool function calls
         if (response.function_calls && response.function_calls.length > 0) {
-          for (const call of response.function_calls) {
-            if (call.name === 'switch_theme' && call.args?.mode) {
-              setTheme(call.args.mode);
-            } else if (call.name === 'toggle_debugger' && contextState.setShowDebugger) {
-              const vis = call.args?.visible !== undefined ? call.args.visible : true;
-              contextState.setShowDebugger(vis);
-            } else if (call.name === 'start_visualization' && contextState.onSetInput) {
-              const vals = call.args?.values;
-              if (Array.isArray(vals) && vals.length > 0) {
-                contextState.onSetInput(vals);
-                if (contextState.reset) contextState.reset();
-                if (contextState.play) contextState.play();
-                setIsGuidedMode(true);
-                setGuidedStepIndex(0);
-              }
-            } else if (call.name === 'generate_quiz' && contextState.onLaunchQuiz) {
-              const questions = Array.isArray(call.args?.questions) ? call.args.questions : undefined;
-              contextState.onLaunchQuiz(questions);
-            } else if (call.name === 'navigate_to_algorithm') {
-              const route = call.args?.route;
-              if (route && typeof route === 'string' && route.startsWith('/dashboard/')) {
-                navigate(route);
-              }
-            }
-          }
+          dispatchFunctionCalls(response.function_calls);
         }
 
         const botMsgId = `bot-${Date.now()}`;
@@ -311,7 +405,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         setIsLoading(false);
       }
     },
-    [inputText, isLoading, messages, contextState, setTheme, llmConfig, navigate]
+    [inputText, isLoading, messages, contextState, setTheme, llmConfig, navigate, dispatchFunctionCalls]
   );
 
   return {
@@ -337,5 +431,6 @@ export function useOctaTutor(): UseOctaTutorReturn {
     resetLLMConfig,
     isSettingsOpen,
     setIsSettingsOpen,
+    suggestions,
   };
 }

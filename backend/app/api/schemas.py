@@ -232,5 +232,3 @@ class OctaTutorResponse(BaseModel):
     reply: str
     function_calls: List[OctaTutorFunctionCall] = Field(default_factory=list)
     mascot_expression: str = Field(default="helping")
-
-

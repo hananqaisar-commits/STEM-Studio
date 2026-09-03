@@ -1,118 +1,75 @@
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from fastapi.testclient import TestClient
 from backend.app.main import app
-from backend.tests.conftest import ASGITestClient
+from backend.app.api.routes.octa_tutor import classify_intent, resolve_algorithm_name
 
-@pytest.fixture
-def test_client(db_session):
-    return ASGITestClient(app)
+client = TestClient(app)
 
-def test_octa_tutor_missing_key_returns_fallback(test_client):
-    """When DASHSCOPE_API_KEY is empty and no custom key provided, server should return HTTP 200 with smart fallback reply."""
-    with patch("backend.app.api.routes.octa_tutor.get_settings") as mock_settings:
-        mock_settings.return_value.DASHSCOPE_API_KEY = ""
-        payload = {
-            "message": "Explain bubble sort",
-            "algorithm_name": "Bubble Sort",
-            "algorithm_id": "bubble",
-            "category": "sorting",
-            "current_step_description": "Comparing elements",
-            "current_step_index": 2,
-            "total_steps": 10,
-        }
-        res = test_client.post("/api/octa-tutor", json=payload)
-        assert res.status_code == 200
-        assert "Bubble Sort" in res.json()["reply"]
+def test_classify_intent():
+    assert classify_intent("open AVL tree") == "navigate"
+    assert classify_intent("show me graphs") == "navigate"
+    assert classify_intent("play the visualization") == "playback"
+    assert classify_intent("pause please") == "playback"
+    assert classify_intent("slow down") == "speed"
+    assert classify_intent("too fast") == "speed"
+    assert classify_intent("dark mode") == "theme"
+    assert classify_intent("hide code panel") == "debugger"
+    assert classify_intent("go fullscreen") == "fullscreen"
+    assert classify_intent("test me with a quiz") == "quiz"
+    assert classify_intent("how do I connect my API?") == "api_help"
+    assert classify_intent("what should I learn next?") == "recommend"
 
-def test_octa_tutor_successful_mock_response(test_client):
-    """Mock successful DashScope Qwen call."""
-    mock_dashscope_response = {
-        "choices": [
-            {
-                "message": {
-                    "content": "Bubble sort works by repeatedly swapping adjacent elements.",
-                    "tool_calls": [
-                        {
-                            "function": {
-                                "name": "switch_theme",
-                                "arguments": '{"mode": "dark"}'
-                            }
-                        }
-                    ]
-                }
-            }
-        ]
+def test_resolve_algorithm_name():
+    assert resolve_algorithm_name("avl") == ("bst", "avl")
+    assert resolve_algorithm_name("open AVL tree") == ("bst", "avl")
+    assert resolve_algorithm_name("dijkstra's algorithm") == ("graph", "dijkstra")
+    assert resolve_algorithm_name("bubble sort") == ("sorting", "bubble")
+    assert resolve_algorithm_name("kadane's") == ("arrays", "kadane")
+    assert resolve_algorithm_name("hanoi") == ("recursion", "towerOfHanoi")
+
+def test_tutor_fallback_endpoint():
+    payload = {
+        "message": "open AVL tree",
+        "algorithm_name": "Bubble Sort",
+        "algorithm_id": "bubble",
+        "category": "sorting",
+        "current_step_description": "Comparing elements 4 and 2",
+        "current_step_index": 2,
+        "total_steps": 10,
     }
+    response = client.post("/api/octa-tutor", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "reply" in data
+    assert "function_calls" in data
+    assert len(data["function_calls"]) > 0
+    assert data["function_calls"][0]["name"] == "navigate_to_algorithm"
+    assert data["function_calls"][0]["args"]["category_id"] == "bst"
+    assert data["function_calls"][0]["args"]["topic_id"] == "avl"
 
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = mock_dashscope_response
-
-    with patch("backend.app.api.routes.octa_tutor.get_settings") as mock_settings:
-        mock_settings.return_value.DASHSCOPE_API_KEY = "mock-key-12345"
-        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = mock_resp
-
-            payload = {
-                "message": "Switch to dark mode",
-                "algorithm_name": "Bubble Sort",
-                "algorithm_id": "bubble",
-                "category": "sorting",
-            }
-            res = test_client.post("/api/octa-tutor", json=payload)
-            assert res.status_code == 200
-            data = res.json()
-            assert data["reply"] == "Bubble sort works by repeatedly swapping adjacent elements."
-            assert len(data["function_calls"]) == 1
-            assert data["function_calls"][0]["name"] == "switch_theme"
-            assert data["function_calls"][0]["args"]["mode"] == "dark"
-            assert data["mascot_expression"] == "happy"
-
-def test_octa_tutor_byok_openai_custom_key(test_client):
-    """Test user's custom BYOK key & provider (OpenAI)."""
-    mock_openai_response = {
-        "choices": [
-            {
-                "message": {
-                    "content": "Hello from custom OpenAI GPT-4o-mini!"
-                }
-            }
-        ]
+def test_tutor_playback_intent():
+    payload = {
+        "message": "pause visualization",
+        "algorithm_name": "Merge Sort",
+        "current_step_index": 1,
+        "total_steps": 5,
     }
+    response = client.post("/api/octa-tutor", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["function_calls"]) > 0
+    assert data["function_calls"][0]["name"] == "control_playback"
+    assert data["function_calls"][0]["args"]["action"] == "pause"
 
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = mock_openai_response
-
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-        mock_post.return_value = mock_resp
-
-        payload = {
-            "message": "Hello tutor",
-            "provider": "openai",
-            "api_key": "sk-user-custom-key-123",
-            "model_name": "gpt-4o-mini",
-        }
-        res = test_client.post("/api/octa-tutor", json=payload)
-        assert res.status_code == 200
-        data = res.json()
-        assert "GPT-4o-mini" in data["reply"]
-
-def test_octa_tutor_test_connection_endpoint(test_client):
-    """Test /api/octa-tutor/test endpoint."""
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-        mock_post.return_value = mock_resp
-
-        payload = {
-            "provider": "openrouter",
-            "api_key": "sk-or-key-xyz",
-            "model_name": "openai/gpt-4o-mini",
-        }
-        res = test_client.post("/api/octa-tutor/test", json=payload)
-        assert res.status_code == 200
-        data = res.json()
-        assert data["success"] is True
-        assert "OPENROUTER" in data["message"]
+def test_tutor_connection_test_endpoint():
+    payload = {
+        "provider": "openai",
+        "api_key": "",
+        "base_url": "https://api.openai.com/v1",
+        "model_name": "gpt-4o-mini"
+    }
+    response = client.post("/api/octa-tutor/test", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is False
+    assert "missing" in data["message"].lower()

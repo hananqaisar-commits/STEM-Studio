@@ -1,7 +1,8 @@
+import os
 import json
 import logging
 import re
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Request, status
 
@@ -32,120 +33,788 @@ tutor_rate_limiter = RateLimiter(max_requests=20, window_seconds=60)
 
 DEFAULT_DASHSCOPE_ENDPOINT = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ALGORITHM ALIAS MAP — Fuzzy name resolution for natural conversation
+# Maps common names, abbreviations, and informal references to (categoryId, topicId)
+# ─────────────────────────────────────────────────────────────────────────────
+
+ALGORITHM_ALIASES: Dict[str, Tuple[str, Optional[str]]] = {
+    # ── Sorting ──
+    "bubble sort": ("sorting", "bubble"), "bubble": ("sorting", "bubble"),
+    "selection sort": ("sorting", "selection"), "selection": ("sorting", "selection"),
+    "insertion sort": ("sorting", "insertion"), "insertion": ("sorting", "insertion"),
+    "merge sort": ("sorting", "merge"), "merge": ("sorting", "merge"),
+    "quick sort": ("sorting", "quick"), "quicksort": ("sorting", "quick"), "quick": ("sorting", "quick"),
+    "heap sort": ("sorting", "heap"), "heapsort": ("sorting", "heap"),
+    "shell sort": ("sorting", "shell"), "shell": ("sorting", "shell"),
+    "counting sort": ("sorting", "counting"), "counting": ("sorting", "counting"),
+    "radix sort": ("sorting", "radix"), "radix": ("sorting", "radix"),
+    "bucket sort": ("sorting", "bucket"), "bucket": ("sorting", "bucket"),
+    "sorting": ("sorting", None), "sorting algorithms": ("sorting", None),
+
+    # ── Arrays ──
+    "linear search": ("arrays", "linearSearch"),
+    "kadane": ("arrays", "kadane"), "kadane's": ("arrays", "kadane"), "kadane's algorithm": ("arrays", "kadane"), "maximum subarray": ("arrays", "kadane"),
+    "two pointer": ("arrays", "twoPointer"), "two pointers": ("arrays", "twoPointer"),
+    "sliding window": ("arrays", "slidingWindow"),
+    "array rotation": ("arrays", "rotation"), "rotation": ("arrays", "rotation"),
+    "prefix sum": ("arrays", "prefixSum"),
+    "arrays": ("arrays", None), "array": ("arrays", None),
+
+    # ── Strings ──
+    "palindrome": ("strings", "palindrome"), "palindrome check": ("strings", "palindrome"),
+    "anagram": ("strings", "anagram"), "anagram check": ("strings", "anagram"),
+    "string reversal": ("strings", "reverse"), "reverse string": ("strings", "reverse"),
+    "frequency count": ("strings", "frequency"), "character frequency": ("strings", "frequency"),
+    "strings": ("strings", None), "string": ("strings", None),
+
+    # ── Linked List ──
+    "singly linked list": ("linkedList", "singly"), "singly": ("linkedList", "singly"),
+    "reverse linked list": ("linkedList", "reverse"),
+    "middle node": ("linkedList", "middleNode"), "find middle": ("linkedList", "middleNode"),
+    "cycle detection": ("linkedList", "detectCycle"), "floyd": ("linkedList", "detectCycle"), "floyd's": ("linkedList", "detectCycle"), "detect cycle": ("linkedList", "detectCycle"),
+    "doubly linked list": ("linkedList", "doubly"), "doubly": ("linkedList", "doubly"),
+    "circular linked list": ("linkedList", "circular"),
+    "linked list": ("linkedList", None), "linkedlist": ("linkedList", None), "ll": ("linkedList", None),
+
+    # ── Stack & Queue ──
+    "stack": ("stackQueue", "stack"), "lifo": ("stackQueue", "stack"),
+    "queue": ("stackQueue", "queue"), "fifo": ("stackQueue", "queue"),
+    "valid parentheses": ("stackQueue", "validParentheses"), "parentheses": ("stackQueue", "validParentheses"),
+    "min stack": ("stackQueue", "minStack"),
+    "postfix": ("stackQueue", "postfixEval"), "rpn": ("stackQueue", "postfixEval"),
+    "daily temperatures": ("stackQueue", "dailyTemperatures"),
+    "trapping rain water": ("stackQueue", "trappingRainWater"), "rain water": ("stackQueue", "trappingRainWater"),
+    "largest rectangle": ("stackQueue", "largestRectangle"), "histogram": ("stackQueue", "largestRectangle"),
+    "circular queue": ("stackQueue", "circularQueue"),
+    "sliding window maximum": ("stackQueue", "slidingWindow"), "sliding window max": ("stackQueue", "slidingWindow"),
+    "task scheduler": ("stackQueue", "taskScheduler"),
+    "rotting oranges": ("stackQueue", "rottingOranges"),
+    "stack and queue": ("stackQueue", None), "stack queue": ("stackQueue", None), "stacks": ("stackQueue", None), "queues": ("stackQueue", None),
+
+    # ── Binary Search ──
+    "binary search": ("binarySearch", "binarySearch"), "classic binary search": ("binarySearch", "binarySearch"),
+    "lower bound": ("binarySearch", "lowerBound"),
+    "upper bound": ("binarySearch", "upperBound"),
+    "search rotated array": ("binarySearch", "searchRotatedArray"), "rotated array": ("binarySearch", "searchRotatedArray"),
+    "peak element": ("binarySearch", "findPeakElement"), "find peak": ("binarySearch", "findPeakElement"),
+
+    # ── Hash Maps ──
+    "two sum": ("hashMaps", "twoSum"), "2sum": ("hashMaps", "twoSum"),
+    "duplicate detect": ("hashMaps", "duplicateDetect"), "find duplicates": ("hashMaps", "duplicateDetect"),
+    "frequency map": ("hashMaps", "frequencyMap"),
+    "subarray sum": ("hashMaps", "subarraySum"),
+    "hash map": ("hashMaps", None), "hashmap": ("hashMaps", None), "hash maps": ("hashMaps", None),
+
+    # ── Trees (BST) ──
+    "bst": ("bst", "bst"), "binary search tree": ("bst", "bst"), "binary tree": ("bst", "bst"),
+    "avl": ("bst", "avl"), "avl tree": ("bst", "avl"), "self balancing tree": ("bst", "avl"),
+    "red black tree": ("bst", "rbt"), "red-black": ("bst", "rbt"), "rbt": ("bst", "rbt"),
+    "heap": ("bst", "heap"), "binary heap": ("bst", "heap"), "priority queue": ("bst", "heap"),
+    "segment tree": ("bst", "segTree"), "seg tree": ("bst", "segTree"),
+    "trie tree": ("bst", "trie"), "prefix tree": ("bst", "trie"),
+    "tree": ("bst", None), "trees": ("bst", None),
+
+    # ── Graphs ──
+    "bfs": ("graph", "bfs"), "breadth first search": ("graph", "bfs"), "breadth first": ("graph", "bfs"),
+    "dfs": ("graph", "dfs"), "depth first search": ("graph", "dfs"), "depth first": ("graph", "dfs"),
+    "dijkstra": ("graph", "dijkstra"), "dijkstra's": ("graph", "dijkstra"), "shortest path": ("graph", "dijkstra"), "dijkstra's algorithm": ("graph", "dijkstra"),
+    "bellman ford": ("graph", "bellmanFord"), "bellman-ford": ("graph", "bellmanFord"),
+    "prim": ("graph", "prim"), "prim's": ("graph", "prim"), "prim's algorithm": ("graph", "prim"),
+    "kruskal": ("graph", "kruskal"), "kruskal's": ("graph", "kruskal"),
+    "a star": ("graph", "aStar"), "a*": ("graph", "aStar"), "astar": ("graph", "aStar"), "pathfinding": ("graph", "aStar"),
+    "topological sort": ("graph", "topoSort"), "topo sort": ("graph", "topoSort"), "kahn": ("graph", "topoSort"), "kahn's": ("graph", "topoSort"),
+    "graph": ("graph", None), "graphs": ("graph", None),
+    "minimum spanning tree": ("graph", "prim"), "mst": ("graph", "prim"),
+
+    # ── Recursion ──
+    "factorial": ("recursion", "factorial"),
+    "fibonacci": ("recursion", "fibonacci"), "fib": ("recursion", "fibonacci"),
+    "power": ("recursion", "power"), "exponentiation": ("recursion", "power"),
+    "array sum": ("recursion", "arraySum"),
+    "tower of hanoi": ("recursion", "towerOfHanoi"), "hanoi": ("recursion", "towerOfHanoi"),
+    "recursion": ("recursion", None), "recursive": ("recursion", None),
+
+    # ── Backtracking ──
+    "subsets": ("backtracking", "subsets"),
+    "permutations": ("backtracking", "permutations"), "permutation": ("backtracking", "permutations"),
+    "n queens": ("backtracking", "nQueens"), "n-queens": ("backtracking", "nQueens"), "nqueens": ("backtracking", "nQueens"), "queens": ("backtracking", "nQueens"),
+    "combination sum": ("backtracking", "combinationSum"),
+    "backtracking": ("backtracking", None), "backtrack": ("backtracking", None),
+
+    # ── Greedy ──
+    "activity selection": ("greedy", "activitySelection"),
+    "fractional knapsack": ("greedy", "fractionalKnapsack"), "knapsack greedy": ("greedy", "fractionalKnapsack"),
+    "job scheduling": ("greedy", "jobScheduling"),
+    "huffman": ("greedy", "huffmanCoding"), "huffman coding": ("greedy", "huffmanCoding"),
+    "greedy": ("greedy", None), "greedy algorithm": ("greedy", None),
+
+    # ── Dynamic Programming ──
+    "fibonacci dp": ("dp", "fibonacciDP"), "fib dp": ("dp", "fibonacciDP"),
+    "coin change": ("dp", "coinChange"),
+    "house robber": ("dp", "houseRobber"),
+    "0/1 knapsack": ("dp", "knapsack01"), "knapsack": ("dp", "knapsack01"), "01 knapsack": ("dp", "knapsack01"),
+    "lcs": ("dp", "lcs"), "longest common subsequence": ("dp", "lcs"),
+    "lis": ("dp", "lis"), "longest increasing subsequence": ("dp", "lis"),
+    "edit distance": ("dp", "editDistance"), "levenshtein": ("dp", "editDistance"),
+    "unique paths": ("dp", "uniquePaths"),
+    "dynamic programming": ("dp", None), "dp": ("dp", None),
+
+    # ── Trie ──
+    "trie insert": ("trie", "trieInsert"),
+    "trie search": ("trie", "trieSearch"),
+    "prefix search": ("trie", "triePrefix"),
+    "word dictionary": ("trie", "wordDictionary"),
+    "autocomplete": ("trie", "autocomplete"),
+    "trie": ("trie", None),
+
+    # ── Complexity ──
+    "complexity": ("complexity", None), "big o": ("complexity", None), "complexity analysis": ("complexity", None),
+    "time complexity": ("complexity", "time"), "space complexity": ("complexity", "space"),
+    "asymptotic": ("complexity", "notations"), "asymptotic notations": ("complexity", "notations"),
+    "master theorem": ("complexity", "recursion"),
+    "amortized": ("complexity", "amortized"), "amortized analysis": ("complexity", "amortized"),
+}
+
+
+def resolve_algorithm_name(text: str) -> Optional[Tuple[str, Optional[str]]]:
+    """Fuzzy-match an algorithm name from natural language text."""
+    text_lower = text.lower().strip()
+    # Direct match first
+    if text_lower in ALGORITHM_ALIASES:
+        return ALGORITHM_ALIASES[text_lower]
+    # Substring search — find the longest matching alias in the text
+    best_match = None
+    best_len = 0
+    for alias, ids in ALGORITHM_ALIASES.items():
+        if alias in text_lower and len(alias) > best_len:
+            best_match = ids
+            best_len = len(alias)
+    return best_match
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTENT-BASED FALLBACK ENGINE
+# Used when no API key is configured. Classifies intent from natural language.
+# ─────────────────────────────────────────────────────────────────────────────
+
+NAVIGATE_PATTERNS = [
+    "open", "show", "go to", "take me", "navigate", "switch to", "let's do",
+    "learn", "teach me", "want to see", "visualize", "run",
+    "dikhao", "kholna", "kholein", "chalein", "seekhna", "dekhao", "dekhna",
+    "打开", "显示", "转到", "我想看",
+]
+
+PLAYBACK_PATTERNS = [
+    "play", "start", "begin", "run", "resume",
+    "pause", "stop", "wait", "hold",
+    "next step", "step forward", "next", "forward", "aage",
+    "reset", "restart", "start over", "again", "phir se",
+    "chalao", "shuru", "ruko", "band karo", "agla",
+    "播放", "开始", "暂停", "停止", "下一步", "重置",
+]
+
+EXPLAIN_PATTERNS = [
+    "explain", "what is", "what's", "how does", "how do", "why",
+    "tell me", "teach", "describe", "help me understand", "what happens",
+    "step", "current step", "this step",
+    "samjhao", "samjha do", "batao", "kya hai", "kya ho raha", "kaise",
+    "解释", "什么是", "为什么", "怎么", "这一步",
+]
+
+COMPARE_PATTERNS = [
+    "compare", "vs", "versus", "difference", "which is better",
+    "comparison", "similarities", "pros and cons", "trade off",
+    "farq", "muqabla", "konsa behtar",
+    "比较", "区别", "哪个好",
+]
+
+SPEED_PATTERNS = [
+    "speed", "slow", "fast", "faster", "slower", "speed up", "slow down",
+    "too fast", "too slow", "quickly", "rapid",
+    "tez", "dheere", "raftaar", "speed kam", "speed zyada",
+    "快", "慢", "速度", "快一点", "慢一点",
+]
+
+THEME_PATTERNS = [
+    "dark", "light", "theme", "mode", "dark mode", "light mode",
+    "night", "bright", "color scheme", "eyes hurt",
+    "andhera", "roshni", "dark karo", "light karo",
+    "暗", "亮", "主题", "深色", "浅色",
+]
+
+DEBUGGER_PATTERNS = [
+    "debugger", "code panel", "code", "debug", "code view",
+    "hide code", "show code", "hide debugger", "show debugger",
+    "code hatao", "code dikhao",
+    "调试", "代码", "显示代码", "隐藏代码",
+]
+
+QUIZ_PATTERNS = [
+    "quiz", "test", "practice", "questions", "test me", "challenge",
+    "exercise", "assessment", "evaluate",
+    "quiz do", "sawaal", "imtihaan", "test karo",
+    "测验", "考试", "练习", "测试",
+]
+
+API_HELP_PATTERNS = [
+    "api", "api key", "connect", "setup", "configure", "settings",
+    "how to connect", "byok", "bring your own", "model",
+    "openai key", "anthropic key", "api lagana", "connection",
+    "api密钥", "设置", "连接",
+]
+
+RECOMMEND_PATTERNS = [
+    "what next", "what should i", "recommend", "suggest", "where to start",
+    "beginner", "learning path", "what to learn", "after this",
+    "next topic", "guide me", "roadmap",
+    "kya seekhein", "aage kya", "shuru kahan se", "suggest karo",
+    "推荐", "建议", "接下来", "学什么",
+]
+
+FULLSCREEN_PATTERNS = [
+    "fullscreen", "full screen", "bigger", "maximize", "enlarge",
+    "exit fullscreen", "smaller", "minimize",
+    "bada karo", "chota karo", "poori screen",
+    "全屏", "放大", "缩小",
+]
+
+INPUT_PATTERNS = [
+    "use array", "input", "try with", "set values", "set array",
+    "custom input", "use these numbers", "random",
+    "array do", "yeh values", "yeh numbers",
+    "输入", "数组", "使用",
+]
+
+GREETING_PATTERNS = [
+    "hi", "hello", "hey", "yo", "howdy", "sup",
+    "who are you", "what can you do", "help", "how to use",
+    "salam", "kya hal", "kaisa hai", "aoa",
+    "你好", "你是谁", "帮助",
+]
+
+
+def classify_intent(text: str) -> str:
+    """Classify user message intent using multi-language pattern matching."""
+    text_lower = text.lower().strip()
+
+    # Check patterns in priority order
+    intent_map = [
+        ("recommend", RECOMMEND_PATTERNS),
+        ("navigate", NAVIGATE_PATTERNS),
+        ("compare", COMPARE_PATTERNS),
+        ("speed", SPEED_PATTERNS),
+        ("input", INPUT_PATTERNS),
+        ("playback", PLAYBACK_PATTERNS),
+        ("fullscreen", FULLSCREEN_PATTERNS),
+        ("theme", THEME_PATTERNS),
+        ("debugger", DEBUGGER_PATTERNS),
+        ("quiz", QUIZ_PATTERNS),
+        ("api_help", API_HELP_PATTERNS),
+        ("greeting", GREETING_PATTERNS),
+        ("explain", EXPLAIN_PATTERNS),
+    ]
+
+    # Check if user mentions a specific algorithm — strong signal for navigate
+    alg_match = resolve_algorithm_name(text)
+    has_algorithm_mention = alg_match is not None
+
+    for intent, patterns in intent_map:
+        for pattern in patterns:
+            # For short/ASCII patterns, enforce word boundary so 'hi' doesn't match 'hide'
+            if pattern.isalnum() and len(pattern) <= 3:
+                matched = bool(re.search(rf"\b{re.escape(pattern)}\b", text_lower))
+            else:
+                matched = pattern in text_lower
+
+            if matched:
+                if has_algorithm_mention and intent in ("navigate", "explain", "playback"):
+                    nav_verbs = ["open", "show", "go", "take", "switch", "navigate", "dikhao", "kholna", "打开"]
+                    if any(v in text_lower for v in nav_verbs):
+                        return "navigate"
+                return intent
+
+    if has_algorithm_mention:
+        return "navigate"
+
+    return "general"
+
+
 def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
-    """Intelligent fallback response generator for offline or unconfigured API key states."""
-    msg_lower = (req_data.message or "").lower().strip()
+    """Intelligent intent-based fallback response for offline / unconfigured API states."""
+    msg = req_data.message or ""
+    msg_lower = msg.lower().strip()
     alg_name = req_data.algorithm_name or "this algorithm"
     step_num = (req_data.current_step_index + 1) if req_data.total_steps > 0 else 1
     total_steps = req_data.total_steps or 1
     step_desc = req_data.current_step_description or "evaluating elements"
 
+    intent = classify_intent(msg)
     function_calls: List[OctaTutorFunctionCall] = []
     mascot_expr = "happy"
 
-    if any(w in msg_lower for w in ["dark mode", "light mode", "theme", "dark", "light"]):
-        target_mode = "dark" if any(w in msg_lower for w in ["dark", "dark mode"]) else "light"
-        function_calls.append(OctaTutorFunctionCall(name="switch_theme", args={"mode": target_mode}))
-        reply = f"Sure thing! Switching interface theme to {target_mode} mode for you."
-        mascot_expr = "excited"
-
-    elif any(w in msg_lower for w in ["debugger", "code panel", "hide debugger", "show debugger"]):
-        vis = not any(w in msg_lower for w in ["hide", "close", "off"])
-        function_calls.append(OctaTutorFunctionCall(name="toggle_debugger", args={"visible": vis}))
-        reply = f"Done! I have {'shown' if vis else 'hidden'} the code debugger panel."
-        mascot_expr = "happy"
-
-    elif any(w in msg_lower for w in ["quiz", "test", "practice", "questions", "generate quiz"]):
-        function_calls.append(OctaTutorFunctionCall(name="generate_quiz", args={"count": 5, "difficulty": "medium"}))
-        reply = f"Awesome! Creating a custom practice quiz on {alg_name} right now."
-        mascot_expr = "review"
-
-    elif any(w in msg_lower for w in ["explain step", "step", "current step", "samjha do"]):
-        step_match = re.search(r'step\s*(\d+)', msg_lower)
-        if step_match:
-            s_idx = int(step_match.group(1))
-            reply = f"In Step {s_idx} of {alg_name}: The algorithm processes current data structures and updates the visualizer layout. {step_desc}"
-        else:
-            reply = f"In Step {step_num} of {total_steps} for {alg_name}: {step_desc}. Every step brings you closer to mastering DSA!"
-        mascot_expr = "reading"
-
-    elif any(w in msg_lower for w in ["how to use", "who are you", "what can you do", "help"]):
+    # ── GREETING ──
+    if intent == "greeting":
         reply = (
             f"Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\n"
-            f"Here is how I can help you:\n"
-            f"• Explain steps of {alg_name} (e.g. 'explain step {step_num}')\n"
-            f"• Control theme: say 'dark mode' or 'light mode'\n"
-            f"• Toggle debugger panel: say 'hide debugger'\n"
-            f"• Practice quiz: say 'generate quiz'\n"
-            f"• Multilingual support: English, Roman Urdu, Urdu, Chinese!"
+            f"Here's what I can do for you:\n"
+            f"• **Navigate**: Say 'open merge sort' or 'show me graphs'\n"
+            f"• **Explain**: Ask 'what is {alg_name}?' or 'explain step {step_num}'\n"
+            f"• **Control**: Say 'play', 'pause', 'next step', 'slow down'\n"
+            f"• **Compare**: Ask 'compare bubble sort vs quick sort'\n"
+            f"• **Quiz**: Say 'test me' or 'generate quiz'\n"
+            f"• **Theme**: Say 'dark mode' or 'light mode'\n"
+            f"• **Voice**: Use the 🎤 mic button (English, Urdu, Chinese)\n"
+            f"• **API Setup**: Ask 'how do I connect my API?'\n\n"
+            f"Currently viewing: **{alg_name}** (step {step_num}/{total_steps})"
         )
         mascot_expr = "happy"
 
-    elif any(w in msg_lower for w in ["kya", "kaise", "batao", "samjhao", "kaam", "yeh", "kia"]):
-        reply = f"Yeh {alg_name} ka step {step_num} hai ({step_desc}). Is step mein algorithm data ko process kar raha hai. Aap koi bhi question pooch sakte hain!"
-        mascot_expr = "helping"
+    # ── NAVIGATE ──
+    elif intent == "navigate":
+        alg_match = resolve_algorithm_name(msg)
+        if alg_match:
+            cat_id, topic_id = alg_match
+            function_calls.append(OctaTutorFunctionCall(
+                name="navigate_to_algorithm",
+                args={"category_id": cat_id, "topic_id": topic_id or ""}
+            ))
+            topic_display = topic_id or cat_id
+            reply = f"Taking you to **{topic_display}** right now! 🚀"
+            mascot_expr = "excited"
+        else:
+            reply = (
+                f"I'd love to help you navigate! I know 110+ algorithms across 15 categories.\n"
+                f"Try saying: 'open AVL tree', 'show me graphs', or 'teach me merge sort'."
+            )
+            mascot_expr = "helping"
 
-    elif any(char for char in msg_lower if '\u4e00' <= char <= '\u9fff'):
-        reply = f"您好！我是 Octa Tutor。关于 {alg_name} 的第 {step_num} 步：{step_desc}。随时告诉我您的疑问！"
+    # ── PLAYBACK ──
+    elif intent == "playback":
+        action = "play"
+        if any(w in msg_lower for w in ["pause", "stop", "wait", "hold", "ruko", "band", "暂停", "停止"]):
+            action = "pause"
+        elif any(w in msg_lower for w in ["next", "step", "forward", "aage", "agla", "下一步"]):
+            action = "step_forward"
+        elif any(w in msg_lower for w in ["reset", "restart", "over", "again", "phir", "重置"]):
+            action = "reset"
+
+        function_calls.append(OctaTutorFunctionCall(name="control_playback", args={"action": action}))
+        action_text = {"play": "Playing", "pause": "Pausing", "step_forward": "Moving to next step", "reset": "Resetting"}
+        reply = f"{action_text.get(action, 'Controlling')} the visualization for you! ▶️"
+        mascot_expr = "excited"
+
+    # ── SPEED ──
+    elif intent == "speed":
+        if any(w in msg_lower for w in ["slow", "dheere", "慢"]):
+            function_calls.append(OctaTutorFunctionCall(name="set_speed", args={"speed": 0.5}))
+            reply = "Slowing down the visualization so you can follow each step clearly! 🐢"
+        else:
+            function_calls.append(OctaTutorFunctionCall(name="set_speed", args={"speed": 2.0}))
+            reply = "Speeding up! Let me know if it's still too fast or slow. ⚡"
         mascot_expr = "happy"
 
+    # ── INPUT ──
+    elif intent == "input":
+        # Try to extract numbers from the message
+        numbers = re.findall(r'\d+', msg)
+        if numbers:
+            values = [int(n) for n in numbers[:20]]  # Cap at 20 values
+            function_calls.append(OctaTutorFunctionCall(name="set_input", args={"values": values}))
+            reply = f"Setting input to [{', '.join(map(str, values))}] and getting ready! 🎯"
+        else:
+            # Generate random input
+            function_calls.append(OctaTutorFunctionCall(name="set_input", args={"values": [8, 3, 5, 1, 9, 2, 7, 4]}))
+            reply = "Using a sample array [8, 3, 5, 1, 9, 2, 7, 4] for you! 🎲"
+        mascot_expr = "excited"
+
+    # ── THEME ──
+    elif intent == "theme":
+        target_mode = "dark" if any(w in msg_lower for w in ["dark", "night", "andhera", "暗", "深色"]) else "light"
+        function_calls.append(OctaTutorFunctionCall(name="switch_theme", args={"mode": target_mode}))
+        reply = f"Switching to **{target_mode} mode** for you! {'🌙' if target_mode == 'dark' else '☀️'}"
+        mascot_expr = "happy"
+
+    # ── DEBUGGER ──
+    elif intent == "debugger":
+        visible = not any(w in msg_lower for w in ["hide", "close", "off", "hatao", "remove", "隐藏"])
+        function_calls.append(OctaTutorFunctionCall(name="toggle_debugger", args={"visible": visible}))
+        reply = f"{'Showing' if visible else 'Hiding'} the code debugger panel! {'👀' if visible else '🙈'}"
+        mascot_expr = "happy"
+
+    # ── FULLSCREEN ──
+    elif intent == "fullscreen":
+        enter = not any(w in msg_lower for w in ["exit", "leave", "close", "small", "minimize", "chota", "缩小"])
+        function_calls.append(OctaTutorFunctionCall(name="toggle_fullscreen", args={"enter": enter}))
+        reply = f"{'Entering' if enter else 'Exiting'} fullscreen mode! {'🖥️' if enter else '📱'}"
+        mascot_expr = "excited"
+
+    # ── QUIZ ──
+    elif intent == "quiz":
+        difficulty = "medium"
+        if any(w in msg_lower for w in ["easy", "simple", "basic", "aasan"]):
+            difficulty = "easy"
+        elif any(w in msg_lower for w in ["hard", "difficult", "tough", "challenge", "mushkil"]):
+            difficulty = "hard"
+        function_calls.append(OctaTutorFunctionCall(name="generate_quiz", args={"count": 5, "difficulty": difficulty}))
+        reply = f"Creating a **{difficulty}** quiz on {alg_name}! Let's test your knowledge! 📝"
+        mascot_expr = "review"
+
+    # ── COMPARE ──
+    elif intent == "compare":
+        reply = (
+            f"Great question! Here's a quick comparison framework for algorithms:\n\n"
+            f"When comparing any two algorithms, consider:\n"
+            f"• **Time Complexity**: Best, average, and worst case\n"
+            f"• **Space Complexity**: In-place vs extra memory\n"
+            f"• **Stability**: Does it preserve equal element order?\n"
+            f"• **Use Cases**: When is each one preferred?\n\n"
+            f"To get a detailed comparison, connect your AI API key in Settings ⚙️ "
+            f"and ask me 'compare X vs Y' — I'll give you a full breakdown!"
+        )
+        mascot_expr = "reading"
+
+    # ── API HELP ──
+    elif intent == "api_help":
+        reply = (
+            f"Setting up your AI API is super easy! Here's how:\n\n"
+            f"1. Click the **⚙️ Settings** icon in the tutor panel header\n"
+            f"2. Choose your **Provider**: OpenAI, Anthropic, OpenRouter, DashScope, or Custom\n"
+            f"3. Paste your **API Key** from the provider's dashboard\n"
+            f"4. The Base URL and Model Name auto-fill (you can customize them)\n"
+            f"5. Click **Test Connection** to verify it works\n\n"
+            f"**Recommended providers:**\n"
+            f"• **OpenAI**: `gpt-4o-mini` — great balance of quality and speed\n"
+            f"• **Anthropic**: `claude-3-haiku` — fast and affordable\n"
+            f"• **OpenRouter**: Access 100+ models with one key\n"
+            f"• **DashScope**: `qwen-plus` — our default, solid performance\n\n"
+            f"Once connected, I can give you much deeper explanations, comparisons, and personalized help!"
+        )
+        mascot_expr = "helping"
+
+    # ── RECOMMEND ──
+    elif intent == "recommend":
+        reply = (
+            f"Here's my recommended learning path! 📚\n\n"
+            f"**🟢 Beginner:**\n"
+            f"1. Complexity Analysis → Understand Big O notation\n"
+            f"2. Arrays → Master the foundation\n"
+            f"3. Strings → Pattern matching basics\n"
+            f"4. Sorting → See algorithms in action\n\n"
+            f"**🟡 Intermediate:**\n"
+            f"5. Linked Lists → Pointer concepts\n"
+            f"6. Stack & Queue → Essential structures\n"
+            f"7. Binary Search → Efficient searching\n"
+            f"8. Hash Maps → O(1) lookups\n"
+            f"9. Recursion → Thinking recursively\n\n"
+            f"**🔴 Advanced:**\n"
+            f"10. Trees (BST, AVL) → Hierarchical data\n"
+            f"11. Graphs (BFS, DFS, Dijkstra) → Network algorithms\n"
+            f"12. Backtracking → Decision trees\n"
+            f"13. Greedy → Optimization\n"
+            f"14. Dynamic Programming → The ultimate skill\n"
+            f"15. Trie → String-optimized trees\n\n"
+            f"Want me to open any of these? Just say the name!"
+        )
+        mascot_expr = "happy"
+
+    # ── EXPLAIN ──
+    elif intent == "explain":
+        # Check for specific step reference
+        step_match = re.search(r'step\s*(\d+)', msg_lower)
+        if step_match:
+            s_idx = int(step_match.group(1))
+            reply = (
+                f"**Step {s_idx} of {alg_name}:**\n\n"
+                f"{step_desc}\n\n"
+                f"At this point, the algorithm is processing the current data and "
+                f"updating the visualization. Watch the highlighted elements — they show "
+                f"exactly what's being compared or modified.\n\n"
+                f"💡 For deeper AI-powered explanations, connect your API key in Settings ⚙️"
+            )
+        else:
+            reply = (
+                f"**{alg_name}** — Currently at step {step_num} of {total_steps}.\n\n"
+                f"**What's happening now:** {step_desc}\n\n"
+                f"The visualization shows each step of the algorithm in real-time. "
+                f"Use the controls to play/pause, step through one at a time, or adjust speed.\n\n"
+                f"Ask me about a specific step (e.g., 'explain step 3') or say 'play' to watch it run!"
+            )
+        mascot_expr = "reading"
+
+    # ── ROMAN URDU catch-all ──
+    elif any(w in msg_lower for w in ["kya", "kaise", "batao", "samjhao", "kaam", "yeh", "kia", "hai", "mein"]):
+        reply = (
+            f"Yeh **{alg_name}** ka step {step_num} hai ({step_desc}).\n\n"
+            f"Is step mein algorithm data ko process kar raha hai. "
+            f"Aap mujhse kuch bhi pooch sakte hain — koi step explain karwana ho, "
+            f"quiz chahiye, ya koi aur algorithm dekhna ho, bas bol dein! 🐙"
+        )
+        mascot_expr = "helping"
+
+    # ── CHINESE catch-all ──
+    elif any(char for char in msg_lower if '\u4e00' <= char <= '\u9fff'):
+        reply = (
+            f"您好！我是 Octa Tutor 🐙\n\n"
+            f"关于 **{alg_name}** 的第 {step_num} 步：{step_desc}\n\n"
+            f"随时告诉我您的疑问！您可以说'解释这一步'、'播放'、'测验'等。"
+        )
+        mascot_expr = "happy"
+
+    # ── GENERAL FALLBACK ──
     else:
-        reply = f"Great question about {alg_name}! We are currently at step {step_num} of {total_steps} ({step_desc}). Ask me to explain specific steps, switch themes, or create a quiz!"
+        reply = (
+            f"Great question! 🐙\n\n"
+            f"You're currently viewing **{alg_name}** (step {step_num}/{total_steps}).\n"
+            f"**Current step:** {step_desc}\n\n"
+            f"I can help you:\n"
+            f"• Explain any step or concept\n"
+            f"• Navigate to a different algorithm\n"
+            f"• Control the visualization (play/pause/speed)\n"
+            f"• Generate a practice quiz\n"
+            f"• Switch themes or toggle the debugger\n\n"
+            f"For AI-powered deep explanations, connect your API key in Settings ⚙️"
+        )
         mascot_expr = "helping"
 
     return OctaTutorResponse(
         reply=reply,
         function_calls=function_calls,
-        mascot_expression=mascot_expr
+        mascot_expression=mascot_expr,
     )
 
-SYSTEM_PROMPT_TEMPLATE = """You are Octa Tutor, a friendly, patient, and expert Data Structures & Algorithms (DSA) teaching assistant for STEM Studio.
-You speak directly to the student as Octa Tutor.
 
-Current Context:
-- Active Algorithm: {algorithm_name} (ID: {algorithm_id}, Category: {category})
-- Timeline Step: Step {step_num} of {total_steps}
-- Step Explanation: "{current_step_description}"
-- Detailed Step Data: {step_data}
+# ─────────────────────────────────────────────────────────────────────────────
+# SYSTEM PROMPT — The "brain training" for the LLM
+# ─────────────────────────────────────────────────────────────────────────────
 
-Rules & Guidelines:
-1. MULTILINGUAL MATCHING (CRITICAL): Always respond in the EXACT SAME language the student uses. If the student asks in Roman Urdu (e.g. "is step ko samjha do"), respond in Roman Urdu. If in native Urdu, respond in Urdu. If in English, respond in English. If in Chinese, respond in Chinese.
-2. PERSONALITY: Be encouraging, enthusiastic, clear, and concise. Introduce yourself as "Octa Tutor" if asked who you are or how to use this feature.
-3. SELF-EXPLAIN: If asked how to use Octa Tutor or what you can do, explain:
-   - Ask about the current algorithm ({algorithm_name}) or DSA concepts.
-   - Ask to explain specific step numbers (e.g. "explain step 7").
-   - Use voice input via the microphone button.
-   - Adjust the interface: ask to "switch to dark mode", "switch to light mode", or "hide/show the debugger".
-   - Ask for a guided step-by-step walkthrough or a customized quiz!
-4. STEP-BY-STEP & STEP REFERENCES: When the student asks about a specific step (e.g. "explain step 7"), reference what happens in that step clearly.
-5. FUNCTION CALLING:
-   - Use `switch_theme` when asked to change interface theme to light or dark mode.
-   - Use `toggle_debugger` when asked to hide or show the debugger panel.
-   - Use `start_visualization` when the student asks to visualize or run an algorithm with specific array/input values.
-   - Use `generate_quiz` when the student asks for a quiz or test.
-6. OUT OF SCOPE / ACCOUNT ACTIONS: If the user asks you to create an account, sign in, sign out, or modify personal account settings, explain politely in their language that conversational account management is coming soon, and direct them to the top-right account menu. Do NOT attempt any unauthorized account mutation.
-7. ALGORITHM NAVIGATION: If the user asks you to teach them or visualize a specific algorithm, use the `navigate_to_algorithm` tool with the appropriate `route` (e.g., `/dashboard/sorting?topic=bubble`). Always clarify if the request is ambiguous (e.g., "Did you mean AVL Tree or BST?"). Do NOT guess.
+SYSTEM_PROMPT_TEMPLATE = """You are Octa Tutor, a brilliant, patient, and deeply knowledgeable Data Structures & Algorithms (DSA) teaching assistant for STEM Studio. You are the student's personal tutor — friendly like a senior who genuinely wants them to succeed.
 
-Algorithm Catalog:
-- Complexity Analysis (/dashboard/complexity): Why Complexity Analysis? (topic=why), Asymptotic Notations (topic=notations), Simplification Rules (topic=rules), Analyzing Loops (topic=loops), Time Complexity Classes (topic=time), Space Complexity (topic=space), Best / Average / Worst Case (topic=cases), Recursion & Master Theorem (topic=recursion), Amortized Analysis (topic=amortized), Time-Space Tradeoffs (topic=tradeoffs), Data Structure Operations (topic=ds-operations), Algorithm Complexity Reference (topic=comparison)
-- Sorting Algorithms (/dashboard/sorting): Bubble Sort (topic=bubble), Selection Sort (topic=selection), Insertion Sort (topic=insertion), Merge Sort (topic=merge), Quick Sort (topic=quick), Heap Sort (topic=heap), Shell Sort (topic=shell), Counting Sort (topic=counting), Radix Sort (topic=radix), Bucket Sort (topic=bucket)
-- Arrays (/dashboard/arrays): Linear Search (topic=linearSearch), Kadane's Algorithm (topic=kadane), Two Pointers (topic=twoPointer), Sliding Window (topic=slidingWindow), Array Rotation (topic=rotation), Prefix Sum (topic=prefixSum)
-- Strings (/dashboard/strings): Palindrome Check (topic=palindrome), Anagram Check (topic=anagram), String Reversal (topic=reverse), Frequency Count (topic=frequency)
-- Linked List (/dashboard/linkedList): Singly Linked List (topic=singly), Reverse Linked List (topic=reverse), Find Middle Node (topic=middleNode), Cycle Detection (topic=detectCycle), Doubly Linked List (topic=doubly), Circular Linked List (topic=circular)
-- Stack & Queue (/dashboard/stackQueue): Stack Primitive (topic=stack), Queue Primitive (topic=queue), Valid Parentheses (topic=validParentheses), Min Stack (topic=minStack), Evaluate RPN (topic=postfixEval), Daily Temperatures (topic=dailyTemperatures), Simplify Path (topic=simplifyPath), Remove Adjacent Duplicates (topic=removeAdjacentDuplicates), Basic Calculator (topic=basicCalculator), Decode String Pattern (topic=decodeString), Trapping Rain Water (topic=trappingRainWater), Largest Rectangle (topic=largestRectangle), Queue using 2 Stacks (topic=queueViaStacks), Stack using Queues (topic=stackViaQueues), Circular Ring Queue (topic=circularQueue), Design Circular Deque (topic=circularDeque), Sliding Window Maximum (topic=slidingWindow), First Non-Repeating in Stream (topic=firstNonRepeating), Moving Average Data Stream (topic=movingAverage), Task Scheduler (topic=taskScheduler), Rotting Oranges (topic=rottingOranges), Dota2 Senate (topic=dota2Senate)
-- Binary Search (/dashboard/binarySearch): Classic Binary Search (topic=binarySearch), Lower Bound (topic=lowerBound), Upper Bound (topic=upperBound), Rotated Sorted Array (topic=searchRotatedArray), Find Peak Element (topic=findPeakElement)
-- Hash Maps (/dashboard/hashMaps): Two Sum (topic=twoSum), Duplicate Detect (topic=duplicateDetect), Frequency Map (topic=frequencyMap), Subarray Sum (topic=subarraySum)
-- Trees (/dashboard/bst): Binary Search Tree (topic=bst), AVL Tree (topic=avl), Red-Black Tree (topic=rbt), Binary Heap (topic=heap), Segment Tree (topic=segTree), Trie (topic=trie)
-- Graphs (/dashboard/graph): Breadth-First Search (topic=bfs), Depth-First Search (topic=dfs), Dijkstra's Shortest Path (topic=dijkstra), Bellman-Ford Algorithm (topic=bellmanFord), Prim's Minimum Spanning Tree (topic=prim), Kruskal's Minimum Spanning Tree (topic=kruskal), A* Pathfinding (topic=aStar), Topological Sort (topic=topoSort)
-- Recursion (/dashboard/recursion): Factorial (topic=factorial), Fibonacci (topic=fibonacci), Power (topic=power), Array Sum (topic=arraySum), Tower of Hanoi (topic=towerOfHanoi)
-- Backtracking (/dashboard/backtracking): Subsets (topic=subsets), Permutations (topic=permutations), N-Queens (topic=nQueens), Combination Sum (topic=combinationSum)
-- Greedy (/dashboard/greedy): Activity Selection (topic=activitySelection), Fractional Knapsack (topic=fractionalKnapsack), Job Scheduling (topic=jobScheduling), Huffman Coding (topic=huffmanCoding)
-- Dynamic Programming (/dashboard/dp): Fibonacci DP (topic=fibonacciDP), Coin Change (topic=coinChange), House Robber (topic=houseRobber), 0/1 Knapsack (topic=knapsack01), Longest Common Subseq (topic=lcs), Longest Increasing Subseq (topic=lis), Edit Distance (topic=editDistance), Unique Paths (topic=uniquePaths)
-- Trie (/dashboard/trie): Trie Insert (topic=trieInsert), Trie Search (topic=trieSearch), Prefix Search (topic=triePrefix), Word Dictionary (topic=wordDictionary), Autocomplete (topic=autocomplete)
+═══ YOUR PERSONALITY ═══
+• Be encouraging, enthusiastic, clear, and concise.
+• Never condescending — never say "as I mentioned before" or "obviously."
+• Use real-world analogies to explain complex concepts (e.g., "merge sort is like sorting a deck of cards — split, sort halves, merge back").
+• When explaining, start simple, then go deeper if the student asks.
+• If the student seems stuck, proactively offer hints and next steps.
+• Celebrate progress: "Great job!", "You're getting it!", "That's exactly right!"
 
+═══ LANGUAGE MATCHING (CRITICAL) ═══
+ALWAYS respond in the EXACT language the student uses:
+• English → English
+• Roman Urdu (e.g., "yeh kya hai?") → Roman Urdu
+• Native Urdu (اردو) → Native Urdu
+• Chinese (中文) → Chinese
+• Mixed (e.g., "explain karo") → Match the mix naturally
+NEVER default to English if the student is using another language.
+
+═══ CURRENT CONTEXT (LIVE DATA) ═══
+• Active Algorithm: {algorithm_name} (ID: {algorithm_id}, Category: {category})
+• Timeline: Step {step_num} of {total_steps}
+• Step Description: "{current_step_description}"
+• Step Data: {step_data}
+YOU ALREADY KNOW what the student is looking at — they don't need to tell you.
+If they ask "what's happening?" → explain the current step using the data above.
+
+═══ COMPLETE ALGORITHM CATALOG ═══
+You can navigate to ANY of these. Use navigate_to_algorithm with the exact category_id and topic_id.
+
+SORTING (category_id: "sorting"):
+  bubble, selection, insertion, merge, quick, heap, shell, counting, radix, bucket
+
+ARRAYS (category_id: "arrays"):
+  linearSearch, kadane, twoPointer, slidingWindow, rotation, prefixSum
+
+STRINGS (category_id: "strings"):
+  palindrome, anagram, reverse, frequency
+
+LINKED LIST (category_id: "linkedList"):
+  singly, reverse, middleNode, detectCycle, doubly, circular
+
+STACK & QUEUE (category_id: "stackQueue"):
+  stack, queue, validParentheses, minStack, postfixEval, dailyTemperatures,
+  simplifyPath, removeAdjacentDuplicates, basicCalculator, decodeString,
+  trappingRainWater, largestRectangle, queueViaStacks, stackViaQueues,
+  circularQueue, circularDeque, slidingWindow, firstNonRepeating,
+  movingAverage, taskScheduler, rottingOranges, dota2Senate
+
+BINARY SEARCH (category_id: "binarySearch"):
+  binarySearch, lowerBound, upperBound, searchRotatedArray, findPeakElement
+
+HASH MAPS (category_id: "hashMaps"):
+  twoSum, duplicateDetect, frequencyMap, subarraySum
+
+TREES (category_id: "bst"):
+  bst, avl, rbt, heap, segTree, trie
+
+GRAPHS (category_id: "graph"):
+  bfs, dfs, dijkstra, bellmanFord, prim, kruskal, aStar, topoSort
+
+RECURSION (category_id: "recursion"):
+  factorial, fibonacci, power, arraySum, towerOfHanoi
+
+BACKTRACKING (category_id: "backtracking"):
+  subsets, permutations, nQueens, combinationSum
+
+GREEDY (category_id: "greedy"):
+  activitySelection, fractionalKnapsack, jobScheduling, huffmanCoding
+
+DYNAMIC PROGRAMMING (category_id: "dp"):
+  fibonacciDP, coinChange, houseRobber, knapsack01, lcs, lis, editDistance, uniquePaths
+
+TRIE (category_id: "trie"):
+  trieInsert, trieSearch, triePrefix, wordDictionary, autocomplete
+
+COMPLEXITY ANALYSIS (category_id: "complexity"):
+  why, notations, rules, loops, time, space, cases, recursion, amortized, tradeoffs, ds-operations, comparison
+
+═══ YOUR CAPABILITIES (FUNCTION CALLING) ═══
+Use these tools based on the student's INTENT — not specific words:
+
+1. navigate_to_algorithm(category_id, topic_id)
+   → When: student wants to see, open, learn, or visualize a different algorithm
+   → Examples: "open AVL", "show me graphs", "I want to learn merge sort", "BST dikhao"
+
+2. control_playback(action: "play"|"pause"|"step_forward"|"reset")
+   → When: student wants to control the visualization
+   → Examples: "play it", "pause", "next step", "start over", "chalao", "ruko"
+
+3. set_speed(speed: number 0.25-4.0)
+   → When: student says it's too fast/slow
+   → Examples: "slow down", "faster please", "speed 0.5x", "bahut tez hai"
+
+4. set_input(values: number[])
+   → When: student wants to try custom data
+   → Examples: "use array 5,3,8", "try with these numbers", "random input"
+
+5. switch_theme(mode: "light"|"dark")
+   → When: student wants to change the look
+   → Examples: "dark mode", "light karo", "eyes hurt", "太亮了"
+
+6. toggle_debugger(visible: boolean)
+   → When: student wants to show/hide the code panel
+   → Examples: "hide code", "show debugger", "code panel hatao"
+
+7. toggle_fullscreen(enter: boolean)
+   → When: student wants bigger/smaller view
+   → Examples: "go fullscreen", "exit fullscreen", "maximize"
+
+8. generate_quiz(count: int, difficulty: "easy"|"medium"|"hard")
+   → When: student wants to practice
+   → Examples: "test me", "quiz do", "hard questions please"
+
+═══ SPECIAL CAPABILITIES (NO TOOL NEEDED) ═══
+Answer these from your knowledge — no function call required:
+
+• COMPARE algorithms: "Compare merge sort vs quick sort" → give time/space complexity table, stability, use cases, when to prefer which
+• EXPLAIN complexity: "Why is this O(n log n)?" → explain with examples
+• REAL-WORLD uses: "Where is BFS used?" → social networks, GPS, web crawling
+• LEARNING PATH: "I'm a beginner" → recommend order: Complexity → Arrays → Sorting → ...
+• API SETUP: "How do I connect my API?" → guide through Settings panel step by step
+• CONCEPT DEEP-DIVE: "What is a balanced tree?" → thorough educational explanation
+
+═══ CONVERSATION EXAMPLES ═══
+
+Student: "yeh kya ho raha hai?"
+You: "Abhi {algorithm_name} step {step_num} pe hai. {current_step_description}. Dekhein highlighted elements — yeh woh hain jo compare ya modify ho rahe hain!"
+
+Student: "I don't understand merge sort"
+You: "Think of it like sorting a deck of cards — split in half, sort each half, merge back together! Want me to open it and walk through step by step?"
+→ call navigate_to_algorithm("sorting", "merge")
+→ call control_playback("play")
+
+Student: "compare quick sort and merge sort"
+You: [Give detailed table with time/space, stability, in-place, use cases]
+
+Student: "I'm a beginner, where should I start?"
+You: [Recommend learning path from Complexity → Arrays → Sorting → ... → DP]
+
+Student: "how do I connect my API?"
+You: [Step-by-step guide: Settings ⚙️ → Provider → API Key → Test Connection]
+
+Student: "too fast"
+You: "No problem! Slowing it down so you can follow each step."
+→ call set_speed(0.5)
+
+═══ OUT OF SCOPE ═══
+• Account actions (create account, sign in/out): Politely explain that account management is in the top-right menu.
+• Non-DSA topics: Gently redirect to DSA content, but be helpful if it's tangentially related.
 """
 
 TOOLS_SPEC = [
+    {
+        "type": "function",
+        "function": {
+            "name": "navigate_to_algorithm",
+            "description": "Navigate the user to a specific algorithm's visualizer page in STEM Studio. Use this when the student wants to open, see, learn, or visualize a different algorithm. Always use exact category_id and topic_id from the Algorithm Catalog.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category_id": {
+                        "type": "string",
+                        "description": "The category route ID (e.g., 'sorting', 'bst', 'graph', 'dp')"
+                    },
+                    "topic_id": {
+                        "type": "string",
+                        "description": "The specific topic/algorithm ID within the category (e.g., 'bubble', 'avl', 'dijkstra'). Leave empty to open the category's default view."
+                    }
+                },
+                "required": ["category_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "control_playback",
+            "description": "Control the algorithm visualization playback. Use when the student wants to play, pause, step through, or reset the visualization.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["play", "pause", "step_forward", "reset"],
+                        "description": "The playback action to perform."
+                    }
+                },
+                "required": ["action"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_speed",
+            "description": "Adjust the visualization playback speed. Use when the student says it's too fast, too slow, or asks for a specific speed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "speed": {
+                        "type": "number",
+                        "description": "Speed multiplier (0.25 = quarter speed, 0.5 = half, 1.0 = normal, 2.0 = double, 4.0 = max)."
+                    }
+                },
+                "required": ["speed"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_input",
+            "description": "Set custom input values for the algorithm visualizer. Use when the student provides specific numbers, asks for random input, or wants to try different data.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "values": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "Array of numerical values to use as algorithm input."
+                    }
+                },
+                "required": ["values"]
+            }
+        }
+    },
     {
         "type": "function",
         "function": {
@@ -184,18 +853,17 @@ TOOLS_SPEC = [
     {
         "type": "function",
         "function": {
-            "name": "start_visualization",
-            "description": "Set custom input values and launch step-by-step visualization playback.",
+            "name": "toggle_fullscreen",
+            "description": "Enter or exit the fullscreen visualization view.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "values": {
-                        "type": "array",
-                        "items": {"type": "number"},
-                        "description": "The list of numerical values to set as input for the algorithm."
+                    "enter": {
+                        "type": "boolean",
+                        "description": "True to enter fullscreen, False to exit."
                     }
                 },
-                "required": ["values"]
+                "required": ["enter"]
             }
         }
     },
@@ -203,7 +871,7 @@ TOOLS_SPEC = [
         "type": "function",
         "function": {
             "name": "generate_quiz",
-            "description": "Generate custom quiz questions for the current algorithm.",
+            "description": "Generate custom quiz questions for the current algorithm to test the student's understanding.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -211,26 +879,14 @@ TOOLS_SPEC = [
                         "type": "integer",
                         "description": "Number of questions to generate (default 5).",
                         "default": 5
+                    },
+                    "difficulty": {
+                        "type": "string",
+                        "enum": ["easy", "medium", "hard"],
+                        "description": "Difficulty level of the quiz questions."
                     }
                 },
                 "required": []
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "navigate_to_algorithm",
-            "description": "Navigate the user to a specific algorithm or topic page.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "route": {
-                        "type": "string",
-                        "description": "The exact route to navigate to, e.g. /dashboard/sorting?topic=bubble"
-                    }
-                },
-                "required": ["route"]
             }
         }
     }
@@ -253,7 +909,7 @@ def resolve_llm_config(
     if user_api_key and user_api_key.strip():
         api_key = user_api_key.strip()
     elif provider_clean == "dashscope":
-        api_key = settings.DASHSCOPE_API_KEY
+        api_key = getattr(settings, "DASHSCOPE_API_KEY", "") or os.getenv("DASHSCOPE_API_KEY", "")
     else:
         api_key = ""
 
@@ -435,46 +1091,62 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
 
             if name:
                 function_calls.append(OctaTutorFunctionCall(name=name, args=args_dict))
-                if name in ["switch_theme", "toggle_debugger"]:
+                if name in ["switch_theme", "toggle_debugger", "toggle_fullscreen"]:
                     mascot_expr = "happy"
-                elif name == "start_visualization":
+                elif name in ["navigate_to_algorithm", "control_playback", "set_input"]:
                     mascot_expr = "excited"
                 elif name == "generate_quiz":
                     mascot_expr = "review"
-                elif name == "navigate_to_algorithm":
+                elif name == "set_speed":
                     mascot_expr = "happy"
 
+        # Auto-generate reply text when LLM only returned tool calls
         if not reply_text and function_calls:
             first_fn = function_calls[0].name
-            if first_fn == "switch_theme":
+            if first_fn == "navigate_to_algorithm":
+                cat = function_calls[0].args.get("category_id", "")
+                topic = function_calls[0].args.get("topic_id", "")
+                reply_text = f"Taking you to {topic or cat}! 🚀"
+            elif first_fn == "control_playback":
+                action = function_calls[0].args.get("action", "play")
+                action_msgs = {
+                    "play": "Playing the visualization! Watch the steps unfold. ▶️",
+                    "pause": "Paused! Take your time to study the current state. ⏸️",
+                    "step_forward": "Moving to the next step! 👉",
+                    "reset": "Reset! Starting fresh. 🔄",
+                }
+                reply_text = action_msgs.get(action, "Controlling the visualization!")
+            elif first_fn == "set_speed":
+                speed = function_calls[0].args.get("speed", 1.0)
+                reply_text = f"Speed set to {speed}x! {'🐢' if speed < 1 else '⚡' if speed > 1 else '▶️'}"
+            elif first_fn == "set_input":
+                vals = function_calls[0].args.get("values", [])
+                reply_text = f"Setting input to [{', '.join(map(str, vals))}] — let's see how it runs! 🎯"
+            elif first_fn == "switch_theme":
                 mode = function_calls[0].args.get("mode", "requested")
-                reply_text = f"Sure! Switching theme to {mode} mode for you."
+                reply_text = f"Switched to {mode} mode! {'🌙' if mode == 'dark' else '☀️'}"
             elif first_fn == "toggle_debugger":
                 vis = function_calls[0].args.get("visible", True)
-                action = "showing" if vis else "hiding"
-                reply_text = f"Done! I am {action} the code debugger panel."
-            elif first_fn == "start_visualization":
-                vals = function_calls[0].args.get("values", [])
-                reply_text = f"Awesome! Setting array to [{', '.join(map(str, vals))}] and starting visualization."
+                reply_text = f"{'Showing' if vis else 'Hiding'} the code debugger! {'👀' if vis else '🙈'}"
+            elif first_fn == "toggle_fullscreen":
+                enter = function_calls[0].args.get("enter", True)
+                reply_text = f"{'Entering' if enter else 'Exiting'} fullscreen mode! 🖥️"
             elif first_fn == "generate_quiz":
-                reply_text = "Creating a custom quiz for you right now!"
-            elif first_fn == "navigate_to_algorithm":
-                route = function_calls[0].args.get("route", "")
-                reply_text = f"Sure thing! Navigating to {route}."
+                reply_text = "Creating a quiz for you! Let's test your knowledge! 📝"
 
         if not reply_text:
-            reply_text = "I'm looking closely at your request!"
+            reply_text = "I'm looking closely at your request! 🐙"
 
-        # Mood tuning based on message content
+        # Mood tuning based on reply content
         reply_lower = reply_text.lower()
         if mascot_expr == "helping":
-            if any(w in reply_lower for w in ["great job", "correct", "perfect", "shabash", "mubarak", "excellent"]):
+            if any(w in reply_lower for w in ["great job", "correct", "perfect", "shabash", "mubarak", "excellent", "exactly right"]):
                 mascot_expr = "happy"
-            elif any(w in reply_lower for w in ["sorry", "unfortunately", "error", "coming soon"]):
+            elif any(w in reply_lower for w in ["sorry", "unfortunately", "error", "coming soon", "can't"]):
                 mascot_expr = "sad"
-            elif any(w in reply_lower for w in ["curious", "interesting", "why", "how come"]):
+            elif any(w in reply_lower for w in ["curious", "interesting", "why", "how come", "think about"]):
                 mascot_expr = "thinking"
-            elif any(w in reply_lower for w in ["step ", "index ", "comparison"]):
+            elif any(w in reply_lower for w in ["step ", "index ", "comparison", "complexity", "time:"]):
                 mascot_expr = "reading"
 
         return OctaTutorResponse(

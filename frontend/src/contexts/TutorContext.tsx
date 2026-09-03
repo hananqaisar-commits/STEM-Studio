@@ -17,7 +17,10 @@ export interface TutorAlgorithmContext {
   reset?: () => void;
   setShowDebugger?: (visible: boolean) => void;
   onLaunchQuiz?: (questions?: any[]) => void;
-  onGenerateRandomInput?: () => void;
+  // NEW: Speed control
+  setSpeed?: (speed: number) => void;
+  // NEW: Fullscreen control
+  toggleFullscreen?: (enter: boolean) => void;
 }
 
 interface TutorContextType {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './SettingsModal.css';
@@ -25,6 +26,9 @@ const DEFAULT_CONFIG: UserLLMConfig = {
 };
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const { theme, setTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState<'ai' | 'appearance'>('ai');
+
   const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
     try {
       const saved = localStorage.getItem('octa_llm_config');
@@ -104,78 +108,112 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         {/* Header */}
         <div className="settings-modal-header">
           <div className="settings-header-title">
-            <h3>AI Model Settings</h3>
-            <p>Configure LLM model API keys and custom endpoints</p>
+            <h3>Settings</h3>
+            <p>Configure model API keys and preferences</p>
           </div>
           <button className="settings-close-btn" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="settings-tabs-bar">
+          <button
+            className={`settings-tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ai')}
+          >
+            AI Model (BYOK)
+          </button>
+          <button
+            className={`settings-tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('appearance')}
+          >
+            Appearance
+          </button>
+        </div>
+
         {/* Body */}
         <div className="settings-modal-body">
-          <div className="settings-field">
-            <label className="settings-label">Provider</label>
-            <select
-              className="settings-select"
-              value={provider}
-              onChange={(e) => handleProviderSelect(e.target.value as LLMProvider)}
-            >
-              {PROVIDER_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {provider !== 'custom' && (
-            <div className="settings-field">
-              <label className="settings-label">API Key</label>
-              <div className="settings-input-wrapper">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  className="settings-input"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={provider === 'dashscope' ? 'Optional (system key active)' : `Enter ${provider.toUpperCase()} API Key`}
-                />
-                <button
-                  type="button"
-                  className="settings-eye-btn"
-                  onClick={() => setShowKey(!showKey)}
+          {activeTab === 'ai' && (
+            <>
+              <div className="settings-field">
+                <label className="settings-label">Provider</label>
+                <select
+                  className="settings-select"
+                  value={provider}
+                  onChange={(e) => handleProviderSelect(e.target.value as LLMProvider)}
                 >
-                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+                  {PROVIDER_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+
+              {provider !== 'custom' && (
+                <div className="settings-field">
+                  <label className="settings-label">API Key</label>
+                  <div className="settings-input-wrapper">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      className="settings-input"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder={provider === 'dashscope' ? 'Optional (system key active)' : `Enter ${provider.toUpperCase()} API Key`}
+                    />
+                    <button
+                      type="button"
+                      className="settings-eye-btn"
+                      onClick={() => setShowKey(!showKey)}
+                    >
+                      {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="settings-field">
+                <label className="settings-label">Model Name</label>
+                <input
+                  type="text"
+                  className="settings-input"
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  placeholder="e.g. qwen-plus, gpt-4o-mini"
+                />
+              </div>
+
+              <div className="settings-field">
+                <label className="settings-label">Base Endpoint URL</label>
+                <input
+                  type="text"
+                  className="settings-input"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                />
+              </div>
+
+              {testResult && (
+                <div className={`settings-status-banner ${testResult.success ? 'success' : 'error'}`}>
+                  {testResult.success ? <Check size={14} /> : <AlertCircle size={14} />}
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+            </>
           )}
 
-          <div className="settings-field">
-            <label className="settings-label">Model Name</label>
-            <input
-              type="text"
-              className="settings-input"
-              value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
-              placeholder="e.g. qwen-plus, gpt-4o-mini"
-            />
-          </div>
-
-          <div className="settings-field">
-            <label className="settings-label">Base Endpoint URL</label>
-            <input
-              type="text"
-              className="settings-input"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-            />
-          </div>
-
-          {testResult && (
-            <div className={`settings-status-banner ${testResult.success ? 'success' : 'error'}`}>
-              {testResult.success ? <Check size={14} /> : <AlertCircle size={14} />}
-              <span>{testResult.message}</span>
+          {activeTab === 'appearance' && (
+            <div className="settings-field">
+              <label className="settings-label">Interface Theme</label>
+              <select
+                className="settings-select"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as any)}
+              >
+                <option value="light">Light Mode</option>
+                <option value="dark">Dark Mode</option>
+              </select>
             </div>
           )}
         </div>
@@ -186,14 +224,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             Reset Defaults
           </button>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleTestConnection}
-              disabled={testing}
-            >
-              {testing ? 'Testing...' : 'Test Connection'}
-            </button>
+            {activeTab === 'ai' && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleTestConnection}
+                disabled={testing}
+              >
+                {testing ? 'Testing...' : 'Test Connection'}
+              </button>
+            )}
             <button type="button" className="btn-primary" onClick={handleSave}>
               Save Changes
             </button>

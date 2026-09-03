@@ -488,4 +488,43 @@ Whenever a new algorithm/module is added to STEM Studio, ensure Octa Tutor's con
 2. No hardcoded algorithm-name lists exist anywhere in Octa Tutor's code that would need manual updating — the context-passing is automatic/dynamic based on whichever algorithm page is currently active (set via TutorContext), not a maintained list.
 3. If the new algorithm introduces new step data fields beyond the standard `ArrayStep` interface, ensure `currentStep` is passed through to the tutor context as-is — the backend system prompt uses JSON.stringify to include whatever fields exist.
 
+## 19. Octa Tutor Master Training Protocol
+
+### 19A. Core Principle — Intent, Not Keywords
+- Octa Tutor MUST understand natural conversation intent, NOT rigid keywords.
+- The system prompt trains the LLM through examples and context, not brittle matching.
+- The fallback engine uses intent classification with multi-language patterns (EN, Urdu, Roman Urdu, Chinese).
+- Never add if/else chains matching exact user phrases — use intent categories and fuzzy alias resolution.
+
+### 19B. When Adding a New Algorithm
+1. Add to `ALGORITHM_CATALOG` in `octa_tutor.py` system prompt (under the appropriate category).
+2. Add common aliases to `ALGORITHM_ALIASES` in `octa_tutor.py` (informal names, abbreviations, typos).
+3. Ensure Page component calls `setTutorContext()` with all algorithm fields.
+4. Add to `categoryTopics.ts` for React Router navigation mapping.
+5. Verification: "open [new algorithm name]" in Octa Tutor MUST automatically navigate to the algorithm page.
+
+### 19C. When Adding a New Tutor Tool / Action
+1. Add tool definition to `TOOLS_SPEC` in `octa_tutor.py`.
+2. Add system prompt guidelines explaining WHEN the LLM should invoke the tool.
+3. Add few-shot conversation examples in the system prompt.
+4. Add tool call handler inside `dispatchFunctionCalls()` in `useOctaTutor.ts`.
+5. Add fallback intent handler in `generate_fallback_response()` for offline states.
+6. Add `TutorContext` callback if the tool needs to mutate UI/visualizer state.
+
+### 19D. System Prompt & Training Quality Standards
+- System prompt MUST contain the full 15-category algorithm catalog with exact route/topic IDs.
+- System prompt MUST include multi-shot conversation examples demonstrating language matching, navigation, speed changes, and algorithm comparisons.
+- System prompt MUST instruct the LLM to match the user's language code-switching style (e.g. Roman Urdu, English-Urdu mix).
+- System prompt MUST inject live timeline state (`algorithmName`, `currentStepIndex`, `totalSteps`, `currentStepDescription`, `step_data`).
+
+### 19E. Octa Tutor Quality Checklist
+- [ ] Natural Intent: Varied phrasings ("slow down", "too fast", "aage chalo", "ruk jao") perform correct actions.
+- [ ] Navigation: Informal algorithm names ("AVL", "dijkstra's", "rbt", "min stack") resolve and navigate accurately.
+- [ ] Multilingual: Tutor responds in user's language (English, Roman Urdu, Urdu, Chinese) automatically.
+- [ ] Context-Aware: Tutor automatically knows active algorithm and timeline step without asking.
+- [ ] Controls: Play, pause, step_forward, reset, speed adjustment, custom input work via conversation.
+- [ ] Comparison & Guidance: Tutor provides structured algorithm comparisons and learning paths.
+- [ ] Voice Input: Microphone toggle supports `en-US`, `ur-PK`, `zh-CN` language selection.
+- [ ] Smooth Animations: Fast 15ms character reveal typing animation streams assistant responses.
+
 

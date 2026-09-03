@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Bot, Send, Mic, MicOff, Settings, X, Trash2, Volume2 } from 'lucide-react';
+import { Send, Mic, MicOff, Settings, X, Trash2, Volume2 } from 'lucide-react';
 import { useOctaTutor, type SupportedSpeechLang } from '../../hooks/useOctaTutor';
 import { useTutorContext } from '../../contexts/TutorContext';
 import { Octa } from '../mascot';
@@ -23,6 +23,7 @@ export const OctaTutor: React.FC = () => {
     clearHistory,
     llmConfig,
     setIsSettingsOpen,
+    suggestions,
   } = useOctaTutor();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,13 +76,6 @@ export const OctaTutor: React.FC = () => {
     );
   }
 
-  const suggestions = [
-    { label: 'Explain step', text: `Explain step ${contextState.currentStepIndex + 1} of ${contextState.totalSteps || 1}.` },
-    { label: 'Dark Mode', text: 'Switch to dark mode.' },
-    { label: 'Hide Debugger', text: 'Hide code debugger.' },
-    { label: 'Generate Quiz', text: `Generate a quiz on ${contextState.algorithmName || 'this algorithm'}.` },
-  ];
-
   return (
     <div className="octa-tutor-window" role="region" aria-label="Octa AI Tutor">
       {/* Header */}
@@ -91,6 +85,9 @@ export const OctaTutor: React.FC = () => {
           <span className="tutor-header-model">{llmConfig.modelName || 'qwen-plus'}</span>
         </div>
         <div className="tutor-header-actions">
+          <button className="tutor-icon-btn" onClick={() => setIsSettingsOpen(true)} title="AI Model Settings">
+            <Settings size={14} />
+          </button>
           <button className="tutor-icon-btn" onClick={clearHistory} title="Clear Chat">
             <Trash2 size={14} />
           </button>
@@ -117,7 +114,7 @@ export const OctaTutor: React.FC = () => {
 
           return (
             <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
-              <div className="tutor-message-content">
+              <div className="tutor-message-content" style={{ whiteSpace: 'pre-line' }}>
                 {displayContent}
               </div>
             </div>
@@ -138,7 +135,7 @@ export const OctaTutor: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggestions */}
+      {/* Dynamic Suggestions */}
       <div className="tutor-suggestions">
         {suggestions.map((s, idx) => (
           <button key={idx} className="tutor-suggestion-pill" onClick={() => sendMessage(s.text)}>
@@ -188,6 +185,7 @@ export const OctaTutor: React.FC = () => {
               className={`tutor-mic-btn ${isListening ? 'listening' : ''}`}
               onClick={isListening ? stopListening : startListening}
               type="button"
+              title="Voice Input (EN, Urdu, Chinese)"
             >
               {isListening ? <MicOff size={14} /> : <Mic size={14} />}
             </button>
