@@ -27,7 +27,7 @@ else:
     # Every request gets a fresh connection — no stale pool issues after cold start.
     # Locally, fall back to a small QueuePool for performance.
     is_ephemeral = any(token in db_url for token in [
-        ".aiven", ".render", ".railway", ".fly", "pythonanywhere",
+        ".aiven", ".render", ".railway", ".fly", "pythonanywhere", "supabase",
     ])
 
     if is_ephemeral:
