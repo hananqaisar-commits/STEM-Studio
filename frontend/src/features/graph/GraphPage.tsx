@@ -44,6 +44,7 @@ import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './Graph.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 interface AlgorithmMeta {
   id: GraphCategory;
@@ -61,6 +62,7 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 ];
 
 export const GraphPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<GraphCategory>('bfs');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -70,10 +72,14 @@ export const GraphPage: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Graph Data State
+  const defaultGraph = getPresetGraph('standard');
+  const [nodes, setNodes] = useState<GraphNode[]>(defaultGraph.nodes);
+  const [edges, setEdges] = useState<GraphEdge[]>(defaultGraph.edges);
 
-  const [startNode, setStartNode] = useState<string>('A');
-  const [nodes, setNodes] = useState<GraphNode[]>(() => getPresetGraph('standard').nodes);
-  const [edges, setEdges] = useState<GraphEdge[]>(() => getPresetGraph('standard').edges);
+  // Control Inputs
+  const [startNodeId, setStartNodeId] = useState<string>('A');
+  const [targetNodeId, setTargetNodeId] = useState<string>('F');
 
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -96,8 +102,30 @@ export const GraphPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
-    } = useStepPlayer<GraphStep>({ steps: activeSteps });
+    seekTo,
+  } = useStepPlayer<GraphStep>({ steps: activeSteps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS_LIST.find((a) => a.id === category);
+
+    setTutorContext({
+      algorithmName: algObj?.name || category.toUpperCase(),
+      algorithmId: category,
+      category: 'graph',
+      currentStepDescription: currentStep?.explanation || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints from the current active steps
   const quizCheckpoints = useMemo(
@@ -148,13 +176,13 @@ export const GraphPage: React.FC = () => {
   const handleRunAlgorithm = () => {
     let steps: GraphStep[] = [];
     if (category === 'bfs') {
-      steps = generateBFSSteps(nodes, edges, startNode);
+      steps = generateBFSSteps(nodes, edges, startNodeId);
     } else if (category === 'dfs') {
-      steps = generateDFSSteps(nodes, edges, startNode);
+      steps = generateDFSSteps(nodes, edges, startNodeId);
     } else if (category === 'dijkstra') {
-      steps = generateDijkstraSteps(nodes, edges, startNode, 'F');
+      steps = generateDijkstraSteps(nodes, edges, startNodeId, 'F');
     } else if (category === 'prim') {
-      steps = generatePrimsSteps(nodes, edges, startNode);
+      steps = generatePrimsSteps(nodes, edges, startNodeId);
     } else if (category === 'topoSort') {
       steps = generateTopoSortSteps(nodes, edges);
     }
@@ -170,9 +198,9 @@ export const GraphPage: React.FC = () => {
     setEdges(updatedEdges);
 
     if (category === 'dijkstra') {
-      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNode, 'F'));
+      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNodeId, 'F'));
     } else if (category === 'prim') {
-      setActiveSteps(generatePrimsSteps(nodes, updatedEdges, startNode));
+      setActiveSteps(generatePrimsSteps(nodes, updatedEdges, startNodeId));
     }
   };
 
@@ -286,8 +314,8 @@ export const GraphPage: React.FC = () => {
               fontWeight: 700,
               cursor: 'pointer',
             }}
-            value={startNode}
-            onChange={(e) => setStartNode(e.target.value)}
+            value={startNodeId}
+            onChange={(e) => setStartNodeId(e.target.value)}
           >
             {nodes.map((n) => (
               <option key={n.id} value={n.id} style={{ background: 'var(--color-surface)' }}>
