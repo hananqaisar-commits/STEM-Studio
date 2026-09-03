@@ -60,11 +60,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchUser]);
 
   const login = async (identifier: string, password: string, rememberMe = false) => {
+    const cleanId = identifier ? identifier.trim() : '';
     const data = await apiClient<{ access_token: string; refresh_token: string }>(
       '/api/auth/login',
       {
         method: 'POST',
-        body: { identifier, password, remember_me: rememberMe },
+        body: {
+          identifier: cleanId,
+          username: cleanId,
+          email: cleanId,
+          password,
+          remember_me: rememberMe,
+        },
       }
     );
 

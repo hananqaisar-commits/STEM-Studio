@@ -16,17 +16,17 @@ class SignUpRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     identifier: Optional[str] = None
-    email: Optional[str] = None
     username: Optional[str] = None
+    email: Optional[str] = None
     password: str
     remember_me: bool = False
 
     @model_validator(mode="after")
     def resolve_identifier(self) -> "LoginRequest":
-        if not self.identifier or not self.identifier.strip():
-            self.identifier = self.email or self.username
-        if not self.identifier or not self.identifier.strip():
-            raise ValueError("Email or username is required to sign in")
+        id_val = self.identifier or self.username or self.email
+        if not id_val or not str(id_val).strip():
+            raise ValueError("Username is required")
+        self.identifier = str(id_val).strip()
         return self
 
 class GoogleSignInRequest(BaseModel):
