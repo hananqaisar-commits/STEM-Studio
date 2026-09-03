@@ -17,6 +17,7 @@ export interface TutorAlgorithmContext {
   reset?: () => void;
   setShowDebugger?: (visible: boolean) => void;
   onLaunchQuiz?: (questions?: any[]) => void;
+  onGenerateRandomInput?: () => void;
 }
 
 interface TutorContextType {

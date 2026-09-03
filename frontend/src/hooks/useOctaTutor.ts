@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type UserLLMConfig } from '../api/octaTutorApi';
 import { useTutorContext } from '../contexts/TutorContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -51,6 +52,7 @@ const DEFAULT_LLM_CONFIG: UserLLMConfig = {
 export function useOctaTutor(): UseOctaTutorReturn {
   const { contextState } = useTutorContext();
   const { setTheme } = useTheme();
+  const navigate = useNavigate();
 
   // Load custom LLM config from localStorage
   const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
@@ -271,6 +273,11 @@ export function useOctaTutor(): UseOctaTutorReturn {
             } else if (call.name === 'generate_quiz' && contextState.onLaunchQuiz) {
               const questions = Array.isArray(call.args?.questions) ? call.args.questions : undefined;
               contextState.onLaunchQuiz(questions);
+            } else if (call.name === 'navigate_to_algorithm') {
+              const route = call.args?.route;
+              if (route && typeof route === 'string' && route.startsWith('/dashboard/')) {
+                navigate(route);
+              }
             }
           }
         }
@@ -304,7 +311,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         setIsLoading(false);
       }
     },
-    [inputText, isLoading, messages, contextState, setTheme, llmConfig]
+    [inputText, isLoading, messages, contextState, setTheme, llmConfig, navigate]
   );
 
   return {

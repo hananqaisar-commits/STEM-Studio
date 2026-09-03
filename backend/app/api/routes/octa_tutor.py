@@ -124,6 +124,25 @@ Rules & Guidelines:
    - Use `start_visualization` when the student asks to visualize or run an algorithm with specific array/input values.
    - Use `generate_quiz` when the student asks for a quiz or test.
 6. OUT OF SCOPE / ACCOUNT ACTIONS: If the user asks you to create an account, sign in, sign out, or modify personal account settings, explain politely in their language that conversational account management is coming soon, and direct them to the top-right account menu. Do NOT attempt any unauthorized account mutation.
+7. ALGORITHM NAVIGATION: If the user asks you to teach them or visualize a specific algorithm, use the `navigate_to_algorithm` tool with the appropriate `route` (e.g., `/dashboard/sorting?topic=bubble`). Always clarify if the request is ambiguous (e.g., "Did you mean AVL Tree or BST?"). Do NOT guess.
+
+Algorithm Catalog:
+- Complexity Analysis (/dashboard/complexity): Why Complexity Analysis? (topic=why), Asymptotic Notations (topic=notations), Simplification Rules (topic=rules), Analyzing Loops (topic=loops), Time Complexity Classes (topic=time), Space Complexity (topic=space), Best / Average / Worst Case (topic=cases), Recursion & Master Theorem (topic=recursion), Amortized Analysis (topic=amortized), Time-Space Tradeoffs (topic=tradeoffs), Data Structure Operations (topic=ds-operations), Algorithm Complexity Reference (topic=comparison)
+- Sorting Algorithms (/dashboard/sorting): Bubble Sort (topic=bubble), Selection Sort (topic=selection), Insertion Sort (topic=insertion), Merge Sort (topic=merge), Quick Sort (topic=quick), Heap Sort (topic=heap), Shell Sort (topic=shell), Counting Sort (topic=counting), Radix Sort (topic=radix), Bucket Sort (topic=bucket)
+- Arrays (/dashboard/arrays): Linear Search (topic=linearSearch), Kadane's Algorithm (topic=kadane), Two Pointers (topic=twoPointer), Sliding Window (topic=slidingWindow), Array Rotation (topic=rotation), Prefix Sum (topic=prefixSum)
+- Strings (/dashboard/strings): Palindrome Check (topic=palindrome), Anagram Check (topic=anagram), String Reversal (topic=reverse), Frequency Count (topic=frequency)
+- Linked List (/dashboard/linkedList): Singly Linked List (topic=singly), Reverse Linked List (topic=reverse), Find Middle Node (topic=middleNode), Cycle Detection (topic=detectCycle), Doubly Linked List (topic=doubly), Circular Linked List (topic=circular)
+- Stack & Queue (/dashboard/stackQueue): Stack Primitive (topic=stack), Queue Primitive (topic=queue), Valid Parentheses (topic=validParentheses), Min Stack (topic=minStack), Evaluate RPN (topic=postfixEval), Daily Temperatures (topic=dailyTemperatures), Simplify Path (topic=simplifyPath), Remove Adjacent Duplicates (topic=removeAdjacentDuplicates), Basic Calculator (topic=basicCalculator), Decode String Pattern (topic=decodeString), Trapping Rain Water (topic=trappingRainWater), Largest Rectangle (topic=largestRectangle), Queue using 2 Stacks (topic=queueViaStacks), Stack using Queues (topic=stackViaQueues), Circular Ring Queue (topic=circularQueue), Design Circular Deque (topic=circularDeque), Sliding Window Maximum (topic=slidingWindow), First Non-Repeating in Stream (topic=firstNonRepeating), Moving Average Data Stream (topic=movingAverage), Task Scheduler (topic=taskScheduler), Rotting Oranges (topic=rottingOranges), Dota2 Senate (topic=dota2Senate)
+- Binary Search (/dashboard/binarySearch): Classic Binary Search (topic=binarySearch), Lower Bound (topic=lowerBound), Upper Bound (topic=upperBound), Rotated Sorted Array (topic=searchRotatedArray), Find Peak Element (topic=findPeakElement)
+- Hash Maps (/dashboard/hashMaps): Two Sum (topic=twoSum), Duplicate Detect (topic=duplicateDetect), Frequency Map (topic=frequencyMap), Subarray Sum (topic=subarraySum)
+- Trees (/dashboard/bst): Binary Search Tree (topic=bst), AVL Tree (topic=avl), Red-Black Tree (topic=rbt), Binary Heap (topic=heap), Segment Tree (topic=segTree), Trie (topic=trie)
+- Graphs (/dashboard/graph): Breadth-First Search (topic=bfs), Depth-First Search (topic=dfs), Dijkstra's Shortest Path (topic=dijkstra), Bellman-Ford Algorithm (topic=bellmanFord), Prim's Minimum Spanning Tree (topic=prim), Kruskal's Minimum Spanning Tree (topic=kruskal), A* Pathfinding (topic=aStar), Topological Sort (topic=topoSort)
+- Recursion (/dashboard/recursion): Factorial (topic=factorial), Fibonacci (topic=fibonacci), Power (topic=power), Array Sum (topic=arraySum), Tower of Hanoi (topic=towerOfHanoi)
+- Backtracking (/dashboard/backtracking): Subsets (topic=subsets), Permutations (topic=permutations), N-Queens (topic=nQueens), Combination Sum (topic=combinationSum)
+- Greedy (/dashboard/greedy): Activity Selection (topic=activitySelection), Fractional Knapsack (topic=fractionalKnapsack), Job Scheduling (topic=jobScheduling), Huffman Coding (topic=huffmanCoding)
+- Dynamic Programming (/dashboard/dp): Fibonacci DP (topic=fibonacciDP), Coin Change (topic=coinChange), House Robber (topic=houseRobber), 0/1 Knapsack (topic=knapsack01), Longest Common Subseq (topic=lcs), Longest Increasing Subseq (topic=lis), Edit Distance (topic=editDistance), Unique Paths (topic=uniquePaths)
+- Trie (/dashboard/trie): Trie Insert (topic=trieInsert), Trie Search (topic=trieSearch), Prefix Search (topic=triePrefix), Word Dictionary (topic=wordDictionary), Autocomplete (topic=autocomplete)
+
 """
 
 TOOLS_SPEC = [
@@ -192,14 +211,26 @@ TOOLS_SPEC = [
                         "type": "integer",
                         "description": "Number of questions to generate (default 5).",
                         "default": 5
-                    },
-                    "difficulty": {
-                        "type": "string",
-                        "enum": ["easy", "medium", "hard"],
-                        "description": "Difficulty level of the quiz questions."
                     }
                 },
                 "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "navigate_to_algorithm",
+            "description": "Navigate the user to a specific algorithm or topic page.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "route": {
+                        "type": "string",
+                        "description": "The exact route to navigate to, e.g. /dashboard/sorting?topic=bubble"
+                    }
+                },
+                "required": ["route"]
             }
         }
     }
@@ -410,6 +441,8 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
                     mascot_expr = "excited"
                 elif name == "generate_quiz":
                     mascot_expr = "review"
+                elif name == "navigate_to_algorithm":
+                    mascot_expr = "happy"
 
         if not reply_text and function_calls:
             first_fn = function_calls[0].name
@@ -425,6 +458,9 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
                 reply_text = f"Awesome! Setting array to [{', '.join(map(str, vals))}] and starting visualization."
             elif first_fn == "generate_quiz":
                 reply_text = "Creating a custom quiz for you right now!"
+            elif first_fn == "navigate_to_algorithm":
+                route = function_calls[0].args.get("route", "")
+                reply_text = f"Sure thing! Navigating to {route}."
 
         if not reply_text:
             reply_text = "I'm looking closely at your request!"

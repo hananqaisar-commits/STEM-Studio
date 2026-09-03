@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap, Search } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap } from 'lucide-react';
 import type { QuizQuestion, QuizCadence } from '../../engine/types/Quiz';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
@@ -48,7 +48,6 @@ export interface QuizPanelProps {
   challengeMode?: boolean;
   /** True when the reveal follows a final wrong attempt — Continue then
    *  advances the canvas to the mispredicted step ("watch the step"). */
-  inspectPending?: boolean;
   onAnswer: (index: number) => void;
   onContinue: () => void;
   /** Per-category wording, e.g. "Resume traversal". */
@@ -69,7 +68,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   timeRemaining = null,
   streakMultiplier = 1,
   challengeMode = false,
-  inspectPending = false,
   onAnswer,
   onContinue,
   continueLabel = 'Continue',
@@ -131,10 +129,8 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   };
 
   const eyebrow = challengeMode
-    ? `Transfer challenge \u00b7 ${checkpointNumber} of ${totalCheckpoints}`
-    : phase === 'retrying'
-      ? `Checkpoint ${checkpointNumber} of ${totalCheckpoints} \u00b7 attempt 2 of 2`
-      : `Checkpoint ${checkpointNumber} of ${totalCheckpoints}`;
+    ? `Transfer challenge \u00b7 Step ${checkpointNumber} of ${totalCheckpoints}`
+    : `Step ${checkpointNumber} of ${totalCheckpoints}`;
 
   /* The card title states what the question trains. 'reason' questions
    * ask for justification of a visible step; everything else is a
@@ -148,13 +144,10 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   /* After a final wrong answer, Continue becomes an inspection: the
    * canvas advances to the mispredicted step so the student watches the
    * ground truth instead of just reading it. */
-  const effectiveContinueLabel =
-    phase === 'revealed' && !wasCorrect && inspectPending
-      ? 'Watch the step'
-      : continueLabel;
+  const effectiveContinueLabel = continueLabel;
 
   /* Timer bar width percentage (the shared Challenge limit is 10 seconds). */
-  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / 10) * 100) : 100;
+  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / 15) * 100) : 100;
   const timerUrgent = timeRemaining !== null && timeRemaining <= 5;
 
   /* Progress percentage for Guided mode. */
@@ -268,7 +261,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
           <div className="quiz-feedback is-hint">
             <Lightbulb size={15} />
             <span>
-              <span className="quiz-feedback-title">Not quite — try once more.</span>
               {question.hint}
             </span>
           </div>
@@ -278,30 +270,12 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
           <div className={`quiz-feedback ${wasCorrect ? 'is-ok' : 'is-bad'}`}>
             {wasCorrect ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
             <span>
-              <span className="quiz-feedback-title">
-                {wasCorrect
-                  ? 'Correct.'
-                  : inspectPending
-                    ? "Let's inspect this step."
-                    : 'The correct answer is shown above.'}
-              </span>
               {question.explanation}
             </span>
           </div>
         )}
 
-        {/* Inspect-the-step cue — wrong on the final attempt. Learning does
-            not stop at the wrong answer: Continue runs the exact step on
-            the canvas so the student sees where their model broke. */}
-        {phase === 'revealed' && !wasCorrect && inspectPending && (
-          <div className="quiz-inspect-note">
-            <Search size={14} />
-            <span>
-              Press <strong>Watch the step</strong> — the canvas will run the very step you
-              predicted. Compare it with what you expected, then try the next prediction.
-            </span>
-          </div>
-        )}
+
 
         {/* Key Idea insight — Concept mode only, shown after reveal */}
         {isConcept && phase === 'revealed' && (
@@ -317,7 +291,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
       <footer className="quiz-foot">
         <span className="quiz-score">
           {answeredCount === 0
-            ? 'First checkpoint'
+            ? 'First question'
             : `${correctCount}/${answeredCount} correct${streak > 1 ? ` \u00b7 streak ${streak}` : ''}`}
         </span>
 
