@@ -1,9 +1,20 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Send, Mic, MicOff, Settings, X, Trash2, Volume2 } from 'lucide-react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
+import { Settings, X, Trash2, Volume2, Sparkles, Bot, User as UserIcon, MessageSquare } from 'lucide-react';
 import { useOctaTutor, type SupportedSpeechLang } from '../../hooks/useOctaTutor';
 import { useTutorContext } from '../../contexts/TutorContext';
 import { Octa } from '../mascot';
+import { LoaderOne } from '../ui/loader';
+import { PlaceholdersAndVanishInput } from '../ui/placeholders-and-vanish-input';
 import './OctaTutor.css';
+
+/**
+ * Format & sanitize raw markdown asterisks (e.g. **bold**) for clean presentation
+ */
+function formatCleanResponse(text: string): string {
+  if (!text) return '';
+  return text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+}
 
 export const OctaTutor: React.FC = () => {
   const { contextState, isTutorOpen, toggleTutor } = useTutorContext();
@@ -15,14 +26,12 @@ export const OctaTutor: React.FC = () => {
     isListening,
     speechLang,
     setSpeechLang,
-    isSpeechSupported,
     mascotExpression,
     sendMessage,
     startListening,
     stopListening,
     clearHistory,
     llmConfig,
-    isSettingsOpen,
     setIsSettingsOpen,
     tutorMode,
     setTutorMode,
@@ -30,195 +39,218 @@ export const OctaTutor: React.FC = () => {
   } = useOctaTutor();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [revealedChars, setRevealedChars] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (messagesEndRef.current && isTutorOpen) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isTutorOpen]);
+  }, [messages, isTutorOpen, isLoading, revealedChars]);
 
-  // Fast char reveal animation
+  // Fast character-by-character streaming typewriter effect
   useEffect(() => {
     const latestMsg = messages[messages.length - 1];
     if (latestMsg && latestMsg.role === 'assistant' && latestMsg.isRevealing) {
       const msgId = latestMsg.id;
-      let currentLen = revealedChars[msgId] || 0;
+      const currentLen = revealedChars[msgId] || 0;
       if (currentLen < latestMsg.content.length) {
         const timer = setTimeout(() => {
           setRevealedChars((prev) => ({
             ...prev,
-            [msgId]: currentLen + 4,
+            [msgId]: currentLen + 5,
           }));
-        }, 15);
+        }, 12);
         return () => clearTimeout(timer);
       }
     }
   }, [messages, revealedChars]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleInputSubmit = useCallback(
+    (e: React.FormEvent) => {
       e.preventDefault();
-      sendMessage();
-    }
-  };
+      if (inputText.trim() && !isLoading) {
+        sendMessage();
+      }
+    },
+    [inputText, isLoading, sendMessage]
+  );
 
   if (!isTutorOpen) {
     return (
-      <button
-        className="octa-tutor-fab"
-        onClick={toggleTutor}
-        title="Open Octa AI Tutor"
-        aria-label="Open Octa AI Tutor"
-      >
-        <Octa expression="happy" size={24} interactive={false} />
-        <span>Octa Tutor</span>
-        <span className="octa-tutor-fab-dot" />
-      </button>
+      <LazyMotion features={domAnimation}>
+        <m.button
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="octa-tutor-fab"
+          onClick={toggleTutor}
+          title="Open Octa AI Tutor"
+          aria-label="Open Octa AI Tutor"
+        >
+          <div className="fab-octa-glow">
+            <Octa expression="happy" size={26} interactive={false} />
+          </div>
+          <span className="fab-text">Octa AI</span>
+          <span className="octa-tutor-fab-dot" />
+        </m.button>
+      </LazyMotion>
     );
   }
 
   return (
-    <div className="octa-tutor-window" role="region" aria-label="Octa AI Tutor">
-      {/* Header */}
-      <div className="tutor-header">
-        <div className="tutor-header-title">
-          <span className="tutor-header-name">Octa Tutor</span>
-          <span className="tutor-header-model">{llmConfig.modelName || 'qwen-plus'}</span>
-        </div>
-        <div className="tutor-header-actions">
-          <button className="tutor-icon-btn" onClick={() => setIsSettingsOpen(true)} title="AI Model Settings">
-            <Settings size={14} />
-          </button>
-          <button className="tutor-icon-btn" onClick={clearHistory} title="Clear Chat">
-            <Trash2 size={14} />
-          </button>
-          <button className="tutor-icon-btn" onClick={toggleTutor} title="Close">
-            <X size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* Context Ribbon */}
-      <div className="tutor-context-ribbon">
-        <span>Context: {contextState.algorithmName || 'General DSA'}</span>
-        <span>Step {contextState.currentStepIndex + 1} / {contextState.totalSteps || 1}</span>
-      </div>
-
-      {/* Mode Switcher Bar */}
-      <div className="tutor-mode-bar">
-        <button
-          className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`}
-          onClick={() => setTutorMode('natural')}
-          title="Natural conversational teaching mode (ChatGPT style)"
-        >
-          AI Concept Mode
-        </button>
-        <button
-          className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`}
-          onClick={() => setTutorMode('interactive')}
-          title="Interactive step-by-step visualizer guidance"
-        >
-          Interactive Step Mode
-        </button>
-      </div>
-
-      {/* Message Output Box */}
-      <div className="tutor-message-list">
-        {messages.map((msg) => {
-          const isAssis = msg.role === 'assistant';
-          const maxChar = revealedChars[msg.id];
-          const displayContent = isAssis && msg.isRevealing && maxChar !== undefined
-            ? msg.content.slice(0, maxChar)
-            : msg.content;
-
-          return (
-            <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
-              <div className="tutor-message-content" style={{ whiteSpace: 'pre-line' }}>
-                {displayContent}
-              </div>
+    <LazyMotion features={domAnimation}>
+      <m.div
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 30, scale: 0.95 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        className="octa-tutor-window"
+        role="region"
+        aria-label="Octa AI Tutor"
+      >
+        {/* Premium Header */}
+        <div className="tutor-header">
+          <div className="tutor-header-left">
+            <div className="tutor-avatar-glow">
+              <Octa expression={mascotExpression} size={28} interactive={false} />
             </div>
-          );
-        })}
-
-        {isLoading && (
-          <div className="tutor-message-bubble assistant">
-            <div className="tutor-message-content">
-              <span className="tutor-typing-dots">
-                <span className="tutor-typing-dot" />
-                <span className="tutor-typing-dot" />
-                <span className="tutor-typing-dot" />
+            <div className="tutor-header-title">
+              <span className="tutor-header-name">
+                Octa AI Tutor <Sparkles size={12} className="inline text-purple-400" />
               </span>
+              <span className="tutor-header-model">{llmConfig.modelName || 'Qwen AI Engine'}</span>
             </div>
           </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Dynamic Suggestions */}
-      <div className="tutor-suggestions">
-        {suggestions.map((s, idx) => (
-          <button key={idx} className="tutor-suggestion-pill" onClick={() => sendMessage(s.text)}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Input Container + Perched Mascot TOP-RIGHT */}
-      <div className="tutor-input-container">
-        {/* Mascot Perched Exactly Top-Right of Input Box */}
-        <div className="tutor-perched-mascot">
-          <Octa expression={mascotExpression} size="small" interactive={true} />
+          <div className="tutor-header-actions">
+            <button className="tutor-icon-btn" onClick={() => setIsSettingsOpen(true)} title="AI Model Settings">
+              <Settings size={14} />
+            </button>
+            <button className="tutor-icon-btn" onClick={clearHistory} title="Clear Chat History">
+              <Trash2 size={14} />
+            </button>
+            <button className="tutor-icon-btn tutor-close-btn" onClick={toggleTutor} title="Close Tutor">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
-        <div className="tutor-input-tools">
-          <div className="tutor-lang-selector">
-            {(['en-US', 'ur-PK', 'zh-CN'] as SupportedSpeechLang[]).map((lang) => (
-              <button
-                key={lang}
-                className={`tutor-lang-chip ${speechLang === lang ? 'active' : ''}`}
-                onClick={() => setSpeechLang(lang)}
-              >
-                {lang === 'en-US' ? 'EN' : lang === 'ur-PK' ? 'UR' : 'ZH'}
+        {/* Context & State Ribbon */}
+        <div className="tutor-context-ribbon">
+          <span className="context-chip">
+            <MessageSquare size={11} className="inline mr-1" />
+            {contextState.algorithmName || 'General DSA Curriculum'}
+          </span>
+          {contextState.totalSteps ? (
+            <span className="step-chip">
+              Step {contextState.currentStepIndex + 1} / {contextState.totalSteps}
+            </span>
+          ) : null}
+        </div>
+
+        {/* Mode Switcher Bar */}
+        <div className="tutor-mode-bar">
+          <button
+            className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`}
+            onClick={() => setTutorMode('natural')}
+            title="Natural conversational teaching mode (ChatGPT style)"
+          >
+            AI Concept Mode
+          </button>
+          <button
+            className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`}
+            onClick={() => setTutorMode('interactive')}
+            title="Interactive step-by-step visualizer guidance"
+          >
+            Interactive Step Mode
+          </button>
+        </div>
+
+        {/* Message Output Scroll Box */}
+        <div className="tutor-message-list">
+          {messages.map((msg) => {
+            const isAssis = msg.role === 'assistant';
+            const maxChar = revealedChars[msg.id];
+            const rawContent = isAssis && msg.isRevealing && maxChar !== undefined
+              ? msg.content.slice(0, maxChar)
+              : msg.content;
+            const displayContent = isAssis ? formatCleanResponse(rawContent) : msg.content;
+
+            return (
+              <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
+                <div className="message-icon-avatar">
+                  {isAssis ? (
+                    <Octa expression="neutral" size={20} interactive={false} />
+                  ) : (
+                    <UserIcon size={14} />
+                  )}
+                </div>
+                <div className="tutor-message-content">
+                  {displayContent}
+                  {isAssis && msg.isRevealing && (revealedChars[msg.id] || 0) < msg.content.length && (
+                    <span className="inline-block w-1.5 h-3.5 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Premium LoaderOne Animation when Thinking */}
+          {isLoading && (
+            <div className="tutor-message-bubble assistant loading-bubble">
+              <div className="message-icon-avatar">
+                <Octa expression="thinking" size={20} interactive={false} />
+              </div>
+              <div className="tutor-loader-stage flex items-center gap-3 py-1 px-3">
+                <LoaderOne size="sm" />
+                <span className="text-xs font-semibold text-purple-400 dark:text-purple-300 animate-pulse">
+                  Octa is thinking...
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Dynamic Context Suggestions */}
+        {suggestions.length > 0 && (
+          <div className="tutor-suggestions">
+            {suggestions.map((s, idx) => (
+              <button key={idx} className="tutor-suggestion-pill" onClick={() => sendMessage(s.text)}>
+                {s.label}
               </button>
             ))}
           </div>
-          {isListening && (
-            <span style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Volume2 size={12} /> Listening...
-            </span>
-          )}
-        </div>
+        )}
 
-        <div className="tutor-input-box-wrapper">
-          <textarea
-            ref={textareaRef}
+        {/* Input Field Section with Placeholders & Vanish Input + Voice Microphone */}
+        <div className="tutor-input-container">
+          <PlaceholdersAndVanishInput
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask Octa Tutor..."
-            className="tutor-textarea"
-            rows={1}
+            setValue={setInputText}
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleInputSubmit(e);
+            }}
+            disabled={isLoading}
+            isListening={isListening}
+            onToggleListening={isListening ? stopListening : startListening}
+            speechLang={speechLang}
+            onSelectLang={setSpeechLang}
+            placeholders={[
+              "Ask Octa anything about Binary Search...",
+              "How does QuickSort partitioning work?",
+              "Explain Time Complexity of Dynamic Programming",
+              "Can you debug my C++ / Python code?",
+              "What is the difference between Stack and Queue?",
+            ]}
           />
-          <button
-            className={`tutor-mic-btn ${isListening ? 'listening' : ''}`}
-            onClick={isListening ? stopListening : startListening}
-            type="button"
-            title={isSpeechSupported ? "Voice Input (English, Urdu, Chinese)" : "Voice Input (Speech Recognition active in supported browsers)"}
-          >
-            {isListening ? <MicOff size={14} /> : <Mic size={14} />}
-          </button>
-          <button
-            className="tutor-send-btn"
-            onClick={() => sendMessage()}
-            disabled={!inputText.trim() || isLoading}
-            type="button"
-          >
-            <Send size={14} />
-          </button>
         </div>
-      </div>
-    </div>
+      </m.div>
+    </LazyMotion>
   );
 };
+
+export default OctaTutor;
