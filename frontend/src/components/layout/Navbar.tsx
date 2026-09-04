@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Octa } from '../mascot';
 import { NavbarGlobalSearch } from './NavbarGlobalSearch';
 import { DSA_CATEGORIES } from '../../data/categories';
 import { SettingsModal } from './SettingsModal';
@@ -79,9 +78,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
           {/* Brand Logo & Title */}
           <Link to="/dashboard" className="navbar-brand-pill">
-            <div className="brand-octa-glow">
-              <Octa expression="neutral" size={26} interactive={false} />
-            </div>
             <span className="brand-pill-title">
               STEM <span className="brand-accent-text">Studio</span>
             </span>

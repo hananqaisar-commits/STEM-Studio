@@ -21,11 +21,7 @@ export interface PlaceholdersAndVanishInputProps {
 
 export function PlaceholdersAndVanishInput({
   placeholders = [
-    "Ask Octa anything about Binary Search...",
-    "How does QuickSort partitioning work?",
-    "Explain Time Complexity of Dynamic Programming",
-    "Can you debug my C++ / Python code?",
-    "What is the difference between Stack and Queue?",
+    "Ask me anything...",
   ],
   onChange,
   onSubmit,
@@ -138,8 +134,8 @@ export function PlaceholdersAndVanishInput({
     <div className="w-full flex flex-col gap-1.5">
       {onSelectLang && (
         <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400/80">Voice Language</span>
-          <div className="flex items-center gap-1 bg-surface-elevated/90 dark:bg-neutral-800/90 p-0.5 rounded-full border border-border/60 shadow-sm">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">Voice Language</span>
+          <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-neutral-800/90 p-0.5 rounded-full border border-slate-300 dark:border-neutral-700/60 shadow-sm">
             {(["en-US", "ur-PK", "zh-CN"] as const).map((lang) => (
               <button
                 key={lang}
@@ -148,7 +144,7 @@ export function PlaceholdersAndVanishInput({
                   "px-2 py-0.5 text-[10px] font-bold rounded-full transition-all",
                   speechLang === lang
                     ? "bg-purple-600 text-white shadow-sm"
-                    : "text-neutral-400 hover:text-foreground"
+                    : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-foreground"
                 )}
                 onClick={() => onSelectLang(lang)}
               >
@@ -161,7 +157,7 @@ export function PlaceholdersAndVanishInput({
 
       <form
         className={cn(
-          "relative mx-auto flex h-11 w-full items-center overflow-hidden rounded-full border border-purple-500/30 bg-surface/90 dark:bg-neutral-900/90 p-1 pl-4 shadow-lg backdrop-blur-md transition-all duration-300 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20",
+          "relative mx-auto flex h-11 w-full items-center overflow-hidden rounded-full border border-purple-500/40 dark:border-purple-500/50 bg-white/95 dark:bg-neutral-900/95 p-1 pl-4 shadow-md dark:shadow-xl backdrop-blur-md transition-all duration-300 focus-within:border-purple-600 dark:focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/20",
           className
         )}
         onSubmit={vanishAndSubmit}
@@ -181,7 +177,7 @@ export function PlaceholdersAndVanishInput({
           onChange={handleInputChange}
           disabled={disabled}
           className={cn(
-            "relative z-20 h-full w-full bg-transparent pr-24 text-xs md:text-sm font-medium text-foreground outline-none border-none placeholder:text-transparent disabled:opacity-50",
+            "relative z-20 h-full w-full bg-transparent pr-24 text-xs md:text-sm font-semibold text-slate-900 dark:text-neutral-100 outline-none border-none placeholder:text-transparent disabled:opacity-50",
             animating && "text-transparent"
           )}
         />
@@ -196,7 +192,7 @@ export function PlaceholdersAndVanishInput({
                 animate={{ y: 0, opacity: 0.65 }}
                 exit={{ y: -8, opacity: 0 }}
                 transition={{ duration: 0.25, ease: "linear" }}
-                className="truncate text-xs md:text-sm text-neutral-500 dark:text-neutral-400 font-medium"
+                className="truncate text-xs md:text-sm text-slate-500 dark:text-neutral-400 font-medium"
               >
                 {placeholders[currentPlaceholder]}
               </motion.p>
@@ -214,7 +210,7 @@ export function PlaceholdersAndVanishInput({
                 "flex size-8 items-center justify-center rounded-full transition-all duration-200",
                 isListening
                   ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse"
-                  : "bg-surface-elevated dark:bg-neutral-800 text-neutral-400 hover:text-purple-400 hover:bg-purple-500/10"
+                  : "bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-500/10"
               )}
               title="Voice Input (Speech Recognition)"
             >

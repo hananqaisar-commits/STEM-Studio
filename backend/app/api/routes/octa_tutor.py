@@ -477,13 +477,32 @@ def get_conceptual_explanation(alg_name: str, topic_id: str = "") -> str:
             "LIS finds the length of the longest subsequence in an array such that all elements are strictly increasing.\n\n"
             "• **DP Approach**: dp[i] stores LIS ending at index i. Time: O(N^2) or O(N log N) with Binary Search."
         )
+    elif "trapping" in name_lower or "rain" in name_lower or "water" in name_lower or t_id == "trappingrainwater":
+        return (
+            "**Trapping Rain Water Algorithm** 🌊\n\n"
+            "The Trapping Rain Water problem calculates how much water is trapped between elevation bars after raining.\n\n"
+            "• **Core Intuition**:\n"
+            "  - The amount of water above bar `i` is bounded by the highest bar to its left and the highest bar to its right.\n"
+            "  - Formula: `Water[i] = max(0, min(max_left[i], max_right[i]) - height[i])`.\n\n"
+            "• **Key Approaches**:\n"
+            "  1. **Two Pointer Technique (Optimal)**: Maintain `left` and `right` pointers with `left_max` and `right_max`. Move the pointer with the smaller boundary inward. Time: O(N), Space: O(1).\n"
+            "  2. **Monotonic Stack**: Store bar indices in a stack of decreasing heights. When encountering a taller bar, pop elements to compute trapped water volume layer-by-layer. Time: O(N), Space: O(N).\n"
+            "  3. **Recursive / Divide & Conquer**: Identify peak height index in subarray and recursively solve left and right segments.\n\n"
+            "• **Complexity Breakdown**:\n"
+            "  - Time Complexity: **O(N)** single-pass.\n"
+            "  - Space Complexity: **O(1)** using two pointers."
+        )
     else:
         return (
-            f"**{alg_name}** 💡\n\n"
-            f"This is an important algorithm in Data Structures & Algorithms.\n\n"
-            f"• **Core Concept**: Solves data organization, searching, or optimization systematically.\n"
-            f"• **Visualization**: Watch each step in real-time in the STEM Studio visualizer window!\n"
-            f"• **Ask me anything**: Ask 'explain step by step', 'real world applications', or 'time complexity' to learn more!"
+            f"**{alg_name} Concept Guide** 💡\n\n"
+            f"{alg_name} is a fundamental Data Structure & Algorithm topic.\n\n"
+            f"• **Core Intuition**: Designed to process, transform, search, or optimize data efficiently.\n"
+            f"• **How to Master It**:\n"
+            f"  1. Understand the problem statement and constraints.\n"
+            f"  2. Identify base cases, invariants, and edge conditions.\n"
+            f"  3. Trace through sample inputs step-by-step.\n"
+            f"  4. Compare time and space complexity trade-offs.\n\n"
+            f"• **Interactive Learning**: Use the STEM Studio controls above to watch real-time step execution, code lines, and variable updates!"
         )
 
 
@@ -709,18 +728,16 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
         )
         mascot_expr = "happy"
 
-    # ── EXPLAIN ──
-    elif intent == "explain":
+    # ── EXPLAIN / CONCEPT ──
+    elif intent in ["explain", "general"]:
         step_match = re.search(r'step\s*(\d+)', msg_lower)
-        if step_match:
+        if req_data.mode == "interactive" and step_match:
             s_idx = int(step_match.group(1))
             reply = (
-                f"**Step {s_idx} of {alg_name}:**\n\n"
-                f"{step_desc}\n\n"
-                f"At this point, the algorithm is processing the current data and "
-                f"updating the visualization. Watch the highlighted elements — they show "
-                f"exactly what's being compared or modified.\n\n"
-                f"💡 For deeper AI-powered explanations, connect your API key in Settings ⚙️"
+                f"**Step {s_idx} Execution Trace for {alg_name}:**\n\n"
+                f"• **Step Overview**: {step_desc}\n"
+                f"• **Live Variables & State**: {req_data.step_data or 'Evaluating active data elements'}\n\n"
+                f"Watch the highlighted elements in the visualizer — they show what's being compared or updated right now!"
             )
         else:
             reply = get_conceptual_explanation(alg_name, topic_id)
@@ -728,22 +745,21 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 
     # ── ROMAN URDU catch-all ──
     elif any(w in msg_lower for w in ["kya", "kaise", "batao", "samjhao", "kaam", "yeh", "kia", "hai", "mein", "hlo", "kaisa", "kese"]):
-        reply = (
-            f"Main bilkul theek hoon! Yeh **{alg_name}** ka step {step_num} hai ({step_desc}).\n\n"
-            f"Is step mein algorithm data ko process kar raha hai. "
-            f"Aap mujhse kuch bhi pooch sakte hain — koi step explain karwana ho, "
-            f"quiz chahiye, ya koi aur algorithm dekhna ho, bas bol dein! 🐙"
-        )
+        reply = get_conceptual_explanation(alg_name, topic_id)
         mascot_expr = "helping"
 
     # ── CHINESE catch-all ──
     elif any(char for char in msg_lower if '\u4e00' <= char <= '\u9fff'):
         reply = (
-            f"您好！我是 Octa Tutor 🐙\n\n"
-            f"关于 **{alg_name}** 的第 {step_num} 步：{step_desc}\n\n"
-            f"随时告诉我您的疑问！您可以说'解释这一步'、'播放'、'测验'等。"
+            f"关于 **{alg_name}** 的概念详解：\n\n"
+            f"• 核心思想：以极高效率处理和组织数据。\n"
+            f"• 时间复杂度：请在 STEM Studio 可视化窗口中观察实时分布！"
         )
         mascot_expr = "happy"
+
+    else:
+        reply = get_conceptual_explanation(alg_name, topic_id)
+        mascot_expr = "thinking"
 
     # ── GENERAL FALLBACK ──
     else:
@@ -772,15 +788,12 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 # SYSTEM PROMPT — The "brain training" for the LLM
 # ─────────────────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT_TEMPLATE = """You are Octa Tutor, a brilliant, patient, and deeply knowledgeable Data Structures & Algorithms (DSA) teaching assistant for STEM Studio. You are the student's personal tutor — friendly like a senior who genuinely wants them to succeed.
+SYSTEM_PROMPT_TEMPLATE = """You are Octa Tutor, a brilliant, masterclass Data Structures & Algorithms (DSA) professor and interactive visualizer teaching assistant for STEM Studio.
 
-═══ YOUR PERSONALITY ═══
-• Be encouraging, enthusiastic, clear, and concise.
-• Never condescending — never say "as I mentioned before" or "obviously."
-• Use real-world analogies to explain complex concepts (e.g., "merge sort is like sorting a deck of cards — split, sort halves, merge back").
-• When explaining, start simple, then go deeper if the student asks.
-• If the student seems stuck, proactively offer hints and next steps.
-• Celebrate progress: "Great job!", "You're getting it!", "That's exactly right!"
+═══ YOUR PERSONALITY & STYLE ═══
+• Be encouraging, articulate, clear, and pedagogically rich (like ChatGPT or Claude!).
+• Use real-world analogies, code snippets, step-by-step logic, and clean Markdown structure.
+• Format all responses with clean GitHub Markdown (headers `###`, bold `**text**`, bullet points `•`, monospaced `code`, and fenced code blocks).
 
 ═══ LANGUAGE MATCHING (CRITICAL) ═══
 ALWAYS respond in the EXACT language the student uses:
@@ -1344,10 +1357,8 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
             elif any(w in reply_lower for w in ["step ", "index ", "comparison", "complexity", "time:"]):
                 mascot_expr = "reading"
 
-        clean_reply = reply_text.replace("**", "")
-
         return OctaTutorResponse(
-            reply=clean_reply,
+            reply=reply_text,
             function_calls=function_calls,
             mascot_expression=mascot_expr
         )

@@ -94,7 +94,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     {
       id: 'welcome-1',
       role: 'assistant',
-      content: `Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\nI can do much more than just answer questions:\n• **Navigate**: "open merge sort", "show me AVL tree"\n• **Explain**: "what's happening?", "explain step 3"\n• **Control**: "play", "pause", "slow down"\n• **Compare**: "compare quick sort vs merge sort"\n• **Quiz**: "test me on ${contextState.algorithmName || 'this algorithm'}"\n• **Voice**: Use the 🎤 mic button!\n\nWhat would you like to learn today?`,
+      content: `Hello! I'm Octa AI Tutor, your expert DSA Professor! 🐙\n\nChoose your preferred learning mode:\n• **AI Concept Mode**: Ask any DSA algorithm, recursion problem, logic, time/space complexity, or code implementations like ChatGPT!\n• **Interactive Step Mode**: Ask real-time questions about the current visualizer step, active elements, and state trace.\n\nWhat algorithm concept would you like to master today?`,
       expression: 'happy',
       timestamp: new Date(),
     },
@@ -217,24 +217,23 @@ export function useOctaTutor(): UseOctaTutorReturn {
     const category = contextState.category || '';
 
     const base: TutorSuggestion[] = [
-      { label: '💡 Explain', text: `Explain what ${algName} does and how it works` },
-      { label: `📖 Step ${stepNum}`, text: `Explain step ${stepNum} of ${totalSteps}` },
+      { label: '💡 Explain Intuition', text: `Explain how ${algName} works intuitively` },
+      { label: '⏱️ Time & Space', text: `What is the time and space complexity of ${algName}?` },
     ];
 
-    // Category-specific suggestions
-    if (category === 'sorting') {
-      base.push({ label: '⚖️ Compare', text: `Compare ${algName} with other sorting algorithms` });
-    } else if (category === 'graph') {
-      base.push({ label: '🌐 Real-world', text: `Where is ${algName} used in real life?` });
-    } else if (category === 'dp') {
-      base.push({ label: '🧩 Approach', text: `What is the DP approach for ${algName}?` });
-    } else if (category === 'bst') {
-      base.push({ label: '🌳 Traverse', text: `Show me the traversal order for this tree` });
-    } else {
-      base.push({ label: '🌍 Use cases', text: `Where is ${algName} used in real-world applications?` });
+    if (contextState.algorithmName) {
+      base.push({ label: `🔍 Step ${stepNum}`, text: `Explain step ${stepNum} of ${totalSteps} in detail` });
     }
 
-    base.push({ label: '📝 Quiz me', text: `Generate a quiz on ${algName}` });
+    if (category === 'sorting') {
+      base.push({ label: '⚖️ Compare', text: `Compare ${algName} with Quick Sort and Merge Sort` });
+    } else if (category === 'graph') {
+      base.push({ label: '🌐 Real-world', text: `Where is ${algName} used in real life system design?` });
+    } else if (category === 'dp') {
+      base.push({ label: '🧩 DP Logic', text: `Explain the subproblems and state transition matrix for ${algName}` });
+    } else {
+      base.push({ label: '💻 Code Implementation', text: `Show me the clean Python and C++ implementation for ${algName}` });
+    }
 
     return base;
   }, [contextState.algorithmName, contextState.currentStepIndex, contextState.totalSteps, contextState.category]);

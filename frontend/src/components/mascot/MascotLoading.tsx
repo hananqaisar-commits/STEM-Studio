@@ -46,10 +46,10 @@ export const MascotLoading: React.FC<MascotLoadingProps> = ({
         {/* Octa Mascot on LEFT */}
         <div className="mascot-loading-mascot-left">
           <span className="mascot-layer mascot-layer--surprised" aria-hidden={done}>
-            <Octa expression="surprised" size={180} interactive={false} label="Octa, waiting" />
+            <Octa expression="surprised" size={150} interactive={false} label="Octa, waiting" />
           </span>
           <span className="mascot-layer mascot-layer--happy" aria-hidden={!done}>
-            <Octa expression="happy" size={180} interactive={false} label="Octa, ready" />
+            <Octa expression="happy" size={150} interactive={false} label="Octa, ready" />
           </span>
         </div>
 
