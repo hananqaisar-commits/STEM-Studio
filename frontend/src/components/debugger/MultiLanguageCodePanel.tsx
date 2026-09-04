@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Play, Layers, Terminal, Cpu, Code2, Binary, FileText, RotateCcw,
+  Play, Layers, RotateCcw,
   AlertTriangle, ChevronDown, Check, Copy, CopyCheck, Bug, FileCode2,
   Pencil, Eye, Loader2,
 } from 'lucide-react';
@@ -11,10 +11,11 @@ import { executeCustomSortingCode } from '../../engine/codeExecutionEngine';
 import type { ArrayStep } from '../../engine/types/Step';
 import {
   getStubEntry,
-  CUSTOM_CODE_LANGUAGES,
   type AlgorithmStubEntry,
   type CustomStubLanguage,
 } from '../../data/customCode';
+import { DEBUGGER_LANGUAGE_IDS, type DebuggerLanguage } from '../../data/languages';
+import { LanguageDropdown } from './LanguageDropdown';
 import './Debugger.css';
 
 type CodeMode = 'default' | 'custom';
@@ -51,27 +52,6 @@ interface MultiLanguageCodePanelProps {
   customBusy?: boolean;
   customMessage?: string | null;
 }
-
-const LANG_META: Record<string, { label: string; icon: React.ReactNode }> = {
-  pseudocode: { label: 'Pseudocode', icon: <FileText size={14} /> },
-  python: { label: 'Python', icon: <Terminal size={14} /> },
-  cpp: { label: 'C++', icon: <Cpu size={14} /> },
-  java: { label: 'Java', icon: <Code2 size={14} /> },
-  javascript: { label: 'JavaScript', icon: <FileCode2 size={14} /> },
-  go: { label: 'Go', icon: <Binary size={14} /> },
-};
-const LANG_ORDER = ['python', 'cpp', 'java', 'javascript', 'go', 'pseudocode'];
-
-const CUSTOM_LANGUAGES: { id: CustomLanguage; label: string }[] = [
-  { id: 'javascript', label: 'JavaScript' },
-  { id: 'python', label: 'Python' },
-  { id: 'cpp', label: 'C++' },
-  { id: 'csharp', label: 'C#' },
-  { id: 'java', label: 'Java' },
-  { id: 'ruby', label: 'Ruby' },
-  { id: 'go', label: 'Go' },
-  { id: 'rust', label: 'Rust' },
-];
 
 /** Only allow a single function body; reject top-level variables or statements. */
 function validateCustomCode(code: string, lang: CustomLanguage): string | null {
@@ -156,8 +136,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     [snippets, algorithmKey]
   );
 
-  const availableLangs = useMemo(
-    () => LANG_ORDER.filter((l) => (resolvedSnippets?.[l]?.length ?? 0) > 0),
+  const availableReferenceLangs = useMemo(
+    () => DEBUGGER_LANGUAGE_IDS.filter((l) => (resolvedSnippets?.[l]?.length ?? 0) > 0),
     [resolvedSnippets]
   );
 
@@ -167,12 +147,11 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     [categoryId, topicId]
   );
 
-  const [selectedLang, setSelectedLang] = useState<string>('python');
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [selectedLang, setSelectedLang] = useState<DebuggerLanguage>('python');
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
-  const [customLang, setCustomLang] = useState<CustomLanguage>('javascript');
+  const [customLang, setCustomLang] = useState<DebuggerLanguage>('python');
   const [stubLang, setStubLang] = useState<CustomStubLanguage>('python');
-  const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey, 'javascript'));
+  const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey, 'python'));
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runSuccess, setRunSuccess] = useState<string | null>(null);
@@ -184,18 +163,18 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
   // Keep the selected language valid as the available set changes per algorithm.
   useEffect(() => {
-    if (availableLangs.length === 0) return;
-    if (!availableLangs.includes(selectedLang)) {
-      setSelectedLang(availableLangs.includes('python') ? 'python' : availableLangs[0]);
+    if (availableReferenceLangs.length === 0) return;
+    if (!availableReferenceLangs.includes(selectedLang)) {
+      setSelectedLang(availableReferenceLangs.includes('python') ? 'python' : availableReferenceLangs[0]);
     }
-  }, [availableLangs, selectedLang]);
+  }, [availableReferenceLangs, selectedLang]);
 
   // Sync custom-code template when algorithm or custom language changes.
   useEffect(() => {
     if (stubEntry) {
       setCustomCode(stubEntry.stubs[stubLang]);
     } else {
-      setCustomCode(getStarterTemplate(algorithmKey, customLang));
+      setCustomCode(getStarterTemplate(algorithmKey, customLang as CustomLanguage));
     }
     setExecutionError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -240,7 +219,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       return;
     }
 
-    const validationError = validateCustomCode(customCode, customLang);
+    const validationError = validateCustomCode(customCode, customLang as CustomLanguage);
     if (validationError) {
       setExecutionError(validationError);
       setRunSuccess(null);
@@ -264,7 +243,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     const MIN_RUN_INDICATOR_MS = 5000;
     window.setTimeout(() => {
       const started = performance.now();
-      const result = executeCustomSortingCode(customCode, currentArray, customLang);
+      const result = executeCustomSortingCode(customCode, currentArray, customLang as CustomLanguage);
       const finish = () => {
         setIsRunning(false);
         if (result.error) {
@@ -281,7 +260,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   };
 
   const handleResetTemplate = () => {
-    setCustomCode(stubEntry ? stubEntry.stubs[stubLang] : getStarterTemplate(algorithmKey, customLang));
+    setCustomCode(stubEntry ? stubEntry.stubs[stubLang] : getStarterTemplate(algorithmKey, customLang as CustomLanguage));
     setExecutionError(null);
     setRunSuccess(null);
   };
@@ -323,41 +302,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       {/* ── Default mode toolbar: language dropdown + copy + status ─ */}
       {codeMode === 'default' && (
         <div className="code-toolbar">
-          <div className="lang-dropdown">
-            <button
-              type="button"
-              className="lang-dropdown-trigger"
-              aria-haspopup="listbox"
-              aria-expanded={langMenuOpen}
-              disabled={availableLangs.length === 0}
-              onClick={() => setLangMenuOpen((o) => !o)}
-            >
-              <span className="lang-dropdown-icon">{LANG_META[selectedLang]?.icon}</span>
-              <span className="lang-dropdown-label">{LANG_META[selectedLang]?.label ?? '—'}</span>
-              <ChevronDown size={14} className={`lang-chevron ${langMenuOpen ? 'open' : ''}`} />
-            </button>
-
-            {langMenuOpen && (
-              <>
-                <div className="lang-dropdown-backdrop" onClick={() => setLangMenuOpen(false)} />
-                <ul className="lang-dropdown-menu" role="listbox">
-                  {availableLangs.map((lang) => (
-                    <li key={lang} role="option" aria-selected={lang === selectedLang}>
-                      <button
-                        type="button"
-                        className={`lang-dropdown-item ${lang === selectedLang ? 'active' : ''}`}
-                        onClick={() => { setSelectedLang(lang); setLangMenuOpen(false); }}
-                      >
-                        <span className="lang-dropdown-icon">{LANG_META[lang]?.icon}</span>
-                        <span>{LANG_META[lang]?.label}</span>
-                        {lang === selectedLang && <Check size={14} className="lang-check" />}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
+          <LanguageDropdown value={selectedLang} onChange={setSelectedLang} available={availableReferenceLangs} ariaLabel="Reference code language" />
 
           {activeLine != null && hasCode && (
             <span className="active-line-chip" title="Currently executing line">
@@ -378,31 +323,17 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         </div>
       )}
 
-      {/* ── Custom mode language bar ────────────────────────────── */}
-      {codeMode === 'custom' && canRunCustom && stubEntry && (
-        <div className="custom-lang-bar">
-          {CUSTOM_CODE_LANGUAGES.map((lang) => (
-            <button
-              key={lang.id}
-              className={`custom-lang-chip ${stubLang === lang.id ? 'active' : ''}`}
-              onClick={() => setStubLang(lang.id)}
-            >
-              {lang.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {codeMode === 'custom' && canRunCustom && !stubEntry && (
-        <div className="custom-lang-bar">
-          {CUSTOM_LANGUAGES.map((lang) => (
-            <button
-              key={lang.id}
-              className={`custom-lang-chip ${customLang === lang.id ? 'active' : ''}`}
-              onClick={() => setCustomLang(lang.id)}
-            >
-              {lang.label}
-            </button>
-          ))}
+      {codeMode === 'custom' && canRunCustom && (
+        <div className="code-toolbar">
+          <LanguageDropdown
+            value={stubEntry ? stubLang : customLang}
+            ariaLabel="Custom code language"
+            onChange={(language) => {
+              const nextTemplate = stubEntry ? stubEntry.stubs[language] : getStarterTemplate(algorithmKey, language as CustomLanguage);
+              if (customCode !== nextTemplate && !window.confirm('Switching languages will clear your current code. Continue?')) return;
+              if (stubEntry) setStubLang(language); else setCustomLang(language);
+            }}
+          />
         </div>
       )}
 

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Code, Terminal, Cpu, Code2, Play, RotateCcw, AlertTriangle, Eye, Pencil, Loader2, Check } from 'lucide-react';
+import { Code, Play, RotateCcw, AlertTriangle, Eye, Pencil, Loader2, Check } from 'lucide-react';
 import { getStackQueueSnippets, STACKQUEUE_GO_SNIPPETS, type LanguageKey } from './stackQueueSnippets';
 import type { StackQueueCategory } from './stackQueueEngine';
 import {
   getStubEntry,
-  CUSTOM_CODE_LANGUAGES,
   type CustomStubLanguage,
 } from '../../data/customCode';
+import { type DebuggerLanguage } from '../../data/languages';
+import { LanguageDropdown } from '../../components/debugger/LanguageDropdown';
 import '../../components/debugger/Debugger.css';
 
 type CodeMode = 'default' | 'custom';
@@ -27,16 +28,6 @@ interface StackQueueCodePanelProps {
   customMessage?: string | null;
 }
 
-type ReferenceLang = LanguageKey | 'go';
-
-const LANGUAGES: { id: ReferenceLang; label: string; icon: React.ReactNode }[] = [
-  { id: 'javascript', label: 'JavaScript', icon: <Code size={14} /> },
-  { id: 'python', label: 'Python', icon: <Terminal size={14} /> },
-  { id: 'cpp', label: 'C++', icon: <Cpu size={14} /> },
-  { id: 'java', label: 'Java', icon: <Code2 size={14} /> },
-  { id: 'go', label: 'Go', icon: <Cpu size={14} /> },
-];
-
 export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   category,
   activeLine = 1,
@@ -44,7 +35,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   customBusy = false,
   customMessage = null,
 }) => {
-  const [selectedLang, setSelectedLang] = useState<ReferenceLang>('javascript');
+  const [selectedLang, setSelectedLang] = useState<DebuggerLanguage>('python');
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
   const [customLang, setCustomLang] = useState<CustomStubLanguage>('python');
 
@@ -76,7 +67,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   // Go references exist for the flagship set; anything else reports the gap
   // explicitly instead of silently falling back to another language.
   const goSnippet = STACKQUEUE_GO_SNIPPETS[category];
-  const currentSnippet = selectedLang === 'go' ? goSnippet : snippetObj[selectedLang];
+  const currentSnippet = selectedLang === 'go' ? goSnippet : snippetObj[selectedLang as LanguageKey];
   const codeLines = currentSnippet?.code.split('\n') ?? [];
   const highlightedIdx = currentSnippet?.lineMapping[activeLine] ?? 0;
 
@@ -129,38 +120,22 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
           </button>
         </div>
 
-        {/* Language Tabs (default mode only) */}
-        {codeMode === 'default' && (
-          <div className="language-tabs">
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang.id}
-                className={`lang-tab ${selectedLang === lang.id ? 'active' : ''}`}
-                onClick={() => setSelectedLang(lang.id)}
-              >
-                <span className="lang-icon">{lang.icon}</span>
-                <span className="lang-label">{lang.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* CUSTOM MODE: Multi-Language Bar */}
+      {codeMode === 'default' && (
+        <div className="code-toolbar">
+          <LanguageDropdown value={selectedLang} onChange={setSelectedLang}
+            available={['cpp', 'java', 'python', 'go']} ariaLabel="Reference code language" />
+        </div>
+      )}
+
       {codeMode === 'custom' && (
-        <div className="custom-lang-bar flex flex-wrap gap-1 p-2 bg-slate-900/60 border-b border-slate-800">
-          {CUSTOM_CODE_LANGUAGES.map((lang) => (
-            <button
-              key={lang.id}
-              className={`px-2 py-0.5 text-xs rounded transition-all ${customLang === lang.id
-                  ? 'bg-amber-500 text-black font-bold shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              onClick={() => setCustomLang(lang.id)}
-            >
-              {lang.label}
-            </button>
-          ))}
+        <div className="code-toolbar">
+          <LanguageDropdown value={customLang} ariaLabel="Custom code language" onChange={(language) => {
+            const nextTemplate = stubEntry?.stubs[language] ?? '';
+            if (customCode !== nextTemplate && !window.confirm('Switching languages will clear your current code. Continue?')) return;
+            setCustomLang(language);
+          }} />
         </div>
       )}
 
@@ -170,8 +145,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
           <div className="code-error-banner" style={{ margin: '0.75rem' }}>
             <AlertTriangle size={14} />
             <span>
-              No Go reference implementation for this topic yet. JavaScript, Python, C++ and Java references
-              are available above, and Custom Mode accepts Go submissions.
+              This reference implementation is coming soon. Custom Mode supports all six languages.
             </span>
           </div>
         </div>

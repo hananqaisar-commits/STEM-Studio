@@ -676,9 +676,40 @@
   color: var(--color-primary);
 }
 
+.lang-dropdown-item.unavailable {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lang-dropdown-item.unavailable small {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
 .lang-check {
   margin-left: auto;
   color: var(--color-primary);
+}
+
+@media (max-width: 520px) {
+  .code-panel-header,
+  .code-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .code-mode-toggle {
+    order: 2;
+  }
+
+  .lang-dropdown-trigger {
+    min-width: 132px;
+  }
+
+  .copy-code-btn {
+    margin-left: 0;
+  }
 }
 
 /* ── Active-line chip & copy button ───────────────────────────────── */
