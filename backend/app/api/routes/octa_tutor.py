@@ -398,19 +398,62 @@ def get_conceptual_explanation(alg_name: str, topic_id: str = "") -> str:
 
     if "hanoi" in name_lower or t_id == "towerofhanoi":
         return (
-            "**Tower of Hanoi** 🗼\n\n"
-            "Tower of Hanoi is a classic mathematical puzzle and recursive algorithm!\n\n"
-            "• **The Setup**: You have 3 pegs (Source, Auxiliary, Target) and N disks of different sizes stacked on the Source peg in decreasing order of size.\n"
-            "• **The Goal**: Move all N disks from the Source peg to the Target peg.\n"
-            "• **The Rules**:\n"
-            "  1. Move only one disk at a time.\n"
-            "  2. Only the top disk of a peg can be moved.\n"
-            "  3. Never place a larger disk on top of a smaller disk.\n\n"
-            "• **How Algorithm Works Recursively**:\n"
-            "  - Move top N-1 disks from Source → Auxiliary peg.\n"
-            "  - Move the N-th (largest) disk from Source → Target peg.\n"
-            "  - Move the N-1 disks from Auxiliary → Target peg.\n\n"
-            "• **Complexity**: Minimum moves = 2^n - 1. Time Complexity: O(2^n), Space: O(n) (recursion stack)."
+            "**Tower of Hanoi Recursive Implementation & Code** 🗼\n\n"
+            "Here is the clean Python implementation for Tower of Hanoi:\n\n"
+            "```python\n"
+            "def tower_of_hanoi(n, source, target, auxiliary):\n"
+            "    if n == 1:\n"
+            "        print(f'Move disk 1 from {source} to {target}')\n"
+            "        return\n"
+            "    # Step 1: Move top N-1 disks from Source to Auxiliary\n"
+            "    tower_of_hanoi(n - 1, source, auxiliary, target)\n"
+            "    # Step 2: Move the Nth disk from Source to Target\n"
+            "    print(f'Move disk {n} from {source} to {target}')\n"
+            "    # Step 3: Move N-1 disks from Auxiliary to Target\n"
+            "    tower_of_hanoi(n - 1, auxiliary, target, source)\n\n"
+            "# Example run with 3 disks\n"
+            "tower_of_hanoi(3, 'A', 'C', 'B')\n"
+            "```\n\n"
+            "• **Time Complexity**: **O(2^n)** exponential moves.\n"
+            "• **Space Complexity**: **O(n)** call stack depth."
+        )
+    elif "linked" in name_lower or "list" in name_lower or "singly" in name_lower or "doubly" in name_lower or t_id in ["singly", "doubly", "circular"]:
+        return (
+            "**Singly Linked List Code & Implementation** 🔗\n\n"
+            "Here is the complete Python code for a Singly Linked List:\n\n"
+            "```python\n"
+            "class Node:\n"
+            "    def __init__(self, data):\n"
+            "        self.data = data\n"
+            "        self.next = None\n\n"
+            "class LinkedList:\n"
+            "    def __init__(self):\n"
+            "        self.head = None\n\n"
+            "    def insert_at_head(self, data):\n"
+            "        new_node = Node(data)\n"
+            "        new_node.next = self.head\n"
+            "        self.head = new_node\n\n"
+            "    def append(self, data):\n"
+            "        new_node = Node(data)\n"
+            "        if not self.head:\n"
+            "            self.head = new_node\n"
+            "            return\n"
+            "        curr = self.head\n"
+            "        while curr.next:\n"
+            "            curr = curr.next\n"
+            "        curr.next = new_node\n\n"
+            "    def display(self):\n"
+            "        elements = []\n"
+            "        curr = self.head\n"
+            "        while curr:\n"
+            "            elements.append(str(curr.data))\n"
+            "            curr = curr.next\n"
+            "        print(' -> '.join(elements) + ' -> NULL')\n"
+            "```\n\n"
+            "• **Key Operations**:\n"
+            "  - `insert_at_head`: **O(1)** instant insertion.\n"
+            "  - `append`: **O(N)** traversal.\n"
+            "  - `display`: **O(N)** print list elements."
         )
     elif "nqueens" in name_lower or "n-queens" in name_lower or t_id == "nqueens":
         return (
@@ -476,22 +519,6 @@ def get_conceptual_explanation(alg_name: str, topic_id: str = "") -> str:
             "**Longest Increasing Subsequence (LIS)** 📈\n\n"
             "LIS finds the length of the longest subsequence in an array such that all elements are strictly increasing.\n\n"
             "• **DP Approach**: dp[i] stores LIS ending at index i. Time: O(N^2) or O(N log N) with Binary Search."
-        )
-    elif "linked" in name_lower or "list" in name_lower or "singly" in name_lower or "doubly" in name_lower or t_id in ["singly", "doubly", "circular"]:
-        return (
-            "**Linked List Data Structure** 🔗\n\n"
-            "A Linked List is a linear data structure where elements (nodes) are stored dynamically and connected via pointers!\n\n"
-            "• **Node Structure**: Contains two main components:\n"
-            "  1. `Data`: Stores the value.\n"
-            "  2. `Next` / `Prev`: Pointers referencing adjacent nodes in memory.\n\n"
-            "• **Variants**:\n"
-            "  - **Singly Linked List**: Traverses forward (`Head → Node1 → Node2 → NULL`).\n"
-            "  - **Doubly Linked List**: Traverses both forward (`Next`) and backward (`Prev`).\n"
-            "  - **Circular Linked List**: The last node links back to `Head`.\n\n"
-            "• **Performance & Advantages**:\n"
-            "  - Insertion/Deletion at Head: **O(1)** instant time.\n"
-            "  - Search / Arbitrary Access: **O(N)** linear traversal.\n"
-            "  - Dynamic memory size without array re-allocation overhead!"
         )
     elif "stack" in name_lower or "queue" in name_lower:
         return (
@@ -1216,10 +1243,16 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
         "max_tokens": 1024,
     }
 
-    # Attach tool spec for OpenAI-compatible providers
+    # Attach tool spec ONLY in interactive mode or when explicit navigation is requested
     if provider_type in ["dashscope", "openai", "openrouter", "custom"]:
-        payload["tools"] = TOOLS_SPEC
-        payload["tool_choice"] = "auto"
+        if t_mode == "interactive":
+            payload["tools"] = TOOLS_SPEC
+            payload["tool_choice"] = "auto"
+        elif any(v in req_data.message.lower() for v in ["open ", "navigate", "take me to", "kholna", "show me topic"]):
+            nav_tool = [t for t in TOOLS_SPEC if t.get("function", {}).get("name") == "navigate_to_algorithm"]
+            if nav_tool:
+                payload["tools"] = nav_tool
+                payload["tool_choice"] = "auto"
 
     headers = {"Content-Type": "application/json"}
     if api_key:
