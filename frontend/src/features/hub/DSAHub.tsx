@@ -62,10 +62,13 @@ const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24
 const SOCIAL_LINKS = [
   { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: LinkedinIcon },
   { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: InstagramIcon },
-  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: GithubIcon },
+  { name: 'GitHub', url: 'https://github.com/hananqaisar-commits', icon: GithubIcon },
 ];
 
 const AFTAB_LINKEDIN = 'https://www.linkedin.com/in/m-aftab-riaz-6468332b9/?skipRedirect=true';
+const AFTAB_GITHUB = 'https://github.com/Aftab-commits';
+const HASSAN_GITHUB = 'https://github.com/hassanmustafa710';
+const HANAN_GITHUB = 'https://github.com/hananqaisar-commits';
 
 function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1800) {
   const [index, setIndex] = useState(0);
@@ -640,22 +643,26 @@ export const DSAHub: React.FC = () => {
               <span className="team-name">Hanan</span>
               <p className="team-desc">Architecture · API · Database · Core Features</p>
               <div className="team-socials">
-                <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
-                <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer"><InstagramIcon size={14} /></a>
-                <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer"><GithubIcon size={14} /></a>
+                <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer" title="LinkedIn"><LinkedinIcon size={14} /></a>
+                <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer" title="Instagram"><InstagramIcon size={14} /></a>
+                <a href={HANAN_GITHUB} target="_blank" rel="noopener noreferrer" title="GitHub"><GithubIcon size={14} /></a>
               </div>
             </div>
             <div className="footer-team-card">
               <span className="team-role">UI / Frontend</span>
               <span className="team-name">Hassan</span>
               <p className="team-desc">Dashboard · Navigation · Visual Polish</p>
+              <div className="team-socials">
+                <a href={HASSAN_GITHUB} target="_blank" rel="noopener noreferrer" title="GitHub"><GithubIcon size={14} /></a>
+              </div>
             </div>
             <div className="footer-team-card">
               <span className="team-role">Algorithms</span>
               <span className="team-name">Aftab</span>
               <p className="team-desc">Animation · Creative Features</p>
               <div className="team-socials">
-                <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
+                <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer" title="LinkedIn"><LinkedinIcon size={14} /></a>
+                <a href={AFTAB_GITHUB} target="_blank" rel="noopener noreferrer" title="GitHub"><GithubIcon size={14} /></a>
               </div>
             </div>
           </div>
