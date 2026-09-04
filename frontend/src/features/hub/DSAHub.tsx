@@ -231,8 +231,11 @@ export const DSAHub: React.FC = () => {
       <section id="hero" className="hero-section">
         <div className="hero-text">
           <h1 className="hero-title">
-            Master DSA Through<br />
-            <span className="hero-accent">Interactive Visualization</span>
+            Explore & Master DSA Through<br />
+            <span className="hero-accent">
+              {typedExploreText}
+              <span className="animate-pulse text-purple-500 font-normal">|</span>
+            </span>
           </h1>
           <p className="hero-subtitle">
             Build algorithm intuition by tracing each operation, checking your understanding,
