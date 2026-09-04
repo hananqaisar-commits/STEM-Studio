@@ -157,7 +157,7 @@ export function PlaceholdersAndVanishInput({
 
       <form
         className={cn(
-          "relative mx-auto flex h-11 w-full items-center overflow-hidden rounded-full border border-purple-500/40 dark:border-purple-500/50 bg-white/95 dark:bg-neutral-900/95 p-1 pl-4 shadow-md dark:shadow-xl backdrop-blur-md transition-all duration-300 focus-within:border-purple-600 dark:focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/20",
+          "relative mx-auto flex h-11 w-full items-center overflow-hidden rounded-full border border-purple-300 dark:border-purple-900/60 bg-white text-slate-900 dark:bg-neutral-950 dark:text-neutral-100 p-1 pl-4 shadow-md dark:shadow-xl backdrop-blur-md transition-all duration-300 focus-within:border-purple-600 dark:focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/20",
           className
         )}
         onSubmit={vanishAndSubmit}
