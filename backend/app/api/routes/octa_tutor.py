@@ -477,32 +477,61 @@ def get_conceptual_explanation(alg_name: str, topic_id: str = "") -> str:
             "LIS finds the length of the longest subsequence in an array such that all elements are strictly increasing.\n\n"
             "• **DP Approach**: dp[i] stores LIS ending at index i. Time: O(N^2) or O(N log N) with Binary Search."
         )
+    elif "linked" in name_lower or "list" in name_lower or "singly" in name_lower or "doubly" in name_lower or t_id in ["singly", "doubly", "circular"]:
+        return (
+            "**Linked List Data Structure** 🔗\n\n"
+            "A Linked List is a linear data structure where elements (nodes) are stored dynamically and connected via pointers!\n\n"
+            "• **Node Structure**: Contains two main components:\n"
+            "  1. `Data`: Stores the value.\n"
+            "  2. `Next` / `Prev`: Pointers referencing adjacent nodes in memory.\n\n"
+            "• **Variants**:\n"
+            "  - **Singly Linked List**: Traverses forward (`Head → Node1 → Node2 → NULL`).\n"
+            "  - **Doubly Linked List**: Traverses both forward (`Next`) and backward (`Prev`).\n"
+            "  - **Circular Linked List**: The last node links back to `Head`.\n\n"
+            "• **Performance & Advantages**:\n"
+            "  - Insertion/Deletion at Head: **O(1)** instant time.\n"
+            "  - Search / Arbitrary Access: **O(N)** linear traversal.\n"
+            "  - Dynamic memory size without array re-allocation overhead!"
+        )
+    elif "stack" in name_lower or "queue" in name_lower:
+        return (
+            "**Stack & Queue Data Structures** 📦\n\n"
+            "Essential linear data structures with strict insertion/deletion rules:\n\n"
+            "• **Stack (LIFO - Last In, First Out)**:\n"
+            "  - Operations: `push()`, `pop()`, `peek()` — all **O(1)**.\n"
+            "  - Real-world uses: Function call stack, Undo/Redo operations, Expression evaluation.\n\n"
+            "• **Queue (FIFO - First In, First Out)**:\n"
+            "  - Operations: `enqueue()`, `dequeue()`, `front()` — all **O(1)**.\n"
+            "  - Real-world uses: Task scheduling, print queues, BFS graph traversal."
+        )
+    elif "recursion" in name_lower or "recursive" in name_lower:
+        return (
+            "**Recursion Mechanics** 🔄\n\n"
+            "Recursion is a programming technique where a function calls itself to solve smaller subproblems!\n\n"
+            "• **Two Required Components**:\n"
+            "  1. **Base Case**: The stopping condition that prevents infinite recursion (e.g. `if n <= 1: return 1`).\n"
+            "  2. **Recursive Step**: Shrinking the input state toward the base case (`n * factorial(n-1)`).\n\n"
+            "• **Call Stack**: Every recursive call creates a new stack frame storing local variables until base cases return."
+        )
     elif "trapping" in name_lower or "rain" in name_lower or "water" in name_lower or t_id == "trappingrainwater":
         return (
             "**Trapping Rain Water Algorithm** 🌊\n\n"
-            "The Trapping Rain Water problem calculates how much water is trapped between elevation bars after raining.\n\n"
+            "Calculates how much water is trapped between elevation bars after raining.\n\n"
             "• **Core Intuition**:\n"
-            "  - The amount of water above bar `i` is bounded by the highest bar to its left and the highest bar to its right.\n"
-            "  - Formula: `Water[i] = max(0, min(max_left[i], max_right[i]) - height[i])`.\n\n"
+            "  - Water above bar `i` is bounded by: `Water[i] = max(0, min(max_left[i], max_right[i]) - height[i])`.\n\n"
             "• **Key Approaches**:\n"
-            "  1. **Two Pointer Technique (Optimal)**: Maintain `left` and `right` pointers with `left_max` and `right_max`. Move the pointer with the smaller boundary inward. Time: O(N), Space: O(1).\n"
-            "  2. **Monotonic Stack**: Store bar indices in a stack of decreasing heights. When encountering a taller bar, pop elements to compute trapped water volume layer-by-layer. Time: O(N), Space: O(N).\n"
-            "  3. **Recursive / Divide & Conquer**: Identify peak height index in subarray and recursively solve left and right segments.\n\n"
-            "• **Complexity Breakdown**:\n"
-            "  - Time Complexity: **O(N)** single-pass.\n"
-            "  - Space Complexity: **O(1)** using two pointers."
+            "  1. **Two Pointers (Optimal)**: Maintain `left` & `right` pointers. Move pointer with smaller boundary inward. Time: O(N), Space: O(1).\n"
+            "  2. **Monotonic Stack**: Maintain decreasing heights stack. Compute trapped water volume layer-by-layer. Time: O(N), Space: O(N)."
         )
     else:
         return (
-            f"**{alg_name} Concept Guide** 💡\n\n"
-            f"{alg_name} is a fundamental Data Structure & Algorithm topic.\n\n"
-            f"• **Core Intuition**: Designed to process, transform, search, or optimize data efficiently.\n"
+            f"**{alg_name} Masterclass Guide** 💡\n\n"
+            f"{alg_name} is a key Data Structure & Algorithm concept.\n\n"
+            f"• **Core Intuition**: Processes, transforms, and optimizes data structures efficiently.\n"
             f"• **How to Master It**:\n"
-            f"  1. Understand the problem statement and constraints.\n"
-            f"  2. Identify base cases, invariants, and edge conditions.\n"
-            f"  3. Trace through sample inputs step-by-step.\n"
-            f"  4. Compare time and space complexity trade-offs.\n\n"
-            f"• **Interactive Learning**: Use the STEM Studio controls above to watch real-time step execution, code lines, and variable updates!"
+            f"  1. Understand the problem constraints & invariant conditions.\n"
+            f"  2. Identify base cases and recursive/iterative transitions.\n"
+            f"  3. Analyze time complexity vs space complexity trade-offs."
         )
 
 
@@ -543,17 +572,10 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
             reply = "您好！我很好，谢谢！今天想学习什么算法呢？ 🐙"
         else:
             reply = (
-                f"Hello! I'm Octa Tutor, your personal DSA teaching assistant! 🐙\n\n"
-                f"Here's what I can do for you:\n"
-                f"• Navigate: Say 'open merge sort' or 'show me graphs'\n"
-                f"• Explain: Ask 'what is {alg_name}?' or 'explain step {step_num}'\n"
-                f"• Control: Say 'play', 'pause', 'next step', 'slow down'\n"
-                f"• Compare: Ask 'compare bubble sort vs quick sort'\n"
-                f"• Quiz: Say 'test me' or 'generate quiz'\n"
-                f"• Theme: Say 'dark mode' or 'light mode'\n"
-                f"• Voice: Use the 🎤 mic button (English, Urdu, Chinese)\n"
-                f"• API Setup: Ask 'how do I connect my API?'\n\n"
-                f"Currently viewing: {alg_name} (step {step_num}/{total_steps})"
+                f"Hello! I'm Octa AI Tutor, your expert DSA Professor! 🐙\n\n"
+                f"I'm ready to teach you any algorithm or data structure concept in depth!\n"
+                f"• Ask me: 'How does Tower of Hanoi work?', 'Explain Dijkstra', or 'Show code'\n"
+                f"• Switch modes: Use **AI Concept Mode** for ChatGPT explanations or **Interactive Step Mode** for visualizer debugging."
             )
         mascot_expr = "happy"
 
@@ -570,7 +592,6 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
                 name="navigate_to_algorithm",
                 args={"category_id": cat_id, "topic_id": topic_id or ""}
             ))
-            # If user also asked to run/visualize/play
             if any(w in msg_lower for w in ["play", "run", "visualize", "step", "chalao"]):
                 function_calls.append(OctaTutorFunctionCall(name="control_playback", args={"action": "play"}))
                 reply = f"Opening {alg_name} and starting visualization step-by-step for you! 🚀"
@@ -594,7 +615,6 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
         elif any(w in msg_lower for w in ["reset", "restart", "over", "again", "phir", "重置"]):
             action = "reset"
 
-        # If an algorithm was specified (e.g. "run palindrome and visualize me")
         if alg_match:
             cat_id, topic_id = alg_match
             function_calls.append(OctaTutorFunctionCall(
@@ -606,26 +626,6 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
         action_text = {"play": "Playing", "pause": "Pausing", "step_forward": "Moving to next step", "reset": "Resetting"}
         reply = f"{action_text.get(action, 'Controlling')} {alg_name} visualization for you! ▶️"
         mascot_expr = "excited"
-
-    # ── QUIZ ──
-    elif intent == "quiz":
-        difficulty = "medium"
-        if any(w in msg_lower for w in ["easy", "simple", "basic", "aasan"]):
-            difficulty = "easy"
-        elif any(w in msg_lower for w in ["hard", "difficult", "tough", "challenge", "mushkil"]):
-            difficulty = "hard"
-
-        # If user specified an algorithm (e.g., "quiz lo mera for Tower of hanoi")
-        if alg_match:
-            cat_id, topic_id = alg_match
-            function_calls.append(OctaTutorFunctionCall(
-                name="navigate_to_algorithm",
-                args={"category_id": cat_id, "topic_id": topic_id or ""}
-            ))
-
-        function_calls.append(OctaTutorFunctionCall(name="generate_quiz", args={"count": 5, "difficulty": difficulty}))
-        reply = f"Awesome! Creating a {difficulty} practice quiz on {alg_name} right now! 📝"
-        mascot_expr = "review"
 
     # ── SPEED ──
     elif intent == "speed":
@@ -649,13 +649,6 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
             reply = "Using a sample array [8, 3, 5, 1, 9, 2, 7, 4] for you! 🎲"
         mascot_expr = "excited"
 
-    # ── THEME ──
-    elif intent == "theme":
-        target_mode = "dark" if any(w in msg_lower for w in ["dark", "night", "andhera", "暗", "深色"]) else "light"
-        function_calls.append(OctaTutorFunctionCall(name="switch_theme", args={"mode": target_mode}))
-        reply = f"Switching to {target_mode} mode for you! {'🌙' if target_mode == 'dark' else '☀️'}"
-        mascot_expr = "happy"
-
     # ── DEBUGGER ──
     elif intent == "debugger":
         visible = not any(w in msg_lower for w in ["hide", "close", "off", "hatao", "remove", "隐藏"])
@@ -673,60 +666,24 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
     # ── COMPARE ──
     elif intent == "compare":
         reply = (
-            f"Great question! Here's a quick comparison framework for algorithms:\n\n"
-            f"When comparing any two algorithms, consider:\n"
-            f"• **Time Complexity**: Best, average, and worst case\n"
-            f"• **Space Complexity**: In-place vs extra memory\n"
-            f"• **Stability**: Does it preserve equal element order?\n"
-            f"• **Use Cases**: When is each one preferred?\n\n"
-            f"To get a detailed comparison, connect your AI API key in Settings ⚙️ "
-            f"and ask me 'compare X vs Y' — I'll give you a full breakdown!"
+            f"Here's a comparison framework for {alg_name}:\n\n"
+            f"• **Time Complexity**: Best, average, and worst-case performance\n"
+            f"• **Space Complexity**: In-place memory usage vs aux space\n"
+            f"• **Stability**: Preserving relative order of identical elements\n\n"
+            f"Connect your custom AI API Key in Settings ⚙️ to generate dynamic comparisons for any algorithm!"
         )
         mascot_expr = "reading"
 
     # ── API HELP ──
     elif intent == "api_help":
         reply = (
-            f"Setting up your AI API is super easy! Here's how:\n\n"
-            f"1. Click the **⚙️ Settings** icon in the tutor panel header\n"
-            f"2. Choose your **Provider**: OpenAI, Anthropic, OpenRouter, DashScope, or Custom\n"
-            f"3. Paste your **API Key** from the provider's dashboard\n"
-            f"4. The Base URL and Model Name auto-fill (you can customize them)\n"
-            f"5. Click **Test Connection** to verify it works\n\n"
-            f"**Recommended providers:**\n"
-            f"• **OpenAI**: `gpt-4o-mini` — great balance of quality and speed\n"
-            f"• **Anthropic**: `claude-3-haiku` — fast and affordable\n"
-            f"• **OpenRouter**: Access 100+ models with one key\n"
-            f"• **DashScope**: `qwen-plus` — solid default performance\n\n"
-            f"Once connected, I can give you deep AI explanations, comparisons, and personalized help!"
+            f"Setting up your AI API Key:\n\n"
+            f"1. Open **⚙️ Settings** in Octa Tutor\n"
+            f"2. Choose your provider (OpenAI, Anthropic, OpenRouter, DashScope, or Custom)\n"
+            f"3. Enter your **API Key** and save!\n\n"
+            f"Once connected, Octa Tutor generates unlimited real-time AI responses!"
         )
         mascot_expr = "helping"
-
-    # ── RECOMMEND ──
-    elif intent == "recommend":
-        reply = (
-            f"Here's my recommended learning path! 📚\n\n"
-            f"**🟢 Beginner:**\n"
-            f"1. Complexity Analysis → Understand Big O notation\n"
-            f"2. Arrays → Master the foundation\n"
-            f"3. Strings → Pattern matching basics\n"
-            f"4. Sorting → See algorithms in action\n\n"
-            f"**🟡 Intermediate:**\n"
-            f"5. Linked Lists → Pointer concepts\n"
-            f"6. Stack & Queue → Essential structures\n"
-            f"7. Binary Search → Efficient searching\n"
-            f"8. Hash Maps → O(1) lookups\n"
-            f"9. Recursion → Thinking recursively\n\n"
-            f"**🔴 Advanced:**\n"
-            f"10. Trees (BST, AVL) → Hierarchical data\n"
-            f"11. Graphs (BFS, DFS, Dijkstra) → Network algorithms\n"
-            f"12. Backtracking → Decision trees\n"
-            f"13. Greedy → Optimization\n"
-            f"14. Dynamic Programming → The ultimate skill\n"
-            f"15. Trie → String-optimized trees\n\n"
-            f"Want me to open any of these? Just say the name!"
-        )
-        mascot_expr = "happy"
 
     # ── EXPLAIN / CONCEPT ──
     elif intent in ["explain", "general"]:
@@ -737,7 +694,7 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
                 f"**Step {s_idx} Execution Trace for {alg_name}:**\n\n"
                 f"• **Step Overview**: {step_desc}\n"
                 f"• **Live Variables & State**: {req_data.step_data or 'Evaluating active data elements'}\n\n"
-                f"Watch the highlighted elements in the visualizer — they show what's being compared or updated right now!"
+                f"Watch the highlighted elements in the visualizer!"
             )
         else:
             reply = get_conceptual_explanation(alg_name, topic_id)
@@ -750,31 +707,20 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 
     # ── CHINESE catch-all ──
     elif any(char for char in msg_lower if '\u4e00' <= char <= '\u9fff'):
-        reply = (
-            f"关于 **{alg_name}** 的概念详解：\n\n"
-            f"• 核心思想：以极高效率处理和组织数据。\n"
-            f"• 时间复杂度：请在 STEM Studio 可视化窗口中观察实时分布！"
-        )
-        mascot_expr = "happy"
-
-    else:
         reply = get_conceptual_explanation(alg_name, topic_id)
-        mascot_expr = "thinking"
+        mascot_expr = "happy"
 
     # ── GENERAL FALLBACK ──
     else:
-        reply = (
-            f"Great question! 🐙\n\n"
-            f"You're currently viewing **{alg_name}** (step {step_num}/{total_steps}).\n"
-            f"**Current step:** {step_desc}\n\n"
-            f"I can help you:\n"
-            f"• Explain any step or concept\n"
-            f"• Navigate to a different algorithm\n"
-            f"• Control the visualization (play/pause/speed)\n"
-            f"• Generate a practice quiz\n"
-            f"• Switch themes or toggle the debugger\n\n"
-            f"For AI-powered deep explanations, connect your API key in Settings ⚙️"
-        )
+        if req_data.mode == "interactive":
+            reply = (
+                f"**Interactive Step Mode — {alg_name}** 🐙\n\n"
+                f"Viewing **Step {step_num} of {total_steps}** (`{step_desc}`).\n\n"
+                f"• Ask me: *'Explain step {step_num}'* or *'What is happening right now?'*\n"
+                f"• Or switch to **AI Concept Mode** above to ask any concept or logic question!"
+            )
+        else:
+            reply = get_conceptual_explanation(alg_name, topic_id)
         mascot_expr = "helping"
 
     return OctaTutorResponse(

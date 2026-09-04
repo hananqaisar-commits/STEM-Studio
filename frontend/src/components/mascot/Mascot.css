@@ -128,16 +128,17 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: clamp(1.5rem, 4vw, 4.5rem);
-  padding: 1.5rem;
-  width: 96vw;
-  max-width: 1500px;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding: 2rem;
+  width: 95vw;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 .mascot-loading-mascot-left {
   position: relative;
-  width: 150px;
-  height: 150px;
+  width: 210px;
+  height: 210px;
   flex-shrink: 0;
   animation: splash-mascot-float 4.2s ease-in-out 1.2s infinite;
 }
@@ -148,6 +149,29 @@
   align-items: flex-start;
   flex: 1;
   min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .mascot-loading-stage-horizontal {
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 1.75rem !important;
+    padding: 1.5rem 1rem !important;
+  }
+
+  .mascot-loading-mascot-left {
+    width: 140px !important;
+    height: 140px !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .mascot-loading-text-right {
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
 }
 
 .mascot-layer {
