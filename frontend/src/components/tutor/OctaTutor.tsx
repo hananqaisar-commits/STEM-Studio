@@ -240,11 +240,7 @@ export const OctaTutor: React.FC = () => {
             speechLang={speechLang}
             onSelectLang={setSpeechLang}
             placeholders={[
-              "Ask Octa anything about Binary Search...",
-              "How does QuickSort partitioning work?",
-              "Explain Time Complexity of Dynamic Programming",
-              "Can you debug my C++ / Python code?",
-              "What is the difference between Stack and Queue?",
+              "Ask me anything...",
             ]}
           />
         </div>

@@ -28,25 +28,25 @@ export const StemWordmark: React.FC<StemWordmarkProps> = ({
     role="img"
     aria-label="STEM Studio"
   >
-    {/* Top Row: STEM (Extra Large, High Contrast Dark in Light Theme / Light in Dark Theme) */}
+    {/* Top Row: STEM (Premium Professional Brand Lockup) */}
     <DancingLetters
       text="STEM"
-      className="gap-2 sm:gap-4 md:gap-6 justify-start flex-nowrap"
+      className="gap-1.5 sm:gap-2 md:gap-3 justify-start flex-nowrap"
       letterClassName={
         compact
-          ? "text-4xl md:text-5xl font-black tracking-tight text-neutral-950 dark:text-neutral-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-slate-900 dark:from-purple-100 dark:via-indigo-200 dark:to-white bg-clip-text text-transparent"
-          : "text-[12vw] sm:text-[14vw] md:text-[15vw] lg:text-[16vw] font-black tracking-tight text-neutral-950 dark:text-neutral-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-purple-800 dark:from-purple-100 dark:via-indigo-100 dark:to-white bg-clip-text text-transparent drop-shadow-2xl leading-none"
+          ? "text-3xl md:text-4xl font-black tracking-tight text-neutral-950 dark:text-neutral-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-slate-900 dark:from-purple-100 dark:via-indigo-200 dark:to-white bg-clip-text text-transparent"
+          : "text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-neutral-950 dark:text-neutral-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-purple-800 dark:from-purple-100 dark:via-indigo-100 dark:to-white bg-clip-text text-transparent drop-shadow-xl leading-none"
       }
     />
 
-    {/* Bottom Row: STUDIO — Separated by spacious ~2 inch vertical gap so letter physics bounce cleanly */}
+    {/* Bottom Row: STUDIO — Elegant vertical separation */}
     <DancingLetters
       text="STUDIO"
-      className="gap-2 sm:gap-4 md:gap-6 justify-start flex-nowrap mt-10 md:mt-16 lg:mt-24"
+      className="gap-1.5 sm:gap-2 md:gap-3 justify-start flex-nowrap mt-5 md:mt-8"
       letterClassName={
         compact
-          ? "text-lg md:text-xl font-black tracking-[0.3em] text-purple-900 dark:text-purple-200 bg-gradient-to-r from-purple-800 via-indigo-800 to-slate-800 dark:from-purple-300 dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent"
-          : "text-[6vw] sm:text-[7vw] md:text-[8vw] lg:text-[8.5vw] font-black tracking-[0.35em] text-purple-900 dark:text-purple-200 bg-gradient-to-r from-purple-800 via-indigo-900 to-purple-900 dark:from-purple-300 dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent drop-shadow-xl leading-none"
+          ? "text-base md:text-lg font-black tracking-[0.3em] text-purple-900 dark:text-purple-200 bg-gradient-to-r from-purple-800 via-indigo-800 to-slate-800 dark:from-purple-300 dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent"
+          : "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-[0.35em] text-purple-900 dark:text-purple-200 bg-gradient-to-r from-purple-800 via-indigo-900 to-purple-900 dark:from-purple-300 dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent drop-shadow-lg leading-none"
       }
     />
   </div>

@@ -136,8 +136,8 @@
 
 .mascot-loading-mascot-left {
   position: relative;
-  width: clamp(120px, 16vw, 190px);
-  height: clamp(120px, 16vw, 190px);
+  width: 150px;
+  height: 150px;
   flex-shrink: 0;
   animation: splash-mascot-float 4.2s ease-in-out 1.2s infinite;
 }
