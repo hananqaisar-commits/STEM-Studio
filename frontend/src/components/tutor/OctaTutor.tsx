@@ -22,7 +22,10 @@ export const OctaTutor: React.FC = () => {
     stopListening,
     clearHistory,
     llmConfig,
+    isSettingsOpen,
     setIsSettingsOpen,
+    tutorMode,
+    setTutorMode,
     suggestions,
   } = useOctaTutor();
 
@@ -101,6 +104,24 @@ export const OctaTutor: React.FC = () => {
       <div className="tutor-context-ribbon">
         <span>Context: {contextState.algorithmName || 'General DSA'}</span>
         <span>Step {contextState.currentStepIndex + 1} / {contextState.totalSteps || 1}</span>
+      </div>
+
+      {/* Mode Switcher Bar */}
+      <div className="tutor-mode-bar">
+        <button
+          className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`}
+          onClick={() => setTutorMode('natural')}
+          title="Natural conversational teaching mode (ChatGPT style)"
+        >
+          AI Concept Mode
+        </button>
+        <button
+          className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`}
+          onClick={() => setTutorMode('interactive')}
+          title="Interactive step-by-step visualizer guidance"
+        >
+          Interactive Step Mode
+        </button>
       </div>
 
       {/* Message Output Box */}

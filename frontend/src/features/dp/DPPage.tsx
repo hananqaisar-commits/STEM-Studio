@@ -54,6 +54,8 @@ const ALGORITHMS: AlgMeta[] = [
   { key: 'uniquePaths', name: 'Unique Paths', complexity: 'O(m·n)', icon: <Route size={14} /> },
 ];
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 export const DPPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<DPAlgorithmKey>('fibonacciDP');
   const [searchParams] = useSearchParams();
@@ -106,6 +108,28 @@ export const DPPage: React.FC = () => {
     play, pause, stepForward, stepBack, reset,
   seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'dp',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildDPCheckpoints(executionData.steps, selectedAlg),

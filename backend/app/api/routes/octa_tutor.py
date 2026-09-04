@@ -391,6 +391,102 @@ def get_real_world_explanation(alg_name: str, category: str) -> str:
         )
 
 
+def get_conceptual_explanation(alg_name: str, topic_id: str = "") -> str:
+    """Generate clear, natural conceptual explanations for DSA topics across all 15 categories."""
+    name_lower = alg_name.lower()
+    t_id = (topic_id or "").lower()
+
+    if "hanoi" in name_lower or t_id == "towerofhanoi":
+        return (
+            "**Tower of Hanoi** 🗼\n\n"
+            "Tower of Hanoi is a classic mathematical puzzle and recursive algorithm!\n\n"
+            "• **The Setup**: You have 3 pegs (Source, Auxiliary, Target) and N disks of different sizes stacked on the Source peg in decreasing order of size.\n"
+            "• **The Goal**: Move all N disks from the Source peg to the Target peg.\n"
+            "• **The Rules**:\n"
+            "  1. Move only one disk at a time.\n"
+            "  2. Only the top disk of a peg can be moved.\n"
+            "  3. Never place a larger disk on top of a smaller disk.\n\n"
+            "• **How Algorithm Works Recursively**:\n"
+            "  - Move top N-1 disks from Source → Auxiliary peg.\n"
+            "  - Move the N-th (largest) disk from Source → Target peg.\n"
+            "  - Move the N-1 disks from Auxiliary → Target peg.\n\n"
+            "• **Complexity**: Minimum moves = 2^n - 1. Time Complexity: O(2^n), Space: O(n) (recursion stack)."
+        )
+    elif "nqueens" in name_lower or "n-queens" in name_lower or t_id == "nqueens":
+        return (
+            "**N-Queens Problem** 👑\n\n"
+            "N-Queens is a classic Backtracking algorithm problem!\n\n"
+            "• **The Challenge**: Place N chess queens on an N×N chessboard so that no two queens attack each other.\n"
+            "• **Rule**: Two queens attack if they share the same row, column, or diagonal.\n"
+            "• **Backtracking Logic**: Place one queen per row. For each cell, check if placing a queen is valid. If valid, recursively proceed to the next row. If stuck, backtrack and try the next column!"
+        )
+    elif "dijkstra" in name_lower or t_id == "dijkstra":
+        return (
+            "**Dijkstra's Algorithm** 🗺️\n\n"
+            "Dijkstra's is a Greedy Graph algorithm used to find the shortest path from a single source node to all other nodes in a weighted graph with non-negative edge weights.\n\n"
+            "• **Key Concept**: Maintains tentative distances for all nodes (infinity initially). Uses a Priority Queue (Min-Heap) to pick the closest unvisited node at each step and relaxes its neighbors.\n"
+            "• **Time Complexity**: O((V + E) log V) with Min-Heap."
+        )
+    elif "merge sort" in name_lower or t_id == "merge":
+        return (
+            "**Merge Sort** 📊\n\n"
+            "Merge Sort is a Divide-and-Conquer sorting algorithm!\n\n"
+            "• **Process**: Divide array in half recursively until sub-arrays have 1 element, then merge sorted sub-arrays back together in order.\n"
+            "• **Time Complexity**: O(N log N) in all cases (Best, Average, Worst).\n"
+            "• **Space Complexity**: O(N) extra memory. Stable sort."
+        )
+    elif "quick sort" in name_lower or t_id == "quick":
+        return (
+            "**Quick Sort** ⚡\n\n"
+            "Quick Sort is an efficient Divide-and-Conquer in-place sorting algorithm!\n\n"
+            "• **Process**: Select a 'Pivot' element. Partition array so elements smaller than pivot go left, larger go right. Recursively sort left and right partitions.\n"
+            "• **Time Complexity**: Average O(N log N), Worst O(N^2) if pivot selection is bad. Space: O(log N)."
+        )
+    elif "binary search" in name_lower or t_id == "binarysearch":
+        return (
+            "**Binary Search** 🔍\n\n"
+            "Binary Search efficiently finds a target value in a SORTED array!\n\n"
+            "• **How it works**: Compare target with middle element. If match, done! If target is smaller, search left half; if larger, search right half.\n"
+            "• **Time Complexity**: O(log N) — exponentially faster than linear O(N) search."
+        )
+    elif "kadane" in name_lower or t_id == "kadane":
+        return (
+            "**Kadane's Algorithm** 💡\n\n"
+            "Kadane's finds the Maximum Sum Contiguous Subarray in a given 1D array.\n\n"
+            "• **Logic**: Iterate through array, keeping track of current max sum. If current sum drops below 0, reset it to 0.\n"
+            "• **Time Complexity**: O(N) single-pass algorithm! Space: O(1)."
+        )
+    elif "avl" in name_lower or t_id == "avl":
+        return (
+            "**AVL Tree** 🌲\n\n"
+            "AVL Tree is a Self-Balancing Binary Search Tree!\n\n"
+            "• **Property**: The height difference (Balance Factor = Height(Left) - Height(Right)) for any node is at most -1, 0, or +1.\n"
+            "• **Rotations**: Performs Left, Right, Left-Right, or Right-Left rotations when unbalanced.\n"
+            "• **Time Complexity**: Guarantees O(log N) search, insertion, and deletion."
+        )
+    elif "trie" in name_lower or "trie" in t_id:
+        return (
+            "**Trie (Prefix Tree)** 🔤\n\n"
+            "Trie is a tree data structure optimized for fast string retrieval and prefix matching!\n\n"
+            "• **Use Cases**: Autocomplete search bars, dictionary lookups, spell checkers.\n"
+            "• **Time Complexity**: O(L) where L is the length of the search word."
+        )
+    elif "lis" in name_lower or t_id == "lis":
+        return (
+            "**Longest Increasing Subsequence (LIS)** 📈\n\n"
+            "LIS finds the length of the longest subsequence in an array such that all elements are strictly increasing.\n\n"
+            "• **DP Approach**: dp[i] stores LIS ending at index i. Time: O(N^2) or O(N log N) with Binary Search."
+        )
+    else:
+        return (
+            f"**{alg_name}** 💡\n\n"
+            f"This is an important algorithm in Data Structures & Algorithms.\n\n"
+            f"• **Core Concept**: Solves data organization, searching, or optimization systematically.\n"
+            f"• **Visualization**: Watch each step in real-time in the STEM Studio visualizer window!\n"
+            f"• **Ask me anything**: Ask 'explain step by step', 'real world applications', or 'time complexity' to learn more!"
+        )
+
+
 def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
     """Intelligent intent-based fallback response for offline / unconfigured API states."""
     msg = req_data.message or ""
@@ -398,8 +494,10 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
 
     # Extract algorithm mentioned in user prompt if present
     alg_match = resolve_algorithm_name(msg)
+    topic_id = ""
     if alg_match:
-        cat_id, topic_id = alg_match
+        cat_id, topic_id_matched = alg_match
+        topic_id = topic_id_matched or ""
         alg_name = (topic_id or cat_id).replace("_", " ").replace("-", " ").title()
         if topic_id == "towerOfHanoi":
             alg_name = "Tower of Hanoi"
@@ -625,13 +723,7 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
                 f"💡 For deeper AI-powered explanations, connect your API key in Settings ⚙️"
             )
         else:
-            reply = (
-                f"**{alg_name}** — Currently at step {step_num} of {total_steps}.\n\n"
-                f"**What's happening now:** {step_desc}\n\n"
-                f"The visualization shows each step of the algorithm in real-time. "
-                f"Use the controls to play/pause, step through one at a time, or adjust speed.\n\n"
-                f"Ask me about a specific step (e.g., 'explain step 3') or say 'play' to watch it run!"
-            )
+            reply = get_conceptual_explanation(alg_name, topic_id)
         mascot_expr = "reading"
 
     # ── ROMAN URDU catch-all ──
@@ -698,6 +790,16 @@ ALWAYS respond in the EXACT language the student uses:
 • Chinese (中文) → Chinese
 • Mixed (e.g., "explain karo") → Match the mix naturally
 NEVER default to English if the student is using another language.
+
+═══ ACTIVE TUTOR MODE: {tutor_mode} ═══
+• NATURAL CONCEPT MODE ("natural"):
+  - Teach like ChatGPT or Claude! Provide high-quality, engaging, natural conversational explanations.
+  - Break down algorithm intuition, time/space complexity, core idea, step-by-step logic, edge cases, and real-world applications naturally.
+  - Do NOT give fixed or robotic template responses. Answer direct questions thoroughly with deep pedagogical impact!
+  - If asked conceptual questions ("what is Tower of Hanoi?", "how does N-Queens work?", "explain Dijkstra"), provide a comprehensive, intuitive, friendly explanation!
+
+• INTERACTIVE STEP MODE ("interactive"):
+  - Focus on real-time visualization steps, predicting the next move, evaluating elements at step {step_num}, and guiding playback controls.
 
 ═══ CURRENT CONTEXT (LIVE DATA) ═══
 • Active Algorithm: {algorithm_name} (ID: {algorithm_id}, Category: {category})
@@ -1116,6 +1218,7 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
     # Format system prompt
     step_num = req_data.current_step_index + 1 if req_data.total_steps > 0 else 0
     system_content = SYSTEM_PROMPT_TEMPLATE.format(
+        tutor_mode=req_data.mode or "natural",
         algorithm_name=req_data.algorithm_name or "DSA Concept",
         algorithm_id=req_data.algorithm_id or "general",
         category=req_data.category or "dsa",
