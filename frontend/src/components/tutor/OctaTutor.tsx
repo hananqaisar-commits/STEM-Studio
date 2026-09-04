@@ -302,8 +302,8 @@ export const OctaTutor: React.FC = () => {
               <div className="message-icon-avatar">
                 <Octa expression="thinking" size={20} interactive={false} />
               </div>
-              <div className="tutor-loader-stage flex items-center gap-3 py-1 px-3">
-                <LoaderOne size="sm" />
+              <div className="tutor-loader-stage flex items-center justify-center gap-3 py-2 px-3">
+                <LoaderOne size="md" />
                 <span className="text-xs font-semibold text-purple-400 dark:text-purple-300 animate-pulse">
                   Octa is thinking...
                 </span>
