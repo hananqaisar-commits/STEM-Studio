@@ -9,11 +9,112 @@ import { PlaceholdersAndVanishInput } from '../ui/placeholders-and-vanish-input'
 import './OctaTutor.css';
 
 /**
- * Format & sanitize raw markdown asterisks (e.g. **bold**) for clean presentation
+ * Format & render rich markdown (bold, italic, code blocks, lists, headers)
  */
-function formatCleanResponse(text: string): string {
-  if (!text) return '';
-  return text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+function parseInlineFormatting(text: string): React.ReactNode[] {
+  const tokenRegex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
+  const parts = text.split(tokenRegex);
+
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-bold text-purple-200 dark:text-purple-100">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code key={i} className="bg-purple-950/60 text-purple-300 dark:bg-purple-900/50 dark:text-purple-200 font-mono text-[0.85em] px-1.5 py-0.5 rounded border border-purple-700/40">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={i} className="italic text-purple-300/90">{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
+function renderTextBlocks(text: string) {
+  const lines = text.split('\n');
+  return lines.map((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return <div key={idx} className="h-1.5" />;
+    }
+
+    if (trimmed.startsWith('### ')) {
+      return (
+        <h4 key={idx} className="text-xs font-bold uppercase tracking-wider text-purple-300 dark:text-purple-200 mt-2 mb-1">
+          {parseInlineFormatting(trimmed.slice(4))}
+        </h4>
+      );
+    }
+    if (trimmed.startsWith('## ')) {
+      return (
+        <h3 key={idx} className="text-sm font-bold text-purple-300 dark:text-purple-200 mt-2.5 mb-1">
+          {parseInlineFormatting(trimmed.slice(3))}
+        </h3>
+      );
+    }
+    if (trimmed.startsWith('# ')) {
+      return (
+        <h2 key={idx} className="text-base font-bold text-purple-300 dark:text-purple-200 mt-3 mb-1.5">
+          {parseInlineFormatting(trimmed.slice(2))}
+        </h2>
+      );
+    }
+
+    if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const content = trimmed.slice(2);
+      return (
+        <div key={idx} className="flex items-start gap-1.5 ml-1 my-0.5">
+          <span className="text-purple-400 font-bold select-none">•</span>
+          <span className="flex-1">{parseInlineFormatting(content)}</span>
+        </div>
+      );
+    }
+
+    return (
+      <p key={idx} className="my-0.5 leading-relaxed">
+        {parseInlineFormatting(line)}
+      </p>
+    );
+  });
+}
+
+function renderFormattedMessage(text: string) {
+  if (!text) return null;
+
+  const codeBlockRegex = /```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    const textBefore = text.slice(lastIndex, match.index);
+    if (textBefore) {
+      parts.push(<div key={`text-${key++}`}>{renderTextBlocks(textBefore)}</div>);
+    }
+
+    const lang = match[1] || 'code';
+    const codeContent = match[2].trim();
+
+    parts.push(
+      <div key={`code-${key++}`} className="my-2.5 rounded-md bg-slate-950 text-emerald-400 p-3 font-mono text-xs overflow-x-auto border border-purple-900/50 shadow-inner">
+        {lang && <div className="text-[10px] uppercase font-bold text-purple-400/80 mb-1 tracking-wider">{lang}</div>}
+        <pre className="whitespace-pre wrap-break-words"><code>{codeContent}</code></pre>
+      </div>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  const remainingText = text.slice(lastIndex);
+  if (remainingText) {
+    parts.push(<div key={`text-${key++}`}>{renderTextBlocks(remainingText)}</div>);
+  }
+
+  return parts;
 }
 
 export const OctaTutor: React.FC = () => {
@@ -154,14 +255,14 @@ export const OctaTutor: React.FC = () => {
           <button
             className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`}
             onClick={() => setTutorMode('natural')}
-            title="Natural conversational teaching mode (ChatGPT style)"
+            title="ChatGPT-style algorithm teaching & conceptual explanations"
           >
             AI Concept Mode
           </button>
           <button
             className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`}
             onClick={() => setTutorMode('interactive')}
-            title="Interactive step-by-step visualizer guidance"
+            title="Live step visualizer execution & state debugging"
           >
             Interactive Step Mode
           </button>
@@ -175,7 +276,6 @@ export const OctaTutor: React.FC = () => {
             const rawContent = isAssis && msg.isRevealing && maxChar !== undefined
               ? msg.content.slice(0, maxChar)
               : msg.content;
-            const displayContent = isAssis ? formatCleanResponse(rawContent) : msg.content;
 
             return (
               <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
@@ -187,7 +287,7 @@ export const OctaTutor: React.FC = () => {
                   )}
                 </div>
                 <div className="tutor-message-content">
-                  {displayContent}
+                  {renderFormattedMessage(rawContent)}
                   {isAssis && msg.isRevealing && (revealedChars[msg.id] || 0) < msg.content.length && (
                     <span className="inline-block w-1.5 h-3.5 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
                   )}
