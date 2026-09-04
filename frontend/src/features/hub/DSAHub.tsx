@@ -11,6 +11,7 @@ import { apiClient } from '../../api/apiClient';
 import { Octa, useMascot } from '../../components/mascot';
 import { GooeyInput } from '../../components/ui/gooey-input';
 import { TextHoverEffect } from '../../components/ui/text-hover-effect';
+import { SparklesDivider } from '../../components/ui/sparkles-demo';
 import '../../components/mascot/Mascot.css';
 import './DSAHub.css';
 
@@ -327,6 +328,8 @@ export const DSAHub: React.FC = () => {
         </div>
       </section>
 
+      {/* ── Sparkles Divider (Gradients + Particle Effect) ── */}
+      <SparklesDivider />
 
       {/* ── Module Grid ──────────────────────────────────────────────── */}
       <section id="modules" className="hub-modules-section">

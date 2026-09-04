@@ -497,6 +497,11 @@ html {
    CATEGORIES SECTION
    ═══════════════════════════════════════════════════════════════════ */
 
+.hub-modules-section {
+  border-top: none !important;
+  padding-top: 1rem;
+}
+
 .hub-categories-section {
   margin-bottom: 3rem;
 }
