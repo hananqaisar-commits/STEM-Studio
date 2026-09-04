@@ -11,7 +11,7 @@ interface StemWordmarkProps {
 
 /**
  * Vector "STEM / STUDIO" brand wordmark using physics-driven Dancing Letters
- * for both STEM (top, large) and STUDIO (bottom, smaller) with light & dark theme support.
+ * for both STEM (top, large) and STUDIO (bottom, smaller) with high-contrast light & dark theme support.
  */
 export const StemWordmark: React.FC<StemWordmarkProps> = ({
   settled = false,
@@ -28,25 +28,25 @@ export const StemWordmark: React.FC<StemWordmarkProps> = ({
     role="img"
     aria-label="STEM Studio"
   >
-    {/* Top Row: STEM */}
+    {/* Top Row: STEM (Extra Large, High Contrast Dark in Light Theme / Light in Dark Theme) */}
     <DancingLetters
       text="STEM"
       className="gap-1 md:gap-2 justify-start flex-nowrap"
       letterClassName={
         compact
-          ? "text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 dark:from-purple-300 dark:via-violet-300 dark:to-indigo-300 bg-clip-text text-transparent"
-          : "text-6xl md:text-7xl lg:text-8xl font-black tracking-tight bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 dark:from-purple-300 dark:via-indigo-300 dark:to-violet-300 bg-clip-text text-transparent drop-shadow-md"
+          ? "text-4xl md:text-5xl font-black tracking-tight text-neutral-950 dark:text-neutral-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-slate-900 dark:from-purple-100 dark:via-indigo-200 dark:to-white bg-clip-text text-transparent"
+          : "text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-neutral-950 dark:text-neutral-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-purple-800 dark:from-purple-100 dark:via-indigo-100 dark:to-white bg-clip-text text-transparent drop-shadow-xl"
       }
     />
 
     {/* Bottom Row: STUDIO */}
     <DancingLetters
       text="STUDIO"
-      className="gap-1 md:gap-1.5 justify-start flex-nowrap mt-1 md:mt-2"
+      className="gap-1 md:gap-2 justify-start flex-nowrap mt-2 md:mt-3"
       letterClassName={
         compact
-          ? "text-base md:text-lg font-extrabold tracking-[0.25em] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-300 dark:via-purple-300 dark:to-pink-300 bg-clip-text text-transparent opacity-90"
-          : "text-2xl md:text-3xl lg:text-4xl font-black tracking-[0.3em] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-indigo-300 dark:via-purple-300 dark:to-pink-300 bg-clip-text text-transparent opacity-95"
+          ? "text-lg md:text-xl font-black tracking-[0.3em] text-purple-900 dark:text-purple-200 bg-gradient-to-r from-purple-800 via-indigo-800 to-slate-800 dark:from-purple-300 dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent"
+          : "text-3xl md:text-4xl lg:text-5xl font-black tracking-[0.35em] text-purple-900 dark:text-purple-200 bg-gradient-to-r from-purple-800 via-indigo-900 to-purple-900 dark:from-purple-300 dark:via-indigo-200 dark:to-purple-100 bg-clip-text text-transparent drop-shadow-md"
       }
     />
   </div>
