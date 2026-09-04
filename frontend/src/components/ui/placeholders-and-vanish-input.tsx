@@ -135,64 +135,20 @@ export function PlaceholdersAndVanishInput({
   };
 
   return (
-    <form
-      className={cn(
-        "relative mx-auto flex h-11 w-full items-center overflow-hidden rounded-full border border-purple-500/30 bg-surface/90 dark:bg-neutral-900/90 p-1 pl-4 shadow-lg backdrop-blur-md transition-all duration-300 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20",
-        className
-      )}
-      onSubmit={vanishAndSubmit}
-    >
-      <canvas
-        ref={canvasRef}
-        className={cn(
-          "pointer-events-none absolute inset-0 size-full filter blur-[0.5px]",
-          !animating && "opacity-0"
-        )}
-      />
-
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={handleInputChange}
-        disabled={disabled}
-        className={cn(
-          "relative z-20 h-full w-full bg-transparent pr-20 text-xs md:text-sm font-medium text-foreground outline-none border-none placeholder:text-transparent disabled:opacity-50",
-          animating && "text-transparent"
-        )}
-      />
-
-      {/* Cycling Placeholder Text Animation */}
-      <div className="pointer-events-none absolute inset-0 flex items-center pl-4 pr-24">
-        <AnimatePresence mode="wait">
-          {!value && (
-            <motion.p
-              key={currentPlaceholder}
-              initial={{ y: 8, opacity: 0 }}
-              animate={{ y: 0, opacity: 0.65 }}
-              exit={{ y: -8, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "linear" }}
-              className="truncate text-xs md:text-sm text-neutral-500 dark:text-neutral-400 font-medium"
-            >
-              {placeholders[currentPlaceholder]}
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Action Buttons: Language Selector, Voice Mic & Submit */}
-      <div className="absolute right-1 z-30 flex items-center gap-1.5 pr-1">
-        {onSelectLang && (
-          <div className="hidden sm:flex items-center gap-1 bg-surface-elevated/80 dark:bg-neutral-800/80 p-0.5 rounded-full border border-border/50">
+    <div className="w-full flex flex-col gap-1.5">
+      {onSelectLang && (
+        <div className="flex items-center justify-between px-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400/80">Voice Language</span>
+          <div className="flex items-center gap-1 bg-surface-elevated/90 dark:bg-neutral-800/90 p-0.5 rounded-full border border-border/60 shadow-sm">
             {(["en-US", "ur-PK", "zh-CN"] as const).map((lang) => (
               <button
                 key={lang}
                 type="button"
                 className={cn(
-                  "px-1.5 py-0.5 text-[10px] font-bold rounded-full transition-all",
+                  "px-2 py-0.5 text-[10px] font-bold rounded-full transition-all",
                   speechLang === lang
                     ? "bg-purple-600 text-white shadow-sm"
-                    : "text-neutral-500 hover:text-neutral-200"
+                    : "text-neutral-400 hover:text-foreground"
                 )}
                 onClick={() => onSelectLang(lang)}
               >
@@ -200,33 +156,82 @@ export function PlaceholdersAndVanishInput({
               </button>
             ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {onToggleListening && (
-          <button
-            type="button"
-            onClick={onToggleListening}
-            className={cn(
-              "flex size-8 items-center justify-center rounded-full transition-all duration-200",
-              isListening
-                ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse"
-                : "bg-surface-elevated dark:bg-neutral-800 text-neutral-400 hover:text-purple-400 hover:bg-purple-500/10"
+      <form
+        className={cn(
+          "relative mx-auto flex h-11 w-full items-center overflow-hidden rounded-full border border-purple-500/30 bg-surface/90 dark:bg-neutral-900/90 p-1 pl-4 shadow-lg backdrop-blur-md transition-all duration-300 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20",
+          className
+        )}
+        onSubmit={vanishAndSubmit}
+      >
+        <canvas
+          ref={canvasRef}
+          className={cn(
+            "pointer-events-none absolute inset-0 size-full filter blur-[0.5px]",
+            !animating && "opacity-0"
+          )}
+        />
+
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleInputChange}
+          disabled={disabled}
+          className={cn(
+            "relative z-20 h-full w-full bg-transparent pr-24 text-xs md:text-sm font-medium text-foreground outline-none border-none placeholder:text-transparent disabled:opacity-50",
+            animating && "text-transparent"
+          )}
+        />
+
+        {/* Cycling Placeholder Text Animation */}
+        <div className="pointer-events-none absolute inset-0 flex items-center pl-4 pr-24">
+          <AnimatePresence mode="wait">
+            {!value && (
+              <motion.p
+                key={currentPlaceholder}
+                initial={{ y: 8, opacity: 0 }}
+                animate={{ y: 0, opacity: 0.65 }}
+                exit={{ y: -8, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "linear" }}
+                className="truncate text-xs md:text-sm text-neutral-500 dark:text-neutral-400 font-medium"
+              >
+                {placeholders[currentPlaceholder]}
+              </motion.p>
             )}
-            title="Voice Input (Speech Recognition)"
-          >
-            {isListening ? <MicOff className="size-3.5" /> : <Mic className="size-3.5" />}
-          </button>
-        )}
+          </AnimatePresence>
+        </div>
 
-        <button
-          type="submit"
-          disabled={!value.trim() || disabled}
-          className="flex size-8 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
-          title="Send message to Octa AI Tutor"
-        >
-          <Send className="size-3.5" />
-        </button>
-      </div>
-    </form>
+        {/* Action Buttons: Voice Mic & Submit */}
+        <div className="absolute right-1 z-30 flex items-center gap-1.5 pr-1">
+          {onToggleListening && (
+            <button
+              type="button"
+              onClick={onToggleListening}
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full transition-all duration-200",
+                isListening
+                  ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse"
+                  : "bg-surface-elevated dark:bg-neutral-800 text-neutral-400 hover:text-purple-400 hover:bg-purple-500/10"
+              )}
+              title="Voice Input (Speech Recognition)"
+            >
+              {isListening ? <MicOff className="size-3.5" /> : <Mic className="size-3.5" />}
+            </button>
+          )}
+
+          <button
+            type="submit"
+            disabled={!value.trim() || disabled}
+            className="flex size-8 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+            title="Send message to Octa AI Tutor"
+          >
+            <Send className="size-3.5" />
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

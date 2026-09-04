@@ -7,7 +7,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Octa } from '../mascot';
-import { GooeyInput } from '../ui/gooey-input';
+import { NavbarGlobalSearch } from './NavbarGlobalSearch';
 import { DSA_CATEGORIES } from '../../data/categories';
 import { SettingsModal } from './SettingsModal';
 import '../mascot/Mascot.css';
@@ -160,24 +160,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
           <div className="navbar-pill-divider" />
 
-          {/* Global Navbar Gooey Search Bar */}
+          {/* Global Universal Navbar Search Bar */}
           <div className="navbar-global-search flex items-center px-1">
-            <GooeyInput
-              placeholder="Search algorithms..."
-              collapsedWidth={42}
-              expandedWidth={220}
-              expandedOffset={35}
-              onValueChange={(query) => {
-                if (query.trim().length > 1) {
-                  const matchingCat = DSA_CATEGORIES.find(c => c.name.toLowerCase().includes(query.toLowerCase()));
-                  if (matchingCat) {
-                    navigate(`/dashboard/${matchingCat.id}`);
-                  } else {
-                    navigate(`/dashboard/dsa`);
-                  }
-                }
-              }}
-            />
+            <NavbarGlobalSearch />
           </div>
 
           <div className="navbar-pill-divider" />
