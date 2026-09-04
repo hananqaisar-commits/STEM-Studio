@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
-
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
   MessageSquare, ChevronDown, Send, Sparkles,
   ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
-
   type LucideIcon,
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
 import { apiClient } from '../../api/apiClient';
 import { Octa, useMascot } from '../../components/mascot';
+import { GooeyInput } from '../../components/ui/gooey-input';
+import { TextHoverEffect } from '../../components/ui/text-hover-effect';
 import '../../components/mascot/Mascot.css';
 import './DSAHub.css';
 
@@ -67,6 +67,39 @@ const SOCIAL_LINKS = [
 
 const AFTAB_LINKEDIN = 'https://www.linkedin.com/in/m-aftab-riaz-6468332b9/?skipRedirect=true';
 
+function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1800) {
+  const [index, setIndex] = useState(0);
+  const [subIndex, setSubIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (words.length === 0) return;
+    const currentWord = words[index];
+
+    if (!isDeleting && subIndex === currentWord.length) {
+      const timeout = setTimeout(() => setIsDeleting(true), pauseDuration);
+      return () => clearTimeout(timeout);
+    }
+
+    if (isDeleting && subIndex === 0) {
+      setIsDeleting(false);
+      setIndex((prev) => (prev + 1) % words.length);
+      return;
+    }
+
+    const timeout = setTimeout(
+      () => {
+        setSubIndex((prev) => prev + (isDeleting ? -1 : 1));
+      },
+      isDeleting ? deletingSpeed : typingSpeed
+    );
+
+    return () => clearTimeout(timeout);
+  }, [subIndex, index, isDeleting, words, typingSpeed, deletingSpeed, pauseDuration]);
+
+  return `${words[index].substring(0, subIndex)}`;
+}
+
 interface PlatformStats {
   active_learners: number;
   total_reviews: number;
@@ -88,6 +121,13 @@ export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
   const [legalDoc, setLegalDoc] = useState<LegalDocType>(null);
   const { state: mascotState, setExpression, setContext } = useMascot();
+
+  const typedExploreText = useTypewriter([
+    "Interactive Visualizations",
+    "14+ Core Algorithm Categories",
+    "Step-by-Step Multi-Language Code",
+    "Quiz & Assessment Challenges",
+  ]);
 
   useEffect(() => {
     setContext('dashboard');
@@ -635,6 +675,11 @@ export const DSAHub: React.FC = () => {
             <button onClick={() => navigate('/sitemap')}>Sitemap</button>
             <button onClick={() => navigate('/contact')}>Contact</button>
           </div>
+        </div>
+
+        {/* Giant OCTA Hover Effect Banner */}
+        <div className="footer-octa-banner w-full h-[20rem] md:h-[28rem] flex items-center justify-center -mb-8 overflow-hidden">
+          <TextHoverEffect text="OCTA" />
         </div>
       </footer>
       {/* Legal Modal */}
