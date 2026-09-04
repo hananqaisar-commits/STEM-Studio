@@ -5,16 +5,28 @@
  */
 
 import sharp from 'sharp';
-import { createWriteStream } from 'fs';
+import { createWriteStream, readFileSync, writeFileSync } from 'fs';
 import { mkdir } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.resolve(__dirname, '../public');
+const SRC_SVG = path.resolve(__dirname, '../src/components/mascot/octa-happy.svg');
 const MASTER = path.join(PUBLIC, 'mascot_favicon_exact.png');
 
 await mkdir(PUBLIC, { recursive: true });
+
+// 1. Generate clean transparent mascot favicon.svg from octa-happy.svg
+const rawSvg = readFileSync(SRC_SVG, 'utf-8');
+const mascotOnlySvg = rawSvg.replace(/viewBox="[^"]*"/, 'viewBox="12 168 1896 1896"');
+writeFileSync(path.join(PUBLIC, 'favicon.svg'), mascotOnlySvg);
+
+// 2. Generate master transparent 512x512 PNG
+await sharp(Buffer.from(mascotOnlySvg))
+  .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .png()
+  .toFile(MASTER);
 
 const SIZES = [
   { size: 16,  name: 'favicon-16x16.png' },
@@ -25,7 +37,7 @@ const SIZES = [
   { size: 512, name: 'icon-512.png' },
 ];
 
-console.log('Generating favicons from:', MASTER);
+console.log('Generating transparent mascot favicons...');
 
 for (const { size, name } of SIZES) {
   const outPath = path.join(PUBLIC, name);
