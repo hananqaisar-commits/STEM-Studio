@@ -124,8 +124,8 @@ export const DSAHub: React.FC = () => {
 
   const typedExploreText = useTypewriter([
     "DSA",
-    "DRD",
-    "Operating System",
+    "DLD",
+    "OS",
     "Networks",
   ], 100, 50, 1600);
 
