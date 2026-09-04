@@ -1,4 +1,4 @@
-import DancingLetters from "@/components/ui/dancing-letters";
+import DancingLetters from "./dancing-letters";
 
 export default function DancingLettersDemo() {
   return (

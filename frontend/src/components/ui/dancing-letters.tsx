@@ -2,7 +2,7 @@
 
 import { LazyMotion, domAnimation, m } from "motion/react";
 import { useState, useCallback, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 interface DancingLettersProps {
   text?: string;
