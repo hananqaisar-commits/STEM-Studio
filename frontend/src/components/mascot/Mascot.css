@@ -151,6 +151,29 @@
   min-width: 0;
 }
 
+@media (max-width: 768px) {
+  .mascot-loading-stage-horizontal {
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 1.75rem !important;
+    padding: 1.5rem 1rem !important;
+  }
+
+  .mascot-loading-mascot-left {
+    width: 140px !important;
+    height: 140px !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .mascot-loading-text-right {
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+}
+
 .mascot-layer {
   position: absolute;
   inset: 0;

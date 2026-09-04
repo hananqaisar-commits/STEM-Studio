@@ -151,12 +151,12 @@
 }
 
 .mobile-menu-btn {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
   .mobile-menu-btn {
-    display: inline-flex;
+    display: inline-flex !important;
   }
 }
 
