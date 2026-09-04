@@ -123,11 +123,11 @@ export const DSAHub: React.FC = () => {
   const { state: mascotState, setExpression, setContext } = useMascot();
 
   const typedExploreText = useTypewriter([
-    "Interactive Visualizations",
-    "14+ Core Algorithm Categories",
-    "Step-by-Step Multi-Language Code",
-    "Quiz & Assessment Challenges",
-  ]);
+    "DSA",
+    "DRD",
+    "Operating System",
+    "Networks",
+  ], 100, 50, 1600);
 
   useEffect(() => {
     setContext('dashboard');
@@ -231,10 +231,10 @@ export const DSAHub: React.FC = () => {
       <section id="hero" className="hero-section">
         <div className="hero-text">
           <h1 className="hero-title">
-            Explore & Master DSA Through<br />
-            <span className="hero-accent">
+            Explore & Master<br />
+            <span className="hero-accent inline-flex items-center gap-1 font-black">
               {typedExploreText}
-              <span className="animate-pulse text-purple-500 font-normal">|</span>
+              <span className="inline-block w-1.5 h-8 md:h-11 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
             </span>
           </h1>
           <p className="hero-subtitle">

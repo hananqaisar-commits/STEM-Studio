@@ -541,20 +541,30 @@
 
 .topic-sidebar {
   background-color: var(--color-surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  padding: 1rem 0.85rem;
-  height: calc(100vh - var(--navbar-height) - 24px);
-  position: sticky;
-  top: calc(var(--navbar-height) + 12px);
+  padding: 1.25rem 0.95rem;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
   flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, width 0.3s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.3s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1), margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 900;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 950;
   overflow-y: auto;
   overflow-x: hidden;
-  border-radius: 0 16px 16px 0;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border-radius: 0 20px 20px 0;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.theme-dark .topic-sidebar {
+  background: rgba(11, 15, 25, 0.96);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 30px rgba(147, 51, 234, 0.08);
 }
 
 .topic-sidebar.sidebar-closed {
@@ -576,25 +586,26 @@
   pointer-events: auto;
 }
 
-/* Left edge hover trigger zone for opening sidebar */
+/* Left edge hover trigger zone for opening sidebar - Full 100vh height */
 .sidebar-hover-trigger {
   position: fixed;
-  top: 70px;
+  top: 0;
+  bottom: 0;
   left: 0;
-  width: 20px;
-  height: calc(100vh - 80px);
-  z-index: 490;
+  width: 24px;
+  height: 100vh;
+  z-index: 940;
   cursor: pointer;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent 80%);
-  opacity: 0.3;
-  transition: opacity 0.25s ease, width 0.2s ease;
-  border-radius: 0 8px 8px 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 40%, transparent), transparent 85%);
+  opacity: 0.25;
+  transition: opacity 0.25s ease, width 0.2s ease, background 0.25s ease;
+  border-radius: 0 10px 10px 0;
 }
 
 .sidebar-hover-trigger:hover {
   opacity: 1;
-  width: 28px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 65%, transparent), transparent);
+  width: 32px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 70%, transparent), transparent);
 }
 
 .sidebar-close-btn.desktop-hide-btn {
