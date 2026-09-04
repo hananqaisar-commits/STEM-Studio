@@ -83,6 +83,8 @@ function parseJobs(raw: string): Job[] {
   });
 }
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 export const GreedyPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<GreedyAlgorithmKey>('activitySelection');
   const [searchParams] = useSearchParams();
@@ -144,6 +146,28 @@ export const GreedyPage: React.FC = () => {
     reset,
   seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'greedy',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints from the current execution steps
   const quizCheckpoints = useMemo(

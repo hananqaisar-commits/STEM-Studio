@@ -45,6 +45,9 @@ export interface UseOctaTutorReturn {
   resetLLMConfig: () => void;
   isSettingsOpen: boolean;
   setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  // Mode switcher: interactive vs natural
+  tutorMode: 'interactive' | 'natural';
+  setTutorMode: React.Dispatch<React.SetStateAction<'interactive' | 'natural'>>;
   // Context-aware suggestions
   suggestions: TutorSuggestion[];
 }
@@ -102,6 +105,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [speechLang, setSpeechLang] = useState<SupportedSpeechLang>('en-US');
   const [mascotExpression, setMascotExpression] = useState<MascotExpression>('neutral');
+  const [tutorMode, setTutorMode] = useState<'interactive' | 'natural'>('natural');
   const [isGuidedMode, setIsGuidedMode] = useState<boolean>(false);
   const [guidedStepIndex, setGuidedStepIndex] = useState<number | null>(null);
 
@@ -373,6 +377,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
           total_steps: contextState.totalSteps,
           step_data: targetStepData,
           conversation_history: historyPayload,
+          mode: tutorMode,
           // BYOK Custom LLM configuration
           provider: llmConfig.provider,
           api_key: llmConfig.apiKey,
@@ -444,6 +449,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
     resetLLMConfig,
     isSettingsOpen,
     setIsSettingsOpen,
+    tutorMode,
+    setTutorMode,
     suggestions,
   };
 }

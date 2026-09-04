@@ -29,6 +29,7 @@ import '../sorting/Sorting.css';
 import './HashMaps.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 interface AlgMeta {
   key: HashMapsAlgorithmKey;
@@ -122,6 +123,28 @@ export const HashMapsPage: React.FC = () => {
       onResume: play,
     },
   });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'hashMaps',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints
   const quizCheckpoints = useMemo(

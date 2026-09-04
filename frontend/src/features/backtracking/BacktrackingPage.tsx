@@ -45,6 +45,8 @@ const ALGORITHMS: AlgMeta[] = [
   { key: 'combinationSum', name: 'Combination Sum', complexity: 'O(2^t)', icon: <Target size={14} /> },
 ];
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 export const BacktrackingPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('subsets');
   const [searchParams] = useSearchParams();
@@ -96,6 +98,28 @@ export const BacktrackingPage: React.FC = () => {
     reset,
   seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'backtracking',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildBacktrackingCheckpoints(executionData.steps, selectedAlg),
