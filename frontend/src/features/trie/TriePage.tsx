@@ -32,6 +32,7 @@ import '../sorting/Sorting.css';
 import '../bst/BST.css';
 import './Trie.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 interface AlgMeta {
   key: TrieAlgorithmKey;
@@ -111,6 +112,28 @@ export const TriePage: React.FC = () => {
     } = useStepPlayer({ steps: executionData.steps });
 
   const trieStep = currentStep as TrieStep | null;
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'trie',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildTrieCheckpoints(executionData.steps, selectedAlg),

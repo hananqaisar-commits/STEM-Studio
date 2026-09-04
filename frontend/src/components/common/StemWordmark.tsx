@@ -1,7 +1,6 @@
 import React from 'react';
+import DancingLetters from '@/components/ui/dancing-letters';
 import './StemWordmark.css';
-
-const LETTERS = ['S', 'T', 'E', 'M'] as const;
 
 interface StemWordmarkProps {
   /** Plays a one-shot settle beat once loading has completed. */
@@ -11,12 +10,7 @@ interface StemWordmarkProps {
 }
 
 /**
- * Vector "STEM / STUDIO" brand wordmark.
- *
- * Rendered as real text with a brand gradient clip (no raster assets) so it
- * stays crisp, scalable, theme-aware and fully animatable. Letters enter with
- * a staggered lift; the whole lockup breathes gently while loading and plays
- * a single settle beat when `settled` becomes true.
+ * Vector "STEM / STUDIO" brand wordmark using physics-driven Dancing Letters.
  */
 export const StemWordmark: React.FC<StemWordmarkProps> = ({
   settled = false,
@@ -33,17 +27,15 @@ export const StemWordmark: React.FC<StemWordmarkProps> = ({
     role="img"
     aria-label="STEM Studio"
   >
-    <span className="stem-wordmark__letters" aria-hidden="true">
-      {LETTERS.map((letter, index) => (
-        <span
-          key={letter}
-          className="stem-wordmark__letter"
-          style={{ '--letter-index': index } as React.CSSProperties}
-        >
-          {letter}
-        </span>
-      ))}
-    </span>
+    <DancingLetters
+      text="STEM"
+      className="gap-1"
+      letterClassName={
+        compact
+          ? "text-3xl md:text-4xl font-extrabold bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 dark:from-purple-300 dark:via-purple-400 dark:to-indigo-300 bg-clip-text text-transparent"
+          : "text-5xl md:text-6xl lg:text-7xl font-extrabold bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-600 dark:from-purple-300 dark:via-purple-400 dark:to-indigo-300 bg-clip-text text-transparent drop-shadow-sm"
+      }
+    />
     <span className="stem-wordmark__sub" aria-hidden="true">
       Studio
     </span>
