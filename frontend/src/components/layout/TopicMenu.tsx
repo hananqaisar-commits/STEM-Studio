@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
-  Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
-  GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-  Home, ChevronDown, PanelLeftClose, BookOpen, Cpu, Monitor, ChevronRight,
-  type LucideIcon,
+  LayoutDashboard, BarChart3, Mail, Bell, Folder, FileText, Database,
+  Users, Settings, Shield, Key, ChevronDown, ChevronUp, Layers, Activity,
+  BarChart2, Grid3x3, Type, GitCommit, Search, Share2, Repeat, CornerDownRight,
+  Hash, Binary, Zap, GitPullRequest, User as UserIcon
 } from 'lucide-react';
-import { MODULES, DSA_CATEGORIES, type CategoryDef } from '../../data/categories';
-import { CATEGORY_TOPICS } from '../../data/categoryTopics';
+import { useAuth } from '../../contexts/AuthContext';
+import { DSA_CATEGORIES } from '../../data/categories';
+import { SettingsModal } from './SettingsModal';
 import './Layout.css';
 
-const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
-  Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
-  GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-  BookOpen, Cpu, Monitor,
+const CATEGORY_ICON_MAP: Record<string, React.ComponentType<{ size?: number }>> = {
+  Activity, BarChart2, Grid3x3, Type, GitCommit, Layers, Search, Share2,
+  Repeat, CornerDownRight, Hash, Binary, Zap, GitPullRequest
 };
 
 interface TopicMenuProps {
@@ -27,139 +27,48 @@ interface TopicMenuProps {
   onWidthChange?: (width: number) => void;
 }
 
-const TOPICS_BY_CATEGORY = new Map(
-  CATEGORY_TOPICS.map((cat) => [cat.categoryId, cat.topics])
-);
-
 export const TopicMenu: React.FC<TopicMenuProps> = ({
-  activeModule,
-  onSelectModule,
+  activeCategory = '',
   isOpen = false,
   onClose,
-  onOpen,
-  activeCategory = '',
-  sidebarWidth = 340,
-  onWidthChange,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const activeTopic = searchParams.get('topic') || '';
 
-  // Track expanded modules — DSA expanded by default
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(() => new Set(['dsa']));
+  const [isHovered, setIsHovered] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  // Track expanded categories — active category expanded by default
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    if (activeCategory && DSA_CATEGORIES.some((c) => c.id === activeCategory)) {
-      initial.add(activeCategory);
-    } else {
-      initial.add('sorting'); // default to sorting if none active
-    }
-    return initial;
+  // Collapsible section states
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    content: true,
+    team: true,
+    settings: true,
   });
 
-  useEffect(() => {
-    if (activeCategory && DSA_CATEGORIES.some((c) => c.id === activeCategory)) {
-      setExpandedCategories((prev) => new Set(prev).add(activeCategory));
-      setExpandedModules((prev) => new Set(prev).add('dsa'));
-    }
-  }, [activeCategory]);
-
-  const toggleModule = (modId: string) => {
-    setExpandedModules((prev) => {
-      const next = new Set(prev);
-      if (next.has(modId)) {
-        next.delete(modId);
-      } else {
-        next.add(modId);
-      }
-      return next;
-    });
-    onSelectModule(modId);
+  const toggleGroup = (groupKey: string) => {
+    setOpenGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }));
   };
 
-  const toggleCategory = (catId: string) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(catId)) {
-        next.delete(catId);
-      } else {
-        next.add(catId);
-      }
-      return next;
-    });
+  const isExpanded = isHovered || isOpen;
+
+  const getUserInitial = () => {
+    if (user?.first_name) return user.first_name[0].toUpperCase();
+    if (user?.username) return user.username[0].toUpperCase();
+    return 'M';
   };
 
-  const handleDashboardClick = () => {
-    navigate('/dashboard');
-    if (onClose) onClose();
+  const getUserDisplayName = () => {
+    if (user?.first_name) return `${user.first_name} ${user.last_name || ''}`.trim();
+    if (user?.username) return user.username;
+    return 'Manu Arora';
   };
-
-  const handleTopicClick = (cat: CategoryDef, topicId: string) => {
-    if (!cat.available) return;
-    setExpandedCategories((prev) => new Set(prev).add(cat.id));
-    navigate(`/dashboard/${cat.id}?topic=${topicId}`);
-    if (onClose) onClose();
-  };
-
-  // --- Resizing logic ---
-  const [isResizing, setIsResizing] = useState(false);
-  const startXRef = useRef<number>(0);
-  const startWidthRef = useRef<number>(sidebarWidth);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    startXRef.current = e.clientX;
-    startWidthRef.current = sidebarWidth;
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'col-resize';
-  };
-
-  const handleDoubleClick = () => {
-    if (onWidthChange) {
-      onWidthChange(340);
-    }
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing || !onWidthChange) return;
-      const delta = e.clientX - startXRef.current;
-      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 260), 550);
-      onWidthChange(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      if (isResizing) {
-        setIsResizing(false);
-        document.body.style.userSelect = '';
-        document.body.style.cursor = '';
-      }
-    };
-
-    if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, onWidthChange]);
 
   return (
     <>
-      {!isOpen && onOpen && (
-        <div
-          className="sidebar-hover-trigger"
-          onMouseEnter={onOpen}
-          title="Hover to show Navigation"
-          aria-label="Open Navigation"
-        />
-      )}
-
+      {/* Mobile Backdrop overlay */}
       <div
         className={`sidebar-overlay ${isOpen ? 'visible' : ''}`}
         onClick={onClose}
@@ -167,142 +76,235 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
       />
 
       <aside
-        className={`topic-sidebar ${isOpen ? 'sidebar-open' : 'sidebar-closed'} ${isResizing ? 'is-resizing' : ''}`}
-        style={{
-          width: `${sidebarWidth}px`,
-          minWidth: `${sidebarWidth}px`,
-          maxWidth: `${sidebarWidth}px`,
-        }}
+        className={`topic-sidebar ${isExpanded ? 'is-expanded' : 'is-collapsed'} ${isOpen ? 'sidebar-open' : ''}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="sidebar-dashboard-row">
-          <button className="sidebar-dashboard-btn" onClick={handleDashboardClick}>
-            <Home size={16} />
-            <span>Dashboard</span>
+        {/* Top Navigation Items */}
+        <div className="sidebar-top-section">
+          {/* Dashboard */}
+          <button
+            className={`sidebar-item-btn ${location.pathname === '/dashboard' ? 'active' : ''}`}
+            onClick={() => { navigate('/dashboard'); if (onClose) onClose(); }}
+            title="Dashboard"
+          >
+            <div className="sidebar-item-icon">
+              <LayoutDashboard size={20} />
+            </div>
+            {isExpanded && <span className="sidebar-item-label">Dashboard</span>}
+          </button>
+
+          {/* Analytics / Modules */}
+          <button
+            className={`sidebar-item-btn ${location.pathname.includes('/dashboard/dsa') ? 'active' : ''}`}
+            onClick={() => { navigate('/dashboard/dsa'); if (onClose) onClose(); }}
+            title="Analytics"
+          >
+            <div className="sidebar-item-icon">
+              <BarChart3 size={20} />
+            </div>
+            {isExpanded && <span className="sidebar-item-label">Analytics</span>}
+          </button>
+
+          {/* Messages */}
+          <button
+            className="sidebar-item-btn"
+            onClick={() => { navigate('/dashboard#reviews'); if (onClose) onClose(); }}
+            title="Messages"
+          >
+            <div className="sidebar-item-icon">
+              <Mail size={20} />
+            </div>
+            {isExpanded && <span className="sidebar-item-label">Messages</span>}
+          </button>
+
+          {/* Notifications */}
+          <button
+            className="sidebar-item-btn"
+            onClick={() => { navigate('/dashboard#faqs'); if (onClose) onClose(); }}
+            title="Notifications"
+          >
+            <div className="sidebar-item-icon">
+              <Bell size={20} />
+            </div>
+            {isExpanded && <span className="sidebar-item-label">Notifications</span>}
           </button>
         </div>
 
-        <div className="sidebar-header">
-          <span className="sidebar-title">CURRICULUM MODULES</span>
-          {onClose && (
+        {/* Separator Line */}
+        <div className="sidebar-divider" />
+
+        {/* Scrollable Middle Content */}
+        <div className="sidebar-scroll-content">
+          {/* Group 1: Content */}
+          <div className="sidebar-group">
             <button
-              className="sidebar-close-btn desktop-hide-btn"
-              onClick={onClose}
-              aria-label="Hide sidebar"
-              title="Hide Sidebar"
+              className={`sidebar-group-header ${openGroups.content ? 'open' : ''}`}
+              onClick={() => toggleGroup('content')}
+              title="Content"
             >
-              <PanelLeftClose size={16} />
+              <div className="sidebar-item-icon">
+                <Folder size={20} />
+              </div>
+              {isExpanded && (
+                <>
+                  <span className="sidebar-group-title">Content</span>
+                  <span className="sidebar-chevron">
+                    {openGroups.content ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </span>
+                </>
+              )}
             </button>
-          )}
-        </div>
 
-        <nav className="topic-list">
-          {MODULES.map((mod) => {
-            const isModuleExpanded = expandedModules.has(mod.id);
-            const isModuleActive = mod.id === activeModule;
-            const ModuleIcon = CATEGORY_ICON_MAP[mod.iconName] ?? BookOpen;
-
-            return (
-              <div key={mod.id} className="module-group">
+            {(openGroups.content || !isExpanded) && (
+              <div className="sidebar-sub-items">
                 <button
-                  className={`topic-card module-card ${isModuleActive ? 'active' : ''} ${!mod.available ? 'module-card-disabled' : ''}`}
-                  onClick={() => mod.available && toggleModule(mod.id)}
-                  disabled={!mod.available}
-                  title={mod.available ? (isModuleExpanded ? 'Click to collapse module' : 'Click to expand module') : 'Coming Soon'}
+                  className="sidebar-sub-item-btn"
+                  onClick={() => { navigate('/dashboard/dsa'); if (onClose) onClose(); }}
+                  title="Documents"
                 >
-                  <div className="topic-icon">
-                    <ModuleIcon size={18} />
+                  <div className="sidebar-item-icon">
+                    <FileText size={18} />
                   </div>
-                  <div className="topic-info">
-                    <span className="topic-name">{mod.name}</span>
-                    <span className="topic-category">{mod.description}</span>
-                  </div>
-                  {mod.available ? (
-                    <ChevronDown size={16} className={`module-chevron ${isModuleExpanded ? 'rotated' : ''}`} />
-                  ) : (
-                    <span className="module-soon-badge">Soon</span>
-                  )}
+                  {isExpanded && <span className="sidebar-sub-label">Documents</span>}
                 </button>
 
-                {/* Sub-categories inside Module */}
-                {isModuleExpanded && mod.id === 'dsa' && (
-                  <div className="module-categories-container">
-                    {DSA_CATEGORIES.map((cat, index) => {
-                      const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;
-                      const isCategoryActive = cat.id === activeCategory;
-                      const isCategoryExpanded = expandedCategories.has(cat.id);
-                      const topics = TOPICS_BY_CATEGORY.get(cat.id) ?? [];
-
-                      return (
-                        <div
-                          key={cat.id}
-                          className={`category-accordion ${isCategoryActive ? 'active' : ''} ${!cat.available ? 'disabled' : ''}`}
-                        >
-                          {/* Category Accordion Header */}
-                          <button
-                            className="category-header"
-                            onClick={() => cat.available && toggleCategory(cat.id)}
-                            disabled={!cat.available}
-                            aria-expanded={isCategoryExpanded}
-                          >
-                            <div className="category-header-left">
-                              <div className="category-icon">
-                                <Icon size={15} />
-                              </div>
-                              <div className="category-meta">
-                                <span className="category-name">{index + 1}. {cat.name}</span>
-                                <span className="category-count">{cat.topicCount} topics</span>
-                              </div>
-                            </div>
-                            <div className={`category-chevron ${isCategoryExpanded ? 'rotated' : ''}`}>
-                              <ChevronDown size={14} />
-                            </div>
-                          </button>
-
-                          {/* Unordered List of Specific Algorithms/Topics */}
-                          {isCategoryExpanded && (
-                            <div className="category-topics open">
-                              <ul className="category-topics-list">
-                                {topics.map((topic) => {
-                                  const isTopicActive = isCategoryActive && topic.id === activeTopic;
-                                  return (
-                                    <li key={topic.id}>
-                                      <button
-                                        className={`topic-item ${isTopicActive ? 'active' : ''}`}
-                                        onClick={() => handleTopicClick(cat, topic.id)}
-                                        disabled={!cat.available}
-                                      >
-                                        <span className="topic-dot" />
-                                        <span className="topic-item-name">{topic.name}</span>
-                                        {topic.group && (
-                                          <span className="topic-badge">{topic.group}</span>
-                                        )}
-                                      </button>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                <button
+                  className="sidebar-sub-item-btn"
+                  onClick={() => { navigate('/dashboard/sorting'); if (onClose) onClose(); }}
+                  title="Database"
+                >
+                  <div className="sidebar-item-icon">
+                    <Database size={18} />
                   </div>
-                )}
+                  {isExpanded && <span className="sidebar-sub-label">Database</span>}
+                </button>
               </div>
-            );
-          })}
-        </nav>
+            )}
+          </div>
 
-        {/* Vertical Resizer Handle */}
-        <div
-          className="sidebar-resizer"
-          onMouseDown={handleMouseDown}
-          onDoubleClick={handleDoubleClick}
-          title="Double-click to reset width • Drag right border to resize"
-        >
-          <div className="resizer-handle-grip" />
+          {/* Group 2: Team / Curriculum Categories */}
+          <div className="sidebar-group">
+            <button
+              className={`sidebar-group-header ${openGroups.team ? 'open' : ''}`}
+              onClick={() => toggleGroup('team')}
+              title="Team & DSA Categories"
+            >
+              <div className="sidebar-item-icon">
+                <Users size={20} />
+              </div>
+              {isExpanded && (
+                <>
+                  <span className="sidebar-group-title">Team</span>
+                  <span className="sidebar-chevron">
+                    {openGroups.team ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </span>
+                </>
+              )}
+            </button>
+
+            {(openGroups.team || !isExpanded) && (
+              <div className="sidebar-sub-items">
+                {DSA_CATEGORIES.slice(0, 5).map((cat) => {
+                  const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;
+                  const isActive = activeCategory === cat.id;
+
+                  return (
+                    <button
+                      key={cat.id}
+                      className={`sidebar-sub-item-btn ${isActive ? 'active' : ''}`}
+                      onClick={() => {
+                        navigate(`/dashboard/${cat.id}`);
+                        if (onClose) onClose();
+                      }}
+                      title={cat.name}
+                    >
+                      <div className="sidebar-item-icon">
+                        <Icon size={18} />
+                      </div>
+                      {isExpanded && <span className="sidebar-sub-label">{cat.name}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Group 3: Settings */}
+          <div className="sidebar-group">
+            <button
+              className={`sidebar-group-header ${openGroups.settings ? 'open' : ''}`}
+              onClick={() => toggleGroup('settings')}
+              title="Settings"
+            >
+              <div className="sidebar-item-icon">
+                <Settings size={20} />
+              </div>
+              {isExpanded && (
+                <>
+                  <span className="sidebar-group-title">Settings</span>
+                  <span className="sidebar-chevron">
+                    {openGroups.settings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </span>
+                </>
+              )}
+            </button>
+
+            {(openGroups.settings || !isExpanded) && (
+              <div className="sidebar-sub-items">
+                <button
+                  className="sidebar-sub-item-btn"
+                  onClick={() => setShowSettingsModal(true)}
+                  title="General"
+                >
+                  <div className="sidebar-item-icon">
+                    <Settings size={18} />
+                  </div>
+                  {isExpanded && <span className="sidebar-sub-label">General</span>}
+                </button>
+
+                <button
+                  className="sidebar-sub-item-btn"
+                  onClick={() => setShowSettingsModal(true)}
+                  title="Security"
+                >
+                  <div className="sidebar-item-icon">
+                    <Shield size={18} />
+                  </div>
+                  {isExpanded && <span className="sidebar-sub-label">Security</span>}
+                </button>
+
+                <button
+                  className="sidebar-sub-item-btn"
+                  onClick={() => setShowSettingsModal(true)}
+                  title="API Keys"
+                >
+                  <div className="sidebar-item-icon">
+                    <Key size={18} />
+                  </div>
+                  {isExpanded && <span className="sidebar-sub-label">API Keys</span>}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Profile User Section */}
+        <div className="sidebar-bottom-profile">
+          <div className="sidebar-user-avatar">
+            {getUserInitial()}
+          </div>
+          {isExpanded && (
+            <div className="sidebar-user-details">
+              <span className="sidebar-user-name">{getUserDisplayName()}</span>
+              {user?.email && <span className="sidebar-user-email">{user.email}</span>}
+            </div>
+          )}
         </div>
       </aside>
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </>
   );
 };
