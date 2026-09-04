@@ -335,6 +335,9 @@
   padding: 16px 20px 20px 20px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 [data-theme="dark"] .tutor-input-container {

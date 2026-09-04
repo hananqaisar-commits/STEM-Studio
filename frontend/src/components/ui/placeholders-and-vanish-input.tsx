@@ -177,13 +177,13 @@ export function PlaceholdersAndVanishInput({
           onChange={handleInputChange}
           disabled={disabled}
           className={cn(
-            "relative z-20 h-full w-full bg-transparent pr-24 text-xs md:text-sm font-semibold text-slate-900 dark:text-neutral-100 outline-none border-none placeholder:text-transparent disabled:opacity-50",
+            "relative z-20 h-full w-full bg-transparent pl-1 pr-28 text-xs md:text-sm font-semibold text-slate-900 dark:text-neutral-100 outline-none border-none placeholder:text-transparent disabled:opacity-50 min-w-0 overflow-x-auto",
             animating && "text-transparent"
           )}
         />
 
         {/* Cycling Placeholder Text Animation */}
-        <div className="pointer-events-none absolute inset-0 flex items-center pl-4 pr-24">
+        <div className="pointer-events-none absolute inset-0 flex items-center pl-5 pr-28 overflow-hidden">
           <AnimatePresence mode="wait">
             {!value && (
               <motion.p

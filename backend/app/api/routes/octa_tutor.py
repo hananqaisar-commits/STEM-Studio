@@ -1174,18 +1174,32 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
         logger.info(f"API key not configured for '{provider_type}'. Returning smart fallback response.")
         return generate_fallback_response(req_data)
 
-    # Format system prompt
+    # Format system prompt based on tutor mode
     step_num = req_data.current_step_index + 1 if req_data.total_steps > 0 else 0
-    system_content = SYSTEM_PROMPT_TEMPLATE.format(
-        tutor_mode=req_data.mode or "natural",
-        algorithm_name=req_data.algorithm_name or "DSA Concept",
-        algorithm_id=req_data.algorithm_id or "general",
-        category=req_data.category or "dsa",
-        step_num=step_num,
-        total_steps=req_data.total_steps or 0,
-        current_step_description=req_data.current_step_description or "No step selected",
-        step_data=req_data.step_data or "{}"
-    )
+    t_mode = req_data.mode or "natural"
+
+    if t_mode == "natural":
+        system_content = (
+            f"You are Octa AI Tutor, an expert Data Structures & Algorithms Professor (like ChatGPT or Claude!).\n"
+            f"The student is asking you a DSA concept question regarding '{req_data.algorithm_name or 'Data Structures & Algorithms'}'.\n\n"
+            f"═══ INSTRUCTIONS ═══\n"
+            f"• Answer the student's prompt directly, intuitively, comprehensively, and naturally as a top-tier professor.\n"
+            f"• Explain problem intuition, step-by-step logic, code implementations (Python & C++), and time/space complexity.\n"
+            f"• Format all responses with clean GitHub Markdown (headers `###`, bold `**text**`, bullet points `•`, monospaced `code`, and fenced code blocks).\n"
+            f"• Match the EXACT language used by the student (English, Roman Urdu, Urdu, Chinese).\n"
+            f"• Do NOT mention visualizer step numbers, step counters, or evaluator states. Focus 100% on high-quality, natural teaching!"
+        )
+    else:
+        system_content = SYSTEM_PROMPT_TEMPLATE.format(
+            tutor_mode=t_mode,
+            algorithm_name=req_data.algorithm_name or "DSA Concept",
+            algorithm_id=req_data.algorithm_id or "general",
+            category=req_data.category or "dsa",
+            step_num=step_num,
+            total_steps=req_data.total_steps or 0,
+            current_step_description=req_data.current_step_description or "No step selected",
+            step_data=req_data.step_data or "{}"
+        )
 
     # Build message list
     messages: List[Dict[str, Any]] = [{"role": "system", "content": system_content}]
