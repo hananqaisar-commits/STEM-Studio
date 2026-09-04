@@ -17,15 +17,13 @@ export interface MascotLoadingProps {
 }
 
 /**
- * Premium branded loading experience.
- *
- * The vector STEM wordmark is the visual anchor; Octa waits below with a
- * surprised expression and smoothly crossfades to happy when `phase` flips
- * to "complete". No hardcoded durations, no fake progress — the parent
- * (BootSplash / route guards) controls the lifecycle from real state.
+ * Premium branded loading experience:
+ * - Mascot Octa positioned on the LEFT side of the text block.
+ * - Dancing letters for "STEM" (top line, large) and "STUDIO" (bottom line, smaller).
+ * - Light and dark theme adaptive gradient colors.
+ * - Clean design without status lines/shimmer bars as requested.
  */
 export const MascotLoading: React.FC<MascotLoadingProps> = ({
-  message = 'Preparing your studio',
   phase = 'loading',
   exiting = false,
 }) => {
@@ -44,29 +42,20 @@ export const MascotLoading: React.FC<MascotLoadingProps> = ({
       aria-live="polite"
       aria-busy={!done}
     >
-      <div className="mascot-loading-stage">
-        <StemWordmark settled={done} />
-
-        {/* Octa: surprised while loading, happy once complete (crossfade) */}
-        <div className="mascot-loading-mascot">
+      <div className="mascot-loading-stage-horizontal">
+        {/* Octa Mascot on LEFT */}
+        <div className="mascot-loading-mascot-left">
           <span className="mascot-layer mascot-layer--surprised" aria-hidden={done}>
-            <Octa expression="surprised" size={96} interactive={false} label="Octa, waiting" />
+            <Octa expression="surprised" size={130} interactive={false} label="Octa, waiting" />
           </span>
           <span className="mascot-layer mascot-layer--happy" aria-hidden={!done}>
-            <Octa expression="happy" size={96} interactive={false} label="Octa, ready" />
+            <Octa expression="happy" size={130} interactive={false} label="Octa, ready" />
           </span>
         </div>
 
-        <div className="splash-status">
-          <span className="splash-status__label splash-status__label--loading">
-            {message}
-          </span>
-          <span className="splash-status__label splash-status__label--done">
-            Ready when you are
-          </span>
-          <div className="splash-shimmer-track">
-            <div className="splash-shimmer-fill" />
-          </div>
+        {/* STEM STUDIO Dancing Letters on RIGHT */}
+        <div className="mascot-loading-text-right">
+          <StemWordmark settled={done} />
         </div>
       </div>
     </div>
