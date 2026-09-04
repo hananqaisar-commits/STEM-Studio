@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
-  MessageSquare, ChevronDown, Send, Sparkles,
+  MessageSquare, ChevronDown, Send, Sparkles, Plus,
   ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
   type LucideIcon,
 } from 'lucide-react';
@@ -414,44 +414,60 @@ export const DSAHub: React.FC = () => {
       </section>
 
       {/* ── FAQs Section ───────────────────────────────────────────── */}
-      <section id="faqs" className="landing-section">
-        <h2 className="section-title">Frequently Asked Questions</h2>
-        <p className="section-subtitle">Common questions about STEM Studio</p>
-        <div className="faq-list">
-          {FAQS.map((faq, i) => (
-            <div key={i} className={`faq-item${openFaq === i ? ' is-open' : ''}`}>
-              <button
-                className="faq-question"
-                onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                aria-expanded={openFaq === i}
-                aria-controls={`faq-answer-${i}`}
-              >
-                <span>{faq.q}</span>
-                <ChevronDown size={16} className="faq-chevron" />
-              </button>
-              {openFaq === i && (
-                <div id={`faq-answer-${i}`} className="faq-answer" role="region" aria-label={faq.q}>
-                  <p>{faq.a}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+      {/* ── FAQs Section ───────────────────────────────────────────── */}
+      <section id="faqs" className="faq-split-section">
+        <div className="faq-split-container">
+          {/* Left Column: Heading */}
+          <div className="faq-split-left">
+            <h2 className="faq-split-heading">
+              Frequently asked<br />questions
+            </h2>
+            <p className="faq-split-sub">
+              Common questions about STEM Studio platform and algorithm learning.
+            </p>
+          </div>
 
-        {/* Ask a question */}
-        <form className="faq-ask-form" onSubmit={handleFaqSubmit}>
-          <h3>Have a question?</h3>
-          <textarea
-            className="faq-ask-input"
-            placeholder="Type your question here..."
-            value={faqQuestion}
-            onChange={(e) => setFaqQuestion(e.target.value)}
-            rows={3}
-          />
-          <button type="submit" className="faq-ask-btn" disabled={!faqQuestion.trim()}>
-            <Send size={14} /> Send Question
-          </button>
-        </form>
+          {/* Right Column: Accordion List & Ask Form */}
+          <div className="faq-split-right">
+            <div className="faq-accordion-list">
+              {FAQS.map((faq, i) => (
+                <div key={i} className={`faq-row-item${openFaq === i ? ' is-open' : ''}`}>
+                  <button
+                    className="faq-row-question"
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    aria-expanded={openFaq === i}
+                    aria-controls={`faq-answer-${i}`}
+                  >
+                    <span className="faq-icon-plus" aria-hidden="true">
+                      <Plus size={20} />
+                    </span>
+                    <span className="faq-question-text">{faq.q}</span>
+                  </button>
+                  {openFaq === i && (
+                    <div id={`faq-answer-${i}`} className="faq-row-answer" role="region" aria-label={faq.q}>
+                      <p>{faq.a}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Ask a question */}
+            <form className="faq-ask-form" onSubmit={handleFaqSubmit}>
+              <h3>Have a question?</h3>
+              <textarea
+                className="faq-ask-input"
+                placeholder="Type your question here..."
+                value={faqQuestion}
+                onChange={(e) => setFaqQuestion(e.target.value)}
+                rows={3}
+              />
+              <button type="submit" className="faq-ask-btn" disabled={!faqQuestion.trim()}>
+                <Send size={14} /> Send Question
+              </button>
+            </form>
+          </div>
+        </div>
       </section>
 
       {/* ── Share Experience Section ───────────────────────────────── */}
