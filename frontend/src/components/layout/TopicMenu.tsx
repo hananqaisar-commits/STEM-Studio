@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-  Home, ChevronDown, PanelLeftClose, BookOpen, Cpu, Monitor, ChevronRight,
+  Home, ChevronDown, PanelLeftClose, BookOpen, Cpu, Monitor, User as UserIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { MODULES, DSA_CATEGORIES, type CategoryDef } from '../../data/categories';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
+import { useAuth } from '../../contexts/AuthContext';
 import './Layout.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
@@ -36,14 +37,18 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   onSelectModule,
   isOpen = false,
   onClose,
-  onOpen,
   activeCategory = '',
   sidebarWidth = 340,
   onWidthChange,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const activeTopic = searchParams.get('topic') || '';
+
+  // Hover state for 64px docked strip vs expanded pane
+  const [isHovered, setIsHovered] = useState(false);
 
   // Track expanded modules — DSA expanded by default
   const [expandedModules, setExpandedModules] = useState<Set<string>>(() => new Set(['dsa']));
@@ -54,7 +59,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
     if (activeCategory && DSA_CATEGORIES.some((c) => c.id === activeCategory)) {
       initial.add(activeCategory);
     } else {
-      initial.add('sorting'); // default to sorting if none active
+      initial.add('sorting');
     }
     return initial;
   });
@@ -149,17 +154,22 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
     };
   }, [isResizing, onWidthChange]);
 
+  const isExpanded = isHovered || isOpen;
+
+  const getUserInitial = () => {
+    if (user?.first_name) return user.first_name[0].toUpperCase();
+    if (user?.username) return user.username[0].toUpperCase();
+    return 'M';
+  };
+
+  const getUserDisplayName = () => {
+    if (user?.first_name) return `${user.first_name} ${user.last_name || ''}`.trim();
+    if (user?.username) return user.username;
+    return 'Manu Arora';
+  };
+
   return (
     <>
-      {!isOpen && onOpen && (
-        <div
-          className="sidebar-hover-trigger"
-          onMouseEnter={onOpen}
-          title="Hover to show Navigation"
-          aria-label="Open Navigation"
-        />
-      )}
-
       <div
         className={`sidebar-overlay ${isOpen ? 'visible' : ''}`}
         onClick={onClose}
@@ -167,34 +177,47 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
       />
 
       <aside
-        className={`topic-sidebar ${isOpen ? 'sidebar-open' : 'sidebar-closed'} ${isResizing ? 'is-resizing' : ''}`}
+        className={`topic-sidebar ${isExpanded ? 'is-expanded' : 'is-collapsed'} ${isOpen ? 'sidebar-open' : ''} ${isResizing ? 'is-resizing' : ''}`}
         style={{
-          width: `${sidebarWidth}px`,
-          minWidth: `${sidebarWidth}px`,
-          maxWidth: `${sidebarWidth}px`,
+          width: isExpanded ? `${sidebarWidth}px` : '64px',
+          minWidth: isExpanded ? `${sidebarWidth}px` : '64px',
+          maxWidth: isExpanded ? `${sidebarWidth}px` : '64px',
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
+        {/* Top: Dashboard Navigation */}
         <div className="sidebar-dashboard-row">
-          <button className="sidebar-dashboard-btn" onClick={handleDashboardClick}>
-            <Home size={16} />
-            <span>Dashboard</span>
+          <button
+            className={`sidebar-dashboard-btn ${location.pathname === '/dashboard' ? 'active' : ''}`}
+            onClick={handleDashboardClick}
+            title="Dashboard"
+          >
+            <div className="sidebar-item-icon">
+              <Home size={18} />
+            </div>
+            {isExpanded && <span>Dashboard</span>}
           </button>
         </div>
 
-        <div className="sidebar-header">
-          <span className="sidebar-title">CURRICULUM MODULES</span>
-          {onClose && (
-            <button
-              className="sidebar-close-btn desktop-hide-btn"
-              onClick={onClose}
-              aria-label="Hide sidebar"
-              title="Hide Sidebar"
-            >
-              <PanelLeftClose size={16} />
-            </button>
-          )}
-        </div>
+        {/* Section Title */}
+        {isExpanded && (
+          <div className="sidebar-header">
+            <span className="sidebar-title">CURRICULUM MODULES</span>
+            {onClose && (
+              <button
+                className="sidebar-close-btn desktop-hide-btn"
+                onClick={onClose}
+                aria-label="Hide sidebar"
+                title="Hide Sidebar"
+              >
+                <PanelLeftClose size={16} />
+              </button>
+            )}
+          </div>
+        )}
 
+        {/* Modules & Categories List */}
         <nav className="topic-list">
           {MODULES.map((mod) => {
             const isModuleExpanded = expandedModules.has(mod.id);
@@ -209,22 +232,26 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                   disabled={!mod.available}
                   title={mod.available ? (isModuleExpanded ? 'Click to collapse module' : 'Click to expand module') : 'Coming Soon'}
                 >
-                  <div className="topic-icon">
+                  <div className="sidebar-item-icon">
                     <ModuleIcon size={18} />
                   </div>
-                  <div className="topic-info">
-                    <span className="topic-name">{mod.name}</span>
-                    <span className="topic-category">{mod.description}</span>
-                  </div>
-                  {mod.available ? (
-                    <ChevronDown size={16} className={`module-chevron ${isModuleExpanded ? 'rotated' : ''}`} />
-                  ) : (
-                    <span className="module-soon-badge">Soon</span>
+                  {isExpanded && (
+                    <>
+                      <div className="topic-info">
+                        <span className="topic-name">{mod.name}</span>
+                        <span className="topic-category">{mod.description}</span>
+                      </div>
+                      {mod.available ? (
+                        <ChevronDown size={16} className={`module-chevron ${isModuleExpanded ? 'rotated' : ''}`} />
+                      ) : (
+                        <span className="module-soon-badge">Soon</span>
+                      )}
+                    </>
                   )}
                 </button>
 
                 {/* Sub-categories inside Module */}
-                {isModuleExpanded && mod.id === 'dsa' && (
+                {(isModuleExpanded || !isExpanded) && mod.id === 'dsa' && (
                   <div className="module-categories-container">
                     {DSA_CATEGORIES.map((cat, index) => {
                       const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;
@@ -243,23 +270,28 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                             onClick={() => cat.available && toggleCategory(cat.id)}
                             disabled={!cat.available}
                             aria-expanded={isCategoryExpanded}
+                            title={`${index + 1}. ${cat.name}`}
                           >
                             <div className="category-header-left">
-                              <div className="category-icon">
-                                <Icon size={15} />
+                              <div className="sidebar-item-icon">
+                                <Icon size={16} />
                               </div>
-                              <div className="category-meta">
-                                <span className="category-name">{index + 1}. {cat.name}</span>
-                                <span className="category-count">{cat.topicCount} topics</span>
+                              {isExpanded && (
+                                <div className="category-meta">
+                                  <span className="category-name">{index + 1}. {cat.name}</span>
+                                  <span className="category-count">{cat.topicCount} topics</span>
+                                </div>
+                              )}
+                            </div>
+                            {isExpanded && (
+                              <div className={`category-chevron ${isCategoryExpanded ? 'rotated' : ''}`}>
+                                <ChevronDown size={14} />
                               </div>
-                            </div>
-                            <div className={`category-chevron ${isCategoryExpanded ? 'rotated' : ''}`}>
-                              <ChevronDown size={14} />
-                            </div>
+                            )}
                           </button>
 
                           {/* Unordered List of Specific Algorithms/Topics */}
-                          {isCategoryExpanded && (
+                          {isExpanded && isCategoryExpanded && (
                             <div className="category-topics open">
                               <ul className="category-topics-list">
                                 {topics.map((topic) => {
@@ -293,15 +325,30 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
           })}
         </nav>
 
-        {/* Vertical Resizer Handle */}
-        <div
-          className="sidebar-resizer"
-          onMouseDown={handleMouseDown}
-          onDoubleClick={handleDoubleClick}
-          title="Double-click to reset width • Drag right border to resize"
-        >
-          <div className="resizer-handle-grip" />
+        {/* User Profile Footer */}
+        <div className="sidebar-bottom-profile">
+          <div className="sidebar-user-avatar">
+            {getUserInitial()}
+          </div>
+          {isExpanded && (
+            <div className="sidebar-user-details">
+              <span className="sidebar-user-name">{getUserDisplayName()}</span>
+              {user?.email && <span className="sidebar-user-email">{user.email}</span>}
+            </div>
+          )}
         </div>
+
+        {/* Vertical Resizer Handle when expanded */}
+        {isExpanded && (
+          <div
+            className="sidebar-resizer"
+            onMouseDown={handleMouseDown}
+            onDoubleClick={handleDoubleClick}
+            title="Double-click to reset width • Drag right border to resize"
+          >
+            <div className="resizer-handle-grip" />
+          </div>
+        )}
       </aside>
     </>
   );

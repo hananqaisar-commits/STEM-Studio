@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
-  MessageSquare, ChevronDown, Send, Sparkles,
+  MessageSquare, ChevronDown, Send, Sparkles, Plus,
   ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
   type LucideIcon,
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import { apiClient } from '../../api/apiClient';
 import { Octa, useMascot } from '../../components/mascot';
 import { GooeyInput } from '../../components/ui/gooey-input';
 import { TextHoverEffect } from '../../components/ui/text-hover-effect';
+import { SparklesDivider } from '../../components/ui/sparkles-demo';
 import '../../components/mascot/Mascot.css';
 import './DSAHub.css';
 
@@ -62,10 +63,13 @@ const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24
 const SOCIAL_LINKS = [
   { name: 'LinkedIn', url: 'https://www.linkedin.com/in/hanan-qaisar-22b0b6368', icon: LinkedinIcon },
   { name: 'Instagram', url: 'https://www.instagram.com/hanan.qaisar', icon: InstagramIcon },
-  { name: 'GitHub', url: 'https://github.com/hananqaisar', icon: GithubIcon },
+  { name: 'GitHub', url: 'https://github.com/hananqaisar-commits', icon: GithubIcon },
 ];
 
 const AFTAB_LINKEDIN = 'https://www.linkedin.com/in/m-aftab-riaz-6468332b9/?skipRedirect=true';
+const AFTAB_GITHUB = 'https://github.com/Aftab-commits';
+const HASSAN_GITHUB = 'https://github.com/hassanmustafa710';
+const HANAN_GITHUB = 'https://github.com/hananqaisar-commits';
 
 function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1800) {
   const [index, setIndex] = useState(0);
@@ -324,6 +328,8 @@ export const DSAHub: React.FC = () => {
         </div>
       </section>
 
+      {/* ── Sparkles Divider (Gradients + Particle Effect) ── */}
+      <SparklesDivider />
 
       {/* ── Module Grid ──────────────────────────────────────────────── */}
       <section id="modules" className="hub-modules-section">
@@ -411,44 +417,60 @@ export const DSAHub: React.FC = () => {
       </section>
 
       {/* ── FAQs Section ───────────────────────────────────────────── */}
-      <section id="faqs" className="landing-section">
-        <h2 className="section-title">Frequently Asked Questions</h2>
-        <p className="section-subtitle">Common questions about STEM Studio</p>
-        <div className="faq-list">
-          {FAQS.map((faq, i) => (
-            <div key={i} className={`faq-item${openFaq === i ? ' is-open' : ''}`}>
-              <button
-                className="faq-question"
-                onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                aria-expanded={openFaq === i}
-                aria-controls={`faq-answer-${i}`}
-              >
-                <span>{faq.q}</span>
-                <ChevronDown size={16} className="faq-chevron" />
-              </button>
-              {openFaq === i && (
-                <div id={`faq-answer-${i}`} className="faq-answer" role="region" aria-label={faq.q}>
-                  <p>{faq.a}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+      {/* ── FAQs Section ───────────────────────────────────────────── */}
+      <section id="faqs" className="faq-split-section">
+        <div className="faq-split-container">
+          {/* Left Column: Heading */}
+          <div className="faq-split-left">
+            <h2 className="faq-split-heading">
+              Frequently asked<br />questions
+            </h2>
+            <p className="faq-split-sub">
+              Common questions about STEM Studio platform and algorithm learning.
+            </p>
+          </div>
 
-        {/* Ask a question */}
-        <form className="faq-ask-form" onSubmit={handleFaqSubmit}>
-          <h3>Have a question?</h3>
-          <textarea
-            className="faq-ask-input"
-            placeholder="Type your question here..."
-            value={faqQuestion}
-            onChange={(e) => setFaqQuestion(e.target.value)}
-            rows={3}
-          />
-          <button type="submit" className="faq-ask-btn" disabled={!faqQuestion.trim()}>
-            <Send size={14} /> Send Question
-          </button>
-        </form>
+          {/* Right Column: Accordion List & Ask Form */}
+          <div className="faq-split-right">
+            <div className="faq-accordion-list">
+              {FAQS.map((faq, i) => (
+                <div key={i} className={`faq-row-item${openFaq === i ? ' is-open' : ''}`}>
+                  <button
+                    className="faq-row-question"
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    aria-expanded={openFaq === i}
+                    aria-controls={`faq-answer-${i}`}
+                  >
+                    <span className="faq-icon-plus" aria-hidden="true">
+                      <Plus size={20} />
+                    </span>
+                    <span className="faq-question-text">{faq.q}</span>
+                  </button>
+                  {openFaq === i && (
+                    <div id={`faq-answer-${i}`} className="faq-row-answer" role="region" aria-label={faq.q}>
+                      <p>{faq.a}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Ask a question */}
+            <form className="faq-ask-form" onSubmit={handleFaqSubmit}>
+              <h3>Have a question?</h3>
+              <textarea
+                className="faq-ask-input"
+                placeholder="Type your question here..."
+                value={faqQuestion}
+                onChange={(e) => setFaqQuestion(e.target.value)}
+                rows={3}
+              />
+              <button type="submit" className="faq-ask-btn" disabled={!faqQuestion.trim()}>
+                <Send size={14} /> Send Question
+              </button>
+            </form>
+          </div>
+        </div>
       </section>
 
       {/* ── Share Experience Section ───────────────────────────────── */}
@@ -640,22 +662,26 @@ export const DSAHub: React.FC = () => {
               <span className="team-name">Hanan</span>
               <p className="team-desc">Architecture · API · Database · Core Features</p>
               <div className="team-socials">
-                <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
-                <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer"><InstagramIcon size={14} /></a>
-                <a href="https://github.com/hananqaisar" target="_blank" rel="noopener noreferrer"><GithubIcon size={14} /></a>
+                <a href="https://www.linkedin.com/in/hanan-qaisar-22b0b6368" target="_blank" rel="noopener noreferrer" title="LinkedIn"><LinkedinIcon size={14} /></a>
+                <a href="https://www.instagram.com/hanan.qaisar" target="_blank" rel="noopener noreferrer" title="Instagram"><InstagramIcon size={14} /></a>
+                <a href={HANAN_GITHUB} target="_blank" rel="noopener noreferrer" title="GitHub"><GithubIcon size={14} /></a>
               </div>
             </div>
             <div className="footer-team-card">
               <span className="team-role">UI / Frontend</span>
               <span className="team-name">Hassan</span>
               <p className="team-desc">Dashboard · Navigation · Visual Polish</p>
+              <div className="team-socials">
+                <a href={HASSAN_GITHUB} target="_blank" rel="noopener noreferrer" title="GitHub"><GithubIcon size={14} /></a>
+              </div>
             </div>
             <div className="footer-team-card">
               <span className="team-role">Algorithms</span>
               <span className="team-name">Aftab</span>
               <p className="team-desc">Animation · Creative Features</p>
               <div className="team-socials">
-                <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer"><LinkedinIcon size={14} /></a>
+                <a href={AFTAB_LINKEDIN} target="_blank" rel="noopener noreferrer" title="LinkedIn"><LinkedinIcon size={14} /></a>
+                <a href={AFTAB_GITHUB} target="_blank" rel="noopener noreferrer" title="GitHub"><GithubIcon size={14} /></a>
               </div>
             </div>
           </div>
