@@ -9,6 +9,7 @@ import { ForgotPassword } from './features/auth/ForgotPassword';
 import { ResetPassword } from './features/auth/ResetPassword';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { BootSplash } from './components/common/BootSplash';
+import { ScrollToTop } from './components/common/ScrollToTop';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
@@ -123,6 +124,7 @@ const DashboardLayout = () => {
           </Routes>
         </main>
       </div>
+      <ScrollToTop />
       <OctaTutor />
     </div>
   );
