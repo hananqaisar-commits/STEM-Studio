@@ -793,33 +793,457 @@ export function executeVFSCommand(
     };
   }
 
-  // --- 18. find & grep & head & tail & wc & uname ---
+  // --- 18. find ---
   if (cmd === 'find') {
-    const matches = Object.values(nodes).map(n => getAbsolutePath(nodes, n.id));
-    return {
-      output: matches.join('\n'),
-      newSnapshot: nextSnapshot,
-      stepRecord: { command: line, diff: `Traversed tree (${matches.length} items)`, explanation: `Traversed VFS directory hierarchy matching search pattern.` },
+    let startPath = '.';
+    let namePattern: string | null = null;
+    let typeFilter: 'f' | 'd' | null = null;
+
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '-name' && args[i + 1]) {
+        namePattern = args[i + 1].replace(/['"]/g, '');
+        i++;
+      } else if (args[i] === '-type' && args[i + 1]) {
+        const t = args[i + 1].toLowerCase();
+        if (t === 'f' || t === 'file') typeFilter = 'f';
+        if (t === 'd' || t === 'directory') typeFilter = 'd';
+        i++;
+      } else if (!args[i].startsWith('-') && i === 0) {
+        startPath = args[i];
+      }
+    }
+
+    const startId = resolveNodeId(nodes, nextSnapshot.currentDirId, startPath);
+    if (!startId || !nodes[startId]) {
+      return {
+        output: `find: '${startPath}': No such file or directory`,
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'Find failed', explanation: `Path "${startPath}" does not exist in VFS.` },
+      };
+    }
+
+    // Helper to collect paths recursively
+    const collectPaths = (nodeId: string, currentRelPath: string): string[] => {
+      const node = nodes[nodeId];
+      if (!node) return [];
+      const results: string[] = [];
+
+      let matchesName = true;
+      if (namePattern) {
+        const regexStr = '^' + namePattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '$';
+        matchesName = new RegExp(regexStr, 'i').test(node.name);
+      }
+
+      let matchesType = true;
+      if (typeFilter === 'f' && node.type === 'directory') matchesType = false;
+      if (typeFilter === 'd' && node.type !== 'directory') matchesType = false;
+
+      if (matchesName && matchesType) {
+        results.push(currentRelPath);
+      }
+
+      if (node.type === 'directory' && node.childrenIds) {
+        for (const childId of node.childrenIds) {
+          const child = nodes[childId];
+          if (child) {
+            const childRel = currentRelPath === '.' ? `./${child.name}` : `${currentRelPath}/${child.name}`;
+            results.push(...collectPaths(childId, childRel));
+          }
+        }
+      }
+      return results;
     };
-  }
 
-  if (cmd === 'grep') {
-    const pattern = args[0] || '';
-    const fileArg = args[1] || 'welcome.txt';
-    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
-    const targetNode = targetId ? nodes[targetId] : undefined;
-    const fileLines = (targetNode?.content || '').split('\n');
-    const matchedLines = fileLines.filter(l => l.toLowerCase().includes(pattern.toLowerCase()));
-
+    const matches = collectPaths(startId, startPath);
     return {
-      output: matchedLines.join('\n') || `(no lines matching "${pattern}")`,
+      output: matches.join('\n') || '',
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `Grep matched ${matchedLines.length} lines`,
-        explanation: `Searched file "${fileArg}" for regex pattern "${pattern}".`,
+        diff: `Find matched ${matches.length} VFS items`,
+        explanation: `Traversed tree starting at "${startPath}" filtering by ${namePattern ? `name "${namePattern}"` : 'all names'} ${typeFilter ? `type ${typeFilter}` : ''}.`,
+        targetNodeId: startId,
+      },
+    };
+  }
+
+  // --- 19. grep ---
+  if (cmd === 'grep') {
+    const isIgnoreCase = args.includes('-i');
+    const showLineNums = args.includes('-n');
+    const countOnly = args.includes('-c');
+
+    const cleanArgs = args.filter(a => !a.startsWith('-'));
+    const pattern = cleanArgs[0] || '';
+    const fileArg = cleanArgs[1] || 'welcome.txt';
+
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
+    const targetNode = targetId ? nodes[targetId] : undefined;
+
+    if (!targetNode || targetNode.type === 'directory') {
+      return {
+        output: `grep: ${fileArg}: ${!targetNode ? 'No such file' : 'Is a directory'}`,
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'Grep error', explanation: `Cannot grep "${fileArg}".` },
+      };
+    }
+
+    const fileLines = (targetNode.content || '').split('\n');
+    const matched: string[] = [];
+
+    fileLines.forEach((l, idx) => {
+      const lineToTest = isIgnoreCase ? l.toLowerCase() : l;
+      const patternToTest = isIgnoreCase ? pattern.toLowerCase() : pattern;
+      if (lineToTest.includes(patternToTest)) {
+        const prefix = showLineNums ? `${idx + 1}:` : '';
+        matched.push(`${prefix}${l}`);
+      }
+    });
+
+    const outputText = countOnly ? String(matched.length) : matched.join('\n');
+
+    return {
+      output: outputText,
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `Grep matched ${matched.length} lines`,
+        explanation: `Searched file "${fileArg}" for string "${pattern}" (${isIgnoreCase ? 'ignore case, ' : ''}${showLineNums ? 'line numbers, ' : ''}${countOnly ? 'count only' : ''}).`,
         targetNodeId: targetId || undefined,
       },
+    };
+  }
+
+  // --- 20. sed ---
+  if (cmd === 'sed') {
+    const isInPlace = args.includes('-i');
+    const cleanArgs = args.filter(a => a !== '-i');
+    const expr = cleanArgs[0] || '';
+    const fileArg = cleanArgs[1];
+
+    if (!expr || !fileArg) {
+      return {
+        output: 'sed: missing expression or filename operand',
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'Syntax error', explanation: 'sed syntax: sed [-i] \'s/old/new/g\' filename' },
+      };
+    }
+
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
+    const targetNode = targetId ? nodes[targetId] : undefined;
+
+    if (!targetNode || targetNode.type === 'directory') {
+      return {
+        output: `sed: can't read ${fileArg}: No such file or directory`,
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'File error', explanation: `File ${fileArg} not found.` },
+      };
+    }
+
+    let modifiedContent = targetNode.content || '';
+    const match = expr.match(/^s\/(.*?)\/(.*?)\/([g]?)$/);
+
+    if (match) {
+      const [, findStr, replaceStr, flags] = match;
+      const regex = new RegExp(findStr, flags.includes('g') ? 'g' : '');
+      modifiedContent = modifiedContent.replace(regex, replaceStr);
+    } else {
+      // Fallback simple string replace
+      modifiedContent = modifiedContent.replace(new RegExp(expr, 'g'), '');
+    }
+
+    if (isInPlace) {
+      targetNode.content = modifiedContent;
+      targetNode.modifiedAt = new Date().toISOString().split('T')[0];
+    }
+
+    return {
+      output: isInPlace ? '' : modifiedContent,
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `${isInPlace ? 'Updated file in place' : 'Transformed stream output'}: ${fileArg}`,
+        explanation: `Applied sed stream editor expression "${expr}" to "${fileArg}". ${isInPlace ? 'Saved directly to VFS node.' : ''}`,
+        targetNodeId: targetId || undefined,
+        mutationType: isInPlace ? 'editor' : undefined,
+      },
+    };
+  }
+
+  // --- 21. awk ---
+  if (cmd === 'awk') {
+    const exprArg = args.find(a => a.startsWith('{') || a.startsWith("'") || a.startsWith('"')) || '{print $0}';
+    const fileArg = args.find(a => !a.startsWith('-') && a !== exprArg && !a.startsWith('{')) || 'welcome.txt';
+
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
+    const targetNode = targetId ? nodes[targetId] : undefined;
+
+    if (!targetNode || targetNode.type === 'directory') {
+      return {
+        output: `awk: cannot open ${fileArg} (No such file or directory)`,
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'File error', explanation: `File ${fileArg} not found.` },
+      };
+    }
+
+    const lines = (targetNode.content || '').split('\n');
+    const resultLines: string[] = [];
+
+    // Parse column print like {print $1} or {print $2} or {print $0}
+    const colMatch = exprArg.match(/\$([0-9]+)/);
+    const colIndex = colMatch ? parseInt(colMatch[1], 10) : null;
+
+    lines.forEach(l => {
+      if (!l.trim()) return;
+      const cols = l.trim().split(/\s+/);
+      if (colIndex === 0) {
+        resultLines.push(l);
+      } else if (colIndex !== null && colIndex > 0) {
+        resultLines.push(cols[colIndex - 1] || '');
+      } else {
+        resultLines.push(l);
+      }
+    });
+
+    return {
+      output: resultLines.join('\n'),
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `Processed ${lines.length} lines with AWK`,
+        explanation: `Executed AWK expression "${exprArg}" over column data in "${fileArg}".`,
+        targetNodeId: targetId || undefined,
+      },
+    };
+  }
+
+  // --- 22. wc ---
+  if (cmd === 'wc') {
+    const countLines = args.includes('-l');
+    const countWords = args.includes('-w');
+    const countChars = args.includes('-c') || args.includes('-m');
+
+    const cleanArgs = args.filter(a => !a.startsWith('-'));
+    const fileArg = cleanArgs[0];
+
+    if (!fileArg) {
+      return {
+        output: '0 0 0',
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'Word count', explanation: 'Counted empty input.' },
+      };
+    }
+
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
+    const targetNode = targetId ? nodes[targetId] : undefined;
+
+    if (!targetNode || targetNode.type === 'directory') {
+      return {
+        output: `wc: ${fileArg}: ${!targetNode ? 'No such file or directory' : 'Is a directory'}`,
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'File error', explanation: `File ${fileArg} not found.` },
+      };
+    }
+
+    const text = targetNode.content || '';
+    const linesCount = text ? text.split('\n').length : 0;
+    const wordsCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+    const charsCount = text.length;
+
+    let outParts: string[] = [];
+    if (countLines) outParts.push(String(linesCount));
+    if (countWords) outParts.push(String(wordsCount));
+    if (countChars) outParts.push(String(charsCount));
+
+    if (outParts.length === 0) {
+      outParts = [String(linesCount), String(wordsCount), String(charsCount)];
+    }
+
+    return {
+      output: `  ${outParts.join('  ')} ${fileArg}`,
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `Counted ${linesCount} lines, ${wordsCount} words, ${charsCount} bytes`,
+        explanation: `Ran wc (word count) on file "${fileArg}".`,
+        targetNodeId: targetId || undefined,
+      },
+    };
+  }
+
+  // --- 23. head & tail ---
+  if (cmd === 'head' || cmd === 'tail') {
+    let numLines = 10;
+    const nIdx = args.indexOf('-n');
+    if (nIdx !== -1 && args[nIdx + 1]) {
+      numLines = parseInt(args[nIdx + 1], 10) || 10;
+    }
+
+    const cleanArgs = args.filter((a, idx) => !a.startsWith('-') && (idx === 0 || args[idx - 1] !== '-n'));
+    const fileArg = cleanArgs[0] || 'welcome.txt';
+
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
+    const targetNode = targetId ? nodes[targetId] : undefined;
+
+    if (!targetNode || targetNode.type === 'directory') {
+      return {
+        output: `${cmd}: cannot open '${fileArg}' for reading: No such file or directory`,
+        newSnapshot: snapshot,
+        stepRecord: { command: line, diff: 'File error', explanation: `File ${fileArg} not found.` },
+      };
+    }
+
+    const lines = (targetNode.content || '').split('\n');
+    const sliced = cmd === 'head' ? lines.slice(0, numLines) : lines.slice(-numLines);
+
+    return {
+      output: sliced.join('\n'),
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `Printed ${sliced.length} lines`,
+        explanation: `Printed ${cmd} ${numLines} lines of file "${fileArg}".`,
+        targetNodeId: targetId || undefined,
+      },
+    };
+  }
+
+  // --- 24. apt & apt-get (Package Manager) ---
+  if (cmd === 'apt' || cmd === 'apt-get') {
+    const subCmd = args[0] || 'help';
+    const pkgName = args[1] || '';
+
+    if (subCmd === 'update') {
+      return {
+        output: `Hit:1 http://archive.ubuntu.com/ubuntu jammy InRelease\nGet:2 http://archive.ubuntu.com/ubuntu jammy-updates InRelease [119 kB]\nGet:3 http://security.ubuntu.com/ubuntu jammy-security InRelease [110 kB]\nFetched 229 kB in 1s (230 kB/s)\nReading package lists... Done\nBuilding dependency tree... Done\nAll packages are up to date.`,
+        newSnapshot: nextSnapshot,
+        stepRecord: { command: line, diff: 'Package index updated', explanation: 'Updated package lists from simulated Ubuntu repositories.' },
+      };
+    }
+
+    if (subCmd === 'install') {
+      if (!pkgName) {
+        return {
+          output: `${cmd}: missing package name argument`,
+          newSnapshot: snapshot,
+          stepRecord: { command: line, diff: 'Syntax error', explanation: 'apt install requires a package name.' },
+        };
+      }
+      return {
+        output: `Reading package lists... Done\nBuilding dependency tree... Done\nThe following NEW packages will be installed: ${pkgName}\n0 upgraded, 1 newly installed, 0 to remove.\nNeed to get 1,420 kB of archives.\nUnpacking ${pkgName}...\nSetting up ${pkgName} (1.2.0-1)... Done.`,
+        newSnapshot: nextSnapshot,
+        stepRecord: {
+          command: line,
+          diff: `+ Installed package: ${pkgName}`,
+          explanation: `Simulated installation of system package "${pkgName}".`,
+        },
+      };
+    }
+
+    if (subCmd === 'list' || subCmd === 'search') {
+      return {
+        output: `vim/jammy,now 2:8.2.3995-1ubuntu2.1 amd64 [installed]\nnano/jammy,now 6.2-1 amd64 [installed]\ntree/jammy 2.0.2-1 amd64\nhtop/jammy 3.0.5-1 amd64\npython3/jammy,now 3.10.6-1 amd64 [installed]\ngcc/jammy,now 4:11.2.0-1ubuntu1 amd64 [installed]\ncurl/jammy,now 7.81.0-1ubuntu1 amd64 [installed]`,
+        newSnapshot: nextSnapshot,
+        stepRecord: { command: line, diff: 'Package list queried', explanation: 'Queried APT package repository database.' },
+      };
+    }
+
+    return {
+      output: `apt 2.4.8 (amd64)\nUsage: apt [options] command\nCommands: update, install, remove, list, search`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: 'APT Help', explanation: 'Displayed APT package manager usage.' },
+    };
+  }
+
+  // --- 25. ssh (Secure Shell) ---
+  if (cmd === 'ssh') {
+    const hostArg = args.find(a => !a.startsWith('-')) || 'student@localhost';
+    return {
+      output: `Connecting to ${hostArg}...\nThe authenticity of host '${hostArg} (192.168.1.105)' can't be established.\nED25519 key fingerprint is SHA256:7uK+X9s39JmP91kLKw0vR2u... \nConnected to ${hostArg} (Ubuntu 22.04.3 LTS Linux 5.15.0-generic).\nLast login: Sat Sep 5 09:10:00 2026 from 10.0.0.1\n[${hostArg} ~]$ `,
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `SSH connected to ${hostArg}`,
+        explanation: `Established simulated secure shell (SSH) terminal session to ${hostArg}.`,
+      },
+    };
+  }
+
+  // --- 26. tree ---
+  if (cmd === 'tree') {
+    const renderTreeAscii = (nodeId: string, indent: string = ''): string[] => {
+      const node = nodes[nodeId];
+      if (!node) return [];
+      const lines: string[] = [];
+      const children = (node.childrenIds || []).map(id => nodes[id]).filter(Boolean);
+
+      children.forEach((child, idx) => {
+        const isLast = idx === children.length - 1;
+        const pointer = isLast ? '└── ' : '├── ';
+        lines.push(`${indent}${pointer}${child.name}${child.type === 'directory' ? '/' : ''}`);
+        if (child.type === 'directory') {
+          const nextIndent = indent + (isLast ? '    ' : '│   ');
+          lines.push(...renderTreeAscii(child.id, nextIndent));
+        }
+      });
+
+      return lines;
+    };
+
+    const treeLines = ['.', ...renderTreeAscii(nextSnapshot.currentDirId)];
+    return {
+      output: treeLines.join('\n'),
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: 'Rendered tree graph',
+        explanation: `Rendered recursive directory tree structure for active working location.`,
+        targetNodeId: nextSnapshot.currentDirId,
+      },
+    };
+  }
+
+  // --- 27. curl & ping ---
+  if (cmd === 'curl') {
+    const url = args.find(a => !a.startsWith('-')) || 'http://example.com';
+    return {
+      output: `<!doctype html>\n<html>\n<head><title>Example Domain</title></head>\n<body>\n<h1>Example Domain</h1>\n<p>This domain is for use in illustrative examples in documents.</p>\n</body>\n</html>`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Fetched URL ${url}`, explanation: `Simulated HTTP GET request to ${url}.` },
+    };
+  }
+
+  if (cmd === 'ping') {
+    const host = args.find(a => !a.startsWith('-')) || 'google.com';
+    return {
+      output: `PING ${host} (142.250.190.46) 56(84) bytes of data.\n64 bytes from ${host}: icmp_seq=1 ttl=117 time=14.2 ms\n64 bytes from ${host}: icmp_seq=2 ttl=117 time=13.8 ms\n64 bytes from ${host}: icmp_seq=3 ttl=117 time=15.1 ms\n--- ${host} ping statistics ---\n3 packets transmitted, 3 received, 0% packet loss, time 2003ms\nrtt min/avg/max/mdev = 13.841/14.380/15.120/0.542 ms`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Pinged host ${host}`, explanation: `Sent ICMP ECHO_REQUEST to network host "${host}".` },
+    };
+  }
+
+  // --- 28. diff ---
+  if (cmd === 'diff') {
+    const f1 = args[0];
+    const f2 = args[1];
+    if (!f1 || !f2) {
+      return { output: 'diff: missing operand after f1', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'diff file1 file2' } };
+    }
+    const n1 = nodes[resolveNodeId(nodes, nextSnapshot.currentDirId, f1) || ''];
+    const n2 = nodes[resolveNodeId(nodes, nextSnapshot.currentDirId, f2) || ''];
+
+    if (!n1 || !n2) {
+      return { output: `diff: ${!n1 ? f1 : f2}: No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'File error', explanation: 'File not found.' } };
+    }
+
+    if (n1.content === n2.content) {
+      return { output: '', newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'Files identical', explanation: `Files ${f1} and ${f2} are identical.` } };
+    }
+
+    return {
+      output: `< ${n1.content || ''}\n---\n> ${n2.content || ''}`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Diff ${f1} vs ${f2}`, explanation: `Compared contents of "${f1}" and "${f2}".` },
     };
   }
 
@@ -842,4 +1266,5 @@ export function executeVFSCommand(
     },
   };
 }
+
 
