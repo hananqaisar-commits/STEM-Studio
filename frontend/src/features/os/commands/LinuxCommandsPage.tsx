@@ -6,8 +6,10 @@ import {
   ChevronRight, Sparkles, BookOpen, Key, Info, HelpCircle
 } from 'lucide-react';
 import { LINUX_COMMAND_GROUPS, type CommandGroup, type CommandItem } from '../../../data/linuxCommandsData';
-import '../../../features/complexity/Complexity.css'; // Reuses established reference table/card styles
-
+import { VisualizerHeader } from '../../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../../components/layout/VisualizerActions';
+import { TheoryPanel } from '../../../components/layout/TheoryPanel';
+import '../../../features/complexity/Complexity.css';
 
 const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
   FolderGit2,
@@ -53,35 +55,36 @@ export const LinuxCommandsPage: React.FC = () => {
   }, [activeGroupId, searchQuery]);
 
   return (
-    <div className="complexity-container animate-fade-in">
-      {/* Category Header */}
-      <div className="complexity-header flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <button className="module-back-btn mb-2" onClick={() => navigate('/dashboard/os')}>
-            <ArrowLeft size={16} /> Back to Operating System
-          </button>
+    <div className="complexity-container animate-fade-in space-y-6">
+      {/* Universal DSA Visualizer Header */}
+      <VisualizerHeader
+        icon={<Terminal size={22} />}
+        title="Commands of Linux"
+        subtitle="Comprehensive reference catalog for 50+ Linux terminal commands across 13 core functional groups"
+        actions={
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <Terminal size={26} />
-            </div>
-            <div>
-              <h1 className="complexity-title">Commands of Linux</h1>
-              <p className="complexity-subtitle">
-                Comprehensive reference catalog for 50+ Linux terminal commands across 13 core functional groups.
-              </p>
-            </div>
+            <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
+              <ArrowLeft size={14} /> Back to OS
+            </button>
+            <VisualizerActions />
           </div>
-        </div>
+        }
+      />
 
-        {/* Global Command Search */}
-        <div className="relative min-w-[280px]">
+      {/* Global Command Search Toolbar */}
+      <div className="bst-toolbar animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-2 text-slate-300 font-semibold text-sm">
+          <BookOpen size={16} className="text-cyan-400" />
+          <span>Interactive Linux Command Reference</span>
+        </div>
+        <div className="relative min-w-[300px]">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search commands, syntax, or keywords..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all"
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-700/60 text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all"
           />
         </div>
       </div>
@@ -266,6 +269,9 @@ export const LinuxCommandsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Theory & Concepts Panel matching DSA module */}
+      <TheoryPanel categoryId="commands" activeTopic={activeGroupId !== 'all' ? activeGroupId : undefined} />
     </div>
   );
 };

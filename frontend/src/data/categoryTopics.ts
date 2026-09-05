@@ -226,4 +226,32 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
       { id: 'autocomplete', name: 'Autocomplete', group: 'O(p+k)' },
     ],
   },
+  // ── Operating Systems ───────────────────────────────────────────
+  {
+    categoryId: 'commands',
+    categoryName: 'Commands of Linux',
+    topics: [
+      { id: 'path-concepts', name: 'Path Concepts', group: 'Group 1' },
+      { id: 'navigation', name: 'Navigation', group: 'Group 2' },
+      { id: 'file-ops', name: 'File & Directory Ops', group: 'Group 3' },
+      { id: 'search-lookup', name: 'Search & Lookup', group: 'Group 4' },
+      { id: 'editors', name: 'Text Editors (Nano & Vim)', group: 'Group 5' },
+      { id: 'user-management', name: 'User Management', group: 'Group 6' },
+      { id: 'group-management', name: 'Group Management', group: 'Group 7' },
+      { id: 'permissions', name: 'Permissions & Ownership', group: 'Group 8' },
+      { id: 'process-management', name: 'Process Management', group: 'Group 9' },
+      { id: 'package-management', name: 'Package Management', group: 'Group 10' },
+      { id: 'network-commands', name: 'Network Commands', group: 'Group 11' },
+      { id: 'system-commands', name: 'System Commands', group: 'Group 12' },
+      { id: 'scheduling', name: 'Scheduling Jobs', group: 'Group 13' },
+    ],
+  },
+  {
+    categoryId: 'filesystem',
+    categoryName: 'File System Simulator',
+    topics: [
+      { id: 'virtual-file-system', name: 'Virtual File System (VFS)', group: 'Visualizer' },
+    ],
+  },
 ];
+
