@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import {
-  Folder, FolderOpen, FileText, HardDrive, Link2, ChevronRight, ChevronDown,
+  Folder, FolderOpen, FileText, FileCode, HardDrive, Link2, ChevronRight, ChevronDown,
   User, Shield, Sparkles, Circle, Network, LayoutList, Move, ArrowLeftRight,
-  Maximize2
+  Maximize2, Settings, Sliders, Terminal, Cpu, FileCheck
 } from 'lucide-react';
 import { type VFSNode, type VFSSnapshot } from './vfs';
 
@@ -13,6 +13,28 @@ interface VFSTreeVisualizerProps {
   onSelectNode?: (nodeId: string) => void;
   isFullscreen?: boolean;
 }
+
+// Helper to classify file node category for realistic shape styling
+const getNodeCategory = (node: VFSNode): 'root' | 'mount' | 'directory' | 'config' | 'script' | 'file' => {
+  if (node.id === 'root') return 'root';
+  if (node.type === 'mount-point' || ['dev', 'proc', 'sys', 'mnt'].includes(node.name)) return 'mount';
+  if (node.type === 'directory') return 'directory';
+
+  const name = node.name.toLowerCase();
+  if (
+    name.endsWith('.conf') ||
+    name.endsWith('.json') ||
+    name.endsWith('.yaml') ||
+    name.endsWith('.rc') ||
+    ['passwd', 'group', 'shadow', 'hosts', 'fstab', 'sudoers', 'bashrc', '.bashrc'].includes(name)
+  ) {
+    return 'config';
+  }
+  if (name.endsWith('.sh') || name.endsWith('.py') || name.endsWith('.js') || name.endsWith('.bin')) {
+    return 'script';
+  }
+  return 'file';
+};
 
 export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   snapshot,
@@ -47,34 +69,44 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
 
   // Helper to resolve icon
   const getNodeIcon = (node: VFSNode, isCollapsed = false) => {
-    if (node.type === 'directory') return isCollapsed ? Folder : FolderOpen;
-    if (node.type === 'mount-point') return HardDrive;
-    if (node.type === 'symlink') return Link2;
+    const cat = getNodeCategory(node);
+    if (cat === 'root') return FolderOpen;
+    if (cat === 'mount') return HardDrive;
+    if (cat === 'directory') return isCollapsed ? Folder : FolderOpen;
+    if (cat === 'config') return Sliders;
+    if (cat === 'script') return Terminal;
     return FileText;
   };
 
-  // Light/Dark theme adaptive node color classes
+  // Light/Dark theme adaptive node color & shape border classes
   const getNodeColorClasses = (node: VFSNode, isCurrentDir: boolean, isTargetActive: boolean, isPathHighlighted: boolean) => {
     if (isCurrentDir) {
-      return 'bg-cyan-500/20 dark:bg-cyan-500/25 text-cyan-800 dark:text-cyan-200 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/50 font-bold';
+      return 'bg-cyan-500/15 text-cyan-900 dark:text-cyan-200 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/50 font-bold';
     }
     if (isTargetActive) {
-      return 'bg-emerald-500/20 dark:bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/50 font-semibold';
+      return 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/50 font-semibold';
     }
     if (isPathHighlighted) {
-      return 'bg-amber-500/20 dark:bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]';
+      return 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]';
     }
 
-    if (node.id === 'root') {
+    const cat = getNodeCategory(node);
+    if (cat === 'root') {
       return 'bg-amber-100 dark:bg-amber-500/15 text-amber-900 dark:text-amber-300 border-amber-400 dark:border-amber-500/40 hover:bg-amber-200 dark:hover:bg-amber-500/25';
     }
-    if (node.type === 'mount-point') {
+    if (cat === 'mount') {
       return 'bg-purple-100 dark:bg-purple-500/15 text-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-500/30 hover:bg-purple-200 dark:hover:bg-purple-500/25';
     }
-    if (node.type === 'directory') {
-      return 'bg-[var(--color-surface)] dark:bg-slate-900/90 text-purple-900 dark:text-cyan-300 border-[var(--color-border)] dark:border-slate-700/80 hover:border-purple-400 dark:hover:border-cyan-500/50 hover:bg-purple-50 dark:hover:bg-slate-800/80';
+    if (cat === 'config') {
+      return 'bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/50 hover:border-amber-500';
     }
-    return 'bg-[var(--color-surface-elevated)] dark:bg-slate-950/80 text-slate-800 dark:text-emerald-300/90 border-[var(--color-border)] dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500/40';
+    if (cat === 'script') {
+      return 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/50 hover:border-emerald-500';
+    }
+    if (cat === 'directory') {
+      return 'bg-white dark:bg-slate-900 text-purple-900 dark:text-cyan-300 border-slate-200 dark:border-slate-700/80 hover:border-purple-400 dark:hover:border-cyan-500/50 hover:bg-purple-50 dark:hover:bg-slate-800/80';
+    }
+    return 'bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-blue-400';
   };
 
   // Track expanded branches in hierarchy view (interactive branch expansion)
@@ -116,18 +148,20 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
 
     return (
       <div className="w-full min-w-[1400px] p-8 flex flex-col items-center gap-10 select-none transition-colors">
-        {/* ROOT NODE (LEVEL 0) */}
+        {/* ROOT NODE (LEVEL 0) - ROOT FOLDER CARD WITH TAB */}
         <div className="flex flex-col items-center relative group">
+          {/* Folder Tab Header Accent */}
+          <div className="w-24 h-2.5 bg-amber-400 dark:bg-amber-500 rounded-t-lg -mb-0.5 z-0 self-start ml-4 border-t border-x border-amber-400/80" />
           <div
             onClick={() => onSelectNode && onSelectNode('root')}
-            className={`px-8 py-4 rounded-2xl border flex items-center gap-3.5 cursor-pointer transition-all shadow-xl backdrop-blur-md ${getNodeColorClasses(
+            className={`z-10 px-8 py-4 rounded-2xl border flex items-center gap-3.5 cursor-pointer transition-all shadow-xl backdrop-blur-md ${getNodeColorClasses(
               rootNode,
               rootId === currentDirId,
               rootId === activeNodeId,
               animatedPathIds.includes('root')
             )}`}
           >
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-500 border border-amber-500/30">
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
               <FolderOpen size={24} />
             </div>
             <div>
@@ -156,6 +190,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
         <div className="w-full relative pt-6 border-t-2 border-purple-500/40 dark:border-purple-500/30 rounded-t-3xl">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-4 items-start">
             {topLevelChildren.map(child => {
+              const cat = getNodeCategory(child);
               const isChildDir = child.type === 'directory' || child.type === 'mount-point';
               const childSubItems = (child.childrenIds || []).map(cid => nodes[cid]).filter(Boolean);
               const isCurrent = child.id === currentDirId;
@@ -171,6 +206,11 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                     isPath ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]' : 'bg-purple-500/40 dark:bg-purple-500/30'
                   }`} />
 
+                  {/* Realistic Folder Tab for Directory Nodes */}
+                  {isChildDir && (
+                    <div className="w-16 h-2 bg-purple-300 dark:bg-purple-700/60 rounded-t-md -mb-2 z-0 self-start ml-2" />
+                  )}
+
                   {/* Level 1 Node Card */}
                   <div
                     onClick={() => {
@@ -179,7 +219,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                         toggleBranchExpanded(child.id);
                       }
                     }}
-                    className={`w-full p-3 rounded-2xl border flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 shadow-md backdrop-blur-sm ${getNodeColorClasses(
+                    className={`z-10 w-full p-3 rounded-2xl border flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 shadow-md backdrop-blur-sm ${getNodeColorClasses(
                       child,
                       isCurrent,
                       isActive,
@@ -187,7 +227,11 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                     )}`}
                   >
                     <div className="flex items-center gap-1.5 font-mono text-xs font-bold truncate max-w-full">
-                      <Icon size={16} className="shrink-0 text-purple-600 dark:text-cyan-400" />
+                      <Icon size={16} className={`shrink-0 ${
+                        cat === 'config' ? 'text-amber-600 dark:text-amber-400' :
+                        cat === 'script' ? 'text-emerald-600 dark:text-emerald-400' :
+                        cat === 'mount' ? 'text-purple-600 dark:text-purple-400' : 'text-purple-600 dark:text-cyan-400'
+                      }`} />
                       <span className="truncate">/{child.name}</span>
                     </div>
 
@@ -217,12 +261,13 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                     </div>
                   </div>
 
-                  {/* LEVEL 2 SUB-BRANCHES - SHOWN UPON BRANCH EXPANSION */}
+                  {/* LEVEL 2 SUB-BRANCHES - DISTINCT SHAPES FOR FILES VS FOLDERS */}
                   {isChildDir && childSubItems.length > 0 && isBranchExpanded && (
                     <div className="w-full flex flex-col items-center pt-1 space-y-1.5 relative animate-fade-in">
                       <div className={`w-0.5 h-3 ${isPath ? 'bg-amber-500' : 'bg-purple-500/40 dark:bg-slate-800'}`} />
-                      <div className="w-full space-y-1.5 bg-[var(--color-surface-elevated)] dark:bg-slate-950/90 p-2 rounded-2xl border border-[var(--color-border)] dark:border-slate-800/90 shadow-md max-h-[220px] overflow-y-auto scrollbar-thin">
+                      <div className="w-full space-y-1.5 bg-white/90 dark:bg-slate-950/90 p-2 rounded-2xl border border-slate-200 dark:border-slate-800/90 shadow-md max-h-[240px] overflow-y-auto scrollbar-thin">
                         {childSubItems.map(sub => {
+                          const subCat = getNodeCategory(sub);
                           const isSubCurrent = sub.id === currentDirId;
                           const isSubActive = sub.id === activeNodeId;
                           const isSubPath = animatedPathIds.includes(sub.id);
@@ -235,7 +280,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                                 e.stopPropagation();
                                 onSelectNode && onSelectNode(sub.id);
                               }}
-                              className={`p-1.5 rounded-xl border text-[11px] font-mono flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] ${getNodeColorClasses(
+                              className={`p-2 rounded-xl border text-[11px] font-mono flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] ${getNodeColorClasses(
                                 sub,
                                 isSubCurrent,
                                 isSubActive,
@@ -243,12 +288,29 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                               )}`}
                             >
                               <div className="flex items-center gap-1.5 truncate">
-                                <SubIcon size={13} className="shrink-0 text-slate-500 dark:text-slate-400" />
+                                <SubIcon size={14} className={`shrink-0 ${
+                                  subCat === 'config' ? 'text-amber-500' :
+                                  subCat === 'script' ? 'text-emerald-500' :
+                                  subCat === 'directory' ? 'text-purple-500' : 'text-blue-500'
+                                }`} />
                                 <span className="truncate font-semibold">{sub.name}</span>
                               </div>
-                              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono px-1 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                                {sub.octalPermissions}
-                              </span>
+                              
+                              <div className="flex items-center gap-1">
+                                {subCat === 'config' && (
+                                  <span className="text-[8px] uppercase tracking-wider px-1 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold border border-amber-400/30">
+                                    CFG
+                                  </span>
+                                )}
+                                {subCat === 'script' && (
+                                  <span className="text-[8px] uppercase tracking-wider px-1 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-400/30">
+                                    SH
+                                  </span>
+                                )}
+                                <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono px-1 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                                  {sub.octalPermissions}
+                                </span>
+                              </div>
                             </div>
                           );
                         })}
@@ -263,6 +325,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       </div>
     );
   };
+
 
   // ── OUTLINE LIST TREE RENDER ─────────────────────────────────────────────
   const renderOutlineNode = (nodeId: string, depth = 0): React.ReactNode => {
