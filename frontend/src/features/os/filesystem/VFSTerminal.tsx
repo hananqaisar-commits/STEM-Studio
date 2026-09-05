@@ -52,49 +52,95 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
     focusTerminal();
   }, [focusTerminal]);
 
-  // Auto scroll to bottom on output update
+  // Auto scroll terminal output ONLY when output history changes (not when typing)
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history, lineText]);
+    if (terminalEndRef.current && history.length > 0) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [history.length]);
 
-  // Helper: Get available children of current working directory for tab completion
-  const getTabCompletions = (prefix: string): string[] => {
-    const currentDir = snapshot.nodes[snapshot.currentDirId];
-    if (!currentDir || !currentDir.childrenIds) return [];
+  // Helper: Resolve directory children for path completion
+  const getPathCompletions = (targetPath: string): { dirPath: string; filter: string; matches: string[] } => {
+    let parentPath = '';
+    let filterPrefix = targetPath;
 
-    const availableNames = currentDir.childrenIds
-      .map(id => snapshot.nodes[id]?.name)
+    if (targetPath.includes('/')) {
+      const lastSlashIdx = targetPath.lastIndexOf('/');
+      parentPath = targetPath.slice(0, lastSlashIdx);
+      filterPrefix = targetPath.slice(lastSlashIdx + 1);
+    }
+
+    // Resolve target directory node
+    let targetDirId = snapshot.currentDirId;
+    if (parentPath === '' && targetPath.startsWith('/')) {
+      targetDirId = 'root';
+    } else if (parentPath === '/') {
+      targetDirId = 'root';
+    } else if (parentPath) {
+      // Find matching directory node
+      const matchingNode = Object.values(snapshot.nodes).find(n => {
+        if (n.type !== 'directory' && n.type !== 'mount-point') return false;
+        return getAbsolutePath(snapshot.nodes, n.id) === parentPath;
+      });
+      if (matchingNode) targetDirId = matchingNode.id;
+    }
+
+    const currentDir = snapshot.nodes[targetDirId];
+    if (!currentDir || !currentDir.childrenIds) return { dirPath: parentPath, filter: filterPrefix, matches: [] };
+
+    const childNames = currentDir.childrenIds
+      .map(id => {
+        const node = snapshot.nodes[id];
+        if (!node) return null;
+        return node.type === 'directory' || node.type === 'mount-point' ? `${node.name}/` : node.name;
+      })
       .filter(Boolean) as string[];
 
-    // If typing first token, also match system commands
-    const isFirstToken = !lineText.trim().includes(' ');
-    const candidates = isFirstToken ? [...COMMAND_LIST, ...availableNames] : availableNames;
-
-    return candidates.filter(name => name.toLowerCase().startsWith(prefix.toLowerCase()));
+    const matches = childNames.filter(name => name.toLowerCase().startsWith(filterPrefix.toLowerCase()));
+    return { dirPath: parentPath, filter: filterPrefix, matches };
   };
 
   // Tab Completion Handler
   const handleTabCompletion = () => {
-    const tokens = lineText.slice(0, cursorPos).split(/\s+/);
+    const textBeforeCursor = lineText.slice(0, cursorPos);
+    const tokens = textBeforeCursor.split(/\s+/);
+    const isFirstToken = tokens.length <= 1;
     const lastToken = tokens[tokens.length - 1] || '';
 
-    const matches = Array.from(new Set(getTabCompletions(lastToken)));
-
-    if (matches.length === 1) {
-      const match = matches[0];
-      const prefixBeforeLastToken = lineText.slice(0, cursorPos - lastToken.length);
-      const suffixAfterCursor = lineText.slice(cursorPos);
-      const newLine = prefixBeforeLastToken + match + (match.endsWith('/') ? '' : ' ') + suffixAfterCursor;
-      setLineText(newLine);
-      setCursorPos((prefixBeforeLastToken + match).length + (match.endsWith('/') ? 0 : 1));
-      setTabPressCount(0);
-    } else if (matches.length > 1) {
-      if (tabPressCount > 0) {
-        // Double tab: Print candidate matches into output
-        onExecuteCommand(`echo "\nPossible completions:\n${matches.join('   ')}"`);
+    if (isFirstToken) {
+      // Complete system command
+      const matches = COMMAND_LIST.filter(cmd => cmd.toLowerCase().startsWith(lastToken.toLowerCase()));
+      if (matches.length === 1) {
+        const completed = matches[0] + ' ';
+        setLineText(completed + lineText.slice(cursorPos));
+        setCursorPos(completed.length);
         setTabPressCount(0);
-      } else {
-        setTabPressCount(1);
+      } else if (matches.length > 1) {
+        if (tabPressCount > 0) {
+          onExecuteCommand(`echo "\nCommand completions:\n${matches.join('   ')}"`);
+          setTabPressCount(0);
+        } else {
+          setTabPressCount(1);
+        }
+      }
+    } else {
+      // Complete path argument
+      const { dirPath, filter, matches } = getPathCompletions(lastToken);
+      if (matches.length === 1) {
+        const match = matches[0];
+        const completedPath = dirPath ? (dirPath.endsWith('/') ? `${dirPath}${match}` : `${dirPath}/${match}`) : match;
+        const prefixBeforeToken = textBeforeCursor.slice(0, textBeforeCursor.length - lastToken.length);
+        const newLine = prefixBeforeToken + completedPath + (completedPath.endsWith('/') ? '' : ' ') + lineText.slice(cursorPos);
+        setLineText(newLine);
+        setCursorPos((prefixBeforeToken + completedPath).length + (completedPath.endsWith('/') ? 0 : 1));
+        setTabPressCount(0);
+      } else if (matches.length > 1) {
+        if (tabPressCount > 0) {
+          onExecuteCommand(`echo "\nPath completions:\n${matches.join('   ')}"`);
+          setTabPressCount(0);
+        } else {
+          setTabPressCount(1);
+        }
       }
     }
   };
