@@ -7,6 +7,7 @@ editor consumes it at build time; the backend reads it from disk here).
 """
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -32,3 +33,77 @@ def load_registry() -> Dict[str, Dict[str, Any]]:
 def get_algorithm(algorithm_key: str) -> Optional[Dict[str, Any]]:
     """Look up an algorithm spec by its composite key (categoryId.topicId)."""
     return load_registry().get(algorithm_key)
+
+
+def validate_submission(algo: Dict[str, Any], language: str, code: str, state: Dict[str, Any]) -> Optional[str]:
+    """Return a user-facing contract error, or ``None`` when the submission is usable.
+
+    Judge0 gives excellent compiler/runtime diagnostics, but it cannot explain
+    the most common editor mistake: pasting a complete program or a method
+    with the wrong name.  Validate that contract before building a wrapper so
+    every algorithm/language pair gets the same method-only experience.
+    """
+    if not code.strip():
+        return "Paste the required method before running it."
+
+    if _has_program_entrypoint(language, code):
+        return "Paste only the required method or class. The studio provides main(), input, and the test harness."
+
+    if algo["kind"] == "class":
+        if not re.search(rf"\b(class|struct|type)\s+{re.escape(algo['entry'])}\b", code):
+            return f"Required class not found: {algo['entry']}"
+        required_methods = [method["name"] for method in algo.get("methods", [])]
+        missing = [name for name in required_methods if not _has_callable(language, code, name)]
+        if missing:
+            return f"Required method not found: {missing[0]}"
+        for op in state.get("operations", []):
+            method = op.get("method") if isinstance(op, dict) else None
+            if method not in required_methods:
+                return f"Unsupported operation for {algo['name']}: {method!s}"
+        return None
+
+    entry = algo["entry"]
+    if not _has_callable(language, code, entry):
+        return f"Required method not found: {entry}({_parameter_hint(algo)})"
+
+    args = state.get("args", {})
+    if not isinstance(args, dict):
+        return "Invalid test input supplied by the studio."
+    missing_args = [param["name"] for param in algo.get("params", []) if param["name"] not in args]
+    if missing_args:
+        return f"Missing test input for: {', '.join(missing_args)}"
+    return None
+
+
+def _has_program_entrypoint(language: str, code: str) -> bool:
+    """Detect wrappers that users must not paste into the method-only editor."""
+    patterns = {
+        "python": r"(?m)^\s*if\s+__name__\s*==\s*['\"]__main__['\"]\s*:",
+        "c": r"\b(?:int|void)\s+main\s*\(",
+        "cpp": r"\b(?:int|void)\s+main\s*\(",
+        "java": r"\bstatic\s+void\s+main\s*\(",
+        "go": r"\bfunc\s+main\s*\(",
+        "csharp": r"\bstatic\s+void\s+Main\s*\(",
+    }
+    return bool(re.search(patterns[language], code))
+
+
+def _has_callable(language: str, code: str, name: str) -> bool:
+    """Match a declaration, not merely a call to the required name."""
+    escaped = re.escape(name)
+    patterns = {
+        "python": rf"(?m)^\s*def\s+{escaped}\s*\(",
+        "go": rf"(?m)^\s*func(?:\s*\([^)]*\))?\s+{escaped}\s*\(",
+        # C-family methods are recognized by a declaration whose name is
+        # followed by parameters and a body. This deliberately accepts the
+        # language-specific return type chosen by the learner.
+        "c": rf"\b{escaped}\s*\([^;{{}}]*\)\s*\{{",
+        "cpp": rf"\b{escaped}\s*\([^;{{}}]*\)\s*\{{",
+        "java": rf"\b{escaped}\s*\([^;{{}}]*\)\s*\{{",
+        "csharp": rf"\b{escaped}\s*\([^;{{}}]*\)\s*\{{",
+    }
+    return bool(re.search(patterns[language], code))
+
+
+def _parameter_hint(algo: Dict[str, Any]) -> str:
+    return ", ".join(param["name"] for param in algo.get("params", []))
