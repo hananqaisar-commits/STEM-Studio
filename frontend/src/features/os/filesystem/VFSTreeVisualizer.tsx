@@ -88,23 +88,23 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       .filter(Boolean);
 
     return (
-      <div className="min-w-[1600px] p-8 flex flex-col items-center gap-10 select-none">
+      <div className="min-w-[2200px] p-8 flex flex-col items-center gap-8 select-none">
         {/* ROOT NODE (LEVEL 0) */}
         <div className="flex flex-col items-center relative group">
           <div
             onClick={() => onSelectNode && onSelectNode('root')}
-            className={`px-6 py-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${getNodeColorClasses(
+            className={`px-8 py-3.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all shadow-xl ${getNodeColorClasses(
               rootNode,
               rootId === currentDirId,
               rootId === activeNodeId,
               animatedPathIds.includes('root')
             )}`}
           >
-            <FolderOpen size={22} className="text-amber-400 shrink-0" />
+            <FolderOpen size={24} className="text-amber-400 shrink-0" />
             <div>
               <div className="font-mono text-base font-bold flex items-center gap-2">
                 <span>/</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-sans">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-sans font-semibold">
                   root
                 </span>
                 {currentDirId === 'root' && (
@@ -113,20 +113,20 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-mono opacity-80 mt-0.5">
+              <div className="flex items-center gap-2 text-[10px] font-mono opacity-90 mt-0.5">
                 <span className="text-emerald-400 font-bold">{rootNode.octalPermissions}</span>
-                <span>{rootNode.permissions}</span>
+                <span className="text-slate-300">{rootNode.permissions}</span>
                 <span className="text-slate-400">{rootNode.owner}:{rootNode.group}</span>
               </div>
             </div>
           </div>
 
           {/* Trunk Vertical Line from Root down */}
-          <div className="w-0.5 h-8 bg-gradient-to-b from-amber-500/60 to-slate-700" />
+          <div className="w-0.5 h-8 bg-gradient-to-b from-amber-500/80 to-slate-600" />
         </div>
 
         {/* LEVEL 1: FHS DIRECTORIES HORIZONTAL ROW */}
-        <div className="w-full flex justify-between items-start gap-4 relative pt-4 border-t-2 border-slate-700/80 rounded-t-xl">
+        <div className="w-full flex justify-between items-start gap-4 relative pt-4 border-t-2 border-slate-700/80 rounded-t-2xl">
           {topLevelChildren.map(child => {
             const isChildDir = child.type === 'directory' || child.type === 'mount-point';
             const childSubItems = (child.childrenIds || []).map(cid => nodes[cid]).filter(Boolean);
@@ -136,16 +136,16 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             const Icon = getNodeIcon(child);
 
             return (
-              <div key={child.id} className="flex flex-col items-center space-y-4 flex-1 min-w-[120px]">
+              <div key={child.id} className="flex flex-col items-center space-y-3 flex-1 min-w-[135px]">
                 {/* Vertical Stem Line from Level 1 Bar */}
-                <div className={`w-0.5 h-6 -mt-4 transition-colors ${
-                  isPath ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' : 'bg-slate-700'
+                <div className={`w-0.5 h-5 -mt-4 transition-colors ${
+                  isPath ? 'bg-amber-400 shadow-[0_0_10px_#f59e0b]' : 'bg-slate-700'
                 }`} />
 
                 {/* Level 1 Node Card */}
                 <div
                   onClick={() => onSelectNode && onSelectNode(child.id)}
-                  className={`w-full p-2.5 rounded-xl border flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 ${getNodeColorClasses(
+                  className={`w-full p-3 rounded-xl border flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 shadow-md ${getNodeColorClasses(
                     child,
                     isCurrent,
                     isActive,
@@ -153,7 +153,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                   )}`}
                 >
                   <div className="flex items-center gap-1.5 font-mono text-xs font-bold truncate max-w-full">
-                    <Icon size={15} className="shrink-0 text-cyan-400" />
+                    <Icon size={16} className="shrink-0 text-cyan-400" />
                     <span className="truncate">/{child.name}</span>
                   </div>
 

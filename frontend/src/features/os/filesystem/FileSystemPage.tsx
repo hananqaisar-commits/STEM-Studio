@@ -23,6 +23,7 @@ import { QuizDock } from '../../../components/quiz/QuizDock';
 import { useQuizSession } from '../../../hooks/useQuizSession';
 import { buildOSQuizCheckpoints, buildOSRevisionData } from './osQuizAdapter';
 import type { QuizCadence } from '../../../engine/types/Quiz';
+import { CATEGORY_TOPICS } from '../../../data/categoryTopics';
 
 import '../../../features/complexity/Complexity.css';
 
@@ -242,6 +243,18 @@ export const FileSystemPage: React.FC = () => {
         icon={<FolderTree size={22} />}
         title="File System Simulator"
         subtitle="Interactive Linux Virtual File System (VFS) Hierarchy, Bash Shell & Terminal Engine"
+        items={[
+          {
+            id: 'virtual-file-system',
+            name: 'Virtual File System (VFS)',
+            description: 'Linux Directory Hierarchy Standard (FHS)',
+          },
+        ]}
+        activeId="virtual-file-system"
+        categories={CATEGORY_TOPICS}
+        activeCategoryId="filesystem"
+        onSelectCategory={(catId) => catId !== 'filesystem' && navigate(`/dashboard/${catId}`)}
+        placeholder="Search Operating System modules..."
         actions={
           <div className="flex items-center gap-3">
             <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
@@ -271,50 +284,52 @@ export const FileSystemPage: React.FC = () => {
       />
 
       {/* Operations Toolbar Matching DSA Studio (Image 1) */}
-      <div className="bst-toolbar animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-2xl border border-slate-800">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="bst-toolbar animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bst-toolbar-left flex items-center gap-2 flex-wrap">
           {/* Step History Controller */}
-          <div className="flex items-center gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-            <button
-              onClick={handlePrevStep}
-              disabled={currentStepIndex === 0}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-slate-100 disabled:opacity-40 disabled:hover:text-slate-300 hover:bg-slate-800"
-              title="Previous command step"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-xs font-mono px-2 text-cyan-400 font-semibold">
-              Step {currentStepIndex + 1} / {stepHistory.length}
-            </span>
-            <button
-              onClick={handleNextStep}
-              disabled={currentStepIndex === stepHistory.length - 1}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-slate-100 disabled:opacity-40 disabled:hover:text-slate-300 hover:bg-slate-800"
-              title="Next command step"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handlePrevStep}
+            disabled={currentStepIndex === 0}
+            className="bst-btn"
+            title="Previous command step"
+          >
+            <ChevronLeft size={14} />
+            <span>Step Back</span>
+          </button>
+          <span className="text-xs font-mono px-3 text-cyan-400 font-semibold bg-slate-950/80 py-1.5 rounded-lg border border-slate-800">
+            Step {currentStepIndex + 1} / {stepHistory.length}
+          </span>
+          <button
+            type="button"
+            onClick={handleNextStep}
+            disabled={currentStepIndex === stepHistory.length - 1}
+            className="bst-btn"
+            title="Next command step"
+          >
+            <span>Step Forward</span>
+            <ChevronRight size={14} />
+          </button>
 
           {/* Reset VFS Button */}
           <button
+            type="button"
             onClick={handleReset}
-            className="px-3 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 text-xs font-semibold flex items-center gap-1.5"
+            className="bst-btn bst-btn-danger"
             title="Reset VFS tree to default FHS state"
           >
-            <RotateCcw size={14} /> Reset VFS
+            <RotateCcw size={14} />
+            <span>Reset VFS</span>
           </button>
 
           {/* FHS Key Concepts Drawer Toggle */}
           <button
+            type="button"
             onClick={() => setShowKeyConcepts(!showKeyConcepts)}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-              showKeyConcepts
-                ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/40'
-                : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
-            }`}
+            className={`bst-btn ${showKeyConcepts ? 'bst-btn-primary' : ''}`}
           >
-            <BookOpen size={14} /> FHS Concepts
+            <BookOpen size={14} />
+            <span>FHS Concepts</span>
           </button>
         </div>
 
