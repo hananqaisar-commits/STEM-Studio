@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FolderTree, RotateCcw, ChevronLeft, ChevronRight, Maximize2, Minimize2,
@@ -19,6 +19,10 @@ import { ExplanationPanel } from '../../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../../components/layout/ResizablePanelRow';
 import { TheoryPanel } from '../../../components/layout/TheoryPanel';
 import { FullScreenCanvasModal } from '../../../components/layout/FullScreenCanvasModal';
+import { QuizDock } from '../../../components/quiz/QuizDock';
+import { useQuizSession } from '../../../hooks/useQuizSession';
+import { buildOSQuizCheckpoints, buildOSRevisionData } from './osQuizAdapter';
+import type { QuizCadence } from '../../../engine/types/Quiz';
 
 import '../../../features/complexity/Complexity.css';
 
@@ -53,6 +57,10 @@ export const FileSystemPage: React.FC = () => {
   // Playback state
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
+  // Quiz Mode State matching DSA module (Image 1)
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [cadence, setCadence] = useState<QuizCadence>('everyStep');
+
   // Layout Toggles matching DSA module
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
@@ -74,6 +82,42 @@ export const FileSystemPage: React.FC = () => {
     initialContent: '',
   });
 
+  // --- Step History Controls (Back / Forward) ---
+  const handlePrevStep = useCallback(() => {
+    if (currentStepIndex > 0) {
+      const idx = currentStepIndex - 1;
+      setCurrentStepIndex(idx);
+      setSnapshot(snapshotHistory[idx]);
+      setActiveNodeId(stepHistory[idx]?.targetNodeId);
+    }
+  }, [currentStepIndex, snapshotHistory, stepHistory]);
+
+  const handleNextStep = useCallback(() => {
+    if (currentStepIndex < stepHistory.length - 1) {
+      const idx = currentStepIndex + 1;
+      setCurrentStepIndex(idx);
+      setSnapshot(snapshotHistory[idx]);
+      setActiveNodeId(stepHistory[idx]?.targetNodeId);
+    }
+  }, [currentStepIndex, snapshotHistory, stepHistory]);
+
+  // Quiz Checkpoints and Session Hook
+  const checkpoints = useMemo(() => buildOSQuizCheckpoints(stepHistory), [stepHistory]);
+  const revisionData = useMemo(() => buildOSRevisionData(), []);
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause: () => setIsPlaying(false),
+    stepForward: handleNextStep,
+    module: 'array',
+    algorithmId: 'filesystem',
+    revisionData,
+  });
+
   // Playback timer effect
   useEffect(() => {
     if (!isPlaying) return;
@@ -85,11 +129,12 @@ export const FileSystemPage: React.FC = () => {
       }
     }, 1200);
     return () => clearInterval(interval);
-  }, [isPlaying, currentStepIndex, stepHistory.length]);
+  }, [isPlaying, currentStepIndex, stepHistory.length, handleNextStep]);
 
   // --- Reset Handler ---
   const handleReset = () => {
     setIsPlaying(false);
+    quizSession.resetSession();
     const fresh = createInitialVFS();
     setSnapshot(fresh);
     setSnapshotHistory([fresh]);
@@ -149,25 +194,6 @@ export const FileSystemPage: React.FC = () => {
     if (result.stepRecord.animatedPathIds) setAnimatedPathIds(result.stepRecord.animatedPathIds);
   };
 
-  // --- Step History Controls (Back / Forward) ---
-  const handlePrevStep = () => {
-    if (currentStepIndex > 0) {
-      const idx = currentStepIndex - 1;
-      setCurrentStepIndex(idx);
-      setSnapshot(snapshotHistory[idx]);
-      setActiveNodeId(stepHistory[idx]?.targetNodeId);
-    }
-  };
-
-  const handleNextStep = () => {
-    if (currentStepIndex < stepHistory.length - 1) {
-      const idx = currentStepIndex + 1;
-      setCurrentStepIndex(idx);
-      setSnapshot(snapshotHistory[idx]);
-      setActiveNodeId(stepHistory[idx]?.targetNodeId);
-    }
-  };
-
   // --- Editor Save Handler ---
   const handleSaveEditorContent = (savedContent: string) => {
     const { fileNodeId, filePath } = editorState;
@@ -211,17 +237,19 @@ export const FileSystemPage: React.FC = () => {
 
   return (
     <div className="bst-page-container animate-fade-in space-y-6">
-      {/* Visualizer Header matching DSA Module */}
+      {/* Visualizer Header matching DSA Module (Image 1) */}
       <VisualizerHeader
         icon={<FolderTree size={22} />}
         title="File System Simulator"
-        subtitle="Interactive Linux Virtual File System (VFS) with live tree visualizer, bash interpreter, Vim/Nano editor, & Octa Tutor"
+        subtitle="Interactive Linux Virtual File System (VFS) Hierarchy, Bash Shell & Terminal Engine"
         actions={
           <div className="flex items-center gap-3">
             <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
               <ArrowLeft size={14} /> Back to OS
             </button>
             <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled(v => !v)}
               debuggerVisible={showDebugger}
               onToggleDebugger={() => setShowDebugger(v => !v)}
               customizeModeEnabled={customizeModeEnabled}
@@ -242,7 +270,7 @@ export const FileSystemPage: React.FC = () => {
         }
       />
 
-      {/* Operations Toolbar Matching DSA Studio */}
+      {/* Operations Toolbar Matching DSA Studio (Image 1) */}
       <div className="bst-toolbar animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-2xl border border-slate-800">
         <div className="flex items-center gap-2 flex-wrap">
           {/* Step History Controller */}
@@ -290,10 +318,10 @@ export const FileSystemPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Help Badge */}
+        {/* Quick Shell Indicator */}
         <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
           <TerminalIcon size={14} className="text-cyan-400" />
-          <span>Prompt: octa@stem-studio</span>
+          <span>Prompt: octa@stem-studio:~</span>
         </div>
       </div>
 
@@ -317,8 +345,43 @@ export const FileSystemPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main Learning Workspace with Resizable Panel Row */}
+      {/* Main Learning Workspace matching DSA Layout (Image 1) */}
       <div className="sorting-workspace scene-workspace">
+        {/* Card 1: Tree Hierarchy Visualizer Canvas */}
+        <div className="renderer-section">
+          <VFSTreeVisualizer
+            snapshot={snapshot}
+            activeNodeId={activeNodeId}
+            animatedPathIds={animatedPathIds}
+            onSelectNode={(id) => setActiveNodeId(id)}
+            isFullscreen={isFullscreen}
+          />
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < stepHistory.length - 1}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onReset={handleReset}
+            onStepBack={handlePrevStep}
+            onStepForward={handleNextStep}
+            onStop={() => { setIsPlaying(false); handleReset(); }}
+            onResume={() => setIsPlaying(true)}
+            quizMode={quizEnabled}
+          />
+        </div>
+
+        {/* Card 2: Quiz Dock matching DSA layout (Image 1) */}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+          />
+        </div>
+
+        {/* Middle Row: Resizable Panel Row for Card 3 (Terminal) & Card 4 (Explanation Card) */}
         <ResizablePanelRow
           storageKey="filesystem"
           customizeModeEnabled={customizeModeEnabled}
@@ -343,6 +406,7 @@ export const FileSystemPage: React.FC = () => {
                 onStepForward={handleNextStep}
                 onStop={() => { setIsPlaying(false); handleReset(); }}
                 onResume={() => setIsPlaying(true)}
+                quizMode={quizEnabled}
               />
             </div>
           }
@@ -368,7 +432,7 @@ export const FileSystemPage: React.FC = () => {
         />
       </div>
 
-      {/* Theory & Concepts Panel matching DSA module */}
+      {/* Card 5: Theory & Core Concepts Panel with Expand All / Collapse All (Image 1) */}
       <TheoryPanel categoryId="filesystem" activeTopic="virtual-file-system" />
 
       {/* Fullscreen Canvas View Modal */}
