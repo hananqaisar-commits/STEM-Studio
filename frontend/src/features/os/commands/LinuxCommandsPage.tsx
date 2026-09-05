@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Terminal, Search, ArrowLeft, FolderGit2, Compass, FolderPlus,
   Edit3, UserCheck, Users, ShieldCheck, Cpu, Package, Globe, Server, Clock,
-  ChevronRight, Sparkles, BookOpen, Key, Info, HelpCircle
+  ChevronRight, Sparkles, BookOpen, Key, Info, HelpCircle, FileText, CheckCircle2
 } from 'lucide-react';
 import { LINUX_COMMAND_GROUPS, type CommandGroup, type CommandItem } from '../../../data/linuxCommandsData';
 import { VisualizerHeader } from '../../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../../components/layout/VisualizerActions';
 import { TheoryPanel } from '../../../components/layout/TheoryPanel';
+import { CATEGORY_TOPICS } from '../../../data/categoryTopics';
 import '../../../features/complexity/Complexity.css';
 
 const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
@@ -31,6 +32,15 @@ export const LinuxCommandsPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeGroupId, setActiveGroupId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Items for VisualizerHeader dropdown search
+  const headerSearchItems = useMemo(() => {
+    return LINUX_COMMAND_GROUPS.map(g => ({
+      id: g.id,
+      name: g.title,
+      description: g.description,
+    }));
+  }, []);
 
   // Filter groups and commands based on active group tab and search query
   const filteredGroups = useMemo(() => {
@@ -55,12 +65,19 @@ export const LinuxCommandsPage: React.FC = () => {
   }, [activeGroupId, searchQuery]);
 
   return (
-    <div className="complexity-container animate-fade-in space-y-6">
-      {/* Universal DSA Visualizer Header */}
+    <div className="complexity-page">
+      {/* Universal Visualizer Header matching Complexity & DSA Studio */}
       <VisualizerHeader
         icon={<Terminal size={22} />}
         title="Commands of Linux"
-        subtitle="Comprehensive reference catalog for 50+ Linux terminal commands across 13 core functional groups"
+        subtitle="Comprehensive reference catalog & interactive Linux terminal commands engine across 13 core functional groups"
+        items={headerSearchItems}
+        activeId={activeGroupId !== 'all' ? activeGroupId : undefined}
+        onSelect={(id) => setActiveGroupId(id)}
+        placeholder="Search Linux commands or groups..."
+        categories={CATEGORY_TOPICS}
+        activeCategoryId="commands"
+        onSelectCategory={(catId) => catId !== 'commands' && navigate(`/dashboard/${catId}`)}
         actions={
           <div className="flex items-center gap-3">
             <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
@@ -75,13 +92,13 @@ export const LinuxCommandsPage: React.FC = () => {
       <div className="bst-toolbar animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-2xl border border-slate-800">
         <div className="flex items-center gap-2 text-slate-300 font-semibold text-sm">
           <BookOpen size={16} className="text-cyan-400" />
-          <span>Interactive Linux Command Reference</span>
+          <span>Interactive Command Reference Catalog</span>
         </div>
-        <div className="relative min-w-[300px]">
+        <div className="relative min-w-[320px]">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search commands, syntax, or keywords..."
+            placeholder="Filter by command name, syntax, or keyword..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-700/60 text-slate-200 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all"
@@ -89,10 +106,10 @@ export const LinuxCommandsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Layout: Group Selection Sidebar/Tabs + Cards Catalog */}
+      {/* Main Catalog Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
-        {/* Left Sidebar: Command Group Filter Navigation */}
-        <div className="lg:col-span-1 space-y-1.5 bg-slate-900/50 p-3 rounded-2xl border border-slate-800/80 h-fit backdrop-blur-sm">
+        {/* Group Selection Sidebar */}
+        <div className="lg:col-span-1 space-y-1.5 bg-slate-900/60 p-3 rounded-2xl border border-slate-800/90 h-fit backdrop-blur-sm shadow-lg">
           <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
             Command Groups ({LINUX_COMMAND_GROUPS.length})
           </div>
@@ -137,7 +154,7 @@ export const LinuxCommandsPage: React.FC = () => {
           })}
         </div>
 
-        {/* Right Section: Command Reference Cards Catalog */}
+        {/* Command Reference Cards Catalog */}
         <div className="lg:col-span-3 space-y-8">
           {filteredGroups.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800">
@@ -193,7 +210,7 @@ export const LinuxCommandsPage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Theory Block (2-3 lines) */}
+                        {/* Theory Block */}
                         <div className="text-sm text-slate-300 leading-relaxed bg-slate-950/40 p-3.5 rounded-xl border border-slate-800/60">
                           <div className="text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
                             <Info size={14} className="text-cyan-400" /> Theory & Purpose
@@ -203,15 +220,15 @@ export const LinuxCommandsPage: React.FC = () => {
 
                         {/* Syntax Block */}
                         <div className="space-y-1.5">
-                          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                            Syntax
+                          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <FileText size={14} className="text-emerald-400" /> Syntax
                           </div>
                           <div className="font-mono text-xs bg-slate-950 text-emerald-400 p-3 rounded-xl border border-slate-800 overflow-x-auto whitespace-pre-wrap">
                             {cmd.syntax}
                           </div>
                         </div>
 
-                        {/* Special Vim 3-Mode Extra Depth Section */}
+                        {/* Special Vim Modes Section */}
                         {cmd.vimModes && (
                           <div className="mt-4 p-4 rounded-xl bg-slate-950/80 border border-cyan-500/30 space-y-3">
                             <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
@@ -240,8 +257,8 @@ export const LinuxCommandsPage: React.FC = () => {
 
                         {/* Real-Life Examples Block */}
                         <div className="space-y-2">
-                          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                            Real-Life Examples
+                          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <CheckCircle2 size={14} className="text-cyan-400" /> Real-Life Examples
                           </div>
                           <div className="space-y-2">
                             {cmd.examples.map((ex, idx) => (
