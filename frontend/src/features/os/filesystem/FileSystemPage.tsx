@@ -11,7 +11,8 @@ import { VimNanoModal } from './VimNanoModal';
 import { createInitialVFS, type VFSSnapshot, getAbsolutePath } from './vfs';
 import { executeVFSCommand, type CommandExecutionResult } from './vfsInterpreter';
 import { useTutorContext } from '../../../contexts/TutorContext';
-import '../../complexity/ComplexityPage.css';
+import '../../../features/complexity/Complexity.css';
+
 
 export const FileSystemPage: React.FC = () => {
   const navigate = useNavigate();

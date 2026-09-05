@@ -6,7 +6,8 @@ import {
   ChevronRight, Sparkles, BookOpen, Key, Info, HelpCircle
 } from 'lucide-react';
 import { LINUX_COMMAND_GROUPS, type CommandGroup, type CommandItem } from '../../../data/linuxCommandsData';
-import '../../complexity/ComplexityPage.css'; // Reuses established reference table/card styles
+import '../../../features/complexity/Complexity.css'; // Reuses established reference table/card styles
+
 
 const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
   FolderGit2,
