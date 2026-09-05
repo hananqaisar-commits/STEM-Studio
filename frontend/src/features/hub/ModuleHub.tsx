@@ -3,24 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-  Sparkles, X, ArrowLeft, type LucideIcon,
+  Sparkles, X, ArrowLeft, Terminal, FolderTree, type LucideIcon,
 } from 'lucide-react';
-import { MODULES, DSA_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
 import './DSAHub.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
+  Terminal, FolderTree,
 };
 
 /**
  * Resolve which categories belong to a given module.
- * Currently all categories belong to DSA; future modules will add their own.
  */
 function getCategoriesForModule(moduleId: string): CategoryDef[] {
   if (moduleId === 'dsa') return DSA_CATEGORIES;
+  if (moduleId === 'os') return OS_CATEGORIES;
   return [];
 }
+
 
 interface ModuleHubProps {
   moduleId: string;

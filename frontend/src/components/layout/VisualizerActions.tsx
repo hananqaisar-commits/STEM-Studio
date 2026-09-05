@@ -3,8 +3,8 @@ import { HelpCircle, Terminal, Sparkles, Layout, RefreshCw } from 'lucide-react'
 
 interface VisualizerActionsProps {
   /** Whether Quiz Mode is currently on. */
-  quizEnabled: boolean;
-  onToggleQuiz: () => void;
+  quizEnabled?: boolean;
+  onToggleQuiz?: () => void;
   /** Standalone quiz entry. */
   onStartQuiz?: () => void;
   /** Omit both debugger props on pages without a debugger panel. */
@@ -29,7 +29,7 @@ interface VisualizerActionsProps {
  * all state lives in the page, so toggling the debugger never resets execution.
  */
 export const VisualizerActions: React.FC<VisualizerActionsProps> = ({
-  quizEnabled,
+  quizEnabled = false,
   onToggleQuiz,
   onStartQuiz,
   debuggerVisible,
@@ -41,15 +41,17 @@ export const VisualizerActions: React.FC<VisualizerActionsProps> = ({
 }) => {
   return (
     <div className="viz-actions">
-      <button
-        type="button"
-        className="viz-action-btn viz-action-quiz"
-        onClick={onStartQuiz ?? onToggleQuiz}
-        title="Start Quiz Mode"
-      >
-        <HelpCircle size={14} />
-        <span>Quiz Mode</span>
-      </button>
+      {onToggleQuiz && (
+        <button
+          type="button"
+          className="viz-action-btn viz-action-quiz"
+          onClick={onStartQuiz ?? onToggleQuiz}
+          title="Start Quiz Mode"
+        >
+          <HelpCircle size={14} />
+          <span>Quiz Mode</span>
+        </button>
+      )}
 
 
       {onToggleDebugger && (

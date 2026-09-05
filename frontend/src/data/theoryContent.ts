@@ -1433,4 +1433,139 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
       },
     ],
   },
+  commands: {
+    categoryId: 'commands',
+    overview:
+      'Linux Terminal Commands provide powerful control over operating system resources, filesystem navigation, permissions, user management, and process execution.',
+    topics: [
+      {
+        id: 'path-concepts',
+        name: 'Path Concepts',
+        complexity: 'O(1)',
+        description: 'Understanding absolute paths starting from root / versus relative paths starting from current working directory.',
+        keyPoints: [
+          'Absolute paths begin with / (e.g. /home/octa/docs).',
+          'Relative paths start from current directory (e.g. ./docs or ../var).',
+          '~ expands to current user home directory (/home/octa).',
+        ],
+        steps: [
+          'Identify root directory / as anchor.',
+          'Use . for current directory, .. for parent directory.',
+          'Combine path segments separated by forward slash /.',
+        ],
+        example: 'cd /etc (absolute) vs cd ../tmp (relative)',
+        applications: ['Scripting', 'Filesystem traversal', 'System administration'],
+      },
+      {
+        id: 'navigation',
+        name: 'Directory Navigation',
+        complexity: 'O(1)',
+        description: 'Core navigation utilities for inspecting working directory (pwd), changing directories (cd), and listing contents (ls).',
+        keyPoints: [
+          'pwd prints the absolute path of current working directory.',
+          'cd changes active directory, cd - toggles back to previous directory.',
+          'ls lists files and directories with permissions, owner, and size.',
+        ],
+        example: 'ls -la /home/octa',
+        applications: ['Command line navigation', 'Directory auditing'],
+      },
+      {
+        id: 'file-ops',
+        name: 'File & Directory Operations',
+        complexity: 'O(1) - O(n)',
+        description: 'Creating, copying, moving, renaming, removing, and reading files and folders.',
+        keyPoints: [
+          'mkdir -p creates nested directory trees.',
+          'touch updates timestamp or creates empty file.',
+          'cp copies files/dirs (-r for recursive), mv moves or renames.',
+          'rm deletes files, rm -rf recursively removes directories.',
+        ],
+        example: 'mkdir -p project/src && touch project/src/index.js',
+        applications: ['File management', 'Build pipelines', 'Deployment scripts'],
+      },
+      {
+        id: 'search-lookup',
+        name: 'Search & Lookup',
+        complexity: 'O(n)',
+        description: 'Grep regex search and Find file tree matching utilities.',
+        keyPoints: [
+          'grep pattern searches file streams or text line by line.',
+          'find starting_path -name pattern searches filesystem hierarchy.',
+          'which locates binary executables in PATH.',
+        ],
+        example: 'grep -rn "TODO" src/ || find /var/log -name "*.log"',
+        applications: ['Log analysis', 'Code auditing', 'System troubleshooting'],
+      },
+      {
+        id: 'editors',
+        name: 'Text Editors (Nano & Vim)',
+        complexity: 'Interactive',
+        description: 'In-terminal text editors. Vim utilizes 3 distinct modes (Normal, Insert, Visual/Command).',
+        keyPoints: [
+          'Nano is simple modeless editor with bottom shortcut keys (^O save, ^X exit).',
+          'Vim Normal Mode is for navigation & d/y/p commands.',
+          'Vim Insert Mode (i) is for typing text; ESC returns to Normal mode.',
+          'Vim Command-line Mode (:) is for saving (:w) and quitting (:q).',
+        ],
+        example: 'vim /etc/hosts (i to edit, ESC then :wq to save and exit)',
+        applications: ['Remote server configuration', 'Quick text edits without GUI'],
+      },
+      {
+        id: 'user-management',
+        name: 'User Management',
+        complexity: 'Admin / root',
+        description: 'System user creation, deletion, modification, and identity inspection.',
+        keyPoints: [
+          'useradd -m creates user home directory.',
+          'usermod -aG adds user to supplementary groups (e.g. sudo).',
+          'whoami prints current logged-in username; id prints UID and GIDs.',
+        ],
+        example: 'sudo useradd -m -s /bin/bash octa',
+        applications: ['Multi-tenant OS security', 'User access control'],
+      },
+      {
+        id: 'permissions',
+        name: 'Permissions & Ownership',
+        complexity: 'POSIX ACL',
+        description: 'POSIX file permissions (rwx) in user/group/others bits, numeric octal modes (755, 644), and Sticky Bit (1777).',
+        keyPoints: [
+          'r=4, w=2, x=1. Octal 755 = rwxr-xr-x (User full, Group/Others read+execute).',
+          'chmod modifies mode bits, chown modifies owner and group.',
+          'Sticky Bit (1777) on /tmp ensures users can only delete their own files.',
+        ],
+        example: 'chmod 755 script.sh && chown octa:developers script.sh',
+        applications: ['System security', 'Web server document root permissions'],
+      },
+    ],
+  },
+  filesystem: {
+    categoryId: 'filesystem',
+    overview:
+      'The Linux Virtual File System (VFS) abstracts disk and memory structures into a unified tree hierarchy governed by the Filesystem Hierarchy Standard (FHS).',
+    topics: [
+      {
+        id: 'virtual-file-system',
+        name: 'Virtual File System (VFS)',
+        complexity: 'O(log n) tree ops',
+        description:
+          'In-memory hierarchical tree representation of Linux directory structures with live node state, permissions, owner tracking, and bash stateful interpreter.',
+        keyPoints: [
+          'FHS defines root /, /etc (configs), /home (users), /var (logs), /tmp (temp).',
+          'In-memory single source of truth snapshot tracks every node modification.',
+          'Stateful execution updates PWD, creates/deletes nodes, and tracks permission changes.',
+          'Tree Visualizer dynamically animates active paths and updates PWD focus.',
+        ],
+        steps: [
+          'User enters bash command in interactive terminal.',
+          'VFS interpreter parses command arguments & active PWD context.',
+          'Snapshot mutates node tree (mkdir/touch/rm/chmod/chown).',
+          'Tree visualizer highlights target node & updates active path.',
+          'Step history records diff, explanation, and command log for playback & Octa Tutor.',
+        ],
+        example: 'mkdir -p /home/octa/code && touch /home/octa/code/main.py',
+        applications: ['OS kernel design', 'Virtual file systems', 'Cloud container rootfs'],
+      },
+    ],
+  },
 };
+
