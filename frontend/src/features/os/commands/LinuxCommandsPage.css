@@ -1,0 +1,39 @@
+/* Linux Commands — dense reference, premium learning workspace */
+.linux-commands-page { max-width: 1540px; margin: 0 auto; padding-bottom: 2.5rem; }
+
+.linux-commands-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1.25rem;
+  padding: 0.85rem 1rem; border: 1px solid var(--color-border); border-radius: 18px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: 0 12px 30px rgba(58, 31, 93, 0.06); backdrop-filter: blur(18px);
+}
+.linux-commands-toolbar__intro, .linux-commands-toolbar__actions { display: flex; align-items: center; gap: 0.65rem; }
+.linux-commands-toolbar__actions { margin-left: 0.5rem; }
+.linux-commands-toolbar button { min-height: 32px; }
+.linux-commands-search { position: relative; width: min(100%, 360px); flex: 0 1 360px; }
+.linux-commands-search input { width: 100%; min-width: 0; }
+
+.linux-commands-catalog { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 1.25rem; margin-top: 1.25rem; align-items: start; }
+.linux-commands-groups {
+  position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto;
+  padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 18px;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent); box-shadow: var(--shadow-sm);
+}
+.linux-commands-results { min-width: 0; }
+.linux-commands-results > div { margin-bottom: 1.75rem; }
+.linux-commands-results > div > div:first-child { padding: 0.15rem 0 0.75rem; }
+.linux-commands-results h2 { letter-spacing: -0.025em; }
+.linux-commands-results [class*="rounded-2xl"] { border-radius: 16px; }
+.linux-commands-results .font-mono { letter-spacing: -0.015em; }
+
+@media (max-width: 900px) {
+  .linux-commands-catalog { grid-template-columns: 1fr; }
+  .linux-commands-groups { position: static; max-height: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
+  .linux-commands-groups > div { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .linux-commands-toolbar, .linux-commands-toolbar__intro { align-items: stretch; flex-direction: column; }
+  .linux-commands-toolbar__actions { margin-left: 0; }
+  .linux-commands-search { width: 100%; flex-basis: auto; }
+  .linux-commands-groups { grid-template-columns: 1fr; }
+}
