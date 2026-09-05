@@ -655,6 +655,76 @@
   width: 64px !important;
   min-width: 64px !important;
   max-width: 64px !important;
+  padding: 1.25rem 0 !important;
+  align-items: center !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-dashboard-row,
+.topic-sidebar.is-collapsed .topic-list,
+.topic-sidebar.is-collapsed .module-group {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-dashboard-row {
+  margin-bottom: 0.75rem !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-dashboard-btn,
+.topic-sidebar.is-collapsed .topic-card.module-card {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 auto 0.4rem auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 12px !important;
+  box-sizing: border-box !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-item-icon {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-dashboard-btn.active,
+.topic-sidebar.is-collapsed .topic-card.module-card.active {
+  background: rgba(147, 51, 234, 0.25) !important;
+  border: 1px solid rgba(192, 132, 252, 0.4) !important;
+  box-shadow: 0 4px 16px rgba(147, 51, 234, 0.35) !important;
+  color: #ffffff !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-dashboard-btn.active .sidebar-item-icon,
+.topic-sidebar.is-collapsed .topic-card.module-card.active .sidebar-item-icon {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-bottom-profile {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  padding: 0.75rem 0 !important;
+  margin-top: auto !important;
+}
+
+.topic-sidebar.is-collapsed .sidebar-user-avatar {
+  margin: 0 auto !important;
 }
 
 /* Expanded Hover/Open State: 260px width */
@@ -669,6 +739,7 @@
 [data-theme='light'] .topic-sidebar.is-expanded {
   box-shadow: 12px 0 36px rgba(0, 0, 0, 0.08);
 }
+
 
 /* Dashboard main margin adjustment for desktop */
 .dashboard-main {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
 import {
-  Home, Bell, Settings, Moon, Sun, User, LogOut, Code2, Layers, Menu
+  Home, Bell, Settings, Moon, Sun, User, LogOut, Code2, Layers, Menu, Monitor
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -34,6 +34,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
       setActiveTab('home');
     } else if (location.pathname.includes('/dashboard/dsa')) {
       setActiveTab('dsa');
+    } else if (location.pathname.includes('/dashboard/os')) {
+      setActiveTab('os');
     } else if (location.pathname.startsWith('/dashboard/')) {
       setActiveTab('visualizer');
     }
@@ -56,12 +58,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
       navigate('/dashboard');
     } else if (tabId === 'dsa') {
       navigate('/dashboard/dsa');
+    } else if (tabId === 'os') {
+      navigate('/dashboard/os');
     } else if (tabId === 'settings') {
       setShowSettingsModal(true);
     } else if (tabId === 'theme') {
       setTheme(theme === 'dark' ? 'light' : 'dark');
     }
   };
+
 
   return (
     <LazyMotion features={domAnimation}>
@@ -130,6 +135,29 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 )}
               </AnimatePresence>
             </m.button>
+
+            {/* Operating System Modules Tab */}
+            <m.button
+              layout
+              onClick={() => handleTabClick('os')}
+              className={`expandable-tab-btn ${activeTab === 'os' ? 'active' : ''}`}
+            >
+              <Monitor size={18} className="tab-icon" />
+              <AnimatePresence initial={false}>
+                {activeTab === 'os' && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text"
+                  >
+                    OS Modules
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </m.button>
+
 
             {/* Visualizer Tab */}
             <m.button
