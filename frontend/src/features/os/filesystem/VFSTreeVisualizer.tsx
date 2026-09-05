@@ -77,7 +77,34 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     return 'bg-[var(--color-surface-elevated)] dark:bg-slate-950/80 text-slate-800 dark:text-emerald-300/90 border-[var(--color-border)] dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500/40';
   };
 
-  // ── GRAPHICAL HIERARCHY TREE RENDER WITH SVG CONNECTORS ─────────────────────
+  // Track expanded branches in hierarchy view (interactive branch expansion)
+  const [expandedBranchIds, setExpandedBranchIds] = useState<Set<string>>(() => {
+    const initial = new Set<string>(['home', 'etc', 'var', 'bin']);
+    if (currentDirId && currentDirId !== 'root') initial.add(currentDirId);
+    return initial;
+  });
+
+  const toggleBranchExpanded = (nodeId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedBranchIds(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  };
+
+  const expandAllBranches = () => {
+    const rootNode = snapshot.nodes['root'];
+    if (!rootNode || !rootNode.childrenIds) return;
+    setExpandedBranchIds(new Set(rootNode.childrenIds));
+  };
+
+  const collapseAllBranches = () => {
+    setExpandedBranchIds(new Set<string>());
+  };
+
+  // ── GRAPHICAL HIERARCHY TREE RENDER WITH INTERACTIVE BRANCHES ─────────────────────
   const renderGraphicalHierarchy = () => {
     const rootNode = nodes['root'];
     if (!rootNode) return null;
@@ -134,7 +161,8 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
               const isCurrent = child.id === currentDirId;
               const isActive = child.id === activeNodeId;
               const isPath = animatedPathIds.includes(child.id);
-              const Icon = getNodeIcon(child);
+              const isBranchExpanded = expandedBranchIds.has(child.id);
+              const Icon = getNodeIcon(child, !isBranchExpanded);
 
               return (
                 <div key={child.id} className="flex flex-col items-center space-y-3 relative group">
@@ -145,7 +173,12 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
 
                   {/* Level 1 Node Card */}
                   <div
-                    onClick={() => onSelectNode && onSelectNode(child.id)}
+                    onClick={() => {
+                      if (onSelectNode) onSelectNode(child.id);
+                      if (isChildDir && childSubItems.length > 0) {
+                        toggleBranchExpanded(child.id);
+                      }
+                    }}
                     className={`w-full p-3 rounded-2xl border flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 shadow-md backdrop-blur-sm ${getNodeColorClasses(
                       child,
                       isCurrent,
@@ -168,19 +201,27 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                       <span className="text-emerald-700 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
                         {child.octalPermissions}
                       </span>
-                      {childSubItems.length > 0 && (
-                        <span className="text-slate-500 dark:text-slate-400 text-[9px]">
-                          ({childSubItems.length} items)
-                        </span>
+                      {isChildDir && childSubItems.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => toggleBranchExpanded(child.id, e)}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-sans font-semibold transition-all ${
+                            isBranchExpanded
+                              ? 'bg-purple-500/20 text-purple-700 dark:text-cyan-300 border border-purple-500/30'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-purple-100'
+                          }`}
+                        >
+                          {isBranchExpanded ? 'Hide' : `+${childSubItems.length}`}
+                        </button>
                       )}
                     </div>
                   </div>
 
-                  {/* LEVEL 2 SUB-BRANCHES - ALL CHILD NODES (1 to N) */}
-                  {isChildDir && childSubItems.length > 0 && (
-                    <div className="w-full flex flex-col items-center pt-1 space-y-1.5 relative">
-                      <div className={`w-0.5 h-3 ${isPath ? 'bg-amber-500' : 'bg-purple-500/30 dark:bg-slate-800'}`} />
-                      <div className="w-full space-y-1.5 bg-[var(--color-surface-elevated)] dark:bg-slate-950/80 p-2 rounded-2xl border border-[var(--color-border)] dark:border-slate-800/90 shadow-sm max-h-[220px] overflow-y-auto scrollbar-thin">
+                  {/* LEVEL 2 SUB-BRANCHES - SHOWN UPON BRANCH EXPANSION */}
+                  {isChildDir && childSubItems.length > 0 && isBranchExpanded && (
+                    <div className="w-full flex flex-col items-center pt-1 space-y-1.5 relative animate-fade-in">
+                      <div className={`w-0.5 h-3 ${isPath ? 'bg-amber-500' : 'bg-purple-500/40 dark:bg-slate-800'}`} />
+                      <div className="w-full space-y-1.5 bg-[var(--color-surface-elevated)] dark:bg-slate-950/90 p-2 rounded-2xl border border-[var(--color-border)] dark:border-slate-800/90 shadow-md max-h-[220px] overflow-y-auto scrollbar-thin">
                         {childSubItems.map(sub => {
                           const isSubCurrent = sub.id === currentDirId;
                           const isSubActive = sub.id === activeNodeId;
@@ -301,6 +342,26 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Branch Expand/Collapse Controls */}
+          {viewMode === 'hierarchy' && (
+            <div className="flex items-center gap-1.5 mr-2">
+              <button
+                type="button"
+                onClick={expandAllBranches}
+                className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-purple-500/10 text-purple-700 dark:text-cyan-300 border border-purple-500/20 hover:bg-purple-500/20"
+              >
+                Expand All
+              </button>
+              <button
+                type="button"
+                onClick={collapseAllBranches}
+                className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-slate-200"
+              >
+                Collapse All
+              </button>
+            </div>
+          )}
+
           {/* Dual Scroll Indicator Badge */}
           <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-800 hidden md:flex items-center gap-1.5">
             <ArrowLeftRight size={13} className="text-purple-600 dark:text-cyan-400" />
