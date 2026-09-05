@@ -193,6 +193,14 @@ export const MODULES: ModuleDef[] = [
     categoryCount: 15,
   },
   {
+    id: 'os',
+    name: 'Operating Systems',
+    description: 'Linux terminal commands, Virtual File System simulator, processes, and permissions',
+    available: true,
+    iconName: 'Monitor',
+    categoryCount: 2,
+  },
+  {
     id: 'dld',
     name: 'Digital Logic Design',
     description: 'Boolean algebra, gates, combinational & sequential circuits',
@@ -200,19 +208,85 @@ export const MODULES: ModuleDef[] = [
     iconName: 'Cpu',
     categoryCount: 0,
   },
+];
+
+/**
+ * Operating System Module OS Options (Windows, macOS, Linux)
+ */
+export interface OSModuleDef {
+  id: string;
+  name: string;
+  description: string;
+  available: boolean;
+  iconName: string;
+  badge?: string;
+  categoryCount: number;
+}
+
+export const OS_DISTROS: OSModuleDef[] = [
   {
-    id: 'os',
-    name: 'Operating Systems',
-    description: 'Processes, scheduling, memory management, file systems',
+    id: 'linux',
+    name: 'Linux OS',
+    description: 'Interactive Linux command reference & live Virtual File System visualizer',
+    available: true,
+    iconName: 'Terminal',
+    categoryCount: 2,
+  },
+  {
+    id: 'windows',
+    name: 'Windows OS',
+    description: 'PowerShell, Command Prompt, and Windows architecture',
     available: false,
-    iconName: 'Monitor',
+    iconName: 'LayoutGrid',
+    badge: 'Coming Soon',
+    categoryCount: 0,
+  },
+  {
+    id: 'macos',
+    name: 'macOS',
+    description: 'Darwin kernel, zsh commands, and macOS directory structure',
+    available: false,
+    iconName: 'Laptop',
+    badge: 'Coming Soon',
     categoryCount: 0,
   },
 ];
 
 /**
- * Look up a category by its route id.
+ * OS Linux Categories Registry
+ */
+export const OS_CATEGORIES: CategoryDef[] = [
+  {
+    id: 'commands',
+    name: 'Commands of Linux',
+    description: 'Comprehensive reference catalog for 50+ Linux commands across 13 functional groups',
+    topicCount: 13,
+    difficulty: 'Beginner',
+    available: true,
+    iconName: 'Terminal',
+  },
+  {
+    id: 'filesystem',
+    name: 'File System Simulator',
+    description: 'Live interactive virtual filesystem with real bash interpreter, tree visualizer, stateful Vim/Nano editor, and permissions mutation tracking',
+    topicCount: 1,
+    difficulty: 'Intermediate',
+    available: true,
+    iconName: 'FolderTree',
+  },
+];
+
+/**
+ * Look up a DSA category by its route id.
  */
 export function getCategoryById(id: string): CategoryDef | undefined {
   return DSA_CATEGORIES.find((c) => c.id === id);
 }
+
+/**
+ * Look up an OS category by its route id.
+ */
+export function getOSCategoryById(id: string): CategoryDef | undefined {
+  return OS_CATEGORIES.find((c) => c.id === id);
+}
+

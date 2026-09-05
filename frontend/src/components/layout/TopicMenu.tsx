@@ -4,9 +4,10 @@ import {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
   Home, ChevronDown, PanelLeftClose, BookOpen, Cpu, Monitor, User as UserIcon,
+  Terminal, FolderTree,
   type LucideIcon,
 } from 'lucide-react';
-import { MODULES, DSA_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
 import { useAuth } from '../../contexts/AuthContext';
 import './Layout.css';
@@ -14,8 +15,9 @@ import './Layout.css';
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-  BookOpen, Cpu, Monitor,
+  BookOpen, Cpu, Monitor, Terminal, FolderTree,
 };
+
 
 interface TopicMenuProps {
   activeModule: string;
@@ -320,6 +322,45 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                     })}
                   </div>
                 )}
+
+                {/* Operating System Categories Container */}
+                {isExpanded && isModuleExpanded && mod.id === 'os' && (
+                  <div className="module-categories-container">
+                    {OS_CATEGORIES.map((cat, index) => {
+                      const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Terminal;
+                      const isCategoryActive = location.pathname.includes(`/dashboard/os/${cat.id}`);
+
+                      return (
+                        <div
+                          key={cat.id}
+                          className={`category-accordion ${isCategoryActive ? 'active' : ''}`}
+                        >
+                          <button
+                            className="category-header"
+                            onClick={() => {
+                              navigate(`/dashboard/os/${cat.id}`);
+                              if (onClose) onClose();
+                            }}
+                            title={`${index + 1}. ${cat.name}`}
+                          >
+                            <div className="category-header-left">
+                              <div className="sidebar-item-icon">
+                                <Icon size={16} />
+                              </div>
+                              {isExpanded && (
+                                <div className="category-meta">
+                                  <span className="category-name">{index + 1}. {cat.name}</span>
+                                  <span className="category-count">{cat.topicCount} {cat.id === 'commands' ? 'Groups' : 'Visualizer'}</span>
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
               </div>
             );
           })}

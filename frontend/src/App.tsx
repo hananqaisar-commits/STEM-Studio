@@ -30,9 +30,14 @@ import { HashMapsPage } from './features/hashMaps/HashMapsPage';
 import { BacktrackingPage } from './features/backtracking/BacktrackingPage';
 import { DPPage } from './features/dp/DPPage';
 import { TriePage } from './features/trie/TriePage';
+import { OSModuleHub } from './features/os/OSModuleHub';
+import { OSCategoriesHub } from './features/os/OSCategoriesHub';
+import { LinuxCommandsPage } from './features/os/commands/LinuxCommandsPage';
+import { FileSystemPage } from './features/os/filesystem/FileSystemPage';
 
 import { TutorProvider } from './contexts/TutorContext';
 import { OctaTutor } from './components/tutor/OctaTutor';
+
 
 /**
  * Protected Route wrapper — redirects to login if not authenticated.
@@ -80,12 +85,11 @@ const DashboardLayout = () => {
   const closeSidebar = () => setIsSidebarOpen(false);
 
   // Determine active module and category from path.
-  // If we are on a DSA category page (e.g. /dashboard/complexity), 
-  // the active module must be 'dsa' so the sidebar correctly shows all DSA categories.
   const isModulePage = MODULES.some(m => m.id === pathSegment);
   const isDsaCategory = DSA_CATEGORIES.some(c => c.id === pathSegment);
+  const isOSPage = pathSegment === 'os';
   
-  const activeModuleId = isModulePage ? pathSegment : (isDsaCategory ? 'dsa' : '');
+  const activeModuleId = isModulePage ? pathSegment : (isOSPage ? 'os' : (isDsaCategory ? 'dsa' : ''));
   const activeCategoryId = isDsaCategory ? pathSegment : '';
 
   return (
@@ -121,6 +125,12 @@ const DashboardLayout = () => {
             <Route path="backtracking" element={<BacktrackingPage />} />
             <Route path="dp" element={<DPPage />} />
             <Route path="trie" element={<TriePage />} />
+
+            {/* Operating System Module Routes */}
+            <Route path="os" element={<OSModuleHub />} />
+            <Route path="os/linux" element={<OSCategoriesHub />} />
+            <Route path="os/commands" element={<LinuxCommandsPage />} />
+            <Route path="os/filesystem" element={<FileSystemPage />} />
           </Routes>
         </main>
       </div>
@@ -128,6 +138,7 @@ const DashboardLayout = () => {
       <OctaTutor />
     </div>
   );
+
 };
 
 const AppContent = () => {
