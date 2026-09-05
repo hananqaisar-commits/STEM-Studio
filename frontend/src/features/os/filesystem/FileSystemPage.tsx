@@ -59,7 +59,7 @@ export const FileSystemPage: React.FC = () => {
 
   // Quiz Mode State matching DSA module (Image 1)
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
-  const [cadence, setCadence] = useState<QuizCadence>('everyStep');
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Layout Toggles matching DSA module
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -113,7 +113,7 @@ export const FileSystemPage: React.FC = () => {
     isPlaying,
     pause: () => setIsPlaying(false),
     stepForward: handleNextStep,
-    module: 'array',
+    module: 'arrays',
     algorithmId: 'filesystem',
     revisionData,
   });

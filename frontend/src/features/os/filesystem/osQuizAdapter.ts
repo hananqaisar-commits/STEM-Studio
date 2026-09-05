@@ -253,16 +253,18 @@ export function buildOSQuizCheckpoints(
 ): QuizCheckpoint[] {
   const checkpoints: QuizCheckpoint[] = [];
 
-  // Map quiz questions to steps
   OS_VFS_QUIZ_BANK.forEach((qDef, idx) => {
     const targetStepIdx = Math.min(idx * 2, Math.max(0, stepHistory.length - 1));
+    const { options, correctIndex } = buildOptions(qDef.id, qDef.correct, qDef.distractors);
+
     const question: QuizQuestion = {
       id: qDef.id,
       prompt: qDef.prompt,
-      options: buildOptions(qDef.correct, qDef.distractors),
+      options,
+      correctIndex,
       explanation: qDef.explanation,
       hint: qDef.hint,
-      weight: (idx % 3) + 1 as 1 | 2 | 3,
+      weight: ((idx % 3) + 1) as 1 | 2 | 3,
       concept: qDef.concept,
     };
 
@@ -277,19 +279,15 @@ export function buildOSQuizCheckpoints(
 
 export function buildOSRevisionData(): QuizRevisionData {
   return {
-    algorithmId: 'filesystem',
-    algorithmName: 'Linux Virtual File System (VFS)',
-    summary: 'Master Linux FHS directory structures, octal permissions, path resolution, and terminal commands.',
-    keyTakeaways: [
-      'Root / is the single anchor of the Linux filesystem hierarchy.',
-      '/etc stores configurations; /var holds logs; /tmp carries the Sticky Bit 1777.',
-      'POSIX permissions (rwx) translate to numeric octal modes (755, 644, 700).',
-      'Vim operates in 3 modes: Normal mode for navigation, Insert mode for typing, Command mode for saving.',
+    description: 'Interactive Linux Virtual File System (VFS) and Filesystem Hierarchy Standard (FHS)',
+    complexity: 'O(1) to O(log n) path resolution',
+    keyIdea: 'Root / is the anchor of the Linux filesystem. POSIX permissions (rwx) translate to 3-digit octal modes (755, 644).',
+    watchFor: [
+      'Sticky Bit (1777) on /tmp allowing users to delete only their own temporary files.',
+      'System-wide configs in /etc vs variable dynamic logs in /var.',
+      'Vim 3-mode operation (Normal, Insert, Command).',
     ],
-    commonPitfalls: [
-      'Confusing / (root directory) with /root (superuser home directory).',
-      'Using rm -rf without verifying active PWD context.',
-      'Forgetting that /tmp Sticky Bit permits deleting only your own files.',
-    ],
+    quickTip: 'Remember that absolute paths always begin with root / while relative paths resolve from current PWD.',
+    example: 'chmod 755 script.sh && ./script.sh',
   };
 }
