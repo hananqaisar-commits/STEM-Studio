@@ -52,19 +52,11 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   // Hover state for 64px docked strip vs expanded pane
   const [isHovered, setIsHovered] = useState(false);
 
-  // Track expanded modules — DSA & OS expanded by default
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(() => new Set(['dsa', 'os']));
+  // Track expanded modules — none expanded by default per user specification
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(() => new Set<string>());
 
-  // Track expanded categories — active category expanded by default
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    if (activeCategory) {
-      initial.add(activeCategory);
-    } else {
-      initial.add('sorting');
-    }
-    return initial;
-  });
+  // Track expanded categories — none expanded by default
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => new Set<string>());
 
   useEffect(() => {
     if (activeCategory) {
