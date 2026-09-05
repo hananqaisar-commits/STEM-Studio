@@ -23,6 +23,7 @@ import { QuizDock } from '../../../components/quiz/QuizDock';
 import { useQuizSession } from '../../../hooks/useQuizSession';
 import { buildOSQuizCheckpoints, buildOSRevisionData } from './osQuizAdapter';
 import type { QuizCadence } from '../../../engine/types/Quiz';
+import { CATEGORY_TOPICS } from '../../../data/categoryTopics';
 
 import '../../../features/complexity/Complexity.css';
 
