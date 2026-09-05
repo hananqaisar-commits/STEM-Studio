@@ -98,7 +98,7 @@ export function createInitialVFS(): VFSSnapshot {
       group: 'root',
       permissions: 'rw-r--r--',
       octalPermissions: '644',
-      content: 'root:x:0:0:root:/root:/bin/bash\nstudent:x:1000:1000:STEM Student:/home/student:/bin/bash',
+      content: 'root:x:0:0:root:/root:/bin/bash\nocta:x:1000:1000:Octa AI:/home/octa:/bin/bash',
       createdAt: now,
       modifiedAt: now,
     },
@@ -111,7 +111,7 @@ export function createInitialVFS(): VFSSnapshot {
       group: 'root',
       permissions: 'rw-r--r--',
       octalPermissions: '644',
-      content: 'root:x:0:\nsudo:x:27:student\nstudent:x:1000:',
+      content: 'root:x:0:\nsudo:x:27:octa\nocta:x:1000:',
       createdAt: now,
       modifiedAt: now,
     },
@@ -134,7 +134,7 @@ export function createInitialVFS(): VFSSnapshot {
       name: 'home',
       type: 'directory',
       parentId: 'root',
-      childrenIds: ['student-home'],
+      childrenIds: ['octa-home'],
       owner: 'root',
       group: 'root',
       permissions: 'rwxr-xr-x',
@@ -142,14 +142,14 @@ export function createInitialVFS(): VFSSnapshot {
       createdAt: now,
       modifiedAt: now,
     },
-    'student-home': {
-      id: 'student-home',
-      name: 'student',
+    'octa-home': {
+      id: 'octa-home',
+      name: 'octa',
       type: 'directory',
       parentId: 'home',
       childrenIds: ['projects-dir', 'bashrc-file', 'welcome-txt'],
-      owner: 'student',
-      group: 'student',
+      owner: 'octa',
+      group: 'octa',
       permissions: 'rwxr-xr-x',
       octalPermissions: '755',
       createdAt: now,
@@ -159,10 +159,10 @@ export function createInitialVFS(): VFSSnapshot {
       id: 'projects-dir',
       name: 'projects',
       type: 'directory',
-      parentId: 'student-home',
+      parentId: 'octa-home',
       childrenIds: ['app-js'],
-      owner: 'student',
-      group: 'student',
+      owner: 'octa',
+      group: 'octa',
       permissions: 'rwxr-xr-x',
       octalPermissions: '755',
       createdAt: now,
@@ -173,8 +173,8 @@ export function createInitialVFS(): VFSSnapshot {
       name: 'app.js',
       type: 'file',
       parentId: 'projects-dir',
-      owner: 'student',
-      group: 'student',
+      owner: 'octa',
+      group: 'octa',
       permissions: 'rw-r--r--',
       octalPermissions: '644',
       content: 'console.log("Hello from Linux STEM Studio!");',
@@ -185,12 +185,12 @@ export function createInitialVFS(): VFSSnapshot {
       id: 'bashrc-file',
       name: '.bashrc',
       type: 'file',
-      parentId: 'student-home',
-      owner: 'student',
-      group: 'student',
+      parentId: 'octa-home',
+      owner: 'octa',
+      group: 'octa',
       permissions: 'rw-r--r--',
       octalPermissions: '644',
-      content: '# STEM Studio Bash Configuration\nexport PS1="\\u@stem-studio:\\w\\$ "\nalias ll="ls -la"',
+      content: '# STEM Studio Premium Zsh/Bash Configuration\nexport PS1="┌──(octa㊀stem-studio)-[\\w]\\n└─\\$ "\nalias ll="ls -la"',
       createdAt: now,
       modifiedAt: now,
     },
@@ -198,12 +198,12 @@ export function createInitialVFS(): VFSSnapshot {
       id: 'welcome-txt',
       name: 'welcome.txt',
       type: 'file',
-      parentId: 'student-home',
-      owner: 'student',
-      group: 'student',
+      parentId: 'octa-home',
+      owner: 'octa',
+      group: 'octa',
       permissions: 'rw-r--r--',
       octalPermissions: '644',
-      content: 'Welcome to the STEM Studio Interactive Virtual File System!\nTry running bash commands like ls, pwd, cd, useradd, chmod, or vim.',
+      content: 'Welcome to Octa STEM Studio Interactive Virtual File System!\nTry running bash commands like ls, pwd, cd, useradd, chmod, or vim.',
       createdAt: now,
       modifiedAt: now,
     },
@@ -234,7 +234,7 @@ export function createInitialVFS(): VFSSnapshot {
       createdAt: now,
       modifiedAt: now,
     },
-    'sess-file': { id: 'sess-file', name: 'sess_temp', type: 'file', parentId: 'tmp', owner: 'student', group: 'student', permissions: 'rw-------', octalPermissions: '600', content: 'temporary session token', createdAt: now, modifiedAt: now },
+    'sess-file': { id: 'sess-file', name: 'sess_temp', type: 'file', parentId: 'tmp', owner: 'octa', group: 'octa', permissions: 'rw-------', octalPermissions: '600', content: 'temporary session token', createdAt: now, modifiedAt: now },
 
     'usr': { id: 'usr', name: 'usr', type: 'directory', parentId: 'root', childrenIds: [], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
     'var': { id: 'var', name: 'var', type: 'directory', parentId: 'root', childrenIds: ['log-dir'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
@@ -245,18 +245,19 @@ export function createInitialVFS(): VFSSnapshot {
   return {
     nodes,
     rootId: 'root',
-    currentDirId: 'student-home',
-    currentUser: 'student',
-    currentGroup: 'student',
+    currentDirId: 'octa-home',
+    currentUser: 'octa',
+    currentGroup: 'octa',
     envVars: {
-      USER: 'student',
-      HOME: '/home/student',
+      USER: 'octa',
+      HOME: '/home/octa',
       SHELL: '/bin/bash',
       PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-      PWD: '/home/student',
+      PWD: '/home/octa',
     },
   };
 }
+
 
 /**
  * Get full absolute path string for a VFS node
@@ -290,12 +291,13 @@ export function resolveNodeId(
 
   // Replace ~ with home directory path
   if (cleaned.startsWith('~')) {
-    const homeNode = Object.values(nodes).find(n => n.name === 'student' && n.parentId === 'home');
+    const homeNode = Object.values(nodes).find(n => n.name === 'octa' && n.parentId === 'home');
     if (homeNode) {
       if (cleaned === '~' || cleaned === '~/') return homeNode.id;
       cleaned = getAbsolutePath(nodes, homeNode.id) + cleaned.substring(1);
     }
   }
+
 
   let startNodeId = currentDirId;
   if (cleaned.startsWith('/')) {

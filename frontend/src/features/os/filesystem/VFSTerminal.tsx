@@ -30,11 +30,9 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
 
   const currentPath = getAbsolutePath(snapshot.nodes, snapshot.currentDirId);
   // Shorten home directory to ~
-  const displayPath = currentPath.startsWith('/home/student')
-    ? currentPath.replace('/home/student', '~')
+  const displayPath = currentPath.startsWith('/home/octa')
+    ? currentPath.replace('/home/octa', '~')
     : currentPath;
-
-  const promptStr = `${snapshot.currentUser}@stem-studio:${displayPath}$`;
 
   // Auto-scroll to bottom when new command output is added
   useEffect(() => {
@@ -81,7 +79,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   ];
 
   return (
-    <div className="w-full bg-slate-950 rounded-2xl border border-slate-800 p-4 font-mono shadow-2xl flex flex-col h-[380px]">
+    <div className="w-full bg-slate-950 rounded-2xl border border-slate-800 p-4 font-mono shadow-2xl flex flex-col h-[400px]">
       {/* Terminal Bar Header */}
       <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-slate-800/90 text-xs font-sans">
         <div className="flex items-center gap-2">
@@ -90,7 +88,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
             <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
             <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
           </div>
-          <span className="text-slate-400 font-mono text-[11px] ml-2">bash — 80x24</span>
+          <span className="text-slate-400 font-mono text-[11px] ml-2">octa@stem-studio — zsh 80x24</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -110,17 +108,27 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
         onClick={() => inputRef.current?.focus()}
       >
         <div className="text-slate-400 text-[11px] pb-1 border-b border-slate-900">
-          Linux stem-studio 5.15.0-88-generic #98-Ubuntu SMP x86_64 bash 5.1.16
+          Linux stem-studio 5.15.0-88-generic #98-Ubuntu SMP x86_64 zsh 5.8.1
           <br />
           Type Linux bash commands below or select a quick shortcut button.
         </div>
 
         {history.map((item, idx) => (
           <div key={idx} className="space-y-0.5">
+            {/* Top Prompt Line */}
+            <div className="text-slate-400 text-[11px] font-mono leading-tight">
+              ┌──(<span className="text-cyan-400 font-bold">{snapshot.currentUser}</span>
+              <span className="text-blue-400 font-bold">㊀</span>
+              <span className="text-cyan-400 font-bold">stem-studio</span>
+              )─[<span className="text-emerald-400 font-bold">{displayPath}</span>]
+            </div>
+            {/* Bottom Input Command Line */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-emerald-400 font-bold">{item.prompt}</span>
+              <span className="text-slate-400 text-xs">└─</span>
+              <span className="text-cyan-400 font-bold">$</span>
               <span className="text-slate-100 font-semibold">{item.command}</span>
             </div>
+
             {item.output && (
               <div
                 className={`whitespace-pre-wrap pl-3 border-l-2 ${
@@ -151,25 +159,38 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
         ))}
       </div>
 
-      {/* Terminal Input Line */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-1">
-        <span className="text-emerald-400 text-xs font-bold shrink-0">{promptStr}</span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type bash command..."
-          className="flex-1 bg-transparent text-xs text-slate-100 placeholder-slate-400 focus:outline-none font-mono"
-        />
-        <button
-          type="submit"
-          className="p-1 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 text-xs"
-        >
-          <Send size={14} />
-        </button>
+      {/* Terminal Active Input Box */}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-0.5 pt-1 border-t border-slate-900">
+        {/* Top Prompt Line */}
+        <div className="text-slate-400 text-[11px] font-mono leading-none">
+          ┌──(<span className="text-cyan-400 font-bold">{snapshot.currentUser}</span>
+          <span className="text-blue-400 font-bold">㊀</span>
+          <span className="text-cyan-400 font-bold">stem-studio</span>
+          )─[<span className="text-emerald-400 font-bold">{displayPath}</span>]
+        </div>
+
+        {/* Bottom Input Command Line */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-400 text-xs">└─</span>
+          <span className="text-cyan-400 font-bold">$</span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputVal}
+            onChange={(e) => setInputVal(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type bash command..."
+            className="flex-1 bg-transparent text-xs text-slate-100 placeholder-slate-400 focus:outline-none font-mono"
+          />
+          <button
+            type="submit"
+            className="p-1 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 text-xs"
+          >
+            <Send size={14} />
+          </button>
+        </div>
       </form>
     </div>
   );
 };
+
