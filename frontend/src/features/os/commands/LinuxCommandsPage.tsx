@@ -12,6 +12,7 @@ import { VisualizerActions } from '../../../components/layout/VisualizerActions'
 import { TheoryPanel } from '../../../components/layout/TheoryPanel';
 import { CATEGORY_TOPICS } from '../../../data/categoryTopics';
 import '../../../features/complexity/Complexity.css';
+import './LinuxCommandsPage.css';
 
 const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
   FolderGit2,
@@ -31,16 +32,16 @@ const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: strin
 
 export const LinuxCommandsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [activeGroupId, setActiveGroupId] = useState<string>('all');
+  const [activeGroupId, setActiveGroupId] = useState<string>('path-concepts');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Track expanded command card IDs (accordion state)
   const [expandedCmdIds, setExpandedCmdIds] = useState<Set<string>>(() => {
-    // Default expand first command of each group
+    // Start focused: displaying a full expanded command from every group made
+    // the reference feel like an overwhelming wall of text on first visit.
     const initial = new Set<string>();
-    LINUX_COMMAND_GROUPS.forEach(g => {
-      if (g.commands[0]) initial.add(g.commands[0].id);
-    });
+    const firstGroup = LINUX_COMMAND_GROUPS.find(g => g.id === 'path-concepts');
+    if (firstGroup?.commands[0]) initial.add(firstGroup.commands[0].id);
     return initial;
   });
 
@@ -104,7 +105,7 @@ export const LinuxCommandsPage: React.FC = () => {
   }, [activeGroupId, searchQuery]);
 
   return (
-    <div className="bst-page-container animate-fade-in space-y-6">
+    <div className="bst-page-container linux-commands-page animate-fade-in space-y-6">
       {/* Universal Visualizer Header matching Complexity & DSA Studio */}
       <VisualizerHeader
         icon={<Terminal size={22} />}
@@ -128,14 +129,14 @@ export const LinuxCommandsPage: React.FC = () => {
       />
 
       {/* Global Command Search & Accordion Controls Toolbar */}
-      <div className="bst-toolbar animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-[var(--color-surface)] dark:bg-slate-900/80 rounded-2xl border border-[var(--color-border)] dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3">
+      <div className="linux-commands-toolbar animate-fade-in">
+        <div className="linux-commands-toolbar__intro">
           <div className="flex items-center gap-2 text-[var(--color-text)] dark:text-slate-200 font-semibold text-sm">
             <BookOpen size={16} className="text-[var(--color-primary)] dark:text-cyan-400" />
             <span>Interactive Command Reference Catalog</span>
           </div>
 
-          <div className="flex items-center gap-2 ml-4">
+          <div className="linux-commands-toolbar__actions">
             <button
               onClick={expandAll}
               type="button"
@@ -153,7 +154,7 @@ export const LinuxCommandsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="relative min-w-[320px]">
+        <div className="linux-commands-search">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] dark:text-slate-400" />
           <input
             type="text"
@@ -166,9 +167,9 @@ export const LinuxCommandsPage: React.FC = () => {
       </div>
 
       {/* Main Catalog Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
+      <div className="linux-commands-catalog">
         {/* Group Selection Sidebar */}
-        <div className="lg:col-span-1 space-y-1.5 bg-[var(--color-surface)] dark:bg-slate-900/60 p-3.5 rounded-2xl border border-[var(--color-border)] dark:border-slate-800/90 h-fit backdrop-blur-sm shadow-sm">
+        <aside className="linux-commands-groups">
           <div className="px-3 py-2 text-xs font-bold text-[var(--color-text-muted)] dark:text-slate-400 uppercase tracking-wider">
             Command Groups ({LINUX_COMMAND_GROUPS.length})
           </div>
@@ -211,10 +212,10 @@ export const LinuxCommandsPage: React.FC = () => {
               </button>
             );
           })}
-        </div>
+        </aside>
 
         {/* Command Reference Cards Catalog */}
-        <div className="lg:col-span-3 space-y-8">
+        <div className="linux-commands-results">
           {filteredGroups.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-[var(--color-surface)] dark:bg-slate-900/40 border border-[var(--color-border)] dark:border-slate-800 shadow-sm">
               <HelpCircle size={40} className="mx-auto text-[var(--color-text-muted)] dark:text-slate-500 mb-3" />
