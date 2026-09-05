@@ -515,6 +515,322 @@ export function executeVFSCommand(
     };
   }
 
+  // --- 12. cp ---
+  if (cmd === 'cp') {
+    const isRecursive = args.includes('-r') || args.includes('-R');
+    const pathArgs = args.filter(a => !a.startsWith('-'));
+
+    if (pathArgs.length < 2) {
+      return { output: 'cp: missing destination file operand', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'cp requires source and destination arguments.' } };
+    }
+
+    const [srcPath, dstPath] = pathArgs;
+    const srcId = resolveNodeId(nodes, nextSnapshot.currentDirId, srcPath);
+
+    if (!srcId || !nodes[srcId]) {
+      return { output: `cp: cannot stat '${srcPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Source not found', explanation: `Source file ${srcPath} not found.` } };
+    }
+
+    const srcNode = nodes[srcId];
+    if (srcNode.type === 'directory' && !isRecursive) {
+      return { output: `cp: -r not specified; omitting directory '${srcPath}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Directory copy omitted', explanation: 'Use cp -r to recursively copy directories.' } };
+    }
+
+    const now = new Date().toISOString().split('T')[0];
+    const newId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const copyNode: VFSNode = {
+      ...JSON.parse(JSON.stringify(srcNode)),
+      id: newId,
+      name: dstPath.split('/').pop() || dstPath,
+      parentId: currentDir.id,
+      createdAt: now,
+      modifiedAt: now,
+    };
+
+    nodes[newId] = copyNode;
+    currentDir.childrenIds = [...(currentDir.childrenIds || []), newId];
+
+    return {
+      output: '',
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `+ Copied ${srcPath} -> ${dstPath}`,
+        explanation: `Duplicated node "${srcPath}" to new destination "${dstPath}". Added node to tree.`,
+        targetNodeId: newId,
+        mutationType: 'create',
+      },
+    };
+  }
+
+  // --- 13. mv ---
+  if (cmd === 'mv') {
+    if (args.length < 2) {
+      return { output: 'mv: missing destination file operand', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'mv requires source and destination.' } };
+    }
+
+    const [srcPath, dstPath] = args;
+    const srcId = resolveNodeId(nodes, nextSnapshot.currentDirId, srcPath);
+
+    if (!srcId || !nodes[srcId]) {
+      return { output: `mv: cannot stat '${srcPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Source not found', explanation: `Source ${srcPath} not found.` } };
+    }
+
+    const srcNode = nodes[srcId];
+    const newName = dstPath.split('/').pop() || dstPath;
+    const oldName = srcNode.name;
+    srcNode.name = newName;
+    srcNode.modifiedAt = new Date().toISOString().split('T')[0];
+
+    return {
+      output: '',
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `Renamed/Moved: ${oldName} -> ${newName}`,
+        explanation: `Moved/Renamed file node from "${oldName}" to "${newName}".`,
+        targetNodeId: srcId,
+        mutationType: 'create',
+      },
+    };
+  }
+
+  // --- 14. echo ---
+  if (cmd === 'echo') {
+    const rawArgs = args.join(' ');
+    // Check for redirection > or >>
+    if (rawArgs.includes('>') || rawArgs.includes('>>')) {
+      const isAppend = rawArgs.includes('>>');
+      const partsSplit = rawArgs.split(isAppend ? '>>' : '>');
+      const textToWrite = partsSplit[0].replace(/["']/g, '').trim();
+      const targetFileName = partsSplit[1].trim();
+
+      const existingId = currentDir.childrenIds?.find(id => nodes[id]?.name === targetFileName);
+      const now = new Date().toISOString().split('T')[0];
+      let targetId = existingId;
+
+      if (!existingId || !nodes[existingId]) {
+        targetId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+        const newFileNode: VFSNode = {
+          id: targetId,
+          name: targetFileName,
+          type: 'file',
+          parentId: currentDir.id,
+          owner: nextSnapshot.currentUser,
+          group: nextSnapshot.currentGroup,
+          permissions: 'rw-r--r--',
+          octalPermissions: '644',
+          content: textToWrite,
+          createdAt: now,
+          modifiedAt: now,
+        };
+        nodes[targetId] = newFileNode;
+        currentDir.childrenIds = [...(currentDir.childrenIds || []), targetId];
+      } else {
+        const fileNode = nodes[existingId];
+        fileNode.content = isAppend ? `${fileNode.content || ''}\n${textToWrite}` : textToWrite;
+        fileNode.modifiedAt = now;
+      }
+
+      return {
+        output: '',
+        newSnapshot: nextSnapshot,
+        stepRecord: {
+          command: line,
+          diff: `${isAppend ? 'Appended' : 'Wrote'} text to ${targetFileName}`,
+          explanation: `Stream redirection (${isAppend ? '>>' : '>'}) wrote "${textToWrite}" into file node "${targetFileName}".`,
+          targetNodeId: targetId,
+          mutationType: 'editor',
+        },
+      };
+    }
+
+    // Standard echo output
+    let echoOutput = rawArgs.replace(/["']/g, '');
+    if (echoOutput.startsWith('$')) {
+      const varName = echoOutput.substring(1);
+      echoOutput = nextSnapshot.envVars[varName] || '';
+    }
+
+    return {
+      output: echoOutput,
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `Echoed string to stdout`,
+        explanation: `Printed string "${echoOutput}" to standard output stream.`,
+        targetNodeId: nextSnapshot.currentDirId,
+      },
+    };
+  }
+
+  // --- 15. export ---
+  if (cmd === 'export') {
+    const expArg = args[0];
+    if (!expArg) {
+      const envLines = Object.entries(nextSnapshot.envVars).map(([k, v]) => `declare -x ${k}="${v}"`);
+      return { output: envLines.join('\n'), newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'Exported env vars', explanation: 'Printed environment variables.' } };
+    }
+
+    if (expArg.includes('=')) {
+      const [k, v] = expArg.split('=');
+      const val = v.replace(/["']/g, '');
+      nextSnapshot.envVars[k] = val;
+
+      // Update ~/.bashrc content
+      const bashrcNode = nodes['bashrc-file'];
+      if (bashrcNode) {
+        bashrcNode.content = (bashrcNode.content || '') + `\nexport ${k}="${val}"`;
+      }
+
+      return {
+        output: '',
+        newSnapshot: nextSnapshot,
+        stepRecord: {
+          command: line,
+          diff: `Environment variable set: ${k}=${val}`,
+          explanation: `Exported environment variable ${k}="${val}" and appended export statement into ~/.bashrc file node.`,
+          targetNodeId: 'bashrc-file',
+          mutationType: 'editor',
+        },
+      };
+    }
+  }
+
+  // --- 16. userdel & groupadd & groupdel & usermod ---
+  if (cmd === 'userdel') {
+    const targetUser = args.find(a => !a.startsWith('-'));
+    if (targetUser) {
+      const userHomeNode = Object.values(nodes).find(n => n.name === targetUser && n.parentId === 'home');
+      if (userHomeNode) {
+        delete nodes[userHomeNode.id];
+        const homeNode = nodes['home'];
+        if (homeNode) homeNode.childrenIds = homeNode.childrenIds?.filter(id => id !== userHomeNode.id);
+      }
+      return {
+        output: '',
+        newSnapshot: nextSnapshot,
+        stepRecord: {
+          command: line,
+          diff: `- Deleted user account ${targetUser}`,
+          explanation: `Deleted user account "${targetUser}" and removed /home/${targetUser} node.`,
+          mutationType: 'delete',
+        },
+      };
+    }
+  }
+
+  if (cmd === 'groupadd') {
+    const groupName = args[0];
+    if (groupName) {
+      const groupFile = nodes['group-file'];
+      if (groupFile) {
+        const gid = 1000 + Object.keys(nodes).length;
+        groupFile.content = (groupFile.content || '') + `\n${groupName}:x:${gid}:`;
+      }
+      return {
+        output: '',
+        newSnapshot: nextSnapshot,
+        stepRecord: {
+          command: line,
+          diff: `+ Added group ${groupName}`,
+          explanation: `Created system group "${groupName}" and appended entry to /etc/group file node.`,
+          targetNodeId: 'group-file',
+          mutationType: 'editor',
+        },
+      };
+    }
+  }
+
+  if (cmd === 'usermod' && args.includes('-aG')) {
+    const grpIdx = args.indexOf('-aG') + 1;
+    const group = args[grpIdx];
+    const user = args[grpIdx + 1];
+    if (group && user) {
+      const groupFile = nodes['group-file'];
+      if (groupFile && groupFile.content) {
+        groupFile.content = groupFile.content.replace(
+          new RegExp(`(${group}:x:\\d+:.*)`),
+          `$1${user},`
+        );
+      }
+      return {
+        output: '',
+        newSnapshot: nextSnapshot,
+        stepRecord: {
+          command: line,
+          diff: `Added user ${user} to group ${group}`,
+          explanation: `Appended user "${user}" to group "${group}" record in /etc/group.`,
+          targetNodeId: 'group-file',
+          mutationType: 'permission',
+        },
+      };
+    }
+  }
+
+  // --- 17. whoami & who & id ---
+  if (cmd === 'whoami') {
+    return {
+      output: nextSnapshot.currentUser,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: 'Identity query', explanation: `Prints effective user name: ${nextSnapshot.currentUser}.` },
+    };
+  }
+
+  if (cmd === 'id') {
+    return {
+      output: `uid=1000(${nextSnapshot.currentUser}) gid=1000(${nextSnapshot.currentGroup}) groups=1000(${nextSnapshot.currentGroup}),27(sudo)`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: 'ID query', explanation: `Prints UID, GID, and supplemental group IDs for active user.` },
+    };
+  }
+
+  if (cmd === 'who') {
+    return {
+      output: `${nextSnapshot.currentUser}  tty7         2026-09-05 07:30 (:0)`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: 'Session query', explanation: 'Displays active shell user sessions.' },
+    };
+  }
+
+  // --- 18. find & grep & head & tail & wc & uname ---
+  if (cmd === 'find') {
+    const matches = Object.values(nodes).map(n => getAbsolutePath(nodes, n.id));
+    return {
+      output: matches.join('\n'),
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Traversed tree (${matches.length} items)`, explanation: `Traversed VFS directory hierarchy matching search pattern.` },
+    };
+  }
+
+  if (cmd === 'grep') {
+    const pattern = args[0] || '';
+    const fileArg = args[1] || 'welcome.txt';
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
+    const targetNode = targetId ? nodes[targetId] : undefined;
+    const fileLines = (targetNode?.content || '').split('\n');
+    const matchedLines = fileLines.filter(l => l.toLowerCase().includes(pattern.toLowerCase()));
+
+    return {
+      output: matchedLines.join('\n') || `(no lines matching "${pattern}")`,
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: `Grep matched ${matchedLines.length} lines`,
+        explanation: `Searched file "${fileArg}" for regex pattern "${pattern}".`,
+        targetNodeId: targetId || undefined,
+      },
+    };
+  }
+
+  if (cmd === 'uname') {
+    return {
+      output: 'Linux stem-studio 5.15.0-88-generic #98-Ubuntu SMP x86_64 x86_64 x86_64 GNU/Linux',
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: 'Kernel query', explanation: 'Printed Linux kernel release details.' },
+    };
+  }
+
   // --- Fallback / Unsupported Command Notice ---
   return {
     output: `bash: ${cmd}: command not supported in this VFS simulator (see Commands of Linux reference section for theoretical usage)`,
@@ -526,3 +842,4 @@ export function executeVFSCommand(
     },
   };
 }
+
