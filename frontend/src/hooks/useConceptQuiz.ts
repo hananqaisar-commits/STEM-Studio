@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { CONCEPT_QUESTIONS, type ConceptQuestion } from '../data/conceptQuestionBank';
+import { CONCEPT_QUESTIONS, conceptQuestionId, type ConceptQuestion } from '../data/conceptQuestionBank';
 
 /* ── useConceptQuiz ────────────────────────────────────────────────────
    Drives Concept Mode (random pool) and Revision Mode (weak-area pool).
@@ -14,12 +14,14 @@ import { CONCEPT_QUESTIONS, type ConceptQuestion } from '../data/conceptQuestion
    ─────────────────────────────────────────────────────────────────── */
 
 const WEAK_AREAS_KEY = 'stem_quiz_weak_areas';
+const REVIEW_HISTORY_KEY = 'stem_quiz_review_history';
 const REVISION_THRESHOLD = 0.6; // accuracy below this = "weak"
 const MIN_ATTEMPTS = 2;         // min answers in a topic to qualify as weak
 const CONCEPT_POOL_SIZE = 12;   // questions per Concept Mode session
 const REVISION_POOL_SIZE = 12;  // questions per Revision Mode session
 
 type TopicStats = Record<string, { wrong: number; total: number }>;
+type ReviewHistory = Record<string, { lastAnsweredAt: number; correct: number; incorrect: number; consecutiveCorrect: number; nextReviewAt: number }>;
 
 function loadWeakAreas(): TopicStats {
   try {
@@ -36,6 +38,22 @@ function saveWeakAreas(stats: TopicStats): void {
   } catch {
     /* quota exceeded — non-fatal */
   }
+}
+
+function loadReviewHistory(): ReviewHistory {
+  try { return JSON.parse(localStorage.getItem(REVIEW_HISTORY_KEY) ?? '{}') as ReviewHistory; } catch { return {}; }
+}
+
+function recordReview(question: ConceptQuestion, correct: boolean): void {
+  const history = loadReviewHistory();
+  const id = conceptQuestionId(question);
+  const previous = history[id] ?? { lastAnsweredAt: 0, correct: 0, incorrect: 0, consecutiveCorrect: 0, nextReviewAt: 0 };
+  const now = Date.now();
+  const streak = correct ? previous.consecutiveCorrect + 1 : 0;
+  const intervals = [1, 3, 7, 14, 28];
+  const days = correct ? intervals[Math.min(streak - 1, intervals.length - 1)] : 0;
+  history[id] = { lastAnsweredAt: now, correct: previous.correct + Number(correct), incorrect: previous.incorrect + Number(!correct), consecutiveCorrect: streak, nextReviewAt: now + days * 86_400_000 };
+  try { localStorage.setItem(REVIEW_HISTORY_KEY, JSON.stringify(history)); } catch { /* non-fatal */ }
 }
 
 function getWeakTopics(stats: TopicStats): string[] {
@@ -60,6 +78,18 @@ function buildPool(mode: 'concept' | 'revision', size: number): ConceptQuestion[
   const stats = loadWeakAreas();
 
   if (mode === 'revision') {
+    const history = loadReviewHistory();
+    if (Object.keys(history).length > 0) {
+      const now = Date.now();
+      return [...CONCEPT_QUESTIONS].sort((a, b) => {
+        const ah = history[conceptQuestionId(a)];
+        const bh = history[conceptQuestionId(b)];
+        const aDue = ah && ah.nextReviewAt <= now ? 0 : 1;
+        const bDue = bh && bh.nextReviewAt <= now ? 0 : 1;
+        if (aDue !== bDue) return aDue - bDue;
+        return (ah?.lastAnsweredAt ?? 0) - (bh?.lastAnsweredAt ?? 0);
+      }).slice(0, size);
+    }
     const weakTopics = getWeakTopics(stats);
     if (weakTopics.length >= 2) {
       // Sample preferentially from weak topics (60%), pad with others
@@ -79,6 +109,7 @@ function buildPool(mode: 'concept' | 'revision', size: number): ConceptQuestion[
 }
 
 function hasEnoughHistory(): boolean {
+  if (Object.keys(loadReviewHistory()).length > 0) return true;
   const stats = loadWeakAreas();
   const weakTopics = getWeakTopics(stats);
   return weakTopics.length >= 2;
@@ -133,6 +164,7 @@ export function useConceptQuiz(mode: 'concept' | 'revision'): ConceptQuizState {
       if (!correct) topicStat.wrong += 1;
       stats[question.topic] = topicStat;
       saveWeakAreas(stats);
+      recordReview(question, correct);
 
       setResults((prev) => [...prev, { topic: question.topic, concept: question.concept, wasCorrect: correct }]);
 

@@ -10,6 +10,7 @@ import {
   type QuizRevisionData,
   type QuestionResult,
 } from '../engine/types/Quiz';
+import { selectDensityCheckpoints } from '../engine/checkpointDensity';
 
 /* ── Quiz session ──────────────────────────────────────────────────────
    Owns the whole learning loop for one visualizer run.
@@ -48,6 +49,8 @@ interface UseQuizSessionArgs {
   cadence: QuizCadence;
   /** Where playback currently is. */
   currentStepIndex: number;
+  /** Actual execution length so Flow Mode scales with the run. */
+  totalSteps?: number;
   isPlaying: boolean;
   /** From useStepPlayer — reused rather than reimplemented. */
   pause: () => void;
@@ -122,6 +125,7 @@ export function useQuizSession({
   checkpoints,
   cadence,
   currentStepIndex,
+  totalSteps,
   isPlaying,
   pause,
   stepForward,
@@ -174,8 +178,9 @@ export function useQuizSession({
     if (challengeMode) {
       return checkpoints.filter((c) => c.stepIndex > 0).slice(0, TRANSFER_CHALLENGE_STEPS);
     }
-    return filterByCadence(checkpoints, cadence);
-  }, [enabled, checkpoints, cadence, challengeMode]);
+    const cadencePoints = filterByCadence(checkpoints, cadence);
+    return totalSteps === undefined ? cadencePoints : selectDensityCheckpoints(cadencePoints, totalSteps);
+  }, [enabled, checkpoints, cadence, challengeMode, totalSteps]);
 
   /* Reset keys off the checkpoint positions, not the array identity: a
      caller that rebuilds its checkpoint array each render would

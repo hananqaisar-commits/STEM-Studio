@@ -253,6 +253,7 @@ export const StackQueuePage: React.FC = () => {
     checkpoints: quizCheckpoints,
     cadence,
     currentStepIndex,
+    totalSteps: activeSteps.length,
     isPlaying,
     pause,
     stepForward,

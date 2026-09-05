@@ -11,6 +11,28 @@ export interface ConceptQuestion extends Omit<QuizQuestion, 'id'> {
   topic: string;
 }
 
+/** Stable identity for per-question review scheduling. */
+export function conceptQuestionId(question: ConceptQuestion): string {
+  return `${question.topic}:${question.concept}:${question.prompt}`;
+}
+
+/** Structural validation for the checked-in (never live-generated) bank. */
+export function validateConceptQuestionBank(questions: ConceptQuestion[]): string[] {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  questions.forEach((question, index) => {
+    const id = conceptQuestionId(question);
+    if (seen.has(id)) errors.push(`Duplicate question at index ${index}`);
+    seen.add(id);
+    if (!question.prompt.trim() || !question.topic.trim() || !question.concept.trim()) errors.push(`Missing metadata at index ${index}`);
+    if (question.options.length !== 4) errors.push(`Question at index ${index} must have four options`);
+    if (question.correctIndex < 0 || question.correctIndex >= question.options.length) errors.push(`Question at index ${index} has invalid answer index`);
+    if (new Set(question.options.map((option) => option.trim().toLowerCase())).size !== question.options.length) errors.push(`Question at index ${index} has duplicate options`);
+    if (question.options.some((option) => !option.trim()) || !question.explanation.trim() || !question.hint.trim()) errors.push(`Question at index ${index} has an empty field`);
+  });
+  return errors;
+}
+
 function q(
   topic: string,
   concept: string,

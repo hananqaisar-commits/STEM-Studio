@@ -185,6 +185,7 @@ export const GraphPage: React.FC = () => {
     checkpoints: quizCheckpoints,
     cadence,
     currentStepIndex,
+    totalSteps: activeSteps.length,
     isPlaying,
     pause,
     stepForward,

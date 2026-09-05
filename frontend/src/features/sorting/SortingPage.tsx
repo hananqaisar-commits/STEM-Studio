@@ -211,6 +211,7 @@ export const SortingPage: React.FC = () => {
     checkpoints: quizCheckpoints,
     cadence,
     currentStepIndex,
+    totalSteps: (customSteps ?? executionData.steps).length,
     isPlaying,
     pause,
     stepForward,
