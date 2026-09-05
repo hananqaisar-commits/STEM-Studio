@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FolderTree, RotateCcw, ChevronLeft, ChevronRight, Maximize2, Minimize2,
@@ -11,13 +11,24 @@ import { VimNanoModal } from './VimNanoModal';
 import { createInitialVFS, type VFSSnapshot, getAbsolutePath } from './vfs';
 import { executeVFSCommand, type CommandExecutionResult } from './vfsInterpreter';
 import { useTutorContext } from '../../../contexts/TutorContext';
-import '../../../features/complexity/Complexity.css';
 
+import { VisualizerHeader } from '../../../components/layout/VisualizerHeader';
+import { VisualizerActions } from '../../../components/layout/VisualizerActions';
+import { FloatingController } from '../../../components/controls/FloatingController';
+import { ExplanationPanel } from '../../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../../components/layout/ResizablePanelRow';
+import { TheoryPanel } from '../../../components/layout/TheoryPanel';
+import { FullScreenCanvasModal } from '../../../components/layout/FullScreenCanvasModal';
+import { QuizDock } from '../../../components/quiz/QuizDock';
+import { useQuizSession } from '../../../hooks/useQuizSession';
+import { buildOSQuizCheckpoints, buildOSRevisionData } from './osQuizAdapter';
+import type { QuizCadence } from '../../../engine/types/Quiz';
+
+import '../../../features/complexity/Complexity.css';
 
 export const FileSystemPage: React.FC = () => {
   const navigate = useNavigate();
   const { toggleTutor } = useTutorContext();
-
 
   // VFS Single Source of Truth Snapshot State
   const [snapshot, setSnapshot] = useState<VFSSnapshot>(() => createInitialVFS());
@@ -43,8 +54,17 @@ export const FileSystemPage: React.FC = () => {
   const [activeNodeId, setActiveNodeId] = useState<string | undefined>('student-home');
   const [animatedPathIds, setAnimatedPathIds] = useState<string[]>([]);
 
-  // Layout Toggles
+  // Playback state
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+
+  // Quiz Mode State matching DSA module (Image 1)
+  const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
+  const [cadence, setCadence] = useState<QuizCadence>('normal');
+
+  // Layout Toggles matching DSA module
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [showDebugger, setShowDebugger] = useState<boolean>(true);
+  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [showKeyConcepts, setShowKeyConcepts] = useState<boolean>(false);
 
   // Editor Modal Trigger State
@@ -62,8 +82,59 @@ export const FileSystemPage: React.FC = () => {
     initialContent: '',
   });
 
+  // --- Step History Controls (Back / Forward) ---
+  const handlePrevStep = useCallback(() => {
+    if (currentStepIndex > 0) {
+      const idx = currentStepIndex - 1;
+      setCurrentStepIndex(idx);
+      setSnapshot(snapshotHistory[idx]);
+      setActiveNodeId(stepHistory[idx]?.targetNodeId);
+    }
+  }, [currentStepIndex, snapshotHistory, stepHistory]);
+
+  const handleNextStep = useCallback(() => {
+    if (currentStepIndex < stepHistory.length - 1) {
+      const idx = currentStepIndex + 1;
+      setCurrentStepIndex(idx);
+      setSnapshot(snapshotHistory[idx]);
+      setActiveNodeId(stepHistory[idx]?.targetNodeId);
+    }
+  }, [currentStepIndex, snapshotHistory, stepHistory]);
+
+  // Quiz Checkpoints and Session Hook
+  const checkpoints = useMemo(() => buildOSQuizCheckpoints(stepHistory), [stepHistory]);
+  const revisionData = useMemo(() => buildOSRevisionData(), []);
+
+  const quizSession = useQuizSession({
+    enabled: quizEnabled,
+    checkpoints,
+    cadence,
+    currentStepIndex,
+    isPlaying,
+    pause: () => setIsPlaying(false),
+    stepForward: handleNextStep,
+    module: 'arrays',
+    algorithmId: 'filesystem',
+    revisionData,
+  });
+
+  // Playback timer effect
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      if (currentStepIndex < stepHistory.length - 1) {
+        handleNextStep();
+      } else {
+        setIsPlaying(false);
+      }
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [isPlaying, currentStepIndex, stepHistory.length, handleNextStep]);
+
   // --- Reset Handler ---
   const handleReset = () => {
+    setIsPlaying(false);
+    quizSession.resetSession();
     const fresh = createInitialVFS();
     setSnapshot(fresh);
     setSnapshotHistory([fresh]);
@@ -123,25 +194,6 @@ export const FileSystemPage: React.FC = () => {
     if (result.stepRecord.animatedPathIds) setAnimatedPathIds(result.stepRecord.animatedPathIds);
   };
 
-  // --- Step History Controls (Back / Forward) ---
-  const handlePrevStep = () => {
-    if (currentStepIndex > 0) {
-      const idx = currentStepIndex - 1;
-      setCurrentStepIndex(idx);
-      setSnapshot(snapshotHistory[idx]);
-      setActiveNodeId(stepHistory[idx]?.targetNodeId);
-    }
-  };
-
-  const handleNextStep = () => {
-    if (currentStepIndex < stepHistory.length - 1) {
-      const idx = currentStepIndex + 1;
-      setCurrentStepIndex(idx);
-      setSnapshot(snapshotHistory[idx]);
-      setActiveNodeId(stepHistory[idx]?.targetNodeId);
-    }
-  };
-
   // --- Editor Save Handler ---
   const handleSaveEditorContent = (savedContent: string) => {
     const { fileNodeId, filePath } = editorState;
@@ -184,30 +236,45 @@ export const FileSystemPage: React.FC = () => {
   ];
 
   return (
-    <div className="complexity-container animate-fade-in space-y-6">
-      {/* Category Header */}
-      <div className="complexity-header flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <button className="module-back-btn mb-2" onClick={() => navigate('/dashboard/os')}>
-            <ArrowLeft size={16} /> Back to Operating System
-          </button>
+    <div className="bst-page-container animate-fade-in space-y-6">
+      {/* Visualizer Header matching DSA Module (Image 1) */}
+      <VisualizerHeader
+        icon={<FolderTree size={22} />}
+        title="File System Simulator"
+        subtitle="Interactive Linux Virtual File System (VFS) Hierarchy, Bash Shell & Terminal Engine"
+        actions={
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <FolderTree size={26} />
-            </div>
-            <div>
-              <h1 className="complexity-title">File System Simulator</h1>
-              <p className="complexity-subtitle">
-                Interactive Linux Virtual File System (VFS) with real bash command interpreter, tree visualizer, stateful Vim/Nano editor, and Octa Tutor.
-              </p>
-            </div>
+            <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
+              <ArrowLeft size={14} /> Back to OS
+            </button>
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled(v => !v)}
+              debuggerVisible={showDebugger}
+              onToggleDebugger={() => setShowDebugger(v => !v)}
+              customizeModeEnabled={customizeModeEnabled}
+              onToggleCustomizeMode={() => setCustomizeModeEnabled(v => !v)}
+              onResetLayout={() => setCustomizeModeEnabled(false)}
+            >
+              <button
+                type="button"
+                className="viz-action-btn"
+                onClick={() => setIsFullscreen(true)}
+                title="Full Screen Canvas View"
+              >
+                <Maximize2 size={14} />
+                <span>Fullscreen</span>
+              </button>
+            </VisualizerActions>
           </div>
-        </div>
+        }
+      />
 
-        {/* Master Control Bar */}
+      {/* Operations Toolbar Matching DSA Studio (Image 1) */}
+      <div className="bst-toolbar animate-fade-in flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-900/80 rounded-2xl border border-slate-800">
         <div className="flex items-center gap-2 flex-wrap">
           {/* Step History Controller */}
-          <div className="flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
             <button
               onClick={handlePrevStep}
               disabled={currentStepIndex === 0}
@@ -229,11 +296,11 @@ export const FileSystemPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Reset Button */}
+          {/* Reset VFS Button */}
           <button
             onClick={handleReset}
             className="px-3 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 text-xs font-semibold flex items-center gap-1.5"
-            title="Reset VFS tree to default FHS install state"
+            title="Reset VFS tree to default FHS state"
           >
             <RotateCcw size={14} /> Reset VFS
           </button>
@@ -244,20 +311,17 @@ export const FileSystemPage: React.FC = () => {
             className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
               showKeyConcepts
                 ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/40'
-                : 'bg-slate-900/90 text-slate-300 border border-slate-800 hover:bg-slate-800'
+                : 'bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800'
             }`}
           >
             <BookOpen size={14} /> FHS Concepts
           </button>
+        </div>
 
-          {/* Fullscreen Canvas Toggle */}
-          <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-2 rounded-xl bg-slate-900/90 text-slate-300 border border-slate-800 hover:bg-slate-800"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen Visualizer'}
-          >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
+        {/* Quick Shell Indicator */}
+        <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+          <TerminalIcon size={14} className="text-cyan-400" />
+          <span>Prompt: octa@stem-studio:~</span>
         </div>
       </div>
 
@@ -281,69 +345,132 @@ export const FileSystemPage: React.FC = () => {
         </div>
       )}
 
-      {/* Master Visualizer Canvas (Top Pane) */}
-      <VFSTreeVisualizer
-        snapshot={snapshot}
-        activeNodeId={activeNodeId}
-        animatedPathIds={animatedPathIds}
-        onSelectNode={(id) => setActiveNodeId(id)}
-        isFullscreen={isFullscreen}
-      />
-
-      {/* Bottom Pane: Split Terminal & Explanation / Octa Tutor */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Interactive Linux Terminal */}
-        <div className="lg:col-span-7">
-          <VFSTerminal
+      {/* Main Learning Workspace matching DSA Layout (Image 1) */}
+      <div className="sorting-workspace scene-workspace">
+        {/* Card 1: Tree Hierarchy Visualizer Canvas */}
+        <div className="renderer-section">
+          <VFSTreeVisualizer
             snapshot={snapshot}
-            history={terminalHistory}
-            onExecuteCommand={handleExecuteCommand}
-            onClearTerminal={() => setTerminalHistory([])}
+            activeNodeId={activeNodeId}
+            animatedPathIds={animatedPathIds}
+            onSelectNode={(id) => setActiveNodeId(id)}
+            isFullscreen={isFullscreen}
+          />
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < stepHistory.length - 1}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onReset={handleReset}
+            onStepBack={handlePrevStep}
+            onStepForward={handleNextStep}
+            onStop={() => { setIsPlaying(false); handleReset(); }}
+            onResume={() => setIsPlaying(true)}
+            quizMode={quizEnabled}
           />
         </div>
 
-        {/* Right Column: Step Explanation Card & Octa Tutor */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* Explanation Card */}
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
-                <Info size={18} className="text-cyan-400" /> Step Explanation
-              </div>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
-                {activeStepRecord.command}
-              </span>
-            </div>
-
-            <div className="text-xs font-mono text-emerald-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-              Diff: {activeStepRecord.diff}
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
-              {activeStepRecord.explanation}
-            </p>
-          </div>
-
-          {/* Octa Tutor Helper Card */}
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-purple-500/30 space-y-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-purple-300 font-bold text-sm">
-                <Sparkles size={18} className="text-purple-400" /> Octa Tutor — Step-Follow Mode
-              </div>
-              <button
-                onClick={() => toggleTutor()}
-                className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 text-xs font-semibold flex items-center gap-1"
-              >
-
-                <MessageSquare size={13} /> Ask Octa
-              </button>
-            </div>
-            <p className="text-xs text-slate-400">
-              Ask Octa &quot;What did Step {currentStepIndex + 1} do?&quot; or ask general questions about Linux file permissions, system daemons, and bash scripting.
-            </p>
-          </div>
+        {/* Card 2: Quiz Dock matching DSA layout (Image 1) */}
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+          />
         </div>
+
+        {/* Middle Row: Resizable Panel Row for Card 3 (Terminal) & Card 4 (Explanation Card) */}
+        <ResizablePanelRow
+          storageKey="filesystem"
+          customizeModeEnabled={customizeModeEnabled}
+          onResetLayout={() => setCustomizeModeEnabled(false)}
+          visualizerPanel={
+            <div className="relative h-full flex flex-col justify-between">
+              <VFSTreeVisualizer
+                snapshot={snapshot}
+                activeNodeId={activeNodeId}
+                animatedPathIds={animatedPathIds}
+                onSelectNode={(id) => setActiveNodeId(id)}
+                isFullscreen={isFullscreen}
+              />
+              <FloatingController
+                isPlaying={isPlaying}
+                canStepBack={currentStepIndex > 0}
+                canStepForward={currentStepIndex < stepHistory.length - 1}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onReset={handleReset}
+                onStepBack={handlePrevStep}
+                onStepForward={handleNextStep}
+                onStop={() => { setIsPlaying(false); handleReset(); }}
+                onResume={() => setIsPlaying(true)}
+                quizMode={quizEnabled}
+              />
+            </div>
+          }
+          debuggerPanel={
+            showDebugger ? (
+              <VFSTerminal
+                snapshot={snapshot}
+                history={terminalHistory}
+                onExecuteCommand={handleExecuteCommand}
+                onClearTerminal={() => setTerminalHistory([])}
+              />
+            ) : null
+          }
+          explanationPanel={
+            <ExplanationPanel
+              description={activeStepRecord.explanation}
+              steps={stepHistory}
+              currentStepIndex={currentStepIndex}
+              timeComplexity={{ best: 'O(1)', average: 'O(log n)', worst: 'O(n)' }}
+              spaceComplexity="O(V + E)"
+            />
+          }
+        />
       </div>
+
+      {/* Card 5: Theory & Core Concepts Panel with Expand All / Collapse All (Image 1) */}
+      <TheoryPanel categoryId="filesystem" activeTopic="virtual-file-system" />
+
+      {/* Fullscreen Canvas View Modal */}
+      <FullScreenCanvasModal
+        isOpen={isFullscreen}
+        onClose={() => setIsFullscreen(false)}
+        title="File System Visualizer | Linux VFS Tree"
+        subtitle="Interactive Linux File System Hierarchy Standard (FHS)"
+        explanationPanel={
+          <ExplanationPanel
+            description={activeStepRecord.explanation}
+            steps={stepHistory}
+            currentStepIndex={currentStepIndex}
+            timeComplexity={{ best: 'O(1)', average: 'O(log n)', worst: 'O(n)' }}
+            spaceComplexity="O(V + E)"
+          />
+        }
+        floatingControls={
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < stepHistory.length - 1}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onReset={handleReset}
+            onStepBack={handlePrevStep}
+            onStepForward={handleNextStep}
+          />
+        }
+      >
+        <VFSTreeVisualizer
+          snapshot={snapshot}
+          activeNodeId={activeNodeId}
+          animatedPathIds={animatedPathIds}
+          onSelectNode={(id) => setActiveNodeId(id)}
+          isFullscreen={true}
+        />
+      </FullScreenCanvasModal>
 
       {/* Stateful Vim/Nano Editor Modal */}
       <VimNanoModal

@@ -14,7 +14,7 @@ import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
 import { ModuleHub } from './features/hub/ModuleHub';
-import { MODULES, DSA_CATEGORIES } from './data/categories';
+import { MODULES, DSA_CATEGORIES, OS_CATEGORIES } from './data/categories';
 import { ComplexityPage } from './features/complexity/ComplexityPage';
 import { SortingPage } from './features/sorting/SortingPage';
 import { BSTPage } from './features/bst/BSTPage';
@@ -87,10 +87,11 @@ const DashboardLayout = () => {
   // Determine active module and category from path.
   const isModulePage = MODULES.some(m => m.id === pathSegment);
   const isDsaCategory = DSA_CATEGORIES.some(c => c.id === pathSegment);
-  const isOSPage = pathSegment === 'os';
+  const isOsCategory = OS_CATEGORIES.some(c => c.id === pathSegment);
+  const isOSPage = pathSegment === 'os' || isOsCategory;
   
   const activeModuleId = isModulePage ? pathSegment : (isOSPage ? 'os' : (isDsaCategory ? 'dsa' : ''));
-  const activeCategoryId = isDsaCategory ? pathSegment : '';
+  const activeCategoryId = isDsaCategory || isOsCategory ? pathSegment : '';
 
   return (
     <div className="dashboard-shell">
@@ -131,6 +132,8 @@ const DashboardLayout = () => {
             <Route path="os/linux" element={<OSCategoriesHub />} />
             <Route path="os/commands" element={<LinuxCommandsPage />} />
             <Route path="os/filesystem" element={<FileSystemPage />} />
+            <Route path="commands" element={<LinuxCommandsPage />} />
+            <Route path="filesystem" element={<FileSystemPage />} />
           </Routes>
         </main>
       </div>
