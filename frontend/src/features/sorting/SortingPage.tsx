@@ -458,6 +458,7 @@ export const SortingPage: React.FC = () => {
         icon={<Layers size={22} />}
         title="Sorting Algorithms Studio"
         subtitle="Interactive Comparison, Partitioning, & In-Place Array Sorting"
+        isCustomCodeRunning={customSteps !== null && customSteps.length > 0}
         items={ALGORITHMS.map((alg) => ({
           id: alg.key,
           name: alg.name,
@@ -585,6 +586,7 @@ export const SortingPage: React.FC = () => {
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
+            isCustomCodeRunning={customSteps !== null && customSteps.length > 0}
           />
           }
         />

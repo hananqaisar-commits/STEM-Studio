@@ -250,8 +250,8 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                   )}
                 </button>
 
-                {/* Sub-categories inside Module */}
-                {(isModuleExpanded || !isExpanded) && mod.id === 'dsa' && (
+                {/* Sub-categories inside Module (only shown when sidebar is expanded) */}
+                {isExpanded && isModuleExpanded && mod.id === 'dsa' && (
                   <div className="module-categories-container">
                     {DSA_CATEGORIES.map((cat, index) => {
                       const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;

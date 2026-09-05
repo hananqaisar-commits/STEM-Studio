@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Code, Info, Clock, HardDrive, List } from 'lucide-react';
+import { Code, Info, Clock, HardDrive, List, AlertTriangle, FileCode2 } from 'lucide-react';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
 import './Layout.css';
@@ -32,6 +32,7 @@ export interface ExplanationPanelProps {
   steps?: StepLike[];
   /** Currently highlighted step index. */
   currentStepIndex?: number;
+  isCustomCodeRunning?: boolean;
 }
 
 export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
@@ -45,6 +46,7 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
   spaceComplexity,
   steps,
   currentStepIndex,
+  isCustomCodeRunning = false,
 }) => {
   const historyListRef = useRef<HTMLUListElement>(null);
   const activeItemRef = useRef<HTMLLIElement>(null);
@@ -55,11 +57,13 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
   // Legacy single-step text used when no step history is provided.
   const fallbackText = explanation || description || 'Select an algorithm and click Play to start visualization.';
   const headerText =
-    stepNumber !== undefined && totalSteps !== undefined
-      ? `STEP ${stepNumber} OF ${totalSteps}`
-      : hasHistory
-        ? `EXECUTION TRACE • ${Math.min(currentIdx + 1, steps.length)} OF ${steps.length}`
-        : 'CURRENT STEP EXPLANATION';
+    isCustomCodeRunning
+      ? `PASTED CODE TRACE • STEP ${stepNumber ?? currentIdx + 1} OF ${totalSteps ?? (hasHistory ? steps.length : 1)}`
+      : stepNumber !== undefined && totalSteps !== undefined
+        ? `STEP ${stepNumber} OF ${totalSteps}`
+        : hasHistory
+          ? `EXECUTION TRACE • ${Math.min(currentIdx + 1, steps.length)} OF ${steps.length}`
+          : 'CURRENT STEP EXPLANATION';
 
   // Auto-scroll the active bullet into view when the step changes.
   useEffect(() => {
@@ -68,9 +72,6 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
     }
   }, [currentIdx, hasHistory]);
 
-  // Array engines use `description`; graph, list and search engines use
-  // `explanation`. Resolve both at the shared boundary so every visualizer
-  // describes the real algorithm action instead of falling back to “Step n”.
   const getStepText = (step: StepLike, idx: number) => {
     const text = step.description?.trim() || step.explanation?.trim();
     if (text) return text;
@@ -82,7 +83,6 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
   const activeIndex = hasHistory ? Math.min(currentIdx, steps.length - 1) : 0;
   const activeStepText = hasHistory ? getStepText(steps[activeIndex], activeIndex) : fallbackText;
 
-  // Keep a concise trace for context while giving the active step priority.
   const historyBullets = hasHistory
     ? steps.slice(0, currentIdx + 1).map((step, idx) => {
         const text = getStepText(step, idx);
@@ -93,6 +93,17 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
 
   return (
     <div className="explanation-panel">
+      {/* Custom Code Execution Notice Banner */}
+      {isCustomCodeRunning && (
+        <div className="pasted-code-notice animate-fade-in">
+          <AlertTriangle size={15} className="pasted-code-notice-icon" />
+          <div>
+            <strong>Custom Code Execution Active</strong>
+            <p>This explanation and trace are generated from your pasted debugger code. Logic may differ from standard textbook implementations.</p>
+          </div>
+        </div>
+      )}
+
       {/* Step Explanation Header */}
       <div className="panel-section step-explanation">
         <div className="section-title">
@@ -104,7 +115,9 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
         </div>
 
         <div className="explanation-current-action">
-          <span className="explanation-current-label">Now executing</span>
+          <span className="explanation-current-label">
+            {isCustomCodeRunning ? 'Pasted code action' : 'Now executing'}
+          </span>
           <p className="explanation-text">{activeStepText}</p>
         </div>
 
