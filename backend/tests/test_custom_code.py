@@ -99,6 +99,34 @@ def test_harness_rejects_unsupported_language():
         harness.build_harness("javascript", algo, "x", {"args": {"arr": [1]}})
 
 
+@pytest.mark.parametrize("language, code", [
+    ("python", "def somethingElse(arr):\n    return arr"),
+    ("cpp", "vector<int> somethingElse(vector<int> arr) { return arr; }"),
+    ("c", "void somethingElse(int* arr, int arrSize) {}"),
+    ("java", "public static int[] somethingElse(int[] arr) { return arr; }"),
+    ("go", "func somethingElse(arr []int) []int { return arr }"),
+    ("csharp", "public static int[] somethingElse(int[] arr) { return arr; }"),
+])
+def test_submission_requires_the_algorithm_entry_point(language, code):
+    algo = registry.get_algorithm("sorting.bubble")
+    message = registry.validate_submission(algo, language, code, {"args": {"arr": [3, 1]}})
+    assert message == "Required method not found: bubbleSort(arr)"
+
+
+@pytest.mark.parametrize("language, code", [
+    ("python", "def bubbleSort(arr):\n    return arr\nif __name__ == '__main__':\n    bubbleSort([])"),
+    ("cpp", "int main() { return 0; }\nvector<int> bubbleSort(vector<int> arr) { return arr; }"),
+    ("c", "int main(void) { return 0; }\nvoid bubbleSort(int* arr, int arrSize) {}"),
+    ("java", "public static void main(String[] args) {}\npublic static int[] bubbleSort(int[] arr) { return arr; }"),
+    ("go", "func main() {}\nfunc bubbleSort(arr []int) []int { return arr }"),
+    ("csharp", "static void Main() {}\npublic static int[] bubbleSort(int[] arr) { return arr; }"),
+])
+def test_submission_rejects_full_program_wrappers(language, code):
+    algo = registry.get_algorithm("sorting.bubble")
+    message = registry.validate_submission(algo, language, code, {"args": {"arr": [3, 1]}})
+    assert message and "Paste only the required method or class" in message
+
+
 def test_stateful_harness_replays_full_operation_history():
     algo = registry.get_algorithm("stackQueue.stack")
     state = STATEFUL_STATE["stackQueue.stack"]
