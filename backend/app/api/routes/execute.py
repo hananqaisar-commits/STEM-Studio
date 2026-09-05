@@ -82,6 +82,10 @@ async def execute_custom_code(req: CustomCodeExecutionRequest) -> CustomCodeExec
     if algo is None:
         raise HTTPException(status_code=404, detail=f"Unknown algorithm: {req.algorithm_key}")
 
+    contract_error = registry.validate_submission(algo, req.language, req.code, req.state)
+    if contract_error:
+        raise HTTPException(status_code=422, detail=contract_error)
+
     try:
         source = harness.build_harness(req.language, algo, req.code, req.state)
     except ValueError as exc:
