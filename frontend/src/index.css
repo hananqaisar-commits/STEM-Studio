@@ -179,7 +179,10 @@ input, select, textarea {
 }
 
 html {
-  font-size: clamp(14px, 0.5vw + 12px, 18px);
+  /* Keep the application at the browser's expected 100% scale. The old
+     viewport-driven scale reached 18px on normal desktop screens, which
+     made the dashboard feel zoomed and pushed primary controls below fold. */
+  font-size: 16px;
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
 }

@@ -1776,7 +1776,7 @@
    hamburger; ≤768px: navbar condenses to icon-only controls.
    ═══════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 1024px) {
+@media (max-width: 900px) {
   .hamburger-btn {
     display: inline-flex;
   }
@@ -1791,8 +1791,13 @@
   }
 
   /* Sidebar leaves the grid flow and becomes a fixed drawer */
-  .dashboard-body {
-    grid-template-columns: minmax(0, 1fr);
+  .dashboard-body { grid-template-columns: minmax(0, 1fr); }
+
+  /* The sidebar becomes a drawer at this point, so its desktop rail must
+     not leave a phantom 64px gutter beside the content. */
+  .dashboard-main {
+    margin-left: 0 !important;
+    width: 100% !important;
   }
 
   .topic-sidebar {
