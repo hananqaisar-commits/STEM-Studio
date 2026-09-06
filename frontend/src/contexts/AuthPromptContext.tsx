@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Lock, LogIn, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import './AuthPrompt.css';
@@ -13,6 +14,7 @@ const AuthPromptContext = createContext<AuthPromptContextValue | undefined>(unde
 
 export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { isAuthenticated, login } = useAuth();
+  const navigate = useNavigate();
   const pendingActionRef = useRef<ProtectedAction | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('Sign in to continue and save your learning progress.');
@@ -75,6 +77,17 @@ export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children
               <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required disabled={isSubmitting} /></label>
               <label className="auth-prompt-remember"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Remember me</label>
               <button type="submit" disabled={isSubmitting}><LogIn size={17} />{isSubmitting ? 'Signing in…' : 'Sign in and continue'}</button>
+              <button
+                type="button"
+                className="auth-prompt-signup"
+                onClick={() => {
+                  close();
+                  navigate('/signup');
+                }}
+                disabled={isSubmitting}
+              >
+                Don't have an account? <span>Create an account</span>
+              </button>
             </form>
           </section>
         </div>
