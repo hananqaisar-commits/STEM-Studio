@@ -191,7 +191,7 @@ function App() {
         <MascotProvider>
           <TutorProvider>
             <Router>
-              <AuthPromptProvider><AppContent /></AuthPromptProvider>arent of b247b8f (Merge pull request #252 from hananqaisar-commits/feature/premium-scroll-upgrade)
+              <AuthPromptProvider><AppContent /></AuthPromptProvider>
             </Router>
           </TutorProvider>
         </MascotProvider>
