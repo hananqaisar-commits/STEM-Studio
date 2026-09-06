@@ -28,68 +28,385 @@ interface Anchor {
   concept: string;
 }
 
-const ANCHORS: Record<RecursionAlgorithmKey, Anchor> = {
-  factorial: {
-    prompt: 'What is the base case for factorial?',
-    correct: 'fact(0) = 1',
-    distractors: ['fact(1) = 0', 'fact(n) = n', 'fact(0) = 0'],
-    explanation:
-      'The base case is fact(0) = 1. Every recursive factorial call chain terminates at n=0, which returns 1. The multiplicative identity (1) is used because factorial is a product.',
-    hint: 'What value of n stops the recursion, and what does it return?',
-    concept: 'Base case',
-  },
-  fibonacci: {
-    prompt: 'Why does naive recursive fibonacci have exponential time complexity?',
-    correct: 'Each call branches into two sub-calls, creating an exponentially growing tree of redundant computations',
-    distractors: [
-      'Because each call does an expensive addition operation',
-      'Because the base case is reached exponentially many times',
-      'Because the recursion depth grows linearly',
-    ],
-    explanation:
-      'fib(n) calls fib(n-1) and fib(n-2), so the call tree roughly doubles at each level. Many sub-problems are solved repeatedly — fib(2) is computed many times for fib(5). This gives O(2^n) total calls.',
-    hint: 'Count how many times fib(2) appears in the call tree for fib(5).',
-    concept: 'Exponential branching',
-  },
-  power: {
-    prompt: 'What is the base case for recursive power(base, exp)?',
-    correct: 'power(b, 0) = 1 — any number to the power 0 is 1',
-    distractors: [
-      'power(b, 1) = b',
-      'power(0, e) = 0',
-      'power(b, 0) = 0',
-    ],
-    explanation:
-      'The base case is exp = 0, which returns 1 (the multiplicative identity). Halving the exponent at every level makes the tree only log₂(exp) deep.',
-    hint: 'What exponent makes any base equal to 1?',
-    concept: 'Base case',
-  },
-  arraySum: {
-    prompt: 'How does recursive array sum decompose the problem?',
-    correct: 'It takes the current element plus the sum of the remaining elements: arr[idx] + sum(arr, idx+1)',
-    distractors: [
-      'It splits the array in half and sums each half',
-      'It accumulates a running total in a parameter',
-      'It sorts the array first then adds elements',
-    ],
-    explanation:
-      'The recursion processes one element at a time: the sum starting at index idx is arr[idx] plus the sum starting at idx+1. The base case (idx past the end) returns 0.',
-    hint: 'Think about what each recursive call is responsible for.',
-    concept: 'Problem decomposition',
-  },
-  towerOfHanoi: {
-    prompt: 'How many moves are required to solve Tower of Hanoi with n disks?',
-    correct: '2^n - 1 moves — each disk configuration must be visited',
-    distractors: [
-      'n moves — one per disk',
-      'n^2 moves — one per pair of disks',
-      '2n moves — twice the number of disks',
-    ],
-    explanation:
-      'Tower of Hanoi with n disks requires exactly 2^n - 1 moves. Moving n-1 disks aside takes 2^(n-1)-1 moves, then 1 move for the largest disk, then 2^(n-1)-1 moves to stack them back — totaling 2^n - 1.',
-    hint: 'For 3 disks the answer is 7. What formula gives 7 when n=3?',
-    concept: 'Move count',
-  },
+const ANCHORS: Record<RecursionAlgorithmKey, Anchor[]> = {
+  factorial: [
+    {
+      prompt: 'What is the base case for factorial?',
+      correct: 'fact(0) = 1',
+      distractors: ['fact(1) = 0', 'fact(n) = n', 'fact(0) = 0'],
+      explanation:
+        'The recursion terminates at n = 0, and 0! = 1 is the multiplicative identity.',
+      hint: 'Which value of n stops the recursion?',
+      concept: 'Base case',
+    },
+    {
+      prompt: 'What recurrence defines factorial?',
+      correct: 'fact(n) = n × fact(n - 1)',
+      distractors: [
+        'fact(n) = n + fact(n - 1)',
+        'fact(n) = fact(n - 2)',
+        'fact(n) = n × fact(n + 1)',
+      ],
+      explanation:
+        'Each factorial call multiplies n by the factorial of the previous integer.',
+      hint: 'Think about n! = n × (n-1)!.',
+      concept: 'Recurrence relation',
+    },
+    {
+      prompt: 'What must happen for a recursive factorial function to terminate?',
+      correct: 'Each call must move toward the base case',
+      distractors: [
+        'The input must increase on every call',
+        'The base case must be removed',
+        'Every call must create two new calls',
+      ],
+      explanation:
+        'The recursive argument decreases toward zero, ensuring the base case is eventually reached.',
+      hint: 'What happens to n after each recursive call?',
+      concept: 'Termination',
+    },
+    {
+      prompt: 'What is the time complexity of recursive factorial?',
+      correct: 'O(n)',
+      distractors: ['O(log n)', 'O(n²)', 'O(2^n)'],
+      explanation:
+        'There is one recursive call for each integer from n down to 0.',
+      hint: 'How many calls are made before reaching zero?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What is the recursive call-stack space complexity of factorial?',
+      correct: 'O(n)',
+      distractors: ['O(1)', 'O(log n)', 'O(2^n)'],
+      explanation:
+        'There can be n+1 active stack frames before the base case returns.',
+      hint: 'Count the nested calls waiting for results.',
+      concept: 'Space complexity',
+    },
+    {
+      prompt: 'What value does fact(1) return?',
+      correct: '1',
+      distractors: ['0', '2', 'Undefined'],
+      explanation:
+        'fact(1) = 1 × fact(0) = 1 × 1 = 1.',
+      hint: 'Apply the recurrence once.',
+      concept: 'Recursive evaluation',
+    },
+    {
+      prompt: 'What happens when fact(0) is reached?',
+      correct: 'The function returns 1 without making another recursive call',
+      distractors: [
+        'It calls fact(-1)',
+        'It returns 0 and continues',
+        'It calls fact(1)',
+      ],
+      explanation:
+        'The base case stops further recursion and returns the multiplicative identity 1.',
+      hint: 'A base case must stop the chain.',
+      concept: 'Base-case evaluation',
+    },
+    {
+      prompt: 'Why is factorial recursion naturally a linear-depth recursion?',
+      correct: 'Each call creates only one smaller subproblem',
+      distractors: [
+        'Each call creates two independent branches',
+        'Each call halves the input',
+        'The recursion uses a heap',
+      ],
+      explanation:
+        'fact(n) only calls fact(n-1), so the recursion forms a single chain rather than a branching tree.',
+      hint: 'How many recursive calls does each frame create?',
+      concept: 'Recursion structure',
+    },
+    {
+      prompt: 'Which input direction would break the usual factorial recursion toward its base case?',
+      correct: 'Increasing n on each recursive call',
+      distractors: [
+        'Decreasing n by one',
+        'Stopping at n = 0',
+        'Returning 1 at the base case',
+      ],
+      explanation:
+        'If the recursive argument grows instead of shrinking, the function may never reach n = 0.',
+      hint: 'The recursive parameter must move toward termination.',
+      concept: 'Progress toward base case',
+    },
+    {
+      prompt: 'What is 5! equal to?',
+      correct: '120',
+      distractors: ['25', '60', '720'],
+      explanation:
+        '5! = 5 × 4 × 3 × 2 × 1 = 120.',
+      hint: 'Expand the factorial product.',
+      concept: 'Factorial evaluation',
+    },
+  ],
+
+  fibonacci: [
+    {
+      prompt: 'Why does naive recursive Fibonacci have exponential time complexity?',
+      correct: 'Each call branches into two sub-calls and repeats the same subproblems',
+      distractors: [
+        'Each addition is exponentially expensive',
+        'The base case is never reached',
+        'The recursion depth is exponential',
+      ],
+      explanation:
+        'fib(n) recursively computes fib(n-1) and fib(n-2), causing many repeated subproblems and exponential growth in calls.',
+      hint: 'Look for repeated fib(k) computations.',
+      concept: 'Exponential branching',
+    },
+    {
+      prompt: 'What are the common base cases for Fibonacci?',
+      correct: 'fib(0) = 0 and fib(1) = 1',
+      distractors: [
+        'fib(0) = 1 and fib(1) = 1',
+        'fib(0) = 0 and fib(1) = 0',
+        'fib(0) = 1 and fib(1) = 0',
+      ],
+      explanation:
+        'These two base cases define the beginning of the Fibonacci sequence.',
+      hint: 'Remember the sequence 0, 1, 1, 2, 3, ...',
+      concept: 'Base cases',
+    },
+    {
+      prompt: 'What recurrence defines Fibonacci for n ≥ 2?',
+      correct: 'fib(n) = fib(n - 1) + fib(n - 2)',
+      distractors: [
+        'fib(n) = fib(n - 1) × fib(n - 2)',
+        'fib(n) = fib(n - 2) - fib(n - 1)',
+        'fib(n) = fib(n + 1) + fib(n - 1)',
+      ],
+      explanation:
+        'Each Fibonacci value is the sum of the two previous values.',
+      hint: 'Think about consecutive sequence terms.',
+      concept: 'Recurrence relation',
+    },
+    {
+      prompt: 'What is the main problem with naive recursive Fibonacci?',
+      correct: 'It recomputes the same subproblems many times',
+      distractors: [
+        'It cannot reach a base case',
+        'It sorts the sequence repeatedly',
+        'It requires a graph',
+      ],
+      explanation:
+        'The same fib(k) values are computed again and again, creating overlapping subproblems.',
+      hint: 'Notice fib(3), fib(2), etc. appearing in multiple branches.',
+      concept: 'Overlapping subproblems',
+    },
+    {
+      prompt: 'What is the recursion-tree space complexity of naive Fibonacci?',
+      correct: 'O(n) call-stack depth',
+      distractors: ['O(1)', 'O(log n)', 'O(2^n) stack frames simultaneously'],
+      explanation:
+        'Although the total number of calls is exponential, the deepest active path is linear in n.',
+      hint: 'Total calls and maximum simultaneous stack depth are different.',
+      concept: 'Space complexity',
+    },
+    {
+      prompt: 'What is fib(2)?',
+      correct: '1',
+      distractors: ['0', '2', '3'],
+      explanation:
+        'fib(2) = fib(1) + fib(0) = 1 + 0 = 1.',
+      hint: 'Apply both base cases.',
+      concept: 'Recursive evaluation',
+    },
+    {
+      prompt: 'How does memoization improve recursive Fibonacci?',
+      correct: 'It stores already computed Fibonacci values and reuses them',
+      distractors: [
+        'It removes the base cases',
+        'It doubles the recursion depth',
+        'It sorts the call tree',
+      ],
+      explanation:
+        'Memoization prevents repeated computation by caching each solved subproblem.',
+      hint: 'Compute each fib(k) once instead of repeatedly.',
+      concept: 'Memoization',
+    },
+    {
+      prompt: 'What is the typical time complexity of memoized Fibonacci?',
+      correct: 'O(n)',
+      distractors: ['O(2^n)', 'O(n²)', 'O(log n)'],
+      explanation:
+        'There are only O(n) distinct Fibonacci states, and each is computed once.',
+      hint: 'Count the number of unique values from 0 through n.',
+      concept: 'Optimized complexity',
+    },
+    {
+      prompt: 'Why does Fibonacci form a branching recursion tree while factorial does not?',
+      correct: 'Each Fibonacci call makes two recursive calls',
+      distractors: [
+        'Fibonacci has no base case',
+        'Factorial uses a queue',
+        'Fibonacci always halves n',
+      ],
+      explanation:
+        'The two recursive dependencies create branching; factorial has only one recursive dependency.',
+      hint: 'Compare the number of recursive calls per function.',
+      concept: 'Branching structure',
+    },
+    {
+      prompt: 'What is fib(5)?',
+      correct: '5',
+      distractors: ['3', '8', '10'],
+      explanation:
+        'fib(5) = fib(4) + fib(3) = 3 + 2 = 5.',
+      hint: 'Sequence: 0, 1, 1, 2, 3, 5.',
+      concept: 'Sequence evaluation',
+    },
+  ],
+
+  power: [
+    {
+      prompt: 'What is the base case for recursive power(base, exp)?',
+      correct: 'power(b, 0) = 1',
+      distractors: ['power(b, 0) = 0', 'power(b, 1) = 0', 'power(0, e) = 1'],
+      explanation:
+        'Any nonzero number raised to exponent zero is 1, which terminates the recursion.',
+      hint: 'Which exponent makes the result equal to the multiplicative identity?',
+      concept: 'Base case',
+    },
+  ],
+
+  arraySum: [
+    {
+      prompt: 'What is the base case for recursive array sum?',
+      correct: 'Return 0 when the index reaches the end of the array',
+      distractors: [
+        'Return the last element forever',
+        'Return 1 for every empty suffix',
+        'Restart from index 0',
+      ],
+      explanation:
+        'The sum of an empty suffix is zero, so recursion stops when there are no elements left.',
+      hint: 'What should the sum of no remaining elements be?',
+      concept: 'Base case',
+    },
+    {
+      prompt: 'How does recursive array sum decompose the problem?',
+      correct: 'arr[idx] + sum(arr, idx + 1)',
+      distractors: [
+        'arr[idx] × sum(arr, idx + 1)',
+        'sum(arr, idx - 1) only',
+        'Split into two equal halves every time',
+      ],
+      explanation:
+        'Each call handles one current element and delegates the remaining suffix to the next call.',
+      hint: 'One element now, the rest later.',
+      concept: 'Problem decomposition',
+    },
+    {
+      prompt: 'What is the time complexity of recursive array sum?',
+      correct: 'O(n)',
+      distractors: ['O(log n)', 'O(n²)', 'O(2^n)'],
+      explanation:
+        'Each element is processed exactly once.',
+      hint: 'How many recursive calls are made for n elements?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What is the call-stack space complexity of recursive array sum?',
+      correct: 'O(n)',
+      distractors: ['O(1)', 'O(log n)', 'O(n²)'],
+      explanation:
+        'There can be one active frame per array position before the recursion starts returning.',
+      hint: 'Think about the depth of the recursive chain.',
+      concept: 'Space complexity',
+    },
+    {
+      prompt: 'What happens when arraySum reaches the final valid element?',
+      correct: 'It adds that element to the base-case result from the empty suffix',
+      distractors: [
+        'It skips the final element',
+        'It starts the array again',
+        'It creates two recursive branches',
+      ],
+      explanation:
+        'The final element is added to sum of the remaining empty suffix, which is 0.',
+      hint: 'The last real element still belongs in the sum.',
+      concept: 'Recursive return',
+    },
+    {
+      prompt: 'Why does recursive array sum form a linear call chain?',
+      correct: 'Each call creates only one recursive call',
+      distractors: [
+        'Each call creates two children',
+        'Each call halves the array',
+        'Each call sorts the suffix',
+      ],
+      explanation:
+        'Only the next index is delegated to the next call, so there is no branching.',
+      hint: 'Count recursive calls made by one frame.',
+      concept: 'Recursion structure',
+    },
+    {
+      prompt: 'What does sum(arr, idx) conceptually represent?',
+      correct: 'The sum of the suffix starting at idx',
+      distractors: [
+        'The maximum element from idx onward',
+        'The whole array length',
+        'Only arr[idx]',
+      ],
+      explanation:
+        'Defining each recursive function in terms of the suffix makes the recurrence easy to reason about.',
+      hint: 'What part of the array is still unresolved?',
+      concept: 'Function meaning',
+    },
+    {
+      prompt: 'Why is 0 the correct base-case return for an empty sum?',
+      correct: 'Zero is the additive identity',
+      distractors: [
+        'Zero is the multiplicative identity',
+        'Zero avoids recursion depth',
+        'Zero represents the last array value',
+      ],
+      explanation:
+        'Adding zero does not change the accumulated sum, making it the natural identity for addition.',
+      hint: 'Compare addition with its identity value.',
+      concept: 'Identity element',
+    },
+    {
+      prompt: 'What happens as idx increases during recursive array sum?',
+      correct: 'The unresolved suffix becomes smaller',
+      distractors: [
+        'The array becomes longer',
+        'The index moves backward',
+        'The same suffix is processed repeatedly',
+      ],
+      explanation:
+        'Every call advances to idx + 1, so fewer elements remain before the base case.',
+      hint: 'Track the recursive parameter.',
+      concept: 'Progress toward base case',
+    },
+    {
+      prompt: 'What is the sum of [1, 2, 3, 4]?',
+      correct: '10',
+      distractors: ['8', '9', '12'],
+      explanation:
+        'The recursive calls eventually return 4 + 3 + 2 + 1 = 10.',
+      hint: 'Add every element once.',
+      concept: 'Evaluation',
+    },
+  ],
+
+  towerOfHanoi: [
+    {
+      prompt: 'What is the base case of Tower of Hanoi recursion?',
+      correct: 'Move one disk directly from the source peg to the target peg',
+      distractors: [
+        'Move all disks in one operation',
+        'Move zero disks to the auxiliary peg',
+        'Start by moving the largest disk',
+      ],
+      explanation:
+        'With one disk, there is no smaller subproblem to solve, so the move is direct.',
+      hint: 'What is the smallest non-trivial Hanoi problem?',
+      concept: 'Base case',
+    },
+  ],
 };
 
 /* ── Step parsing helpers (JSON-encoded tree metadata) ───────────────── */
@@ -577,9 +894,13 @@ export function buildRecursionCheckpoints(
     });
   };
 
-  // 1. Anchor question at step 0
-  const anchor = ANCHORS[algorithm];
-  const anchorId = `recursion-${algorithm}-anchor`;
+  // 1. Deterministic conceptual anchor at step 0.
+  // Power/Hanoi already have large curated pools below, so their single
+  // anchor remains lightweight and the existing pools stay untouched.
+  const anchors = ANCHORS[algorithm];
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
+  const anchorId = `recursion-${algorithm}-anchor-${anchorIndex}`;
   usedIndices.add(0);
   const anchorOpts = buildOptions(anchorId, anchor.correct, anchor.distractors);
   checkpoints.push({

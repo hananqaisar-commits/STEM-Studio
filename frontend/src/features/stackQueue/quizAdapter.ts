@@ -74,262 +74,1300 @@ const PARENTHESES_ANCHOR: Anchor = {
    The flagship problems get an anchor about their ONE central idea,
    not a generic push/pop definition. */
 
-const SPECIFIC_ANCHORS: Partial<Record<StackQueueCategory, Anchor>> = {
-  dailyTemperatures: {
-    prompt: 'Before it starts: why does the monotonic stack store INDICES instead of temperatures?',
-    correct: 'The answer is a distance between days — indices are needed to compute i − j',
-    distractors: [
-      'Indices are smaller numbers and save memory',
-      'Temperatures can repeat, but indices cannot',
-      'The stack must stay sorted, and indices already are',
-    ],
-    explanation:
-      'When a warmer day pops the stack top, the waiting time is the current index minus the stored index. Storing temperatures would lose the position the answer depends on.',
-    hint: 'The answer for each day is a NUMBER OF DAYS. What do you need to compute a distance?',
-    concept: 'Index stack',
-  },
-  trappingRainWater: {
-    prompt: 'Before it starts: why must the stack hold strictly DECREASING heights?',
-    correct: 'A shorter-or-equal top means no right boundary has arrived — water can only be measured when a taller bar pops it',
-    distractors: [
-      'So the tallest bar is always on top',
-      'Decreasing order keeps the bars sorted by index',
-      'It is a coincidence of the input order',
-    ],
-    explanation:
-      'When a taller bar arrives, the popped bar is the valley floor: left wall = new stack top, right wall = current bar. If taller tops were allowed, valleys would be buried before their water could be measured.',
-    hint: 'What does it mean for the water when the incoming bar is taller than the top?',
-    concept: 'Monotonic boundary',
-  },
-  largestRectangle: {
-    prompt: 'Before it starts: a sentinel bar of height 0 is appended to the histogram. Why?',
-    correct: 'Height 0 is shorter than every real bar, so it forces the stack to flush and every rectangle to be measured',
-    distractors: [
-      'It marks the middle of the histogram',
-      'It stores the best area found so far',
-      'It reserves space for one more bar',
-    ],
-    explanation:
-      "A bar's rectangle is only measured when a shorter bar pops it. Without the sentinel, bars still rising at the end of the histogram would never be popped and never measured.",
-    hint: 'Which single bar can guarantee to be shorter than all the rest?',
-    concept: 'Sentinel flush',
-  },
-  basicCalculator: {
-    prompt: "Before it starts: when the scanner hits '(', what must be saved before the inner expression is evaluated?",
-    correct: 'The running result and the pending sign, so they can be restored at the matching ")"',
-    distractors: [
-      'The entire expression string, to scan it again later',
-      'The final answer so far and the stack depth',
-      "Nothing — '(' is simply skipped",
-    ],
-    explanation:
-      "'(' starts a fresh sub-expression, so the running result resets to 0. The only way to keep the outer work is to push (result, sign) on the context stack; ')' pops it and folds the inner value back in with the saved sign.",
-    hint: 'The scanner moves forward only and never comes back. What would be lost?',
-    concept: 'Context stack',
-  },
-  decodeString: {
-    prompt: "Before it starts: what PAIR of values must be pushed when '[' is read?",
-    correct: 'The string built so far and the repeat count that precedes the bracket',
-    distractors: [
-      'Only the repeat count — the string can be rebuilt later',
-      'The full decoded result so far',
-      "The position of the matching ']'",
-    ],
-    explanation:
-      "']' needs two facts to expand: how many times to repeat (the count) and what to prepend (the outer string). Pushing both makes every nesting level self-contained.",
-    hint: "']' must repeat something AND attach it to something. Where do both come from?",
-    concept: 'Paired stacks',
-  },
-  stackViaQueues: {
-    prompt: 'Before it starts: push is made O(n) on purpose. What does push do so that pop stays O(1)?',
-    correct: 'Enqueue the new value into the empty aux queue, drain the main queue in behind it, then swap the two queues',
-    distractors: [
-      'Enqueue at the rear of the main queue and bubble it to the front',
-      'Keep both queues balanced at all times',
-      'Move half the elements so the cost amortizes',
-    ],
-    explanation:
-      'After the rotation the newest value sits at the FRONT of the main queue — exactly where a stack top must be for pop to be a single O(1) dequeue.',
-    hint: 'LIFO means the newest element must be reached first. Which end of a queue is reached first?',
-    concept: 'Costly push rotation',
-  },
-  circularDeque: {
-    prompt: 'Before it starts: insertFront computes (front − 1 + capacity) % capacity. Why add capacity before the modulo?',
-    correct: 'front − 1 can be −1; the shift keeps the index inside the ring instead of going negative',
-    distractors: [
-      'It reserves one extra slot for overflow',
-      'It doubles the capacity when the deque is full',
-      'It is just another way to write front + 1',
-    ],
-    explanation:
-      'Modulo on a negative dividend stays negative. Adding capacity lands on the same residue in [0, capacity), wrapping slot 0 back to capacity − 1 exactly as a ring should.',
-    hint: 'What is (0 − 1) % 5 in most languages?',
-    concept: 'Ring wraparound',
-  },
-  firstNonRepeating: {
-    prompt: 'Before it starts: why can the candidate queue still contain characters that are no longer valid answers?',
-    correct: 'Cleanup is lazy — a repeated character is only dequeued once it actually reaches the head',
-    distractors: [
-      'The queue is rebuilt from scratch on every step',
-      'Because the frequency map is only checked at the end',
-      'Invalid candidates are kept for the final timeline',
-    ],
-    explanation:
-      'A character that repeats later stays queued until it reaches the head and is needed. This keeps every step O(1): no scanning, just one frequency check of the head.',
-    hint: 'Nothing ever scans the middle of the queue. When is the head examined?',
-    concept: 'Lazy cleanup',
-  },
-  movingAverage: {
-    prompt: 'Before it starts: how does the average stay O(1) to compute when the window slides?',
-    correct: 'Keep a running sum: add the incoming value and subtract the one that just left',
-    distractors: [
-      'Re-add the whole window on every step',
-      'Store all previous averages and interpolate',
-      'The queue is sorted, so the middle element is the average',
-    ],
-    explanation:
-      'Recomputing a k-length sum costs O(k) per step. One add and one subtract keep every step constant time — the whole reason the window queue exists.',
-    hint: 'Only two numbers change when the window slides. Which two?',
-    concept: 'Running sum',
-  },
-  taskScheduler: {
-    prompt: 'Before it starts: what does the greedy rule pick on every tick that has ready work?',
-    correct: 'The ready task with the highest remaining count',
-    distractors: [
-      'The task that has been cooling the longest',
-      'Round-robin over all task names in order',
-      'A random ready task — the order does not matter',
-    ],
-    explanation:
-      'Finishing high-count tasks early lets their cooldowns overlap with other work. Burning low-count tasks first strands the frequent ones, forcing idle ticks later.',
-    hint: 'Which choice leaves the least work cooling down later?',
-    concept: 'Greedy ordering',
-  },
-  rottingOranges: {
-    prompt: 'Before it starts: why do ALL rotten oranges enter the BFS queue at minute 0?',
-    correct: 'They are all sources — BFS then spreads one ring per minute simultaneously from every one of them',
-    distractors: [
-      'To sort them by position before spreading',
-      'Because the queue cannot hold more than one source',
-      'So the grid can be scanned level by level later',
-    ],
-    explanation:
-      'One BFS level equals one minute of simultaneous spread. Seeding every source at depth 0 is what makes the level count equal the answer — a single-source BFS would report the wrong time.',
-    hint: 'What does one BFS level represent in this problem?',
-    concept: 'Multi-source BFS',
-  },
-  dota2Senate: {
-    prompt: 'Before it starts: why does each round winner re-enqueue at (original index + n)?',
-    correct: 'It must act again in the NEXT round — adding n keeps the turn order consistent as rounds repeat',
-    distractors: [
-      'It is banned and leaves the queue forever',
-      'n is its new voting power',
-      'To mark it as having already voted this round',
-    ],
-    explanation:
-      'The simulation is round-robin: survivors act once per round, and the original index decides who is earlier. Shifting by n preserves that comparison across rounds.',
-    hint: 'Every surviving senator acts again. When is this one\'s next turn?',
-    concept: 'Round-robin simulation',
-  },
-  minStack: {
-    prompt: 'Before it starts: what does the auxiliary stack hold at every moment?',
-    correct: 'The minimum of the main stack at that depth — every push records min(new value, current min)',
-    distractors: [
-      'A sorted copy of the main stack',
-      'Only the single smallest value ever pushed',
-      'Nothing — it is filled only when getMin is called',
-    ],
-    explanation:
-      'Popping the main stack must also RESTORE the previous minimum, and a plain variable cannot remember history. Recording the min-at-each-depth on a parallel stack makes both push and pop O(1): pop simply pops the min stack too.',
-    hint: 'After the smallest value is popped away, how would you know what the new minimum is?',
-    concept: 'Min at each depth',
-  },
-  postfixEval: {
-    prompt: 'Before it starts: why does postfix need no parentheses and no precedence rules?',
-    correct: 'The order values sit on the stack IS the grouping — every operator consumes the two values waiting above it',
-    distractors: [
-      'Postfix operators are always evaluated by precedence anyway',
-      'Parentheses are silently inserted around every triple',
-      'The expression is converted to infix first',
-    ],
-    explanation:
-      'In postfix an operator can only fire once both operands exist, so "3 4 −" can only mean 3 − 4. The stack holds the pending work; grouping is a property of positions, not symbols.',
-    hint: 'When an operator arrives, where are its two operands standing?',
-    concept: 'Stack as pending work',
-  },
-  simplifyPath: {
-    prompt: 'Before it starts: what does the directory stack remember that a string split alone cannot?',
-    correct: 'Only the directories still in effect — ".." cancels the most recent one, "." cancels nothing',
-    distractors: [
-      'Every token, including "." and ".."',
-      'The original path, for error checking',
-      'The number of slashes seen so far',
-    ],
-    explanation:
-      'A canonical path is just the surviving directories joined with "/". ".." popping the top mirrors exactly how real filesystems climb one level, and "." is a no-op — so the stack ends up holding the answer directly.',
-    hint: 'When you type "cd ..", which directory stops counting?',
-    concept: 'Stack as path state',
-  },
-  removeAdjacentDuplicates: {
-    prompt: 'Before it starts: why does a stack remove pairs that only become adjacent AFTER earlier removals?',
-    correct: 'Each pop exposes a new top, and the next character is compared against that new top — cancellations cascade naturally',
-    distractors: [
-      'The string is re-scanned from the start after every removal',
-      'A frequency map decides which characters to drop',
-      'Adjacent pairs are marked first and deleted in one sweep',
-    ],
-    explanation:
-      'In "abbaca" the second b pops the first, then the second a meets the newly exposed a and pops it too. One left-to-right pass with a stack handles cascades that would otherwise need repeated rescans.',
-    hint: 'After "bb" disappears, what is now next to the incoming "a"?',
-    concept: 'Cascading cancellation',
-  },
-  queueViaStacks: {
-    prompt: 'Before it starts: the Out-Stack only receives a transfer when it is completely empty. Why not top it up on every enqueue?',
-    correct: 'The Out-Stack is already in dequeue order — mixing a fresh transfer into it would break the FIFO sequence',
-    distractors: [
-      'Transfers are expensive, so they are batched for no other reason',
-      'The In-Stack would overflow otherwise',
-      'It simply makes the code shorter',
-    ],
-    explanation:
-      'A transfer reverses the In-Stack, putting the oldest value on top of the Out-Stack. If a second reversal landed on a non-empty Out-Stack, newer values would bury the older ones still waiting, and dequeue would return the wrong element. Waiting for empty preserves the order — and amortizes the transfer cost.',
-    hint: 'A transfer reverses arrival order. What happens if a second reversal lands on top of an unfinished one?',
-    concept: 'Transfer on empty',
-  },
-  circularQueue: {
-    prompt: 'Before it starts: enqueue computes REAR = (rear + 1) % capacity. What does the modulo buy?',
-    correct: 'The index wraps to slot 0 after the last slot — the queue reuses freed space instead of shifting',
-    distractors: [
-      'It prevents the queue from ever being full',
-      'It keeps the queue sorted by insertion order',
-      'It halves the memory the queue needs',
-    ],
-    explanation:
-      'A naive array queue must shift every element forward after a dequeue (O(n)). With wraparound, dequeue just moves FRONT ahead and the freed slots at the start become the new REAR — every operation stays O(1).',
-    hint: 'After the last slot is used and the front has moved forward, where can new elements go?',
-    concept: 'Ring wraparound',
-  },
-  slidingWindow: {
-    prompt: 'Before it starts: why is storing INDICES in the deque enough to know both the max and whether an entry has slid out?',
-    correct: 'An index answers position (still inside the window?) and, through the array, value — one fact covers both checks',
-    distractors: [
-      'Indices keep the deque shorter than values would',
-      'The window boundary is recomputed from scratch each step anyway',
-      'Only indices can legally be stored in a deque',
-    ],
-    explanation:
-      'The deque front must always be the max, and any entry older than the window start is dead. Indices let one eviction rule (front too old) and one insertion rule (back smaller than the newcomer) maintain both properties in O(1) per element.',
-    hint: 'The window moves by POSITION. What must each deque entry reveal about position?',
-    concept: 'Index deque',
-  },
+const makeAnchor = (
+  prompt: string,
+  correct: string,
+  distractors: string[],
+  explanation: string,
+  hint: string,
+  concept: string,
+): Anchor => ({
+  prompt,
+  correct,
+  distractors,
+  explanation,
+  hint,
+  concept,
+});
+
+/* ── Five fixed conceptual anchors per flagship problem ────────────
+   These rotate deterministically between runs while the existing
+   generated step-prediction questions remain completely untouched. */
+
+const SPECIFIC_ANCHORS: Partial<Record<StackQueueCategory, Anchor[]>> = {
+
+  validParentheses: [
+    makeAnchor(
+      'Why does a valid-parentheses algorithm need a stack?',
+      'Because the most recently opened unmatched bracket must be closed first',
+      [
+        'Because brackets are processed from right to left',
+        'Because a stack automatically sorts bracket types',
+        'Because the total number of brackets must stay even',
+      ],
+      'Nested brackets require last-opened-first-closed behavior, which is exactly LIFO.',
+      'Think about nested parentheses like (( )).',
+      'LIFO matching',
+    ),
+    makeAnchor(
+      'When processing a closing bracket, what should be checked first?',
+      'Whether the stack is non-empty and its top matches the closing bracket',
+      [
+        'Whether the bottom bracket matches',
+        'Whether the input contains an even number of characters',
+        'Whether every opening bracket appeared before every closing bracket',
+      ],
+      'A closing bracket can only match the latest unmatched opener, which is at the top.',
+      'The next closer only cares about one pending opener.',
+      'Top-of-stack validation',
+    ),
+    makeAnchor(
+      'What does an empty stack at the end mean in valid-parentheses checking?',
+      'Every opening bracket has been matched and closed',
+      [
+        'There were no brackets in the input',
+        'Every bracket appeared twice',
+        'The stack automatically discarded invalid brackets',
+      ],
+      'No unmatched opener remains when the stack is empty after the full scan.',
+      'Ask: what would still be waiting if something were unmatched?',
+      'Final emptiness',
+    ),
+    makeAnchor(
+      'What is the usual time complexity of valid-parentheses checking?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(2ⁿ)',
+      ],
+      'Each bracket is pushed and popped at most once, so the scan is linear.',
+      'Count how many times one character can be processed.',
+      'Linear scan',
+    ),
+    makeAnchor(
+      'What is the main failure case for a closing bracket?',
+      'The stack is empty or its top bracket has the wrong type',
+      [
+        'The string contains too many opening brackets before the scan',
+        'The stack contains more than three elements',
+        'The closing bracket appears at an odd index',
+      ],
+      'A closer is invalid if nothing is waiting or the most recent opener is incompatible.',
+      'A closer needs exactly one valid partner.',
+      'Mismatch detection',
+    ),
+  ],
+
+  minStack: [
+    makeAnchor(
+      'Why does Min Stack usually keep a second stack?',
+      'To remember the minimum value at every stack depth',
+      [
+        'To sort the main stack',
+        'To duplicate every value for faster push',
+        'To store only values that are negative',
+      ],
+      'The auxiliary stack preserves the previous minimum when the current minimum is popped.',
+      'A single minimum variable loses history after a pop.',
+      'Minimum history',
+    ),
+    makeAnchor(
+      'What should be pushed onto the minimum stack when value x arrives?',
+      'min(x, currentMinimum)',
+      [
+        'Always x',
+        'Always the previous minimum',
+        'The average of x and the previous minimum',
+      ],
+      'Each depth stores the smallest value visible at that depth.',
+      'Ask what the minimum should be immediately after this push.',
+      'Running minimum',
+    ),
+    makeAnchor(
+      'Why can getMin() be O(1) in a Min Stack?',
+      'The current minimum is kept at the top of the auxiliary stack',
+      [
+        'The main stack is kept sorted',
+        'The stack scans every element in advance',
+        'The smallest value is always pushed first',
+      ],
+      'The current minimum is directly available without scanning.',
+      'No search is needed when the answer is already stored.',
+      'Constant-time minimum',
+    ),
+    makeAnchor(
+      'What must happen to the minimum stack when the main stack pops?',
+      'Its top must also be popped',
+      [
+        'It must be sorted again',
+        'It must be cleared',
+        'Nothing ever changes',
+      ],
+      'Both stacks represent the same depth, so popping one depth must pop the other.',
+      'Both stacks have synchronized history.',
+      'Synchronized depth',
+    ),
+    makeAnchor(
+      'What extra space does a Min Stack typically use?',
+      'O(n)',
+      [
+        'O(1)',
+        'O(log n)',
+        'O(n²)',
+      ],
+      'The auxiliary stack can contain one minimum entry per main-stack element.',
+      'Count the possible auxiliary entries.',
+      'Auxiliary space',
+    ),
+  ],
+
+  postfixEval: [
+    makeAnchor(
+      'What does the stack hold while evaluating a postfix expression?',
+      'Operands whose results are waiting for a later operator',
+      [
+        'Operators waiting for operands',
+        'Parentheses waiting to be closed',
+        'Every token in sorted order',
+      ],
+      'Operands stay on the stack until an operator consumes them.',
+      'Think about what must survive until an operator appears.',
+      'Pending operands',
+    ),
+    makeAnchor(
+      'When an operator appears, which operand is popped first?',
+      'The top value is the right operand and the next value is the left operand',
+      [
+        'The bottom value is always the right operand',
+        'Operands are interchangeable for every operator',
+        'The top value is always the left operand',
+      ],
+      'For subtraction and division, stack order matters: a = left, b = right, then a op b.',
+      'Use 8 2 − as a test.',
+      'Operand order',
+    ),
+    makeAnchor(
+      'Why does postfix evaluation not require precedence rules?',
+      'The token order already determines exactly when each operator executes',
+      [
+        'Every operator has equal precedence',
+        'The stack sorts operators by precedence',
+        'Parentheses are inserted automatically',
+      ],
+      'Postfix places each operator after its operands, so grouping is implicit.',
+      'The operator cannot execute before its operands exist.',
+      'Implicit grouping',
+    ),
+    makeAnchor(
+      'What is the usual time complexity of postfix evaluation?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(2ⁿ)',
+      ],
+      'Each token is processed once and each operand is pushed and popped at most once.',
+      'Count work per token.',
+      'Linear evaluation',
+    ),
+    makeAnchor(
+      'What happens when the final postfix evaluation finishes correctly?',
+      'Exactly one result remains on the stack',
+      [
+        'The stack must contain all original operands',
+        'The stack must contain every operator',
+        'The stack must be empty before reading the final token',
+      ],
+      'A valid expression reduces all operands and operators to one final result.',
+      'One complete expression should produce one value.',
+      'Single final result',
+    ),
+  ],
+
+  dailyTemperatures: [
+    makeAnchor(
+      'Why does Daily Temperatures store indices instead of temperatures?',
+      'The answer is a day distance, so the algorithm needs i − j',
+      [
+        'Indices are always smaller than temperatures',
+        'Temperatures cannot be stored in a stack',
+        'Indices are already sorted by temperature',
+      ],
+      'The number of days waited depends on positions, not just values.',
+      'The answer is literally a distance between days.',
+      'Index stack',
+    ),
+    makeAnchor(
+      'What makes the stack in Daily Temperatures monotonic?',
+      'Temperatures represented by indices remain in decreasing order',
+      [
+        'Indices remain in decreasing order',
+        'All temperatures are globally sorted',
+        'The stack contains only the maximum temperature',
+      ],
+      'A warmer incoming day pops every cooler unresolved day.',
+      'Ask what must be true before a warmer day arrives.',
+      'Monotonic decrease',
+    ),
+    makeAnchor(
+      'When does an index finally receive its answer?',
+      'When a warmer temperature causes that index to be popped',
+      [
+        'As soon as the index is pushed',
+        'Only after the complete array is scanned twice',
+        'When it reaches the bottom of the stack',
+      ],
+      'The current index is the first later day known to be warmer, so the difference gives the answer.',
+      'A pop means the waiting period has just been resolved.',
+      'Resolution on pop',
+    ),
+    makeAnchor(
+      'Why are multiple indices popped by one warmer temperature?',
+      'One warmer day can resolve several earlier days waiting for any warmer value',
+      [
+        'All earlier days have the same answer',
+        'The stack must always have one element',
+        'The warmer value replaces every previous temperature',
+      ],
+      'Every popped temperature is smaller than the current one, so the current day resolves each of them.',
+      'Imagine several consecutive cooler days.',
+      'Batch resolution',
+    ),
+    makeAnchor(
+      'What is the typical time complexity of the monotonic-stack solution?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(n³)',
+      ],
+      'Each index is pushed once and popped at most once.',
+      'Can one index be popped more than once?',
+      'Amortized linear time',
+    ),
+  ],
+
+  trappingRainWater: [
+    makeAnchor(
+      'What does a popped bar represent in the monotonic-stack solution?',
+      'The middle valley whose trapped water can now be bounded by left and right walls',
+      [
+        'The global maximum bar',
+        'A bar that can never trap water',
+        'The final answer for the entire array',
+      ],
+      'When a taller right wall arrives, the popped bar becomes the basin floor.',
+      'Think left wall, bottom, right wall.',
+      'Valley discovery',
+    ),
+    makeAnchor(
+      'What determines the water height above a valley?',
+      'The smaller of the left and right boundary heights',
+      [
+        'The taller boundary only',
+        'The valley floor only',
+        'The average of all bars',
+      ],
+      'Water cannot rise above the shorter wall.',
+      'A container is limited by its shorter wall.',
+      'Boundary minimum',
+    ),
+    makeAnchor(
+      'Why does the stack maintain decreasing heights?',
+      'A taller incoming bar is needed to reveal a trapped basin',
+      [
+        'To keep indices sorted',
+        'To guarantee the tallest bar is at the top',
+        'Because equal heights cannot exist',
+      ],
+      'Until a taller bar appears, the right boundary needed to calculate the basin is missing.',
+      'Ask what event makes a valley measurable.',
+      'Monotonic boundary',
+    ),
+    makeAnchor(
+      'What information is required to calculate a newly discovered water region?',
+      'Left boundary, right boundary, valley bottom, and their horizontal distance',
+      [
+        'Only the tallest bar',
+        'Only the current bar height',
+        'Only the array length',
+      ],
+      'Area depends on bounded height and width.',
+      'Area is height multiplied by width.',
+      'Water geometry',
+    ),
+    makeAnchor(
+      'What is the typical time complexity of the monotonic-stack solution?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(2ⁿ)',
+      ],
+      'Every index enters and leaves the stack at most once.',
+      'Count pushes and pops over the whole scan.',
+      'Linear water trapping',
+    ),
+  ],
+
+  largestRectangle: [
+    makeAnchor(
+      'Why is a histogram bar popped when a shorter bar arrives?',
+      'Its maximum possible rectangle width is now determined by the new right boundary',
+      [
+        'The bar is globally the shortest',
+        'The algorithm wants to sort the histogram',
+        'Every shorter bar must be deleted',
+      ],
+      'A shorter bar proves the taller bar cannot extend farther right.',
+      'A rectangle ends when you meet a shorter height.',
+      'Right boundary discovery',
+    ),
+    makeAnchor(
+      'Why is a sentinel height 0 appended?',
+      'To force remaining bars to pop at the end',
+      [
+        'To represent the median bar',
+        'To store the best area',
+        'To increase the histogram capacity',
+      ],
+      'Without a shorter final bar, increasing bars could remain unresolved.',
+      'What if the histogram keeps rising until its last element?',
+      'Sentinel flush',
+    ),
+    makeAnchor(
+      'How is the width of a popped rectangle found?',
+      'Using the current index as the right boundary and the new stack top as the left boundary',
+      [
+        'Using only the popped bar index',
+        'Using the histogram midpoint',
+        'Using the global maximum index',
+      ],
+      'The new stack top marks the first smaller bar on the left.',
+      'Width lies between the two smaller boundaries.',
+      'Rectangle width',
+    ),
+    makeAnchor(
+      'What does an increasing stack of heights represent?',
+      'Bars that can still extend farther to the right without hitting a shorter bar',
+      [
+        'Bars already at their maximum area',
+        'Bars sorted by index',
+        'Bars that must be removed immediately',
+      ],
+      'Each unresolved bar still has the possibility of gaining width.',
+      'No shorter right boundary has appeared yet.',
+      'Unresolved extension',
+    ),
+    makeAnchor(
+      'What is the typical time complexity of the monotonic-stack solution?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(n log n)',
+        'O(2ⁿ)',
+      ],
+      'Each histogram bar is pushed once and popped at most once.',
+      'Count total stack operations.',
+      'Linear histogram scan',
+    ),
+  ],
+
+  simplifyPath: [
+    makeAnchor(
+      'What should a directory stack do when it sees ".."?',
+      'Pop the most recent directory when one exists',
+      [
+        'Push ".." as a literal directory',
+        'Clear the entire stack',
+        'Move to the first directory',
+      ],
+      'Parent navigation cancels the current directory.',
+      'Think about `cd ..`.',
+      'Parent navigation',
+    ),
+    makeAnchor(
+      'What should happen when simplifyPath sees "."?',
+      'Nothing',
+      [
+        'Push "." onto the stack',
+        'Pop two directories',
+        'Reset to the root',
+      ],
+      'A single dot refers to the current directory and does not change the canonical path.',
+      '`.` means stay here.',
+      'No-op directory',
+    ),
+    makeAnchor(
+      'Why does a stack naturally fit canonical path simplification?',
+      'A later ".." cancels the most recently accepted directory',
+      [
+        'Paths are automatically sorted by a stack',
+        'A stack removes every duplicate directory',
+        'Stacks always store absolute paths',
+      ],
+      'The latest directory is exactly the one that parent navigation removes.',
+      'Which directory is affected by the next `..`?',
+      'LIFO path state',
+    ),
+    makeAnchor(
+      'What should multiple consecutive slashes generally do?',
+      'They do not create additional directory entries',
+      [
+        'They create empty directories',
+        'They reset the stack',
+        'They reverse the path',
+      ],
+      'Canonical Unix paths treat repeated separators as separators, not directories.',
+      'Split into meaningful path components.',
+      'Path normalization',
+    ),
+    makeAnchor(
+      'What is the typical complexity of simplifying a path?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(2ⁿ)',
+      ],
+      'Each path component is processed once and pushed or popped at most once.',
+      'Count the number of path components.',
+      'Linear path processing',
+    ),
+  ],
+
+  decodeString: [
+    makeAnchor(
+      'What two pieces of context are saved when `[` is encountered?',
+      'The current built string and the repeat count',
+      [
+        'Only the repeat count',
+        'Only the final decoded result',
+        'The matching bracket index',
+      ],
+      'Nested decoding needs both the outer string and how many times the inner part repeats.',
+      'At `]`, what two facts are needed to rebuild the result?',
+      'Paired context',
+    ),
+    makeAnchor(
+      'What does the repeat count before `[` represent?',
+      'How many times the bracketed substring should be repeated',
+      [
+        'The substring length',
+        'The stack depth',
+        'The index of the closing bracket',
+      ],
+      'The number directly controls expansion at the matching `]`.',
+      'Read `3[a]` literally.',
+      'Repeat multiplier',
+    ),
+    makeAnchor(
+      'Why does decoding use a stack for nested brackets?',
+      'Each nesting level has its own string and repeat count that must be restored later',
+      [
+        'The stack sorts characters',
+        'The stack prevents digits from appearing',
+        'The stack removes duplicate substrings',
+      ],
+      'Nested contexts must be suspended and resumed in LIFO order.',
+      'Inner work finishes before outer work resumes.',
+      'Nested context',
+    ),
+    makeAnchor(
+      'What happens at a closing bracket `]`?',
+      'The inner decoded string is expanded and combined with the saved outer string',
+      [
+        'The entire expression is restarted',
+        'The current result is discarded',
+        'The repeat count is ignored',
+      ],
+      'The matching saved context tells the algorithm how to rebuild this level.',
+      'This is where the suspended outer context returns.',
+      'Context restoration',
+    ),
+    makeAnchor(
+      'Why is a string stack and count stack often conceptually paired?',
+      'Each nested level needs both its previous string state and its multiplier',
+      [
+        'Strings and counts always have equal numeric values',
+        'One stack stores errors',
+        'Both stacks are required only for memory allocation',
+      ],
+      'The two values belong to the same nesting level and are restored together.',
+      'Think of them as one saved frame.',
+      'Nested frame',
+    ),
+  ],
+
+  basicCalculator: [
+    makeAnchor(
+      'What must be saved when `(` begins a sub-expression?',
+      'The current result and sign from the outer expression',
+      [
+        'Only the full input string',
+        'Only the current number',
+        'Nothing',
+      ],
+      'The inner expression temporarily replaces the outer running state.',
+      'Ask what would be lost when the result resets for the inner expression.',
+      'Context stack',
+    ),
+    makeAnchor(
+      'Why can a sign be stored as context for a parenthesized expression?',
+      'It tells how the completed inner result should be combined with the outer result',
+      [
+        'It stores the next digit',
+        'It identifies the matching parenthesis index',
+        'It sorts operators',
+      ],
+      'After `)` the saved sign determines whether the inner value is added or subtracted.',
+      'The outer operator still matters after the inner expression finishes.',
+      'Saved operator context',
+    ),
+    makeAnchor(
+      'What happens when `)` is encountered?',
+      'The inner result is folded back into the saved outer result',
+      [
+        'The expression is discarded',
+        'The stack is cleared completely',
+        'The scanner jumps to the start',
+      ],
+      'The closing parenthesis restores the suspended outer context.',
+      'Think: resume the expression that was waiting.',
+      'Sub-expression return',
+    ),
+    makeAnchor(
+      'Why can this calculator be evaluated in one left-to-right pass?',
+      'Parentheses context is stored explicitly, so earlier text never needs to be rescanned',
+      [
+        'All expressions are automatically sorted',
+        'Parentheses have no effect',
+        'Numbers are always single-digit',
+      ],
+      'The stack carries exactly the information needed to resume outer expressions.',
+      'A good stack stores context instead of restarting work.',
+      'Single-pass evaluation',
+    ),
+    makeAnchor(
+      'What is the typical time complexity of this stack-based calculator?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(2ⁿ)',
+      ],
+      'Each character is scanned a constant number of times.',
+      'Count work per character.',
+      'Linear expression evaluation',
+    ),
+  ],
+
+  removeAdjacentDuplicates: [
+    makeAnchor(
+      'Why does a stack naturally remove adjacent duplicates in one pass?',
+      'The stack top is the last surviving character, so it can be compared with the next character',
+      [
+        'The stack sorts characters alphabetically',
+        'The stack counts frequencies globally',
+        'The stack scans the string backwards',
+      ],
+      'The top represents exactly the character immediately before the incoming one in the reduced string.',
+      'Compare the incoming character with the current reduced-string end.',
+      'Local cancellation',
+    ),
+    makeAnchor(
+      'What causes cascading removals?',
+      'A pop exposes a new stack top that may now match the incoming character',
+      [
+        'The whole string is rescanned every time',
+        'A frequency map deletes all copies',
+        'The stack reverses the entire input',
+      ],
+      'Removing one pair can make a new pair adjacent.',
+      'What becomes adjacent after a pop?',
+      'Cascading cancellation',
+    ),
+    makeAnchor(
+      'What happens when the incoming character differs from the stack top?',
+      'It is pushed',
+      [
+        'It is discarded',
+        'The whole stack is cleared',
+        'The previous top is duplicated',
+      ],
+      'A mismatch means no adjacent pair exists at that point.',
+      'Different neighbors should both survive.',
+      'Push on mismatch',
+    ),
+    makeAnchor(
+      'What happens when the incoming character equals the stack top?',
+      'The top is popped instead of pushing another copy',
+      [
+        'Both characters stay',
+        'The entire stack is reversed',
+        'Only the incoming character remains',
+      ],
+      'Matching adjacent characters cancel as a pair.',
+      'Equal neighboring characters disappear together.',
+      'Pair cancellation',
+    ),
+    makeAnchor(
+      'What is the typical time complexity of this algorithm?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(2ⁿ)',
+      ],
+      'Each character is pushed at most once and popped at most once.',
+      'Total stack operations stay linear.',
+      'Linear cancellation',
+    ),
+  ],
+
+  queueViaStacks: [
+    makeAnchor(
+      'Why are two stacks enough to implement a queue?',
+      'A second reversal restores FIFO order when elements move from input to output',
+      [
+        'Two stacks automatically sort values',
+        'One stack stores only even elements',
+        'A stack is already FIFO',
+      ],
+      'The first stack records arrival order and the second reverses it for removal order.',
+      'One reversal changes LIFO into FIFO.',
+      'Two-stack reversal',
+    ),
+    makeAnchor(
+      'When should elements be transferred from In-Stack to Out-Stack?',
+      'When Out-Stack is empty and a dequeue is needed',
+      [
+        'After every enqueue',
+        'After every dequeue no matter what',
+        'Only when In-Stack is empty',
+      ],
+      'If Out-Stack still contains older elements, moving newer values into it would break FIFO.',
+      'Do not disturb already-ready oldest elements.',
+      'Transfer on empty',
+    ),
+    makeAnchor(
+      'Why can dequeue be O(1) after a transfer?',
+      'The oldest element is on top of Out-Stack',
+      [
+        'The entire queue is sorted',
+        'Out-Stack contains one element only',
+        'Dequeues never modify the stack',
+      ],
+      'The reversal puts the oldest arrival at the accessible top.',
+      'FIFO becomes LIFO after one controlled reversal.',
+      'Constant dequeue',
+    ),
+    makeAnchor(
+      'What is the amortized complexity of queue operations with two stacks?',
+      'O(1) amortized per operation',
+      [
+        'O(n) for every operation',
+        'O(n²) amortized',
+        'O(log n) always',
+      ],
+      'An element can be transferred only a constant number of times across the two stacks.',
+      'Expensive transfers are spread across many operations.',
+      'Amortized analysis',
+    ),
+    makeAnchor(
+      'Which stack receives new enqueued elements first?',
+      'The In-Stack',
+      [
+        'The Out-Stack',
+        'Both equally',
+        'Neither until dequeue',
+      ],
+      'In-Stack records the incoming order before any reversal.',
+      'Think of one stack as the arrival lane.',
+      'Input stack',
+    ),
+  ],
+
+  stackViaQueues: [
+    makeAnchor(
+      'Why can push be made O(n) in a stack implemented with queues?',
+      'The new element can be rotated to the front so pop becomes O(1)',
+      [
+        'Queues are naturally LIFO',
+        'The stack can never contain more than one value',
+        'Push never changes queue order',
+      ],
+      'After rotation, the newest value is at the front of the main queue.',
+      'The stack top must be the next value dequeued.',
+      'Costly push',
+    ),
+    makeAnchor(
+      'Why is the newest value moved to the front of the main queue?',
+      'Because the front is the position used for the O(1) pop',
+      [
+        'Because the rear is inaccessible',
+        'Because queues automatically reverse themselves',
+        'Because the newest value is always the smallest',
+      ],
+      'Pop is implemented as dequeue, so the desired stack top must already be at the front.',
+      'Where does dequeue remove from?',
+      'Front-as-top',
+    ),
+    makeAnchor(
+      'Why is an auxiliary queue useful during push?',
+      'It lets the newly inserted value become first while preserving the old values behind it',
+      [
+        'It sorts the old values',
+        'It stores only duplicate values',
+        'It replaces the main queue permanently',
+      ],
+      'Rotating values into a fresh queue builds the desired LIFO-facing order.',
+      'Imagine inserting x before the old queue contents.',
+      'Auxiliary rotation',
+    ),
+    makeAnchor(
+      'What is the typical time complexity of pop in the one-costly-operation design?',
+      'O(1)',
+      [
+        'O(n)',
+        'O(n²)',
+        'O(log n)',
+      ],
+      'The newest element has already been arranged at the front.',
+      'All expensive reordering happened during push.',
+      'Constant pop',
+    ),
+    makeAnchor(
+      'What trade-off does this queue-based stack implementation make?',
+      'It spends more time on push to make pop fast',
+      [
+        'It uses no memory but slower push',
+        'It makes both operations O(n²)',
+        'It removes LIFO behavior entirely',
+      ],
+      'The design chooses where to pay the reordering cost.',
+      'One operation is intentionally expensive.',
+      'Time trade-off',
+    ),
+  ],
+
+  circularQueue: [
+    makeAnchor(
+      'Why does a circular queue use modulo arithmetic for the rear index?',
+      'To wrap the index back to slot 0 after the last slot',
+      [
+        'To sort the queue',
+        'To increase capacity automatically',
+        'To prevent dequeue',
+      ],
+      'Modulo implements ring wraparound without moving existing elements.',
+      'What should happen after the last array position?',
+      'Ring wraparound',
+    ),
+    makeAnchor(
+      'Why is a circular queue more space-efficient than a naive array queue?',
+      'Freed slots at the front can be reused after dequeue',
+      [
+        'It doubles the array size',
+        'It compresses every stored value',
+        'It removes the need for a rear pointer',
+      ],
+      'Wraparound lets later enqueues use positions that earlier dequeues freed.',
+      'Picture the array as a ring instead of a line.',
+      'Space reuse',
+    ),
+    makeAnchor(
+      'What does the front index represent?',
+      'The position of the current oldest queue element',
+      [
+        'The position of the newest element',
+        'The next free slot only',
+        'The queue midpoint',
+      ],
+      'FIFO removal always happens from the oldest element.',
+      'Front means where dequeue looks.',
+      'Front pointer',
+    ),
+    makeAnchor(
+      'What does the rear index represent?',
+      'The position associated with the newest enqueued element',
+      [
+        'The oldest element',
+        'The queue midpoint',
+        'The current capacity',
+      ],
+      'Enqueue advances the rear around the ring.',
+      'Rear means where new data arrives.',
+      'Rear pointer',
+    ),
+    makeAnchor(
+      'What is the main advantage of circular indexing?',
+      'Enqueue and dequeue can remain O(1) without shifting elements',
+      [
+        'Sorting becomes automatic',
+        'Memory becomes unlimited',
+        'Every queue becomes priority-based',
+      ],
+      'Only index pointers move; stored elements do not need to be shifted.',
+      'A good queue implementation moves pointers, not all elements.',
+      'Constant-time queue operations',
+    ),
+  ],
+
+  circularDeque: [
+    makeAnchor(
+      'Why does insertFront use `(front - 1 + capacity) % capacity`?',
+      'It wraps front backward safely even when front is 0',
+      [
+        'It doubles the capacity',
+        'It moves the front forward',
+        'It prevents every insertion',
+      ],
+      'Adding capacity before modulo avoids a negative index.',
+      'Test the formula with front = 0.',
+      'Backward wraparound',
+    ),
+    makeAnchor(
+      'What makes a deque different from a normal queue?',
+      'Insertion and removal are supported at both ends',
+      [
+        'It only removes from the rear',
+        'It always sorts values',
+        'It has no front pointer',
+      ],
+      'A deque exposes both front and rear operations.',
+      'Think double-ended queue.',
+      'Double-ended access',
+    ),
+    makeAnchor(
+      'Why is modulo important in a circular deque?',
+      'It keeps both front and rear positions inside the fixed-size ring',
+      [
+        'It makes every value unique',
+        'It sorts the deque',
+        'It increases the number of stored items',
+      ],
+      'Both ends may move backward or forward and need wraparound.',
+      'Both directions need ring arithmetic.',
+      'Circular indexing',
+    ),
+    makeAnchor(
+      'What problem does adding capacity before modulo solve?',
+      'Negative intermediate indices',
+      [
+        'Duplicate values',
+        'Queue overflow',
+        'Unsorted elements',
+      ],
+      'Many languages can produce a negative remainder from a negative dividend.',
+      'Consider `(0 - 1) % capacity`.',
+      'Safe modulo',
+    ),
+    makeAnchor(
+      'What is the typical goal of a circular deque implementation?',
+      'O(1) insertion and removal at both ends',
+      [
+        'O(n) insertion so values stay sorted',
+        'O(log n) access to arbitrary positions',
+        'Automatic priority scheduling',
+      ],
+      'Pointer arithmetic gives constant-time end operations.',
+      'Only the ends need to move.',
+      'Constant-time deque',
+    ),
+  ],
+
+  slidingWindow: [
+    makeAnchor(
+      'Why does a monotonic deque store indices rather than just values?',
+      'Indices reveal both the value through the array and whether an entry has left the window',
+      [
+        'Indices always take less memory',
+        'Only indices can be stored in a deque',
+        'Indices keep the input sorted',
+      ],
+      'Window membership depends on position, while value comparisons still use the array.',
+      'The window moves by index.',
+      'Index deque',
+    ),
+    makeAnchor(
+      'Why are smaller values removed from the deque back when a larger value arrives?',
+      'They can never become the maximum while the larger newer value remains in the window',
+      [
+        'Smaller values are invalid input',
+        'The deque only stores equal values',
+        'The algorithm needs sorted input',
+      ],
+      'The newer larger value dominates them for every future window containing both.',
+      'Ask: can the smaller value ever beat the larger one later?',
+      'Dominance pruning',
+    ),
+    makeAnchor(
+      'Why must expired indices be removed from the deque front?',
+      'They are no longer inside the current sliding window',
+      [
+        'They have the smallest values',
+        'They were inserted first',
+        'They are always duplicates',
+      ],
+      'An expired value cannot contribute to the current maximum.',
+      'Window boundaries matter.',
+      'Expiry eviction',
+    ),
+    makeAnchor(
+      'What should the deque front represent after maintenance?',
+      'The index of the maximum value in the current window',
+      [
+        'The oldest index regardless of value',
+        'The minimum value in the window',
+        'The last inserted index only',
+      ],
+      'The monotonic decreasing structure keeps the largest value at the front.',
+      'Front is the answer candidate.',
+      'Maximum-at-front',
+    ),
+    makeAnchor(
+      'What is the typical complexity of monotonic-deque sliding window maximum?',
+      'O(n)',
+      [
+        'O(n²)',
+        'O(n log n)',
+        'O(2ⁿ)',
+      ],
+      'Each index enters and leaves the deque at most once.',
+      'Amortized work per element stays constant.',
+      'Linear sliding window',
+    ),
+  ],
+
+  firstNonRepeating: [
+    makeAnchor(
+      'Why does the algorithm need both a frequency map and a queue?',
+      'The map tracks counts while the queue preserves candidate order',
+      [
+        'Both structures store identical data',
+        'The queue sorts frequencies',
+        'The map stores only positions',
+      ],
+      'Frequency answers validity; queue order answers which valid character came first.',
+      'One structure answers how many, the other who came first.',
+      'Map plus queue',
+    ),
+    makeAnchor(
+      'Why can the queue contain a repeated character temporarily?',
+      'Cleanup is lazy and happens when that character reaches the front',
+      [
+        'Repeated characters are always valid',
+        'The queue cannot remove from the front',
+        'The map is checked only once',
+      ],
+      'Removing every invalid character immediately would require more work than necessary.',
+      'Ask when the algorithm actually needs to inspect a candidate.',
+      'Lazy cleanup',
+    ),
+    makeAnchor(
+      'What does the queue front represent?',
+      'The earliest candidate that has not yet been proven invalid',
+      [
+        'The most frequent character',
+        'The latest character seen',
+        'The alphabetically smallest character',
+      ],
+      'FIFO preserves arrival order among possible non-repeating candidates.',
+      'Earliest candidate comes first.',
+      'Candidate order',
+    ),
+    makeAnchor(
+      'What happens when the queue front has frequency greater than one?',
+      'It is removed because it can no longer be the answer',
+      [
+        'Its frequency is increased',
+        'It is moved to the rear',
+        'It becomes the answer',
+      ],
+      'A frequency above one proves the character repeats.',
+      'The front is checked for current validity.',
+      'Invalidation',
+    ),
+    makeAnchor(
+      'What is the usual complexity of the first-non-repeating-character stream algorithm?',
+      'O(n) total time',
+      [
+        'O(n²)',
+        'O(log n)',
+        'O(2ⁿ)',
+      ],
+      'Each character is enqueued once and removed from the queue at most once.',
+      'Count total map and queue operations.',
+      'Linear stream processing',
+    ),
+  ],
+
+  taskScheduler: [
+    makeAnchor(
+      'Why does the scheduler prioritize the task with the highest remaining count?',
+      'Using frequent tasks early helps their cooldowns overlap with other work',
+      [
+        'Frequent tasks always have the shortest execution time',
+        'The alphabet requires that order',
+        'Rare tasks cannot be scheduled later',
+      ],
+      'The main risk is leaving a highly frequent task stranded by cooldown gaps.',
+      'Which task is hardest to fit later?',
+      'Greedy frequency choice',
+    ),
+    makeAnchor(
+      'What does the cooldown queue usually track?',
+      'Tasks that have run recently and the time when they become available again',
+      [
+        'Only completed tasks',
+        'Only the least frequent task',
+        'All tasks sorted alphabetically',
+      ],
+      'A cooling task cannot return to the ready pool until its cooldown expires.',
+      'A cooldown is a future availability event.',
+      'Cooldown tracking',
+    ),
+    makeAnchor(
+      'When can the scheduler execute a task?',
+      'When its remaining count is positive and it is not cooling down',
+      [
+        'Whenever its count is highest, even during cooldown',
+        'Only when every task has equal count',
+        'Only after all tasks finish',
+      ],
+      'Both frequency and availability constraints must hold.',
+      'Ready work is different from total work.',
+      'Ready-set condition',
+    ),
+    makeAnchor(
+      'What should happen if no task is ready but work remains?',
+      'Advance time, representing an idle slot',
+      [
+        'Delete the cooling tasks',
+        'Reset all task counts',
+        'Execute a random cooling task',
+      ],
+      'The CPU may need to wait until a task exits cooldown.',
+      'No ready work means time still moves.',
+      'Idle tick',
+    ),
+    makeAnchor(
+      'Why can a max-heap be useful in this problem?',
+      'It gives fast access to the ready task with the largest remaining frequency',
+      [
+        'It stores cooldown times in sorted order only',
+        'It guarantees zero idle time',
+        'It removes the need for a queue',
+      ],
+      'Priority by remaining count is exactly what a max-heap provides.',
+      'We need the largest count quickly.',
+      'Priority queue',
+    ),
+  ],
+
+  movingAverage: [
+    makeAnchor(
+      'Why does a queue fit a fixed-size moving average?',
+      'The oldest value leaves exactly when the newest value enters',
+      [
+        'Queues automatically calculate averages',
+        'Queues sort the values',
+        'Only queues support numeric values',
+      ],
+      'FIFO order matches the sliding window’s entering and leaving behavior.',
+      'Which value should leave first?',
+      'FIFO window',
+    ),
+    makeAnchor(
+      'How can the average be updated in O(1)?',
+      'Add the incoming value and subtract the outgoing value from a running sum',
+      [
+        'Recompute every value in the window',
+        'Sort the window first',
+        'Store every previous average',
+      ],
+      'Only two values change when the window slides.',
+      'Only one enters and one leaves.',
+      'Running sum',
+    ),
+    makeAnchor(
+      'What should happen before the window reaches its full size?',
+      'The running sum is divided by the current number of elements',
+      [
+        'Always divide by the maximum window size',
+        'Return zero',
+        'Discard the new value',
+      ],
+      'The current window may contain fewer than the target number of elements.',
+      'The divisor is the current count.',
+      'Partial window',
+    ),
+    makeAnchor(
+      'What value must be removed from the queue when the window is full and a new value arrives?',
+      'The oldest value',
+      [
+        'The largest value',
+        'The smallest value',
+        'The newest value',
+      ],
+      'FIFO removal preserves the sliding-window boundary.',
+      'Think first-in, first-out.',
+      'Window eviction',
+    ),
+    makeAnchor(
+      'What is the typical complexity per new sample?',
+      'O(1)',
+      [
+        'O(k)',
+        'O(n log n)',
+        'O(n²)',
+      ],
+      'One enqueue, one possible dequeue, and constant-time arithmetic are enough.',
+      'No full-window scan is needed.',
+      'Constant-time update',
+    ),
+  ],
+
+  rottingOranges: [
+    makeAnchor(
+      'Why do all rotten oranges enter the BFS queue at minute 0?',
+      'They are simultaneous sources of the spread',
+      [
+        'They need to be sorted first',
+        'Only one source is allowed per BFS',
+        'The queue requires one orange per minute',
+      ],
+      'Multi-source BFS measures the earliest spread from every rotten orange at once.',
+      'All sources start at the same time.',
+      'Multi-source BFS',
+    ),
+    makeAnchor(
+      'What does one BFS level represent in Rotting Oranges?',
+      'One minute of spread',
+      [
+        'One orange processed',
+        'One row of the grid',
+        'One completed path',
+      ],
+      'All nodes in the same BFS level are reached at the same elapsed time.',
+      'BFS depth maps directly to minutes.',
+      'Time by BFS level',
+    ),
+    makeAnchor(
+      'When does a fresh orange become rotten?',
+      'When it is first reached by a neighboring rotten orange',
+      [
+        'Only after scanning the whole grid',
+        'When it reaches the queue rear',
+        'When all fresh oranges are adjacent',
+      ],
+      'The first BFS arrival is the minimum time to that cell.',
+      'BFS discovers the earliest possible minute.',
+      'First-arrival infection',
+    ),
+    makeAnchor(
+      'How do you know whether the final answer is impossible?',
+      'At the end, at least one fresh orange remains',
+      [
+        'The queue is empty at the start',
+        'There are no rotten oranges',
+        'The grid has an even number of cells',
+      ],
+      'Any unreachable fresh orange can never rot.',
+      'Look for fresh cells after BFS finishes.',
+      'Unreachable fresh cells',
+    ),
+    makeAnchor(
+      'What is the typical time complexity?',
+      'O(R × C)',
+      [
+        'O((R × C)²)',
+        'O(log(R × C))',
+        'O(2^(R×C))',
+      ],
+      'Each grid cell is enqueued and processed at most once.',
+      'Count the cells, not all possible paths.',
+      'Grid-linear BFS',
+    ),
+  ],
+
+  dota2Senate: [
+    makeAnchor(
+      'Why are senate members stored by their original positions?',
+      'Relative order determines whose turn comes first',
+      [
+        'Positions determine voting power',
+        'Positions determine party membership',
+        'Positions are used only for sorting by name',
+      ],
+      'The simulation is round-robin, so the original turn order matters.',
+      'The earlier senator acts earlier in each round.',
+      'Turn order',
+    ),
+    makeAnchor(
+      'Why is a surviving senator re-enqueued at index + n?',
+      'It represents that senator’s next turn in the following round',
+      [
+        'It removes the senator from future rounds',
+        'It increases voting power',
+        'It marks the senator as defeated',
+      ],
+      'Adding n moves the same relative position into the next round.',
+      'Every survivor gets another future turn.',
+      'Round advancement',
+    ),
+    makeAnchor(
+      'What does comparing the two queue fronts tell us?',
+      'Which party member gets to act first',
+      [
+        'Which party has more total senators',
+        'Which senator has greater voting power',
+        'Which party has the alphabetically earlier name',
+      ],
+      'The smallest scheduled index acts first.',
+      'Front means earliest upcoming turn.',
+      'Scheduled turn',
+    ),
+    makeAnchor(
+      'What happens to the senator who wins a ban?',
+      'That senator survives and is scheduled again for a later round',
+      [
+        'The winner also leaves forever',
+        'The winner changes party',
+        'The winner loses voting rights',
+      ],
+      'Only the banned opponent is removed; the winner remains eligible.',
+      'Winning an interaction does not end the winner’s participation.',
+      'Survivor requeue',
+    ),
+    makeAnchor(
+      'What is the core data-structure idea behind the efficient simulation?',
+      'Two queues preserve each party’s next scheduled turn',
+      [
+        'A stack sorts both parties',
+        'A hash map replaces turn order',
+        'A tree stores every possible vote',
+      ],
+      'Queues model repeated round-robin turns naturally.',
+      'Future turns are consumed from the front.',
+      'Two-queue simulation',
+    ),
+  ],
 };
 
-function anchorForCategory(category: StackQueueCategory): Anchor {
-  /* Flagship problems carry their own anchor about the ONE idea that
-     makes them work; only the primitives fall back to the generic
-     LIFO/FIFO/bracket definitions. */
+function anchorForCategory(
+  category: StackQueueCategory,
+  stepCount: number,
+): Anchor {
+  /* Flagship problems carry their own rotating conceptual anchors;
+     primitives fall back to the generic LIFO/FIFO/bracket definitions. */
   const specific = SPECIFIC_ANCHORS[category];
-  if (specific) return specific;
+  if (specific?.length) {
+    return specific[stepCount % specific.length];
+  }
+
   switch (category) {
     case 'queue':
       return QUEUE_ANCHOR;
@@ -1305,7 +2343,7 @@ export function buildStackQueueCheckpoints(
 ): QuizCheckpoint[] {
   if (steps.length < 1) return [];
 
-  const anchor = anchorForCategory(category);
+  const anchor = anchorForCategory(category, steps.length);
   const checkpoints: QuizCheckpoint[] = [];
 
   const anchorId = `sq-${category}-anchor`;
