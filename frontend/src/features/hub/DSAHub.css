@@ -1,6 +1,6 @@
 /* ── Smooth scroll ────────────────────────────────────────────────── */
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 .dsa-hub {
@@ -332,6 +332,11 @@ html {
   min-height: 380px;
 }
 
+/* Motion owns the hero mascot's idle movement; avoid stacking the old CSS loop. */
+.hero-mascot-motion .octa-interactive {
+  animation: none;
+}
+
 .hero-image {
   width: 300px;
   height: 300px;
@@ -420,6 +425,12 @@ html {
 @keyframes bubblePulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bubble {
+    animation: none;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
