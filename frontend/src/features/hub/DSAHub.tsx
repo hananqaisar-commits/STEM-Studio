@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion, useReducedMotion } from 'motion/react';
-import { useLenis } from 'lenis/react';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
   MessageSquare, ChevronDown, Send, Sparkles, Plus,
@@ -53,13 +51,13 @@ const FAQS = [
 
 /* ── Inline SVG brand icons (not available in lucide-react v1.x) ── */
 const LinkedinIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect width="4" height="12" x="2" y="9" /><circle cx="4" cy="4" r="2" /></svg>
 );
 const InstagramIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></svg>
 );
 const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" /><path d="M9 18c-4.51 2-5-2-7-2" /></svg>
 );
 
 /* ── Footer social links ──────────────────────────────────────────── */
@@ -74,13 +72,13 @@ const AFTAB_GITHUB = 'https://github.com/Aftab-commits';
 const HASSAN_GITHUB = 'https://github.com/hassanmustafa710';
 const HANAN_GITHUB = 'https://github.com/hananqaisar-commits';
 
-function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1800, reducedMotion = false) {
+function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1800) {
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (words.length === 0 || reducedMotion) return;
+    if (words.length === 0) return;
     const currentWord = words[index];
 
     if (!isDeleting && subIndex === currentWord.length) {
@@ -102,7 +100,7 @@ function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pa
     );
 
     return () => clearTimeout(timeout);
-  }, [subIndex, index, isDeleting, words, typingSpeed, deletingSpeed, pauseDuration, reducedMotion]);
+  }, [subIndex, index, isDeleting, words, typingSpeed, deletingSpeed, pauseDuration]);
 
   return `${words[index].substring(0, subIndex)}`;
 }
@@ -127,8 +125,6 @@ import { LegalModal, type LegalDocType } from '../../components/layout/LegalModa
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
   const { requireAuth } = useAuthPrompt();
-  const lenis = useLenis();
-  const shouldReduceMotion = useReducedMotion();
   const [legalDoc, setLegalDoc] = useState<LegalDocType>(null);
   const { state: mascotState, setExpression, setContext } = useMascot();
 
@@ -137,7 +133,7 @@ export const DSAHub: React.FC = () => {
     "DLD",
     "OS",
     "Networks",
-  ], 100, 50, 1600, shouldReduceMotion ?? false);
+  ], 100, 50, 1600);
 
   useEffect(() => {
     setContext('dashboard');
@@ -230,20 +226,7 @@ export const DSAHub: React.FC = () => {
   };
 
   const scrollToSection = (id: string) => {
-    if (lenis) {
-      lenis.scrollTo(`#${id}`, { offset: -16 });
-      return;
-    }
-
-    document.getElementById(id)?.scrollIntoView({ behavior: 'auto' });
-  };
-
-  const reveal = (delay: number, scale = 1) => shouldReduceMotion ? {
-    initial: false as const,
-  } : {
-    initial: { opacity: 0, y: 18, scale },
-    animate: { opacity: 1, y: 0, scale: 1 },
-    transition: { duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] as const },
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   /* ── Subject module bubbles are rendered directly from MODULES ───── */
@@ -254,26 +237,26 @@ export const DSAHub: React.FC = () => {
       {/* ── Hero Section ───────────────────────────────────────────── */}
       <section id="hero" className="hero-section">
         <div className="hero-text">
-          <motion.h1 className="hero-title" {...reveal(0)}>
+          <h1 className="hero-title">
             Explore & Master<br />
             <span className="hero-accent inline-flex items-center gap-1 font-black">
               {typedExploreText}
               <span className="inline-block w-1.5 h-8 md:h-11 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
             </span>
-          </motion.h1>
-          <motion.p className="hero-subtitle" {...reveal(0.13)}>
+          </h1>
+          <p className="hero-subtitle">
             Build algorithm intuition by tracing each operation, checking your understanding,
             and comparing implementations across languages.
-          </motion.p>
-          <motion.div className="hero-cta" {...reveal(0.27, 0.96)}>
-            <motion.button whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }} whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }} className="hero-btn hero-btn-primary" onClick={() => navigate('/dashboard/dsa')}>
+          </p>
+          <div className="hero-cta">
+            <button className="hero-btn hero-btn-primary" onClick={() => navigate('/dashboard/dsa')}>
               Start Learning <ArrowRight size={16} />
-            </motion.button>
-            <motion.button whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }} whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }} className="hero-btn hero-btn-secondary" onClick={() => scrollToSection('features')}>
+            </button>
+            <button className="hero-btn hero-btn-secondary" onClick={() => scrollToSection('features')}>
               Explore Features
-            </motion.button>
-          </motion.div>
-          <motion.div className="hero-social-proof" {...reveal(0.38)}>
+            </button>
+          </div>
+          <div className="hero-social-proof">
             <div className="hero-avatar-stack">
               {['A', 'S', 'R', 'M'].map((initial, i) => (
                 <div
@@ -296,8 +279,8 @@ export const DSAHub: React.FC = () => {
                 <span className="hero-rating-count">({stats.total_reviews} Reviews)</span>
               </div>
             )}
-          </motion.div>
-          <motion.div className="hero-stats" {...reveal(0.46)}>
+          </div>
+          <div className="hero-stats">
             <div className="hero-stat">
               <span className="hero-stat-num">{availableModules}</span>
               <span className="hero-stat-label">Modules</span>
@@ -310,14 +293,9 @@ export const DSAHub: React.FC = () => {
               <span className="hero-stat-num">{totalTopics}+</span>
               <span className="hero-stat-label">Topics</span>
             </div>
-          </motion.div>
+          </div>
         </div>
-        <motion.div
-          className="hero-visual mascot-hero hero-mascot-motion"
-          initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97 }}
-          animate={shouldReduceMotion ? undefined : { opacity: 1, scale: 1, y: [0, -5, 0] }}
-          transition={shouldReduceMotion ? undefined : { opacity: { duration: 0.55, delay: 0.2 }, scale: { duration: 0.55, delay: 0.2 }, y: { duration: 4.8, ease: 'easeInOut', repeat: Infinity } }}
-        >
+        <div className="hero-visual mascot-hero">
           <div className="mascot-hero-center">
             <Octa expression={mascotState.expression} size="xl" />
           </div>
@@ -350,7 +328,7 @@ export const DSAHub: React.FC = () => {
               );
             })}
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* ── Sparkles Divider (Gradients + Particle Effect) ── */}
@@ -514,85 +492,85 @@ export const DSAHub: React.FC = () => {
             )}
             {reviewStatus === 'success' && (
               <svg className="paper-plane-fly" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             )}
           </div>
           <form id="review-form" className="review-form" onSubmit={handleReviewSubmit}>
-          <div className="review-form-row">
-            <div className="review-form-field">
-              <label>Your Rating</label>
-              <div className="star-selector">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={`star-btn${s <= reviewStars ? ' is-active' : ''}`}
-                    onMouseEnter={() => {
-                      if (s <= 2) setExpression('thinking', { temporary: true, durationMs: 600 });
-                      else if (s >= 4) setExpression('happy', { temporary: true, durationMs: 600 });
-                    }}
-                    onClick={() => setReviewStars(s)}
-                  >
-                    <Star size={20} fill={s <= reviewStars ? 'currentColor' : 'none'} />
-                  </button>
-                ))}
+            <div className="review-form-row">
+              <div className="review-form-field">
+                <label>Your Rating</label>
+                <div className="star-selector">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`star-btn${s <= reviewStars ? ' is-active' : ''}`}
+                      onMouseEnter={() => {
+                        if (s <= 2) setExpression('thinking', { temporary: true, durationMs: 600 });
+                        else if (s >= 4) setExpression('happy', { temporary: true, durationMs: 600 });
+                      }}
+                      onClick={() => setReviewStars(s)}
+                    >
+                      <Star size={20} fill={s <= reviewStars ? 'currentColor' : 'none'} />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="review-form-row review-form-two-col">
-            <div className="review-form-field">
-              <label><User size={13} /> Full Name</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Your name"
-                value={reviewName}
-                onChange={(e) => setReviewName(e.target.value)}
-                required
-              />
+            <div className="review-form-row review-form-two-col">
+              <div className="review-form-field">
+                <label><User size={13} /> Full Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Your name"
+                  value={reviewName}
+                  onChange={(e) => setReviewName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="review-form-field">
+                <label><Star size={13} /> Role</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. CS Student"
+                  value={reviewRole}
+                  onChange={(e) => setReviewRole(e.target.value)}
+                  required
+                />
+              </div>
             </div>
             <div className="review-form-field">
-              <label><Star size={13} /> Role</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. CS Student"
-                value={reviewRole}
-                onChange={(e) => setReviewRole(e.target.value)}
+              <label><MessageSquare size={13} /> Your Review</label>
+              <textarea
+                className="form-input form-textarea"
+                placeholder="Share your experience with STEM Studio..."
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                rows={4}
                 required
+                minLength={10}
               />
             </div>
-          </div>
-          <div className="review-form-field">
-            <label><MessageSquare size={13} /> Your Review</label>
-            <textarea
-              className="form-input form-textarea"
-              placeholder="Share your experience with STEM Studio..."
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              rows={4}
-              required
-              minLength={10}
-            />
-          </div>
-          {reviewStatus === 'success' && (
-            <p className="review-status review-status-success">
-              Thank you! Your review has been submitted for approval.
-            </p>
-          )}
-          {reviewStatus === 'error' && (
-            <p className="review-status review-status-error">
-              Failed to submit review. Please try again later.
-            </p>
-          )}
-          <button
-            type="submit"
-            className="review-submit-btn"
-            disabled={reviewStatus === 'submitting' || reviewStars === 0}
-          >
-            {reviewStatus === 'submitting' ? 'Submitting...' : 'Submit Review'} <Send size={14} />
-          </button>
+            {reviewStatus === 'success' && (
+              <p className="review-status review-status-success">
+                Thank you! Your review has been submitted for approval.
+              </p>
+            )}
+            {reviewStatus === 'error' && (
+              <p className="review-status review-status-error">
+                Failed to submit review. Please try again later.
+              </p>
+            )}
+            <button
+              type="submit"
+              className="review-submit-btn"
+              disabled={reviewStatus === 'submitting' || reviewStars === 0}
+            >
+              {reviewStatus === 'submitting' ? 'Submitting...' : 'Submit Review'} <Send size={14} />
+            </button>
           </form>
         </div>
       </section>
