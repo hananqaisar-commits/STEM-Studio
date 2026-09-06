@@ -173,48 +173,559 @@ const AUTHORED_META: Partial<Record<GraphCategory, { hint: string; concept: stri
 const ANCHORS: Partial<
   Record<
     GraphCategory,
-    { prompt: string; correct: string; distractors: string[]; explanation: string; hint: string; concept: string }
+    {
+      prompt: string;
+      correct: string;
+      distractors: string[];
+      explanation: string;
+      hint: string;
+      concept: string;
+    }[]
   >
 > = {
-  dfs: {
-    prompt: 'Which data structure gives depth-first search its behaviour?',
-    correct: 'A stack (last in, first out)',
-    distractors: [
-      'A queue (first in, first out)',
-      'A min-heap ordered by depth',
-      'A set of visited vertices',
-    ],
-    explanation:
-      'A stack. DFS pushes each vertex it descends into and pops it on the way back out, so the most recently discovered vertex is always the next one explored. The recursion stack shown under the canvas is that stack made visible.',
-    hint: 'Watch the QUEUE / STACK panel: which end do vertices enter, and which end do they leave from?',
-    concept: 'Traversal strategy',
-  },
-  prim: {
-    prompt: "Prim's algorithm grows a single tree outward. Which edge is it always allowed to take next?",
-    correct: 'The lightest edge with exactly one endpoint in the tree',
-    distractors: [
-      'The lightest edge left anywhere in the graph',
-      'The lightest edge leaving the vertex added most recently',
-      'Any edge that does not close a cycle',
-    ],
-    explanation:
-      "The lightest edge crossing the cut between the tree and everything outside it. That is the cut property, and it is also what separates Prim's from Kruskal's: Kruskal's takes the globally lightest edge that stays acyclic, which need not touch the tree at all.",
-    hint: "Prim's tree stays connected at every step, so ask which edges could extend it by exactly one new vertex.",
-    concept: 'Cut property',
-  },
-  topoSort: {
-    prompt: "In Kahn's algorithm, a vertex becomes ready to emit when…",
-    correct: '…its in-degree has dropped to zero',
-    distractors: [
-      '…it has no outgoing edges left',
-      '…all of its neighbours have been emitted',
-      '…it is the earliest unemitted vertex alphabetically',
-    ],
-    explanation:
-      'In-degree zero means every prerequisite of that vertex has already been emitted, so putting it next cannot violate the direction of any edge. Vertices with a positive in-degree are still waiting on something.',
-    hint: 'The deg: badge under each vertex counts the prerequisites it is still waiting on.',
-    concept: "Kahn's ready queue",
-  },
+  bfs: [
+    {
+      prompt: 'What data structure gives BFS its level-by-level behaviour?',
+      correct: 'A queue (FIFO)',
+      distractors: [
+        'A stack (LIFO)',
+        'A min-heap ordered by distance',
+        'A set of visited vertices',
+      ],
+      explanation:
+        'BFS uses a queue, so the vertex discovered earliest is explored first. This preserves level-by-level traversal.',
+      hint: 'Think about which discovered vertex must be processed first.',
+      concept: 'Traversal strategy',
+    },
+    {
+      prompt: 'Why can BFS find shortest paths in an unweighted graph?',
+      correct: 'It explores vertices in increasing number of edges from the source',
+      distractors: [
+        'It always chooses the smallest edge weight',
+        'It explores the deepest path first',
+        'It sorts all vertices before traversal',
+      ],
+      explanation:
+        'In an unweighted graph, every edge has equal cost. BFS finishes all vertices at distance k before moving to distance k+1.',
+      hint: 'Think about what one BFS level represents.',
+      concept: 'Shortest path',
+    },
+    {
+      prompt: 'When should BFS mark a vertex as visited?',
+      correct: 'When it is discovered and enqueued',
+      distractors: [
+        'Only after it is dequeued',
+        'Only after all neighbours are processed',
+        'Only when it becomes the final vertex',
+      ],
+      explanation:
+        'Marking a vertex when it is enqueued prevents the same vertex from being added to the queue multiple times.',
+      hint: 'Look at the moment a newly discovered vertex joins the queue.',
+      concept: 'Visited management',
+    },
+    {
+      prompt: 'What does the FIFO rule mean in BFS?',
+      correct: 'The oldest queued vertex is processed first',
+      distractors: [
+        'The newest vertex is processed first',
+        'The vertex with the smallest label is processed first',
+        'The vertex with the largest degree is processed first',
+      ],
+      explanation:
+        'FIFO means first in, first out. The vertex waiting longest in the queue is explored next.',
+      hint: 'Compare the front and back of the queue.',
+      concept: 'Queue order',
+    },
+    {
+      prompt: 'What is the typical time complexity of BFS with an adjacency-list graph?',
+      correct: 'O(V + E)',
+      distractors: [
+        'O(V² + E)',
+        'O(E log V)',
+        'O(log V)',
+      ],
+      explanation:
+        'Each vertex is processed and each edge is examined a constant number of times, giving O(V + E).',
+      hint: 'Count vertex work plus edge work.',
+      concept: 'Complexity',
+    },
+  ],
+
+  dfs: [
+    {
+      prompt: 'Which data structure gives depth-first search its behaviour?',
+      correct: 'A stack (LIFO)',
+      distractors: [
+        'A queue (FIFO)',
+        'A min-heap ordered by depth',
+        'A set of visited vertices',
+      ],
+      explanation:
+        'A stack makes the most recently discovered vertex the next one explored, producing depth-first behaviour.',
+      hint: 'Watch the QUEUE / STACK panel: which end is served first?',
+      concept: 'Traversal strategy',
+    },
+    {
+      prompt: 'What does DFS do when it reaches a vertex with no unvisited neighbour?',
+      correct: 'It backtracks to an earlier vertex',
+      distractors: [
+        'It permanently stops the whole traversal',
+        'It restarts from the source',
+        'It moves to the globally smallest vertex',
+      ],
+      explanation:
+        'DFS backtracks when the current path cannot be extended, returning to the most recent earlier vertex with another option.',
+      hint: 'Think about what a stack does when the current branch is exhausted.',
+      concept: 'Backtracking',
+    },
+    {
+      prompt: 'Why is a visited set important in DFS on a graph with cycles?',
+      correct: 'It prevents repeatedly exploring the same vertex',
+      distractors: [
+        'It sorts vertices by degree',
+        'It guarantees the graph is acyclic',
+        'It chooses the shortest path automatically',
+      ],
+      explanation:
+        'Cycles can lead back to already explored vertices. The visited set prevents infinite revisiting.',
+      hint: 'Ask what happens if an edge points back to an earlier vertex.',
+      concept: 'Cycle handling',
+    },
+    {
+      prompt: 'Which traversal pattern best describes DFS?',
+      correct: 'Explore one path deeply before trying alternatives',
+      distractors: [
+        'Explore every vertex at one distance before the next',
+        'Always choose the globally lightest edge',
+        'Process vertices alphabetically',
+      ],
+      explanation:
+        'DFS follows one branch as far as possible, then backtracks and explores another branch.',
+      hint: 'Depth first means depth comes before breadth.',
+      concept: 'Traversal order',
+    },
+    {
+      prompt: 'What is the typical time complexity of DFS with an adjacency-list graph?',
+      correct: 'O(V + E)',
+      distractors: [
+        'O(V²)',
+        'O(E log V)',
+        'O(log V)',
+      ],
+      explanation:
+        'DFS visits each reachable vertex and examines each relevant edge a constant number of times.',
+      hint: 'Count vertex visits and edge examinations.',
+      concept: 'Complexity',
+    },
+  ],
+
+  dijkstra: [
+    {
+      prompt: 'What edge-weight condition is required by Dijkstra’s algorithm?',
+      correct: 'All edge weights must be non-negative',
+      distractors: [
+        'All edge weights must be equal',
+        'At least one edge must have negative weight',
+        'Every edge must have weight 1',
+      ],
+      explanation:
+        'Dijkstra relies on the fact that taking another edge cannot later reduce a vertex already finalised. Negative edges break that assumption.',
+      hint: 'Think about why a finalised shortest distance must stay final.',
+      concept: 'Greedy assumption',
+    },
+    {
+      prompt: 'What does Dijkstra mean when it extracts the minimum-distance vertex?',
+      correct: 'Its current tentative distance is the smallest among all unsettled vertices',
+      distractors: [
+        'Its degree is the smallest',
+        'Its edge weight is the smallest',
+        'It was discovered most recently',
+      ],
+      explanation:
+        'Dijkstra repeatedly selects the unsettled vertex with the smallest tentative distance and finalises it.',
+      hint: 'Look at the distance values, not the graph degree.',
+      concept: 'Extract-min',
+    },
+    {
+      prompt: 'What is relaxation in Dijkstra’s algorithm?',
+      correct: 'Checking whether going through one vertex gives a shorter distance to a neighbour',
+      distractors: [
+        'Removing an edge from the graph',
+        'Marking every neighbour as final',
+        'Sorting all edges globally',
+      ],
+      explanation:
+        'Relaxation compares the existing tentative distance with the distance obtained through the current vertex.',
+      hint: 'Think about improving a tentative d= value.',
+      concept: 'Relaxation',
+    },
+    {
+      prompt: 'Why can Dijkstra finalise a vertex permanently?',
+      correct: 'With non-negative edges, no later route can produce a smaller distance',
+      distractors: [
+        'Because the graph must be acyclic',
+        'Because every vertex has degree two',
+        'Because all paths have equal length',
+      ],
+      explanation:
+        'Once the smallest tentative distance is selected, any alternative path reaching that vertex later must already be at least as expensive.',
+      hint: 'This is the key greedy invariant.',
+      concept: 'Shortest-path invariant',
+    },
+    {
+      prompt: 'What is the common complexity of Dijkstra with a binary min-heap and adjacency lists?',
+      correct: 'O((V + E) log V)',
+      distractors: [
+        'O(V + E)',
+        'O(V²E)',
+        'O(log V) total',
+      ],
+      explanation:
+        'Heap-based extract-min and distance updates contribute logarithmic factors, giving the standard O((V + E) log V) bound.',
+      hint: 'Think about heap operations for vertices and edge relaxations.',
+      concept: 'Complexity',
+    },
+  ],
+
+  prim: [
+    {
+      prompt: "Prim's algorithm grows an MST by choosing…",
+      correct: 'The lightest edge crossing from the current tree to an outside vertex',
+      distractors: [
+        'The globally lightest edge anywhere in the graph',
+        'The lightest edge leaving only the newest vertex',
+        'Any edge that does not close a cycle',
+      ],
+      explanation:
+        "Prim's uses the cut property: the cheapest edge crossing the tree/outside cut safely adds one new vertex.",
+      hint: 'One endpoint must already belong to the growing tree.',
+      concept: 'Cut property',
+    },
+    {
+      prompt: "What is the main goal of Prim's algorithm?",
+      correct: 'To build a minimum spanning tree of a connected weighted graph',
+      distractors: [
+        'To find single-source shortest paths',
+        'To produce a topological ordering',
+        'To detect every cycle',
+      ],
+      explanation:
+        "Prim's constructs a minimum spanning tree, not shortest paths from a source.",
+      hint: 'Think about connecting all vertices with minimum total edge weight.',
+      concept: 'Minimum spanning tree',
+    },
+    {
+      prompt: "Why does Prim's keep its growing tree connected?",
+      correct: 'Every chosen edge connects the tree to exactly one new outside vertex',
+      distractors: [
+        'It chooses disconnected global edges first',
+        'It removes all unvisited vertices',
+        'It requires every vertex to have the same degree',
+      ],
+      explanation:
+        "Each selected crossing edge attaches a new vertex to the existing tree, so the partial solution remains connected.",
+      hint: 'Look at what the chosen edge does to the tree boundary.',
+      concept: 'Connected growth',
+    },
+    {
+      prompt: "Which statement distinguishes Prim's from Kruskal's?",
+      correct: "Prim's grows one connected tree from an existing tree boundary",
+      distractors: [
+        "Prim's always uses a queue",
+        "Prim's ignores edge weights",
+        "Prim's requires directed graphs",
+      ],
+      explanation:
+        "Prim's grows outward from the current tree, while Kruskal's considers globally light edges and uses cycle checks.",
+      hint: 'Compare local cut choices with global edge ordering.',
+      concept: 'Algorithm comparison',
+    },
+    {
+      prompt: "What is the typical heap-based time complexity of Prim's with adjacency lists?",
+      correct: 'O(E log V)',
+      distractors: [
+        'O(V + E)',
+        'O(V²E)',
+        'O(log V)',
+      ],
+      explanation:
+        'Using a binary heap for the frontier edges gives the standard O(E log V) bound.',
+      hint: 'Think about weighted frontier updates.',
+      concept: 'Complexity',
+    },
+  ],
+
+  kruskal: [
+    {
+      prompt: "What does Kruskal's algorithm consider first?",
+      correct: 'The globally lightest remaining edge',
+      distractors: [
+        'The edge leaving the newest tree vertex',
+        'The highest-degree vertex',
+        'The longest edge first',
+      ],
+      explanation:
+        "Kruskal's sorts edges by weight and considers them from lightest to heaviest.",
+      hint: 'Kruskal is edge-centric, not tree-frontier-centric.',
+      concept: 'Greedy edge order',
+    },
+    {
+      prompt: "When does Kruskal's reject an edge?",
+      correct: 'When adding it would create a cycle',
+      distractors: [
+        'Whenever the edge is not the absolute lightest',
+        'Whenever both endpoints exist',
+        'Whenever the graph is connected',
+      ],
+      explanation:
+        "An MST cannot contain cycles, so Kruskal rejects an edge whose endpoints are already connected.",
+      hint: 'Ask what happens if the endpoints are already in the same component.',
+      concept: 'Cycle avoidance',
+    },
+    {
+      prompt: 'Which data structure is commonly used to detect cycles efficiently in Kruskal?',
+      correct: 'Disjoint Set Union (Union-Find)',
+      distractors: [
+        'A FIFO queue',
+        'A stack only',
+        'A binary search tree of vertex labels',
+      ],
+      explanation:
+        'Union-Find tracks connected components and efficiently answers whether two endpoints are already connected.',
+      hint: 'Think of maintaining components while edges are added.',
+      concept: 'Union-Find',
+    },
+    {
+      prompt: 'What happens if Kruskal is run on a disconnected graph?',
+      correct: 'It produces a minimum spanning forest',
+      distractors: [
+        'It must always fail',
+        'It creates one tree by adding cycles',
+        'It automatically connects components with zero-cost edges',
+      ],
+      explanation:
+        'A disconnected graph has no spanning tree, but Kruskal still produces the minimum spanning forest of its components.',
+      hint: 'Each connected component gets its own spanning tree.',
+      concept: 'Disconnected graphs',
+    },
+    {
+      prompt: "What is the dominant complexity of Kruskal's algorithm?",
+      correct: 'O(E log E)',
+      distractors: [
+        'O(V)',
+        'O(E²V)',
+        'O(log E)',
+      ],
+      explanation:
+        'Sorting the E edges dominates the runtime, giving O(E log E).',
+      hint: 'The first major step is sorting all edges.',
+      concept: 'Complexity',
+    },
+  ],
+
+  bellmanFord: [
+    {
+      prompt: 'How many full relaxation passes does Bellman-Ford need before checking for a negative cycle?',
+      correct: 'V - 1 passes',
+      distractors: [
+        'E passes exactly',
+        'log V passes',
+        'One pass only',
+      ],
+      explanation:
+        'Any simple shortest path can contain at most V - 1 edges, so V - 1 passes are enough to propagate all shortest-path distances.',
+      hint: 'Count the maximum number of edges in a simple path.',
+      concept: 'Relaxation passes',
+    },
+    {
+      prompt: 'What important edge-weight feature makes Bellman-Ford more general than Dijkstra?',
+      correct: 'It can handle negative edge weights',
+      distractors: [
+        'It requires all edges to have the same weight',
+        'It only works on trees',
+        'It ignores edge weights completely',
+      ],
+      explanation:
+        'Bellman-Ford can correctly process negative edges, provided there is no reachable negative-weight cycle affecting the shortest path.',
+      hint: 'Compare the assumptions of Bellman-Ford and Dijkstra.',
+      concept: 'Negative edges',
+    },
+    {
+      prompt: 'How can Bellman-Ford detect a reachable negative-weight cycle?',
+      correct: 'A further relaxation is still possible after V - 1 passes',
+      distractors: [
+        'The queue becomes empty',
+        'Every vertex has degree one',
+        'The graph becomes disconnected',
+      ],
+      explanation:
+        'If a distance can still be improved after V - 1 passes, some reachable negative cycle is allowing an endlessly improving path.',
+      hint: 'Ask what an extra successful relaxation means.',
+      concept: 'Negative-cycle detection',
+    },
+    {
+      prompt: 'What is the main operation repeated by Bellman-Ford?',
+      correct: 'Relax every edge',
+      distractors: [
+        'Remove every visited vertex',
+        'Choose only the lightest edge',
+        'Perform topological sorting first',
+      ],
+      explanation:
+        'Bellman-Ford repeatedly scans all edges and applies the relaxation rule.',
+      hint: 'The algorithm is based on repeated edge scans.',
+      concept: 'Core operation',
+    },
+    {
+      prompt: 'What is the standard time complexity of Bellman-Ford?',
+      correct: 'O(VE)',
+      distractors: [
+        'O(V + E)',
+        'O(E log V)',
+        'O(log V)',
+      ],
+      explanation:
+        'The algorithm performs up to V - 1 passes over all E edges, yielding O(VE).',
+      hint: 'Multiply the number of passes by the number of edges.',
+      concept: 'Complexity',
+    },
+  ],
+
+  aStar: [
+    {
+      prompt: 'What score does A* use to prioritize a node?',
+      correct: 'f(n) = g(n) + h(n)',
+      distractors: [
+        'f(n) = g(n) - h(n)',
+        'f(n) = g(n) × h(n)',
+        'f(n) = h(n) only',
+      ],
+      explanation:
+        'A* combines the exact cost already travelled, g(n), with the heuristic estimate to the goal, h(n).',
+      hint: 'Remember past cost plus estimated remaining cost.',
+      concept: 'A* evaluation',
+    },
+    {
+      prompt: 'What does g(n) represent in A*?',
+      correct: 'The cost of the path from the start to node n',
+      distractors: [
+        'The estimated cost from n to the goal',
+        'The graph degree of n',
+        'The number of neighbours of n',
+      ],
+      explanation:
+        'g(n) is the exact cost accumulated from the start to the current node.',
+      hint: 'Separate travelled cost from estimated future cost.',
+      concept: 'Path cost',
+    },
+    {
+      prompt: 'What does h(n) represent in A*?',
+      correct: 'An estimate of the remaining cost from n to the goal',
+      distractors: [
+        'The exact cost already travelled',
+        'The number of visited nodes',
+        'The in-degree of n',
+      ],
+      explanation:
+        'h(n) estimates the remaining cost and guides the search toward the goal.',
+      hint: 'It looks forward toward the destination.',
+      concept: 'Heuristic',
+    },
+    {
+      prompt: 'What property should an admissible A* heuristic have?',
+      correct: 'It never overestimates the true remaining cost',
+      distractors: [
+        'It must always overestimate',
+        'It must always equal zero',
+        'It must equal the number of edges exactly',
+      ],
+      explanation:
+        'An admissible heuristic is optimistic: it does not claim the remaining path is more expensive than it really is.',
+      hint: 'Think about optimistic lower bounds.',
+      concept: 'Heuristic admissibility',
+    },
+    {
+      prompt: 'When h(n) = 0 for every node, A* behaves like…',
+      correct: 'Dijkstra’s algorithm',
+      distractors: [
+        'Depth-first search',
+        'Kruskal’s algorithm',
+        'Topological sorting',
+      ],
+      explanation:
+        'With h(n)=0, f(n)=g(n), so A* prioritizes exactly the same distance information as Dijkstra.',
+      hint: 'Set h(n) to zero in f(n)=g(n)+h(n).',
+      concept: 'Relationship to Dijkstra',
+    },
+  ],
+
+  topoSort: [
+    {
+      prompt: "In Kahn's algorithm, a vertex becomes ready to emit when…",
+      correct: 'its in-degree drops to zero',
+      distractors: [
+        'it has no outgoing edges left',
+        'all of its neighbours have been emitted',
+        'it is the earliest unemitted vertex alphabetically',
+      ],
+      explanation:
+        "In-degree zero means all prerequisites have already been emitted, so the vertex can safely enter the ready queue.",
+      hint: 'The deg: badge shows how many incoming prerequisites remain.',
+      concept: "Kahn's ready queue",
+    },
+    {
+      prompt: 'A topological ordering can exist only for which kind of graph?',
+      correct: 'A directed acyclic graph (DAG)',
+      distractors: [
+        'Any undirected graph',
+        'Any graph with positive weights',
+        'Only complete graphs',
+      ],
+      explanation:
+        'A directed cycle creates a circular dependency, making a valid linear topological ordering impossible.',
+      hint: 'Think about what a cycle does to dependency order.',
+      concept: 'DAG requirement',
+    },
+    {
+      prompt: "How can Kahn's algorithm detect a cycle?",
+      correct: 'Not all vertices can be emitted',
+      distractors: [
+        'The graph gains an extra edge',
+        'The queue always contains every vertex',
+        'Every in-degree becomes negative',
+      ],
+      explanation:
+        "If vertices remain but no zero-in-degree vertex is available, the remaining graph contains a cycle.",
+      hint: 'Ask what happens when every remaining vertex still has a prerequisite.',
+      concept: 'Cycle detection',
+    },
+    {
+      prompt: 'What does a topological ordering represent?',
+      correct: 'A linear order that respects every directed dependency',
+      distractors: [
+        'The shortest weighted path',
+        'A minimum spanning tree',
+        'Vertices sorted only by label',
+      ],
+      explanation:
+        'For every directed edge u → v, u must appear before v in the ordering.',
+      hint: 'Every arrow becomes an ordering constraint.',
+      concept: 'Dependency ordering',
+    },
+    {
+      prompt: "What is the typical time complexity of Kahn's topological sort?",
+      correct: 'O(V + E)',
+      distractors: [
+        'O(V²E)',
+        'O(E log V)',
+        'O(log V)',
+      ],
+      explanation:
+        'Each vertex enters and leaves the ready queue once, while each edge is processed once.',
+      hint: 'Count vertex and edge processing.',
+      concept: 'Complexity',
+    },
+  ],
 };
 
 /**
@@ -250,12 +761,16 @@ function authoredCandidates(steps: GraphStep[], category: GraphCategory): Candid
 }
 
 function anchorCandidate(steps: GraphStep[], category: GraphCategory): Candidate[] {
-  const anchor = ANCHORS[category];
-  if (!anchor || steps.length < 2) return [];
+  const anchors = ANCHORS[category];
+  if (!anchors || anchors.length === 0 || steps.length < 2) return [];
+
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
+
   return [
     {
       stepIndex: 0,
-      kind: 'authored',
+      kind: `anchor-${anchorIndex}`,
       priority: 0,
       reinforce: 0,
       fixedWeight: 1,
