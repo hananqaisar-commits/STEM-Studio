@@ -124,7 +124,7 @@ import { LegalModal, type LegalDocType } from '../../components/layout/LegalModa
 
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
-  const { requireAuth } = useAuthPrompt();parent of b247b8f(Merge pull request #252 from hananqaisar - commits / feature / premium - scroll - upgrade)
+  const { requireAuth } = useAuthPrompt();
   const [legalDoc, setLegalDoc] = useState<LegalDocType>(null);
   const { state: mascotState, setExpression, setContext } = useMascot();
 

@@ -6,7 +6,7 @@ import {
   Sparkles, X, ArrowLeft, Terminal, FolderTree, type LucideIcon,
 } from 'lucide-react';
 import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
-import { useAuthPrompt } from '../../contexts/AuthPromptContext'; parent of b247b8f(Merge pull request #252 from hananqaisar - commits / feature / premium - scroll - upgrade)
+import { useAuthPrompt } from '../../contexts/AuthPromptContext'; 
 import './DSAHub.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
