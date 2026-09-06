@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
@@ -6,7 +6,11 @@ import {
   Sparkles, X, ArrowLeft, Terminal, FolderTree, type LucideIcon,
 } from 'lucide-react';
 import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './DSAHub.css';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
@@ -32,6 +36,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
   const navigate = useNavigate();
   const module = MODULES.find(m => m.id === moduleId);
   const categories = getCategoriesForModule(moduleId);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   /* ── New feature detection (moved from DSAHub) ────────────────── */
   const [newFeatures, setNewFeatures] = useState<string[]>([]);
@@ -60,6 +65,32 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(currentIds));
     setDismissedNew(true);
   }, [moduleId, categories]);
+
+  useEffect(() => {
+    if (!gridRef.current) return;
+
+    const cards = gridRef.current.querySelectorAll('.hub-card');
+    if (cards.length === 0) return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(cards, { autoAlpha: 1, y: 0 });
+      return;
+    }
+
+    const context = gsap.context(() => {
+      gsap.fromTo(cards, { autoAlpha: 0, y: 24 }, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.55,
+        stagger: 0.07,
+        ease: 'power3.out',
+        scrollTrigger: { trigger: gridRef.current, start: 'top 82%', once: true },
+      });
+    }, gridRef);
+
+    ScrollTrigger.refresh();
+    return () => context.revert();
+  }, [moduleId, categories.length]);
 
   if (!module) {
     return (
@@ -126,7 +157,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
       )}
 
       {/* Category Grid */}
-      <div className="hub-grid">
+      <div ref={gridRef} className="hub-grid">
         {categories.map((cat) => {
           const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Activity;
           return (

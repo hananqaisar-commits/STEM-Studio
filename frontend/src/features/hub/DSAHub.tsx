@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion, useReducedMotion } from 'motion/react';
+import { useLenis } from 'lenis/react';
 import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
   MessageSquare, ChevronDown, Send, Sparkles, Plus,
@@ -71,13 +73,13 @@ const AFTAB_GITHUB = 'https://github.com/Aftab-commits';
 const HASSAN_GITHUB = 'https://github.com/hassanmustafa710';
 const HANAN_GITHUB = 'https://github.com/hananqaisar-commits';
 
-function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1800) {
+function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pauseDuration = 1800, reducedMotion = false) {
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (words.length === 0) return;
+    if (words.length === 0 || reducedMotion) return;
     const currentWord = words[index];
 
     if (!isDeleting && subIndex === currentWord.length) {
@@ -99,7 +101,7 @@ function useTypewriter(words: string[], typingSpeed = 80, deletingSpeed = 40, pa
     );
 
     return () => clearTimeout(timeout);
-  }, [subIndex, index, isDeleting, words, typingSpeed, deletingSpeed, pauseDuration]);
+  }, [subIndex, index, isDeleting, words, typingSpeed, deletingSpeed, pauseDuration, reducedMotion]);
 
   return `${words[index].substring(0, subIndex)}`;
 }
@@ -123,6 +125,8 @@ import { LegalModal, type LegalDocType } from '../../components/layout/LegalModa
 
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
+  const lenis = useLenis();
+  const shouldReduceMotion = useReducedMotion();
   const [legalDoc, setLegalDoc] = useState<LegalDocType>(null);
   const { state: mascotState, setExpression, setContext } = useMascot();
 
@@ -131,7 +135,7 @@ export const DSAHub: React.FC = () => {
     "DLD",
     "OS",
     "Networks",
-  ], 100, 50, 1600);
+  ], 100, 50, 1600, shouldReduceMotion ?? false);
 
   useEffect(() => {
     setContext('dashboard');
@@ -223,7 +227,20 @@ export const DSAHub: React.FC = () => {
   };
 
   const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    if (lenis) {
+      lenis.scrollTo(`#${id}`, { offset: -16 });
+      return;
+    }
+
+    document.getElementById(id)?.scrollIntoView({ behavior: 'auto' });
+  };
+
+  const reveal = (delay: number, scale = 1) => shouldReduceMotion ? {
+    initial: false as const,
+  } : {
+    initial: { opacity: 0, y: 18, scale },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    transition: { duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] as const },
   };
 
   /* ── Subject module bubbles are rendered directly from MODULES ───── */
@@ -234,26 +251,26 @@ export const DSAHub: React.FC = () => {
       {/* ── Hero Section ───────────────────────────────────────────── */}
       <section id="hero" className="hero-section">
         <div className="hero-text">
-          <h1 className="hero-title">
+          <motion.h1 className="hero-title" {...reveal(0)}>
             Explore & Master<br />
             <span className="hero-accent inline-flex items-center gap-1 font-black">
               {typedExploreText}
               <span className="inline-block w-1.5 h-8 md:h-11 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
             </span>
-          </h1>
-          <p className="hero-subtitle">
+          </motion.h1>
+          <motion.p className="hero-subtitle" {...reveal(0.13)}>
             Build algorithm intuition by tracing each operation, checking your understanding,
             and comparing implementations across languages.
-          </p>
-          <div className="hero-cta">
-            <button className="hero-btn hero-btn-primary" onClick={() => navigate('/dashboard/dsa')}>
+          </motion.p>
+          <motion.div className="hero-cta" {...reveal(0.27, 0.96)}>
+            <motion.button whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }} whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }} className="hero-btn hero-btn-primary" onClick={() => navigate('/dashboard/dsa')}>
               Start Learning <ArrowRight size={16} />
-            </button>
-            <button className="hero-btn hero-btn-secondary" onClick={() => scrollToSection('features')}>
+            </motion.button>
+            <motion.button whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }} whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }} className="hero-btn hero-btn-secondary" onClick={() => scrollToSection('features')}>
               Explore Features
-            </button>
-          </div>
-          <div className="hero-social-proof">
+            </motion.button>
+          </motion.div>
+          <motion.div className="hero-social-proof" {...reveal(0.38)}>
             <div className="hero-avatar-stack">
               {['A', 'S', 'R', 'M'].map((initial, i) => (
                 <div
@@ -276,8 +293,8 @@ export const DSAHub: React.FC = () => {
                 <span className="hero-rating-count">({stats.total_reviews} Reviews)</span>
               </div>
             )}
-          </div>
-          <div className="hero-stats">
+          </motion.div>
+          <motion.div className="hero-stats" {...reveal(0.46)}>
             <div className="hero-stat">
               <span className="hero-stat-num">{availableModules}</span>
               <span className="hero-stat-label">Modules</span>
@@ -290,9 +307,14 @@ export const DSAHub: React.FC = () => {
               <span className="hero-stat-num">{totalTopics}+</span>
               <span className="hero-stat-label">Topics</span>
             </div>
-          </div>
+          </motion.div>
         </div>
-        <div className="hero-visual mascot-hero">
+        <motion.div
+          className="hero-visual mascot-hero hero-mascot-motion"
+          initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1, scale: 1, y: [0, -5, 0] }}
+          transition={shouldReduceMotion ? undefined : { opacity: { duration: 0.55, delay: 0.2 }, scale: { duration: 0.55, delay: 0.2 }, y: { duration: 4.8, ease: 'easeInOut', repeat: Infinity } }}
+        >
           <div className="mascot-hero-center">
             <Octa expression={mascotState.expression} size="xl" />
           </div>
@@ -325,7 +347,7 @@ export const DSAHub: React.FC = () => {
               );
             })}
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ── Sparkles Divider (Gradients + Particle Effect) ── */}
