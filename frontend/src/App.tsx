@@ -10,6 +10,7 @@ import { ResetPassword } from './features/auth/ResetPassword';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { BootSplash } from './components/common/BootSplash';
 import { ScrollToTop } from './components/common/ScrollToTop';
+import { SmoothScroll } from './components/common/SmoothScroll';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
@@ -173,7 +174,9 @@ function App() {
         <MascotProvider>
           <TutorProvider>
             <Router>
-              <AppContent />
+              <SmoothScroll>
+                <AppContent />
+              </SmoothScroll>
             </Router>
           </TutorProvider>
         </MascotProvider>
