@@ -11,7 +11,6 @@ import { ResetPassword } from './features/auth/ResetPassword';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { BootSplash } from './components/common/BootSplash';
 import { ScrollToTop } from './components/common/ScrollToTop';
-import { SmoothScroll } from './components/common/SmoothScroll';
 import { Navbar } from './components/layout/Navbar';
 import { TopicMenu } from './components/layout/TopicMenu';
 import { DSAHub } from './features/hub/DSAHub';
@@ -108,7 +107,7 @@ const DashboardLayout = () => {
   const isDsaCategory = DSA_CATEGORIES.some(c => c.id === pathSegment);
   const isOsCategory = OS_CATEGORIES.some(c => c.id === pathSegment);
   const isOSPage = pathSegment === 'os' || isOsCategory;
-  
+
   const activeModuleId = isModulePage ? pathSegment : (isOSPage ? 'os' : (isDsaCategory ? 'dsa' : ''));
   const activeCategoryId = isDsaCategory || isOsCategory ? pathSegment : '';
 
@@ -192,9 +191,7 @@ function App() {
         <MascotProvider>
           <TutorProvider>
             <Router>
-              <SmoothScroll>
-                <AuthPromptProvider><AppContent /></AuthPromptProvider>
-              </SmoothScroll>
+              <AuthPromptProvider><AppContent /></AuthPromptProvider>arent of b247b8f (Merge pull request #252 from hananqaisar-commits/feature/premium-scroll-upgrade)
             </Router>
           </TutorProvider>
         </MascotProvider>
