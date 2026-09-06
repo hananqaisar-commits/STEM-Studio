@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
 import {
-  Home, Bell, Settings, Moon, Sun, User, LogOut, Code2, Layers, Menu, Monitor
+  Home, Bell, Settings, Moon, Sun, User, LogOut, LogIn, Code2, Layers, Menu, Monitor
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,7 +18,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -264,7 +264,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
           <div className="navbar-pill-divider" />
 
-          {/* User Account Dropdown */}
+          {/* Account actions */}
+          {!isAuthenticated ? (
+            <m.button layout onClick={() => navigate('/login')} className="expandable-tab-btn" title="Sign in">
+              <LogIn size={18} className="tab-icon" />
+              <span className="tab-label-text">Sign In</span>
+            </m.button>
+          ) : (
           <div className="user-pill-container" ref={userDropdownRef}>
             <m.button
               layout
@@ -314,6 +320,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               </div>
             )}
           </div>
+          )}
         </div>
       </header>
 

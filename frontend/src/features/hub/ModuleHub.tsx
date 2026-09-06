@@ -6,6 +6,7 @@ import {
   Sparkles, X, ArrowLeft, Terminal, FolderTree, type LucideIcon,
 } from 'lucide-react';
 import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { useAuthPrompt } from '../../contexts/AuthPromptContext';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './DSAHub.css';
@@ -34,6 +35,7 @@ interface ModuleHubProps {
 
 export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
   const navigate = useNavigate();
+  const { requireAuth } = useAuthPrompt();
   const module = MODULES.find(m => m.id === moduleId);
   const categories = getCategoriesForModule(moduleId);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -143,7 +145,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
               {newFeatures.map(id => {
                 const cat = categories.find(c => c.id === id);
                 return cat ? (
-                  <span key={id} className="new-feature-chip" onClick={() => navigate(`/dashboard/${cat.id}`)}>
+                  <span key={id} className="new-feature-chip" onClick={() => requireAuth(() => navigate(`/dashboard/${cat.id}`), 'Sign in to open this interactive module and save your progress.')}>
                     {cat.name} — {cat.topicCount} topics
                   </span>
                 ) : null;
@@ -164,7 +166,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
             <div
               key={cat.id}
               className={`hub-card ${!cat.available ? 'hub-card-disabled' : ''}`}
-              onClick={() => cat.available && navigate(`/dashboard/${cat.id}`)}
+              onClick={() => cat.available && requireAuth(() => navigate(`/dashboard/${cat.id}`), 'Sign in to open this interactive module and save your progress.')}
             >
               <div className="hub-card-icon">
                 <Icon size={22} />

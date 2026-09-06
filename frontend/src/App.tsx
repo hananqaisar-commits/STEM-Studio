@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthPromptProvider, useAuthPrompt } from './contexts/AuthPromptContext';
 import { MascotProvider } from './components/mascot';
 import { SignIn } from './features/auth/SignIn';
 import { SignUp } from './features/auth/SignUp';
@@ -64,6 +65,23 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+const GatedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const { requireAuth } = useAuthPrompt();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      const destination = `${location.pathname}${location.search}`;
+      requireAuth(() => navigate(destination, { replace: true }), 'Sign in to open this interactive module and save your progress.');
+    }
+  }, [isAuthenticated, isLoading, location.pathname, location.search, navigate, requireAuth]);
+
+  if (isLoading) return <LoadingScreen message="Checking session..." />;
+  return isAuthenticated ? <>{children}</> : <DSAHub />;
+};
+
 
 
 /**
@@ -112,29 +130,29 @@ const DashboardLayout = () => {
           <Routes>
             <Route index element={<DSAHub />} />
             <Route path="dsa" element={<ModuleHub moduleId="dsa" />} />
-            <Route path="complexity" element={<ComplexityPage />} />
-            <Route path="sorting" element={<SortingPage />} />
-            <Route path="stackQueue" element={<StackQueuePage />} />
-            <Route path="linkedList" element={<LinkedListPage />} />
-            <Route path="bst" element={<BSTPage />} />
-            <Route path="binarySearch" element={<BinarySearchPage />} />
-            <Route path="graph" element={<GraphPage />} />
-            <Route path="arrays" element={<ArraysPage />} />
-            <Route path="strings" element={<StringsPage />} />
-            <Route path="recursion" element={<RecursionPage />} />
-            <Route path="greedy" element={<GreedyPage />} />
-            <Route path="hashMaps" element={<HashMapsPage />} />
-            <Route path="backtracking" element={<BacktrackingPage />} />
-            <Route path="dp" element={<DPPage />} />
-            <Route path="trie" element={<TriePage />} />
+            <Route path="complexity" element={<GatedRoute><ComplexityPage /></GatedRoute>} />
+            <Route path="sorting" element={<GatedRoute><SortingPage /></GatedRoute>} />
+            <Route path="stackQueue" element={<GatedRoute><StackQueuePage /></GatedRoute>} />
+            <Route path="linkedList" element={<GatedRoute><LinkedListPage /></GatedRoute>} />
+            <Route path="bst" element={<GatedRoute><BSTPage /></GatedRoute>} />
+            <Route path="binarySearch" element={<GatedRoute><BinarySearchPage /></GatedRoute>} />
+            <Route path="graph" element={<GatedRoute><GraphPage /></GatedRoute>} />
+            <Route path="arrays" element={<GatedRoute><ArraysPage /></GatedRoute>} />
+            <Route path="strings" element={<GatedRoute><StringsPage /></GatedRoute>} />
+            <Route path="recursion" element={<GatedRoute><RecursionPage /></GatedRoute>} />
+            <Route path="greedy" element={<GatedRoute><GreedyPage /></GatedRoute>} />
+            <Route path="hashMaps" element={<GatedRoute><HashMapsPage /></GatedRoute>} />
+            <Route path="backtracking" element={<GatedRoute><BacktrackingPage /></GatedRoute>} />
+            <Route path="dp" element={<GatedRoute><DPPage /></GatedRoute>} />
+            <Route path="trie" element={<GatedRoute><TriePage /></GatedRoute>} />
 
             {/* Operating System Module Routes */}
             <Route path="os" element={<OSModuleHub />} />
             <Route path="os/linux" element={<OSCategoriesHub />} />
-            <Route path="os/commands" element={<LinuxCommandsPage />} />
-            <Route path="os/filesystem" element={<FileSystemPage />} />
-            <Route path="commands" element={<LinuxCommandsPage />} />
-            <Route path="filesystem" element={<FileSystemPage />} />
+            <Route path="os/commands" element={<GatedRoute><LinuxCommandsPage /></GatedRoute>} />
+            <Route path="os/filesystem" element={<GatedRoute><FileSystemPage /></GatedRoute>} />
+            <Route path="commands" element={<GatedRoute><LinuxCommandsPage /></GatedRoute>} />
+            <Route path="filesystem" element={<GatedRoute><FileSystemPage /></GatedRoute>} />
           </Routes>
         </main>
       </div>
@@ -153,12 +171,12 @@ const AppContent = () => {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
         <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
         <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
-        <Route path="/dashboard/*" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>} />
+        <Route path="/dashboard/*" element={<DashboardLayout />} />
       </Routes>
       {!splashExited && (
         <BootSplash loading={isLoading} onExited={handleSplashExited} />
@@ -175,7 +193,7 @@ function App() {
           <TutorProvider>
             <Router>
               <SmoothScroll>
-                <AppContent />
+                <AuthPromptProvider><AppContent /></AuthPromptProvider>
               </SmoothScroll>
             </Router>
           </TutorProvider>
