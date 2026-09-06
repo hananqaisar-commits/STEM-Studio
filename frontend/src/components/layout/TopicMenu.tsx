@@ -10,6 +10,7 @@ import {
 import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAuthPrompt } from '../../contexts/AuthPromptContext';
 import './Layout.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
@@ -47,6 +48,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { requireAuth } = useAuthPrompt();
   const activeTopic = searchParams.get('topic') || '';
 
   // Hover state for 64px docked strip vs expanded pane
@@ -100,7 +102,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   const handleTopicClick = (cat: CategoryDef, topicId: string) => {
     if (!cat.available) return;
     setExpandedCategories((prev) => new Set(prev).add(cat.id));
-    navigate(`/dashboard/${cat.id}?topic=${topicId}`);
+    requireAuth(() => navigate(`/dashboard/${cat.id}?topic=${topicId}`), 'Sign in to open this interactive topic and save your progress.');
     if (onClose) onClose();
   };
 
@@ -332,7 +334,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                           <button
                             className="category-header"
                             onClick={() => {
-                              navigate(`/dashboard/os/${cat.id}`);
+                              requireAuth(() => navigate(`/dashboard/os/${cat.id}`), 'Sign in to open this interactive module and save your progress.');
                               if (onClose) onClose();
                             }}
                             title={`${index + 1}. ${cat.name}`}

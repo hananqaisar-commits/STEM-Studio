@@ -3,6 +3,7 @@ import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
 import { Settings, X, Trash2, Volume2, Sparkles, Bot, User as UserIcon, MessageSquare } from 'lucide-react';
 import { useOctaTutor, type SupportedSpeechLang } from '../../hooks/useOctaTutor';
 import { useTutorContext } from '../../contexts/TutorContext';
+import { useAuthPrompt } from '../../contexts/AuthPromptContext';
 import { Octa } from '../mascot';
 import { LoaderOne } from '../ui/loader';
 import { PlaceholdersAndVanishInput } from '../ui/placeholders-and-vanish-input';
@@ -119,6 +120,7 @@ function renderFormattedMessage(text: string) {
 
 export const OctaTutor: React.FC = () => {
   const { contextState, isTutorOpen, toggleTutor } = useTutorContext();
+  const { requireAuth } = useAuthPrompt();
   const {
     messages,
     inputText,
@@ -185,7 +187,7 @@ export const OctaTutor: React.FC = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="octa-tutor-fab"
-          onClick={toggleTutor}
+          onClick={() => requireAuth(toggleTutor, 'Sign in to chat with Octa AI Tutor and keep your learning context.')}
           title="Open Octa AI Tutor"
           aria-label="Open Octa AI Tutor"
         >

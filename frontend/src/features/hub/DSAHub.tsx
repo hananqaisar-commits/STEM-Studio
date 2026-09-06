@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
 import { apiClient } from '../../api/apiClient';
+import { useAuthPrompt } from '../../contexts/AuthPromptContext';
 import { Octa, useMascot } from '../../components/mascot';
 import { GooeyInput } from '../../components/ui/gooey-input';
 import { TextHoverEffect } from '../../components/ui/text-hover-effect';
@@ -125,6 +126,7 @@ import { LegalModal, type LegalDocType } from '../../components/layout/LegalModa
 
 export const DSAHub: React.FC = () => {
   const navigate = useNavigate();
+  const { requireAuth } = useAuthPrompt();
   const lenis = useLenis();
   const shouldReduceMotion = useReducedMotion();
   const [legalDoc, setLegalDoc] = useState<LegalDocType>(null);
@@ -191,6 +193,7 @@ export const DSAHub: React.FC = () => {
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (reviewStars === 0) return;
+    if (!requireAuth(() => (document.getElementById('review-form') as HTMLFormElement | null)?.requestSubmit(), 'Sign in to submit a review and share your learning experience.')) return;
     setReviewStatus('submitting');
     setExpression('focused');
     try {
@@ -515,7 +518,7 @@ export const DSAHub: React.FC = () => {
               </svg>
             )}
           </div>
-          <form className="review-form" onSubmit={handleReviewSubmit}>
+          <form id="review-form" className="review-form" onSubmit={handleReviewSubmit}>
           <div className="review-form-row">
             <div className="review-form-field">
               <label>Your Rating</label>
