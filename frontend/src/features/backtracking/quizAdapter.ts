@@ -14,59 +14,278 @@ interface Anchor {
   concept: string;
 }
 
-const ANCHORS: Record<BacktrackingAlgorithmKey, Anchor> = {
-  subsets: {
-    prompt: 'Before it starts: how many subsets does a set of n elements have?',
-    correct: '2^n — each element is independently included or excluded',
-    distractors: [
-      'n^2 — every pair forms a subset',
-      'n! — every ordering is a distinct subset',
-      '2n — each element contributes two subsets',
-    ],
-    explanation:
-      'Each of the n elements has two independent choices: include or exclude. The total number of subsets is 2 × 2 × … × 2 = 2^n, forming a complete binary decision tree of depth n.',
-    hint: 'Think about how many independent binary choices you make.',
-    concept: 'Solution count',
-  },
-  permutations: {
-    prompt: 'Before it starts: what is the time complexity of generating all permutations?',
-    correct: 'O(n! · n) — there are n! permutations, each taking O(n) to record',
-    distractors: [
-      'O(2^n) — each position has two choices',
-      'O(n^2) — nested loops over positions',
-      'O(n · log n) — sorting-based approach',
-    ],
-    explanation:
-      'There are n! permutations of n elements. At each leaf of the decision tree we copy or output the array, which takes O(n) time. So the total is O(n! · n).',
-    hint: 'How many leaves does the permutation decision tree have?',
-    concept: 'Time complexity',
-  },
-  nQueens: {
-    prompt: 'Before it starts: what constraint does N-Queens check before placing a queen?',
-    correct: 'No two queens share the same column, row, or diagonal',
-    distractors: [
-      'Queens must be placed in consecutive columns',
-      'Each queen must be adjacent to the previous one',
-      'Queens can share diagonals but not rows or columns',
-    ],
-    explanation:
-      'A queen attacks along its row, column, and both diagonals. Since we place one queen per row, row conflicts are impossible. We only need to check column and diagonal conflicts with previously placed queens.',
-    hint: 'Think about which directions a queen can attack in chess.',
-    concept: 'Constraint checking',
-  },
-  combinationSum: {
-    prompt: 'Before it starts: what is the backtracking condition in Combination Sum?',
-    correct: 'Stop when remainder reaches 0 (solution) or goes negative (prune)',
-    distractors: [
-      'Stop when all candidates have been used exactly once',
-      'Stop when the combination length equals the target',
-      'Stop when the sum exceeds twice the target',
-    ],
-    explanation:
-      'The algorithm tracks a running remainder (target minus current sum). When remainder = 0, a valid combination is found. When a candidate exceeds the remainder, that branch is pruned since all candidates are positive.',
-    hint: 'What happens to the remainder as you add candidates to the combination?',
-    concept: 'Pruning condition',
-  },
+const ANCHORS: Record<BacktrackingAlgorithmKey, Anchor[]> = {
+  subsets: [
+    {
+      prompt: 'How many subsets does a set of n elements have?',
+      correct: '2^n — each element is independently included or excluded',
+      distractors: [
+        'n^2 — every pair forms a subset',
+        'n! — every ordering is a distinct subset',
+        '2n — each element contributes exactly two subsets',
+      ],
+      explanation:
+        'Every element has two independent choices: include it or exclude it. With n elements, that gives 2^n possible subsets.',
+      hint: 'Think about two choices for every element.',
+      concept: 'Solution count',
+    },
+    {
+      prompt: 'What is the main branching decision for generating all subsets?',
+      correct: 'Include the current element or exclude it',
+      distractors: [
+        'Swap the current element with every other element',
+        'Choose only the larger of two elements',
+        'Always include the current element',
+      ],
+      explanation:
+        'Subset generation builds a binary decision tree. At each level, the current element is either included or skipped.',
+      hint: 'Each element creates two branches.',
+      concept: 'Branching',
+    },
+    {
+      prompt: 'When does the subset-generation recursion reach a base case?',
+      correct: 'After every element has been decided',
+      distractors: [
+        'When the current subset has one element',
+        'When the array becomes sorted',
+        'When the subset sum reaches zero',
+      ],
+      explanation:
+        'A complete subset is formed after include/exclude decisions have been made for all n elements.',
+      hint: 'Ask when there are no undecided elements left.',
+      concept: 'Base case',
+    },
+    {
+      prompt: 'What is the time complexity of generating all subsets if each subset is copied/output?',
+      correct: 'O(2^n · n)',
+      distractors: [
+        'O(n)',
+        'O(n^2)',
+        'O(n!)',
+      ],
+      explanation:
+        'There are 2^n subsets, and writing each subset can take O(n) time in the worst case, giving O(2^n · n).',
+      hint: 'Count both the number of subsets and the cost of recording one.',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What does backtracking do after exploring the include branch for a subset?',
+      correct: 'Undo the choice and explore the exclude branch',
+      distractors: [
+        'Sort the current subset permanently',
+        'Restart the entire recursion from the root',
+        'Delete the input array',
+      ],
+      explanation:
+        'Backtracking restores the previous state so the alternative decision can be explored without carrying the old choice forward.',
+      hint: 'Backtracking means restore state and try another branch.',
+      concept: 'State restoration',
+    },
+  ],
+
+  permutations: [
+    {
+      prompt: 'How many distinct permutations can n distinct elements have?',
+      correct: 'n!',
+      distractors: [
+        '2^n',
+        'n^2',
+        'n + 1',
+      ],
+      explanation:
+        'There are n choices for the first position, n-1 for the second, and so on, giving n × (n-1) × ... × 1 = n!.',
+      hint: 'Count the decreasing number of choices for each position.',
+      concept: 'Permutation count',
+    },
+    {
+      prompt: 'What does one recursion level represent when generating permutations by swapping?',
+      correct: 'Fixing one position in the permutation',
+      distractors: [
+        'Removing one element permanently',
+        'Sorting the entire array',
+        'Finding the maximum element',
+      ],
+      explanation:
+        'At each level, the algorithm chooses one remaining element for the current position and recurses to the next position.',
+      hint: 'Each recursion depth corresponds to one position.',
+      concept: 'Position fixing',
+    },
+    {
+      prompt: 'Why must a permutation algorithm restore the array after exploring a swap?',
+      correct: 'To allow the next branch to start from the original state',
+      distractors: [
+        'To make the array sorted',
+        'To reduce the array length',
+        'To prevent recursion from reaching a base case',
+      ],
+      explanation:
+        'Undoing the swap restores the state so another candidate can be placed in that position without interference from the previous branch.',
+      hint: 'Every branch should see the correct starting state.',
+      concept: 'Backtracking',
+    },
+    {
+      prompt: 'What is the usual time complexity of generating and outputting all permutations?',
+      correct: 'O(n! · n)',
+      distractors: [
+        'O(n)',
+        'O(2^n)',
+        'O(n^2)',
+      ],
+      explanation:
+        'There are n! permutations and recording each one can take O(n), producing O(n! · n).',
+      hint: 'How many permutations exist, and how much does it cost to output one?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What should happen when the recursion reaches the final position of a permutation?',
+      correct: 'Record/output the complete permutation',
+      distractors: [
+        'Delete the last element',
+        'Restart from position zero immediately',
+        'Sort the completed permutation',
+      ],
+      explanation:
+        'When all positions have been fixed, the current array represents one complete permutation and can be recorded as a solution.',
+      hint: 'At the leaf of the decision tree, what do you have?',
+      concept: 'Base case',
+    },
+  ],
+
+  nQueens: [
+    {
+      prompt: 'What makes a queen placement valid in N-Queens?',
+      correct: 'No previously placed queen attacks the new queen',
+      distractors: [
+        'The new queen must be adjacent to another queen',
+        'The new queen must share a diagonal with a queen',
+        'Only the row needs to be checked',
+      ],
+      explanation:
+        'A queen attacks along rows, columns, and diagonals. Since we usually place one queen per row, previously occupied columns and both diagonal directions must be safe.',
+      hint: 'Think about every direction a chess queen can attack.',
+      concept: 'Constraint checking',
+    },
+    {
+      prompt: 'Why can the standard row-by-row N-Queens algorithm skip explicit row checks?',
+      correct: 'Because it places exactly one queen in each row',
+      distractors: [
+        'Queens cannot attack horizontally',
+        'Rows are automatically sorted',
+        'The board contains no repeated rows',
+      ],
+      explanation:
+        'The recursion places one queen in the current row only once, so two queens cannot occupy the same row.',
+      hint: 'How many queens does the algorithm place in one row?',
+      concept: 'Row invariant',
+    },
+    {
+      prompt: 'What is the purpose of pruning an invalid N-Queens branch?',
+      correct: 'Avoid exploring completions that can no longer become valid solutions',
+      distractors: [
+        'Increase the board size',
+        'Guarantee every branch becomes a solution',
+        'Sort the queen positions',
+      ],
+      explanation:
+        'Once a queen conflicts with an earlier placement, no deeper choices can repair that placement, so the branch is abandoned immediately.',
+      hint: 'An invalid partial board cannot become valid by adding more queens elsewhere.',
+      concept: 'Pruning',
+    },
+    {
+      prompt: 'Which checks are central when testing a new queen position?',
+      correct: 'Column and both diagonal conflicts with existing queens',
+      distractors: [
+        'Only the previous row',
+        'Only the nearest column',
+        'Array order and element frequency',
+      ],
+      explanation:
+        'With one queen per row, the essential checks are whether another queen occupies the same column or either diagonal.',
+      hint: 'Rows are already controlled by the recursion structure.',
+      concept: 'Conflict types',
+    },
+    {
+      prompt: 'What happens when an entire row has no valid column remaining?',
+      correct: 'Backtrack to the previous row and move that queen',
+      distractors: [
+        'Add another row to the board',
+        'Accept the current board as a solution',
+        'Restart the program without changing state',
+      ],
+      explanation:
+        'No valid placement means the current partial solution is a dead end. The algorithm returns to the previous decision and tries another column.',
+      hint: 'A dead end requires undoing an earlier choice.',
+      concept: 'Backtracking trigger',
+    },
+  ],
+
+  combinationSum: [
+    {
+      prompt: 'What does remainder = 0 mean in Combination Sum?',
+      correct: 'The current combination exactly reaches the target',
+      distractors: [
+        'The combination is impossible',
+        'The candidate list must be sorted',
+        'The recursion must restart from the root',
+      ],
+      explanation:
+        'The remainder represents how much target value is still needed. Zero means the current combination sums exactly to the target.',
+      hint: 'Remainder means target minus the current sum.',
+      concept: 'Base case',
+    },
+    {
+      prompt: 'Why can a positive-remainder branch be pruned when the chosen candidate exceeds the remainder?',
+      correct: 'Adding another positive value cannot bring the sum back down',
+      distractors: [
+        'All candidates are automatically equal',
+        'The algorithm requires a negative candidate',
+        'The target becomes larger',
+      ],
+      explanation:
+        'With positive candidates, once a candidate is larger than the remaining required sum, continuing that branch would only make the sum exceed the target.',
+      hint: 'Can adding positive numbers reduce an already-too-large partial sum?',
+      concept: 'Pruning',
+    },
+    {
+      prompt: 'What is the key difference between choosing and skipping a candidate in Combination Sum?',
+      correct: 'Choose adds it to the current combination; skip moves to another candidate',
+      distractors: [
+        'Choose deletes it; skip sorts it',
+        'Both actions always add the candidate',
+        'Both actions reset the entire recursion',
+      ],
+      explanation:
+        'The decision tree explores whether to include a candidate and, depending on the implementation, whether that candidate can be reused before moving forward.',
+      hint: 'Track what changes in the current combination.',
+      concept: 'Branch decision',
+    },
+    {
+      prompt: 'Why does backtracking remove a chosen candidate before exploring another branch?',
+      correct: 'To restore the partial combination for the alternative branch',
+      distractors: [
+        'To permanently discard the candidate',
+        'To make the target larger',
+        'To reduce recursion depth to zero',
+      ],
+      explanation:
+        'The current choice belongs only to the branch being explored. Removing it restores the state before trying another candidate.',
+      hint: 'Backtracking means undo the previous branch-specific choice.',
+      concept: 'State restoration',
+    },
+    {
+      prompt: 'What is a key property of the classic Combination Sum problem that enables repeated use of a candidate?',
+      correct: 'A candidate may be chosen multiple times while building a combination',
+      distractors: [
+        'Every candidate must be used exactly once',
+        'Candidates must form a permutation',
+        'Each candidate can only appear in the first position',
+      ],
+      explanation:
+        'In the classic version, the same candidate can be selected repeatedly as long as the resulting sum does not exceed the target.',
+      hint: 'Ask whether a successful combination like [2,2,3] is allowed when 2 is a candidate.',
+      concept: 'Candidate reuse',
+    },
+  ],
 };
 
 /* ── Mid-execution question generators ────────────────────────────── */
@@ -206,10 +425,13 @@ export function buildBacktrackingCheckpoints(
   if (steps.length < 2) return [];
 
   const checkpoints: QuizCheckpoint[] = [];
-  const anchor = ANCHORS[algorithm];
+  // One fixed conceptual question at step 0.
+  // Selection is deterministic so the quiz is reproducible.
+  const anchors = ANCHORS[algorithm];
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
 
-  // Anchor question at step 0
-  const anchorId = `backtracking-${algorithm}-anchor`;
+  const anchorId = `backtracking-${algorithm}-anchor-${anchorIndex}`;
   const anchorOptions = buildOptions(anchorId, anchor.correct, anchor.distractors);
   checkpoints.push({
     stepIndex: 0,
