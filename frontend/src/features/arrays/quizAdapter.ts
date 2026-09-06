@@ -18,85 +18,414 @@ interface Anchor {
   concept: string;
 }
 
-const ANCHORS: Record<ArrayAlgorithmKey, Anchor> = {
-  linearSearch: {
-    prompt: 'Before it starts: what is the worst-case time complexity of Linear Search?',
-    correct: 'O(n) — every element may need to be inspected',
-    distractors: [
-      'O(log n) — the array is halved each step',
-      'O(1) — only the first element is checked',
-      'O(n²) — each element is compared to every other',
-    ],
-    explanation:
-      'Linear search scans elements one by one from left to right. In the worst case the target is absent or at the very end, requiring a full pass through all n elements.',
-    hint: 'Think about what happens when the target is not in the array at all.',
-    concept: 'Time complexity',
-  },
-  kadane: {
-    prompt: "Before it starts: in Kadane's algorithm, when does currentSum reset to zero?",
-    correct: 'When currentSum drops below zero, since a negative prefix cannot help a future subarray',
-    distractors: [
-      'At every index, to start fresh',
-      'Only when a negative element is encountered',
-      'When currentSum exceeds maxSum',
-    ],
-    explanation:
-      "Kadane's algorithm tracks the maximum subarray sum ending at each position. If currentSum falls below zero, any future subarray is better off starting fresh from the next element rather than carrying the negative prefix forward.",
-    hint: 'A negative running sum only hurts the next element added to it.',
-    concept: 'Reset condition',
-  },
-  twoPointer: {
-    prompt: 'Before it starts: what must be true about the array for the two-pointer sum technique to work correctly?',
-    correct: 'The array must be sorted so pointer moves have predictable effects on the sum',
-    distractors: [
-      'The array must contain only positive integers',
-      'The array must have an even number of elements',
-      'The target sum must be present in the array',
-    ],
-    explanation:
-      'The two-pointer technique relies on sortedness: moving the left pointer right increases the sum, moving the right pointer left decreases it. Without sorted order, these invariants break and the algorithm cannot guarantee correctness.',
-    hint: 'What property lets you know which pointer to move after each comparison?',
-    concept: 'Precondition',
-  },
-  slidingWindow: {
-    prompt: 'Before it starts: what does a fixed-size sliding window compute in a single pass?',
-    correct: 'The aggregate (e.g. sum) of every contiguous subarray of size k',
-    distractors: [
-      'The maximum element in the array',
-      'The sorted order of each window',
-      'The longest increasing subsequence',
-    ],
-    explanation:
-      'A sliding window of size k moves one position at a time, adding the new element entering the window and removing the element leaving it. This computes each window\'s aggregate in O(1) per step, giving O(n) overall.',
-    hint: 'Think about what changes between one window position and the next.',
-    concept: 'Window invariant',
-  },
-  rotation: {
-    prompt: 'Before it starts: rotating an array of size n by k positions is equivalent to rotating by how many?',
-    correct: 'k mod n — rotations wrap around after n shifts',
-    distractors: [
-      'k * n — each rotation multiplies the offset',
-      'n - k — the reverse direction',
-      'k / 2 — half the rotations cancel out',
-    ],
-    explanation:
-      'After n rotations the array returns to its original order, so only the remainder k mod n matters. A rotation of 7 on a 5-element array is the same as a rotation of 2.',
-    hint: 'What happens after you rotate an array exactly n times?',
-    concept: 'Modular arithmetic',
-  },
-  prefixSum: {
-    prompt: 'Before it starts: what does prefix[i] represent in a prefix sum array?',
-    correct: 'The sum of all elements from index 0 through index i',
-    distractors: [
-      'The sum of elements from index i to the end',
-      'The maximum value up to index i',
-      'The count of elements less than array[i]',
-    ],
-    explanation:
-      'A prefix sum array stores cumulative totals: prefix[i] = arr[0] + arr[1] + … + arr[i]. This lets any range sum be computed in O(1) as prefix[right] - prefix[left - 1].',
-    hint: 'Think cumulative: each entry accumulates everything before it plus itself.',
-    concept: 'Prefix definition',
-  },
+const ANCHORS: Record<ArrayAlgorithmKey, Anchor[]> = {
+  linearSearch: [
+    {
+      prompt: 'What is the worst-case time complexity of Linear Search?',
+      correct: 'O(n) — every element may need to be inspected',
+      distractors: [
+        'O(log n) — the search range is halved each step',
+        'O(1) — only one element is checked',
+        'O(n²) — every element is compared with every other element',
+      ],
+      explanation:
+        'Linear Search checks elements one by one. In the worst case the target is absent or is the last element, so all n elements are inspected.',
+      hint: 'Think about the case where the target is at the end or missing.',
+      concept: 'Worst-case complexity',
+    },
+    {
+      prompt: 'What is the best-case time complexity of Linear Search?',
+      correct: 'O(1) — the target is found at the first position',
+      distractors: [
+        'O(log n) — the array is repeatedly halved',
+        'O(n) — every element is always inspected',
+        'O(n²) — nested comparisons are required',
+      ],
+      explanation:
+        'If the first element already matches the target, Linear Search stops immediately after one comparison.',
+      hint: 'What happens when the target is the very first element?',
+      concept: 'Best-case complexity',
+    },
+    {
+      prompt: 'What allows Linear Search to stop before reaching the end of the array?',
+      correct: 'Finding the target at the current index',
+      distractors: [
+        'The array becoming sorted',
+        'The current value becoming larger than the target in every case',
+        'Reaching the middle of the array',
+      ],
+      explanation:
+        'Linear Search can terminate immediately when the current element equals the target.',
+      hint: 'Look at the equality check performed at each index.',
+      concept: 'Early termination',
+    },
+    {
+      prompt: 'What happens if the target does not exist in the array?',
+      correct: 'The algorithm checks all candidates and returns not-found',
+      distractors: [
+        'It always returns index 0',
+        'It automatically sorts the array first',
+        'It switches to Binary Search',
+      ],
+      explanation:
+        'Without a matching value, Linear Search continues until the final element and then reports that the target is absent.',
+      hint: 'What condition ends the loop when no match is found?',
+      concept: 'Absent target',
+    },
+    {
+      prompt: 'Which input condition does Linear Search NOT require?',
+      correct: 'The array does not need to be sorted',
+      distractors: [
+        'A target value to compare against',
+        'Ability to inspect array elements',
+        'A valid sequence of elements',
+      ],
+      explanation:
+        'Linear Search works on sorted or unsorted arrays because it does not rely on ordering to eliminate parts of the search space.',
+      hint: 'Does Linear Search use ordering to decide which half to ignore?',
+      concept: 'Precondition',
+    },
+  ],
+
+  kadane: [
+    {
+      prompt: "In Kadane's algorithm, when should currentSum be reset to zero?",
+      correct: 'When currentSum becomes negative',
+      distractors: [
+        'Whenever a negative element appears',
+        'Whenever currentSum exceeds maxSum',
+        'At every new index',
+      ],
+      explanation:
+        'A negative running sum can only reduce the sum of any future subarray, so Kadane starts fresh after currentSum drops below zero.',
+      hint: 'Ask whether carrying a negative prefix can ever help a future sum.',
+      concept: 'Reset condition',
+    },
+    {
+      prompt: "What does Kadane's maxSum represent?",
+      correct: 'The largest subarray sum found so far',
+      distractors: [
+        'The current running sum only',
+        'The largest individual element only',
+        'The total sum of the entire array',
+      ],
+      explanation:
+        'maxSum stores the best contiguous-subarray sum encountered during the scan.',
+      hint: 'Compare the running candidate with the best answer seen so far.',
+      concept: 'State meaning',
+    },
+    {
+      prompt: "What is Kadane's time complexity for an array of n elements?",
+      correct: 'O(n) — one pass through the array',
+      distractors: [
+        'O(log n)',
+        'O(n²)',
+        'O(2^n)',
+      ],
+      explanation:
+        'Kadane updates the running sum and best answer once per element, so it runs in linear time.',
+      hint: 'How many times does the algorithm process each array position?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'How should Kadane behave on an all-negative array in the standard non-empty-subarray version?',
+      correct: 'Return the largest (least negative) element',
+      distractors: [
+        'Always return zero',
+        'Always return the total array sum',
+        'Return the smallest (most negative) element',
+      ],
+      explanation:
+        'For a non-empty maximum-subarray problem, the best answer among all-negative values is the single largest element.',
+      hint: 'A non-empty subarray cannot simply disappear when every value is negative.',
+      concept: 'Edge case',
+    },
+    {
+      prompt: "Why can Kadane discard a negative prefix?",
+      correct: 'A negative prefix makes every future extension worse',
+      distractors: [
+        'Negative numbers are invalid input',
+        'The array must contain only positive values',
+        'The prefix is always sorted incorrectly',
+      ],
+      explanation:
+        'Adding a negative prefix to a future positive continuation lowers that future subarray sum, so starting fresh is better.',
+      hint: 'Compare x with x + negative_value.',
+      concept: 'Greedy invariant',
+    },
+  ],
+
+  twoPointer: [
+    {
+      prompt: 'What key condition makes the classic two-pointer sum technique correct?',
+      correct: 'The array is sorted',
+      distractors: [
+        'The array must contain only positive values',
+        'The array length must be even',
+        'The target must equal an array element',
+      ],
+      explanation:
+        'Sorted order gives pointer movements predictable effects: moving left right increases the sum, while moving right left decreases it.',
+      hint: 'What property tells you which pointer to move after a comparison?',
+      concept: 'Precondition',
+    },
+    {
+      prompt: 'If the current pair sum is smaller than the target, which pointer moves in the classic sorted-array approach?',
+      correct: 'Move the left pointer right',
+      distractors: [
+        'Move the right pointer left',
+        'Move both pointers outward',
+        'Do not move either pointer',
+      ],
+      explanation:
+        'Moving the left pointer right replaces a smaller value with a larger one, increasing the pair sum.',
+      hint: 'You need the sum to become larger.',
+      concept: 'Pointer movement',
+    },
+    {
+      prompt: 'If the current pair sum is larger than the target, which pointer moves?',
+      correct: 'Move the right pointer left',
+      distractors: [
+        'Move the left pointer right',
+        'Move both pointers to the same side',
+        'Restart from index 0',
+      ],
+      explanation:
+        'Moving the right pointer left replaces a larger value with a smaller one, reducing the sum.',
+      hint: 'You need the sum to become smaller.',
+      concept: 'Pointer movement',
+    },
+    {
+      prompt: 'What is the typical time complexity of the sorted-array two-pointer sum technique?',
+      correct: 'O(n)',
+      distractors: [
+        'O(log n)',
+        'O(n²)',
+        'O(1) regardless of input size',
+      ],
+      explanation:
+        'Both pointers move only inward across the array, so the total number of pointer moves is linear.',
+      hint: 'Can either pointer move backward after passing an index?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'Why does the classic two-pointer rule not work the same way on an unsorted array?',
+      correct: 'Pointer movement no longer guarantees whether the sum will increase or decrease',
+      distractors: [
+        'Unsorted arrays cannot be indexed',
+        'Two pointers require an even-sized array',
+        'The target value disappears from memory',
+      ],
+      explanation:
+        'Without sorted order, moving a pointer does not have a predictable effect on the pair sum, so the correctness argument breaks.',
+      hint: 'The technique depends on monotonic movement of values.',
+      concept: 'Limitation',
+    },
+  ],
+
+  slidingWindow: [
+    {
+      prompt: 'What does a fixed-size sliding window compute efficiently?',
+      correct: 'An aggregate such as the sum for every contiguous window of size k',
+      distractors: [
+        'The longest increasing subsequence',
+        'A globally sorted copy of the array',
+        'Only the maximum element in the array',
+      ],
+      explanation:
+        'A fixed-size window moves one position at a time, updating its aggregate from the element entering and the element leaving.',
+      hint: 'Compare two consecutive windows.',
+      concept: 'Window definition',
+    },
+    {
+      prompt: 'When a fixed-size window moves one position right, what changes?',
+      correct: 'One element enters and one element leaves',
+      distractors: [
+        'Every element changes',
+        'Only the entering element matters',
+        'The window doubles in size',
+      ],
+      explanation:
+        'Consecutive windows overlap heavily, so only two boundary elements need to be updated.',
+      hint: 'Most of the previous window is still present.',
+      concept: 'Window transition',
+    },
+    {
+      prompt: 'Why can a fixed-size sliding-window sum be maintained in O(1) per move?',
+      correct: 'Add the entering element and subtract the leaving element',
+      distractors: [
+        'Recompute the entire window every time',
+        'Sort each window before summing',
+        'Multiply the previous sum by the window size',
+      ],
+      explanation:
+        'The previous sum already contains the shared elements. Only the two changed boundaries need updates.',
+      hint: 'What two values are different between adjacent windows?',
+      concept: 'Incremental update',
+    },
+    {
+      prompt: 'What is the overall time complexity of scanning all fixed-size windows using incremental updates?',
+      correct: 'O(n)',
+      distractors: [
+        'O(nk)',
+        'O(n²) for every k',
+        'O(log n)',
+      ],
+      explanation:
+        'The first window takes O(k), then each remaining window is updated in O(1), giving O(n) overall.',
+      hint: 'Do you rescan all k elements for every window?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What must be established before sliding a fixed-size window?',
+      correct: 'The initial window of size k must be formed correctly',
+      distractors: [
+        'The array must already be sorted',
+        'The target must be at index 0',
+        'The window must contain the entire array',
+      ],
+      explanation:
+        'The first window provides the starting aggregate. Later windows can then be updated incrementally.',
+      hint: 'What value does the first slide need as its starting point?',
+      concept: 'Initialization',
+    },
+  ],
+
+  rotation: [
+    {
+      prompt: 'Rotating an array of length n by k positions is equivalent to rotating by what amount?',
+      correct: 'k mod n',
+      distractors: [
+        'k × n',
+        'n - k in every case',
+        'k / 2',
+      ],
+      explanation:
+        'After n rotations the array returns to its original order, so only the remainder after division by n matters.',
+      hint: 'What happens after exactly n full rotations?',
+      concept: 'Modulo arithmetic',
+    },
+    {
+      prompt: 'What does one right rotation do to an array?',
+      correct: 'Move the last element to the front and shift the others right',
+      distractors: [
+        'Move the first element to the end',
+        'Swap only the first and last elements',
+        'Reverse the whole array',
+      ],
+      explanation:
+        'A right rotation wraps the final element around to index 0 and shifts every other element one position right.',
+      hint: 'Which end wraps around in a right rotation?',
+      concept: 'Rotation direction',
+    },
+    {
+      prompt: 'Why is k mod n useful before implementing an array rotation?',
+      correct: 'It removes redundant full cycles',
+      distractors: [
+        'It sorts the array',
+        'It guarantees k becomes 1',
+        'It removes duplicate values',
+      ],
+      explanation:
+        'Any complete set of n rotations restores the original array, so reducing k avoids unnecessary work.',
+      hint: 'Full cycles do not change the final arrangement.',
+      concept: 'Optimization',
+    },
+    {
+      prompt: 'In the reversal-based right-rotation method, what is the first high-level step?',
+      correct: 'Reverse the entire array',
+      distractors: [
+        'Sort the array',
+        'Reverse only the first k elements',
+        'Swap every adjacent pair',
+      ],
+      explanation:
+        'The standard reversal method is: reverse all elements, reverse the first k, then reverse the remaining n-k.',
+      hint: 'Recall the three-reversal technique.',
+      concept: 'Reversal technique',
+    },
+    {
+      prompt: 'What should happen when k is larger than the array length n?',
+      correct: 'Reduce k using k mod n',
+      distractors: [
+        'Reject the input automatically',
+        'Repeat the full algorithm k times without reduction',
+        'Use n + k',
+      ],
+      explanation:
+        'Reducing k modulo n gives the equivalent rotation while avoiding redundant full cycles.',
+      hint: 'A rotation of n positions changes nothing.',
+      concept: 'Edge case',
+    },
+  ],
+
+  prefixSum: [
+    {
+      prompt: 'What does prefix[i] represent in a standard prefix-sum array?',
+      correct: 'The sum of elements from index 0 through index i',
+      distractors: [
+        'The sum from index i to the end',
+        'The maximum value through index i',
+        'The count of values smaller than arr[i]',
+      ],
+      explanation:
+        'Each prefix entry stores a cumulative total beginning at index 0.',
+      hint: 'Think cumulative: each entry includes everything before it.',
+      concept: 'Prefix definition',
+    },
+    {
+      prompt: 'How is prefix[i] usually computed from the previous prefix value?',
+      correct: 'prefix[i] = prefix[i - 1] + arr[i]',
+      distractors: [
+        'prefix[i] = prefix[i - 1] - arr[i]',
+        'prefix[i] = prefix[i - 1] × arr[i]',
+        'prefix[i] = arr[i] only',
+      ],
+      explanation:
+        'Each new prefix adds the current element to the cumulative total stored at the previous index.',
+      hint: 'A prefix sum is cumulative addition.',
+      concept: 'Construction',
+    },
+    {
+      prompt: 'How can the sum of a range L..R be obtained in O(1) with prefix sums when L > 0?',
+      correct: 'prefix[R] - prefix[L - 1]',
+      distractors: [
+        'prefix[R] + prefix[L - 1]',
+        'prefix[L] - prefix[R]',
+        'prefix[R] / prefix[L - 1]',
+      ],
+      explanation:
+        'Subtracting the cumulative sum through L-1 removes all values before L.',
+      hint: 'What must be removed from the cumulative sum ending at R?',
+      concept: 'Range query',
+    },
+    {
+      prompt: 'What special case must be handled when a range starts at index 0?',
+      correct: 'Use prefix[R] directly because there is no prefix[-1]',
+      distractors: [
+        'Return zero',
+        'Subtract arr[0] from prefix[R]',
+        'Start the range at index 1',
+      ],
+      explanation:
+        'For L = 0, the answer is simply prefix[R]. A common implementation mistake is trying to access prefix[-1].',
+      hint: 'There is nothing before index 0 to subtract.',
+      concept: 'Off-by-one edge case',
+    },
+    {
+      prompt: 'What is the usual space complexity of storing a full prefix-sum array?',
+      correct: 'O(n)',
+      distractors: [
+        'O(1)',
+        'O(log n)',
+        'O(n²)',
+      ],
+      explanation:
+        'A prefix array stores one cumulative value per input position, so it uses linear extra space.',
+      hint: 'How many prefix values are stored for n input elements?',
+      concept: 'Space complexity',
+    },
+  ],
 };
 
 /* ── Mid-execution question generators ──────────────────────────────────
@@ -292,10 +621,14 @@ export function buildArraysCheckpoints(
   if (steps.length < 2) return [];
 
   const checkpoints: QuizCheckpoint[] = [];
-  const anchor = ANCHORS[algorithm];
+  // One fixed conceptual question at step 0.
+  // Select deterministically from the algorithm's question bank so the quiz
+  // remains reproducible instead of relying on Math.random().
+  const anchors = ANCHORS[algorithm];
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
 
-  // Anchor question at step 0
-  const anchorId = `arrays-${algorithm}-anchor`;
+  const anchorId = `arrays-${algorithm}-anchor-${anchorIndex}`;
   const anchorOptions = buildOptions(anchorId, anchor.correct, anchor.distractors);
   checkpoints.push({
     stepIndex: 0,
