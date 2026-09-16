@@ -143,14 +143,14 @@ export const LinuxCommandsPage: React.FC = () => {
             <button
               onClick={expandAll}
               type="button"
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all flex items-center gap-1"
+              className="bst-btn bst-btn-primary"
             >
               <ChevronDown size={14} /> Expand All
             </button>
             <button
               onClick={collapseAll}
               type="button"
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-surface-elevated)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-purple-500/10 hover:text-purple-600 transition-all flex items-center gap-1"
+              className="bst-btn"
             >
               <ChevronUp size={14} /> Collapse All
             </button>
@@ -180,15 +180,19 @@ export const LinuxCommandsPage: React.FC = () => {
             onClick={() => setActiveGroupId('all')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
               activeGroupId === 'all'
-                ? 'bg-gradient-to-r from-purple-500/15 to-indigo-500/15 text-purple-700 dark:text-purple-300 font-bold border border-purple-500/30 shadow-sm'
-                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
+                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium border border-transparent'
             }`}
           >
             <span className="flex items-center gap-2">
-              <BookOpen size={16} className={activeGroupId === 'all' ? 'text-purple-600 dark:text-purple-400' : ''} />
+              <BookOpen size={16} className={activeGroupId === 'all' ? 'text-white' : ''} />
               <span>All Groups</span>
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeGroupId === 'all'
+                ? 'bg-white/20 text-white border border-white/30'
+                : 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20'
+            }`}>
               {LINUX_COMMAND_GROUPS.reduce((acc, g) => acc + g.commands.length, 0)}
             </span>
           </button>
@@ -202,15 +206,19 @@ export const LinuxCommandsPage: React.FC = () => {
                 onClick={() => setActiveGroupId(group.id)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-purple-500/15 to-indigo-500/15 text-purple-700 dark:text-purple-300 font-bold border border-purple-500/30 shadow-sm'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium border border-transparent'
                 }`}
               >
                 <span className="flex items-center gap-2 truncate">
-                  <GroupIcon size={15} className={isActive ? 'text-purple-600 dark:text-purple-400 shrink-0' : 'text-[var(--color-text-muted)] shrink-0'} />
+                  <GroupIcon size={15} className={isActive ? 'text-white shrink-0' : 'text-[var(--color-text-muted)] shrink-0'} />
                   <span className="truncate">{group.title}</span>
                 </span>
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)] shrink-0">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  isActive
+                    ? 'bg-white/20 text-white border border-white/30'
+                    : 'bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
+                }`}>
                   {group.commands.length}
                 </span>
               </button>
@@ -227,7 +235,7 @@ export const LinuxCommandsPage: React.FC = () => {
               <p className="text-[var(--color-text-secondary)] text-sm">Try searching for a different command name or syntax keyword.</p>
               <button
                 onClick={() => { setSearchQuery(''); setActiveGroupId('all'); }}
-                className="mt-4 px-4 py-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-300 text-xs font-semibold border border-purple-500/30 hover:bg-purple-500/20 transition-all"
+                className="bst-btn bst-btn-primary mt-4"
               >
                 Clear Search & Filters
               </button>
