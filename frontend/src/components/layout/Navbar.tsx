@@ -146,6 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               to="/dashboard/os"
               onClick={() => setActiveTab('os')}
               className={`expandable-tab-btn ${activeTab === 'os' ? 'active' : ''}`}
+              aria-label="Operating Systems module"
             >
               <Monitor size={18} className="tab-icon" />
               <AnimatePresence initial={false}>
@@ -155,9 +156,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                     animate={{ opacity: 1, width: 'auto' }}
                     exit={{ opacity: 0, width: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="tab-label-text"
+                    className="tab-label-text flex items-center gap-1.5"
                   >
-                    OS Modules
+                    <span>OS Modules</span>
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm animate-pulse">
+                      NEW
+                    </span>
                   </m.span>
                 )}
               </AnimatePresence>
@@ -168,6 +172,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               layout
               onClick={() => handleTabClick('visualizer')}
               className={`expandable-tab-btn ${activeTab === 'visualizer' ? 'active' : ''}`}
+              aria-label="Visualizer"
             >
               <Code2 size={18} className="tab-icon" />
               <AnimatePresence initial={false}>
@@ -202,6 +207,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               layout
               onClick={() => handleTabClick('notifications')}
               className={`expandable-tab-btn ${activeTab === 'notifications' ? 'active' : ''}`}
+              aria-label="Notifications"
             >
               <Bell size={18} className="tab-icon" />
               <AnimatePresence initial={false}>
@@ -225,6 +231,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               onClick={() => handleTabClick('settings')}
               className={`expandable-tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
               title="Settings"
+              aria-label="Settings"
             >
               <Settings size={18} className="tab-icon" />
               <AnimatePresence initial={false}>
@@ -248,6 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               onClick={() => handleTabClick('theme')}
               className={`expandable-tab-btn ${activeTab === 'theme' ? 'active' : ''}`}
               title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              aria-label={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
             >
               {theme === 'dark' ? <Moon size={18} className="tab-icon" /> : <Sun size={18} className="tab-icon" />}
               <AnimatePresence initial={false}>
@@ -270,7 +278,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
           {/* Account actions */}
           {!isAuthenticated ? (
-            <m.button layout onClick={() => navigate('/login')} className="expandable-tab-btn" title="Sign in">
+            <m.button layout onClick={() => navigate('/login')} className="expandable-tab-btn" title="Sign in" aria-label="Sign in">
               <LogIn size={18} className="tab-icon" />
               <span className="tab-label-text">Sign In</span>
             </m.button>
@@ -283,6 +291,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 setShowUserDropdown(!showUserDropdown);
               }}
               className={`expandable-tab-btn ${activeTab === 'user' || showUserDropdown ? 'active' : ''}`}
+              aria-label="Account menu"
             >
               <User size={18} className="tab-icon" />
               <AnimatePresence initial={false}>
