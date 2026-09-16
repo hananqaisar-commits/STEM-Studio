@@ -1,5 +1,7 @@
 import React, {useState, useMemo, useEffect} from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Search,
   RotateCcw,
@@ -430,6 +432,7 @@ export const BinarySearchPage: React.FC = () => {
 
   return (
     <div className="bs-container">
+      <SEOHead {...getSEOForRoute('/dashboard/binarySearch')} />
       <VisualizerHeader
         icon={<Search size={22} />}
         title="Binary Search Studio"

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth, ApiError } from '../../contexts/AuthContext';
@@ -57,6 +58,7 @@ export const ResetPassword: React.FC = () => {
 
   return (
     <div className="auth-page-container">
+      <SEOHead title="Reset Password | STEM Studio" description="Set a new password for your STEM Studio account." noIndex={true} />
       <div className="auth-card animate-fade-in">
         <div className="auth-header">
           <h1 className="auth-title">Set New Password</h1>

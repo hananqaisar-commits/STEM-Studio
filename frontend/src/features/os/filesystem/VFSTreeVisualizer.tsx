@@ -81,32 +81,32 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   // Light/Dark theme adaptive node color & shape border classes
   const getNodeColorClasses = (node: VFSNode, isCurrentDir: boolean, isTargetActive: boolean, isPathHighlighted: boolean) => {
     if (isCurrentDir) {
-      return 'bg-cyan-500/15 text-cyan-900 dark:text-cyan-200 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/50 font-bold';
+      return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)] ring-2 ring-purple-500/50 font-bold';
     }
     if (isTargetActive) {
-      return 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/50 font-semibold';
+      return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/50 font-semibold';
     }
     if (isPathHighlighted) {
-      return 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]';
+      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]';
     }
 
     const cat = getNodeCategory(node);
     if (cat === 'root') {
-      return 'bg-amber-100 dark:bg-amber-500/15 text-amber-900 dark:text-amber-300 border-amber-400 dark:border-amber-500/40 hover:bg-amber-200 dark:hover:bg-amber-500/25';
+      return 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/40 hover:bg-purple-500/20';
     }
     if (cat === 'mount') {
-      return 'bg-purple-100 dark:bg-purple-500/15 text-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-500/30 hover:bg-purple-200 dark:hover:bg-purple-500/25';
+      return 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20';
     }
     if (cat === 'config') {
-      return 'bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/50 hover:border-amber-500';
+      return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:border-amber-500';
     }
     if (cat === 'script') {
-      return 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/50 hover:border-emerald-500';
+      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:border-emerald-500';
     }
     if (cat === 'directory') {
-      return 'bg-white dark:bg-slate-900 text-purple-900 dark:text-cyan-300 border-slate-200 dark:border-slate-700/80 hover:border-purple-400 dark:hover:border-cyan-500/50 hover:bg-purple-50 dark:hover:bg-slate-800/80';
+      return 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-500 hover:bg-purple-500/5';
     }
-    return 'bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-blue-400';
+    return 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-400';
   };
 
   // Track expanded branches in hierarchy view (interactive branch expansion)

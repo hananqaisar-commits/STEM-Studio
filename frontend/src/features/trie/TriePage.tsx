@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Binary, Search, GitBranch, BookOpen, MessageSquare, Maximize2, Sparkles, Trash2, Layers
 } from 'lucide-react';
@@ -281,6 +283,7 @@ export const TriePage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/trie')} />
       <VisualizerHeader
         icon={<Binary size={22} />}
         title="Trie (Prefix Tree) Studio"

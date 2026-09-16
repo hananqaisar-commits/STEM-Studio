@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Clock, Package, Calendar, FileText, Maximize2, Sparkles, Layers, Trash2
 } from 'lucide-react';
@@ -432,6 +434,7 @@ export const GreedyPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/greedy')} />
       <VisualizerHeader
         icon={<Package size={22} />}
         title="Greedy Algorithms Studio"

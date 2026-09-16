@@ -1,6 +1,8 @@
 import React, {useState, useEffect} from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity } from 'lucide-react';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
 import './Complexity.css';
@@ -51,6 +53,7 @@ export const ComplexityPage: React.FC = () => {
 
   return (
     <div className="complexity-page">
+      <SEOHead {...getSEOForRoute('/dashboard/complexity')} />
       <VisualizerHeader
         icon={<Activity size={22} />}
         title="Complexity Analysis"

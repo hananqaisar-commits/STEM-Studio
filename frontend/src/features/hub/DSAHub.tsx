@@ -13,6 +13,7 @@ import { Octa, useMascot } from '../../components/mascot';
 import { GooeyInput } from '../../components/ui/gooey-input';
 import { TextHoverEffect } from '../../components/ui/text-hover-effect';
 import { SparklesDivider } from '../../components/ui/sparkles-demo';
+import { SEOHead } from '../../components/common/SEOHead';
 import '../../components/mascot/Mascot.css';
 import './DSAHub.css';
 
@@ -234,16 +235,24 @@ export const DSAHub: React.FC = () => {
 
   return (
     <div className="dsa-hub">
+      <SEOHead
+        title="STEM Studio – Interactive DSA & Algorithm Visualizer"
+        description="STEM Studio is an interactive Data Structures and Algorithms learning platform with step-by-step visualizers, multi-language debugger, quizzes, and 138+ topics designed to help students master algorithms."
+        canonical="https://stem-studio-one.vercel.app/dashboard"
+      />
       {/* ── Hero Section ───────────────────────────────────────────── */}
       <section id="hero" className="hero-section">
         <div className="hero-text">
           <h1 className="hero-title">
-            Explore & Master<br />
+            STEM Studio
+          </h1>
+          <p className="hero-typed-line">
+            Explore & Master{' '}
             <span className="hero-accent inline-flex items-center gap-1 font-black">
               {typedExploreText}
               <span className="inline-block w-1.5 h-8 md:h-11 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
             </span>
-          </h1>
+          </p>
           <p className="hero-subtitle">
             Build algorithm intuition by tracing each operation, checking your understanding,
             and comparing implementations across languages.
@@ -294,6 +303,9 @@ export const DSAHub: React.FC = () => {
               <span className="hero-stat-label">Topics</span>
             </div>
           </div>
+          <p className="hero-intro-text">
+            STEM Studio is a free, interactive learning platform for Data Structures and Algorithms. Explore step-by-step visualizations for sorting, searching, graph traversal, trees, dynamic programming, and more — with a multi-language debugger, quiz modes, and custom input testing across 14 categories and 138+ topics.
+          </p>
         </div>
         <div className="hero-visual mascot-hero">
           <div className="mascot-hero-center">
@@ -343,12 +355,8 @@ export const DSAHub: React.FC = () => {
         <div className="module-grid">
           {MODULES.map((mod) => {
             const Icon = MODULE_ICON_MAP[mod.iconName] ?? BookOpen;
-            return (
-              <div
-                key={mod.id}
-                className={`module-card ${!mod.available ? 'module-card-disabled' : ''}`}
-                onClick={() => mod.available && navigate(`/dashboard/${mod.id}`)}
-              >
+            const cardContent = (
+              <>
                 <div className="module-card-icon">
                   <Icon size={28} />
                 </div>
@@ -364,6 +372,15 @@ export const DSAHub: React.FC = () => {
                   )}
                   <ArrowRight size={16} className="module-card-arrow" />
                 </div>
+              </>
+            );
+            return mod.available ? (
+              <Link key={mod.id} to={`/dashboard/${mod.id}`} className="module-card">
+                {cardContent}
+              </Link>
+            ) : (
+              <div key={mod.id} className="module-card module-card-disabled">
+                {cardContent}
               </div>
             );
           })}
@@ -611,9 +628,9 @@ export const DSAHub: React.FC = () => {
               <button className="footer-link-btn" onClick={() => scrollToSection('features')}>
                 <Zap size={15} /> Features
               </button>
-              <button className="footer-link-btn" onClick={() => navigate('/dashboard/dsa')}>
-                <Eye size={15} /> Visualizer
-              </button>
+              <Link to="/dashboard/dsa" className="footer-link-btn">
+                <Eye size={15} /> Explore DSA Visualizers
+              </Link>
               <button className="footer-link-btn" onClick={() => scrollToSection('reviews')}>
                 <Star size={15} /> Reviews
               </button>
@@ -716,6 +733,23 @@ export const DSAHub: React.FC = () => {
       </footer>
       {/* Legal Modal */}
       <LegalModal docType={legalDoc} onClose={() => setLegalDoc(null)} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: FAQS.map((faq) => ({
+              '@type': 'Question',
+              name: faq.q,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.a,
+              },
+            })),
+          }),
+        }}
+      />
     </div>
   );
 };
