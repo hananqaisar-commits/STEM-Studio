@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -86,6 +87,7 @@ export const SignIn: React.FC = () => {
 
   return (
     <div className="auth-page-container">
+      <SEOHead title="Sign In | STEM Studio" description="Sign in to your STEM Studio account." noIndex={true} />
       <div className="auth-card animate-fade-in auth-card-with-mascot">
         <div className="mascot-auth-jump">
           <Octa expression={mascotState.expression} size="medium" />

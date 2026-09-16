@@ -4,6 +4,8 @@ import {
   Terminal, LayoutGrid, Laptop, ArrowLeft, Monitor, ChevronRight, Sparkles
 } from 'lucide-react';
 import { OS_DISTROS, type OSModuleDef } from '../../data/categories';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import '../hub/DSAHub.css';
 
 const OS_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
@@ -17,6 +19,7 @@ export const OSModuleHub: React.FC = () => {
 
   return (
     <div className="dsa-hub">
+      <SEOHead {...getSEOForRoute('/dashboard/os')} />
       <div className="module-page-header">
         <button className="module-back-btn" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={16} /> Back to Dashboard

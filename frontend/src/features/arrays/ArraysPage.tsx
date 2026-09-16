@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Search, Zap, ArrowRightLeft, RotateCw, Hash, Maximize2, Sparkles, Trash2, Layers
 } from 'lucide-react';
@@ -465,6 +467,7 @@ export const ArraysPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/arrays')} />
       <VisualizerHeader
         icon={<Search size={22} />}
         title="Array Algorithms Studio"

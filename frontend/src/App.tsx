@@ -38,6 +38,7 @@ import { FileSystemPage } from './features/os/filesystem/FileSystemPage';
 
 import { TutorProvider } from './contexts/TutorContext';
 import { OctaTutor } from './components/tutor/OctaTutor';
+import { NotFoundPage } from './features/NotFoundPage';
 
 
 /**
@@ -176,6 +177,7 @@ const AppContent = () => {
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
         <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
         <Route path="/dashboard/*" element={<DashboardLayout />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       {!splashExited && (
         <BootSplash loading={isLoading} onExited={handleSplashExited} />

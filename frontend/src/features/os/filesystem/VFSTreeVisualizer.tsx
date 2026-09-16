@@ -81,32 +81,32 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   // Light/Dark theme adaptive node color & shape border classes
   const getNodeColorClasses = (node: VFSNode, isCurrentDir: boolean, isTargetActive: boolean, isPathHighlighted: boolean) => {
     if (isCurrentDir) {
-      return 'bg-cyan-500/15 text-cyan-900 dark:text-cyan-200 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/50 font-bold';
+      return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)] ring-2 ring-purple-500/50 font-bold';
     }
     if (isTargetActive) {
-      return 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/50 font-semibold';
+      return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/50 font-semibold';
     }
     if (isPathHighlighted) {
-      return 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]';
+      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]';
     }
 
     const cat = getNodeCategory(node);
     if (cat === 'root') {
-      return 'bg-amber-100 dark:bg-amber-500/15 text-amber-900 dark:text-amber-300 border-amber-400 dark:border-amber-500/40 hover:bg-amber-200 dark:hover:bg-amber-500/25';
+      return 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/40 hover:bg-purple-500/20';
     }
     if (cat === 'mount') {
-      return 'bg-purple-100 dark:bg-purple-500/15 text-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-500/30 hover:bg-purple-200 dark:hover:bg-purple-500/25';
+      return 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20';
     }
     if (cat === 'config') {
-      return 'bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/50 hover:border-amber-500';
+      return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:border-amber-500';
     }
     if (cat === 'script') {
-      return 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/50 hover:border-emerald-500';
+      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:border-emerald-500';
     }
     if (cat === 'directory') {
-      return 'bg-white dark:bg-slate-900 text-purple-900 dark:text-cyan-300 border-slate-200 dark:border-slate-700/80 hover:border-purple-400 dark:hover:border-cyan-500/50 hover:bg-purple-50 dark:hover:bg-slate-800/80';
+      return 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-500 hover:bg-purple-500/5';
     }
-    return 'bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-blue-400';
+    return 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-400';
   };
 
   // Track expanded branches in hierarchy view (interactive branch expansion)
@@ -396,50 +396,47 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col bg-[var(--color-surface)] dark:bg-slate-950/90 text-[var(--color-text)] dark:text-slate-100 rounded-2xl border border-[var(--color-border)] dark:border-slate-800 shadow-inner overflow-hidden transition-colors">
+    <div className="w-full flex flex-col bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl border border-[var(--color-border)] shadow-md overflow-hidden transition-all">
       {/* Top Controls Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-elevated)] dark:bg-slate-900/90 border-b border-[var(--color-border)] dark:border-slate-800 text-xs font-sans">
-        <div className="flex items-center gap-2 font-bold">
-          <Circle size={10} className="fill-purple-600 dark:fill-cyan-400 text-purple-600 dark:text-cyan-400 animate-ping" />
-          <span>Linux Virtual File System (VFS) Hierarchy</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[var(--color-surface-elevated)] border-b border-[var(--color-border)] text-xs font-sans">
+        <div className="flex items-center gap-2.5 font-bold text-[var(--color-text)]">
+          <Circle size={10} className="fill-purple-500 text-purple-500 animate-pulse" />
+          <span>Linux Virtual File System (VFS) Renderer</span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 font-bold">
+            FHS Tree Canvas
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Branch Expand/Collapse Controls */}
           {viewMode === 'hierarchy' && (
-            <div className="flex items-center gap-1.5 mr-2">
+            <div className="flex items-center gap-1.5 mr-1">
               <button
                 type="button"
                 onClick={expandAllBranches}
-                className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-purple-500/10 text-purple-700 dark:text-cyan-300 border border-purple-500/20 hover:bg-purple-500/20"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all"
               >
                 Expand All
               </button>
               <button
                 type="button"
                 onClick={collapseAllBranches}
-                className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-slate-200"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-purple-500/10 transition-all"
               >
                 Collapse All
               </button>
             </div>
           )}
 
-          {/* Dual Scroll Indicator Badge */}
-          <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-800 hidden md:flex items-center gap-1.5">
-            <ArrowLeftRight size={13} className="text-purple-600 dark:text-cyan-400" />
-            <span>Dual-Axis Scroll</span>
-          </span>
-
           {/* View Mode Toggle Button */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-300 dark:border-slate-800">
+          <div className="flex items-center bg-[var(--color-surface)] p-1 rounded-xl border border-[var(--color-border)]">
             <button
               type="button"
               onClick={() => setViewMode('hierarchy')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'hierarchy'
-                  ? 'bg-purple-600 dark:bg-cyan-500/20 text-white dark:text-cyan-300 border border-purple-500 dark:border-cyan-500/30'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-purple-600 text-white shadow-sm font-bold'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
               title="Graphical Tree Hierarchy Diagram"
             >
@@ -448,10 +445,10 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('outline')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'outline'
-                  ? 'bg-purple-600 dark:bg-cyan-500/20 text-white dark:text-cyan-300 border border-purple-500 dark:border-cyan-500/30'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-purple-600 text-white shadow-sm font-bold'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
               title="Expandable Tree Outline List"
             >
@@ -464,14 +461,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       {/* Main Canvas Area */}
       <div
         ref={scrollContainerRef}
-        className={`w-full overflow-auto scrollbar-thin transition-all ${
-          isFullscreen ? 'h-[75vh] min-h-[550px]' : 'h-[420px]'
+        className={`w-full overflow-auto scrollbar-thin transition-all bg-[var(--color-surface-elevated)]/40 ${
+          isFullscreen ? 'h-[75vh] min-h-[550px]' : 'h-[440px]'
         }`}
       >
         {viewMode === 'hierarchy' ? (
           renderGraphicalHierarchy()
         ) : (
-          <div className="p-4">
+          <div className="p-4 space-y-1">
             {renderOutlineNode('root')}
           </div>
         )}

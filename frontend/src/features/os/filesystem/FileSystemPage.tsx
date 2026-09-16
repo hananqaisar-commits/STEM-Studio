@@ -13,6 +13,8 @@ import { executeVFSCommand, type CommandExecutionResult } from './vfsInterpreter
 import { useTutorContext } from '../../../contexts/TutorContext';
 
 import { VisualizerHeader } from '../../../components/layout/VisualizerHeader';
+import { SEOHead } from '../../../components/common/SEOHead';
+import { getSEOForRoute } from '../../../data/seoMetadata';
 import { VisualizerActions } from '../../../components/layout/VisualizerActions';
 import { FloatingController } from '../../../components/controls/FloatingController';
 import { ExplanationPanel } from '../../../components/layout/ExplanationPanel';
@@ -238,6 +240,7 @@ export const FileSystemPage: React.FC = () => {
 
   return (
     <div className="bst-page-container animate-fade-in space-y-6">
+      <SEOHead {...getSEOForRoute('/dashboard/os/filesystem')} />
       {/* Visualizer Header matching DSA Module (Image 1) */}
       <VisualizerHeader
         icon={<FolderTree size={22} />}

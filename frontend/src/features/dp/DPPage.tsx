@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Maximize2, Sparkles, Trash2, Layers,
   Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins,
@@ -458,6 +460,7 @@ export const DPPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/dp')} />
       <VisualizerHeader
         icon={<Grid3X3 size={22} />}
         title="Dynamic Programming Studio"

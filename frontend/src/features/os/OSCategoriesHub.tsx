@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Terminal, FolderTree, ArrowLeft, ChevronRight, BookOpen } from 'lucide-react';
 import { OS_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import '../hub/DSAHub.css';
 
 const OS_CAT_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
@@ -14,6 +16,7 @@ export const OSCategoriesHub: React.FC = () => {
 
   return (
     <div className="dsa-hub">
+      <SEOHead {...getSEOForRoute('/dashboard/os/linux')} />
       <div className="module-page-header">
         <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
           <ArrowLeft size={16} /> Back to Operating System Module
