@@ -480,14 +480,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
               <button
                 type="button"
                 onClick={expandAllBranches}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all flex items-center gap-1"
+                className="bst-btn bst-btn-primary"
               >
                 <Eye size={13} /> Expand All
               </button>
               <button
                 type="button"
                 onClick={collapseAllBranches}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[var(--color-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-purple-500/10 transition-all"
+                className="bst-btn"
               >
                 Collapse All
               </button>
@@ -495,14 +495,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
           )}
 
           {/* View Mode Toggle Button */}
-          <div className="flex items-center bg-[var(--color-surface)] p-1 rounded-xl border border-[var(--color-border)] shadow-sm">
+          <div className="flex items-center bg-[var(--color-surface)] p-1 rounded-xl border border-[var(--color-border)] shadow-sm gap-1">
             <button
               type="button"
               onClick={() => setViewMode('hierarchy')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+              className={`bst-btn ${
                 viewMode === 'hierarchy'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                  ? 'bst-btn-primary'
+                  : ''
               }`}
               title="Graphical Tree Hierarchy Cards"
             >
@@ -511,10 +511,10 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('outline')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+              className={`bst-btn ${
                 viewMode === 'outline'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                  ? 'bst-btn-primary'
+                  : ''
               }`}
               title="Expandable Tree Outline List"
             >

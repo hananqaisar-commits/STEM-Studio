@@ -320,7 +320,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
           <button
             type="button"
             onClick={onClearTerminal}
-            className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 flex items-center gap-1.5 transition-all shadow-sm"
+            className="bst-btn bst-btn-danger text-xs py-1 px-3"
             title="Clear terminal screen (Ctrl+L)"
           >
             <Trash2 size={13} /> Clear
