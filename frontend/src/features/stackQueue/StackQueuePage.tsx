@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Layers, Plus, Trash2, CheckCircle2, Maximize2, Sparkles
 } from 'lucide-react';
@@ -1394,6 +1396,7 @@ export const StackQueuePage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/stackQueue')} />
       <VisualizerHeader
         icon={<Layers size={22} />}
         title="Stack & Queue Studio"

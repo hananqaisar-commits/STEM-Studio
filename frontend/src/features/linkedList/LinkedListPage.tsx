@@ -1,5 +1,7 @@
 import React, {useState, useMemo, useEffect} from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Link2,
   Plus,
@@ -506,6 +508,7 @@ export const LinkedListPage: React.FC = () => {
 
   return (
     <div className="linked-list-container">
+      <SEOHead {...getSEOForRoute('/dashboard/linkedList')} />
       <VisualizerHeader
         icon={<Link2 size={22} />}
         title="Linked List Visualizer"

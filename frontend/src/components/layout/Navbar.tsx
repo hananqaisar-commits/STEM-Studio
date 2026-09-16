@@ -12,6 +12,8 @@ import { SettingsModal } from './SettingsModal';
 import '../mascot/Mascot.css';
 import './Layout.css';
 
+const MLink = m.create(Link);
+
 interface NavbarProps {
   onToggleSidebar?: () => void;
 }
@@ -93,9 +95,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
           {/* Navigation Items */}
           <div className="navbar-nav-group">
             {/* Home Tab */}
-            <m.button
+            <MLink
               layout
-              onClick={() => handleTabClick('home')}
+              to="/dashboard"
+              onClick={() => setActiveTab('home')}
               className={`expandable-tab-btn ${activeTab === 'home' ? 'active' : ''}`}
             >
               <Home size={18} className="tab-icon" />
@@ -112,12 +115,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   </m.span>
                 )}
               </AnimatePresence>
-            </m.button>
+            </MLink>
 
             {/* DSA Modules Tab */}
-            <m.button
+            <MLink
               layout
-              onClick={() => handleTabClick('dsa')}
+              to="/dashboard/dsa"
+              onClick={() => setActiveTab('dsa')}
               className={`expandable-tab-btn ${activeTab === 'dsa' ? 'active' : ''}`}
             >
               <Layers size={18} className="tab-icon" />
@@ -134,12 +138,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   </m.span>
                 )}
               </AnimatePresence>
-            </m.button>
+            </MLink>
 
             {/* Operating System Modules Tab */}
-            <m.button
+            <MLink
               layout
-              onClick={() => handleTabClick('os')}
+              to="/dashboard/os"
+              onClick={() => setActiveTab('os')}
               className={`expandable-tab-btn ${activeTab === 'os' ? 'active' : ''}`}
             >
               <Monitor size={18} className="tab-icon" />
@@ -156,8 +161,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   </m.span>
                 )}
               </AnimatePresence>
-            </m.button>
-
+            </MLink>
 
             {/* Visualizer Tab */}
             <m.button

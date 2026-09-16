@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import { Plus, Search, Maximize2, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary, DatabaseZap, TreePine } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
 import { IntervalTreeRenderer } from '../../components/renderers/IntervalTreeRenderer';
@@ -844,6 +846,7 @@ export const BSTPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/bst')} />
       <VisualizerHeader
         icon={<Network size={22} />}
         title="Tree Structures Studio"

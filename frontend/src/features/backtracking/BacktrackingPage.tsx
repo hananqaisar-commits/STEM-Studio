@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Layers, Grid3X3, Target, Shuffle, Maximize2, Sparkles, Trash2,
 } from 'lucide-react';
@@ -364,6 +366,7 @@ export const BacktrackingPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/backtracking')} />
       <VisualizerHeader
         icon={<Layers size={22} />}
         title="Backtracking Algorithms Studio"

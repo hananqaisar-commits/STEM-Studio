@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, Hash
 } from 'lucide-react';
@@ -454,6 +456,7 @@ export const SortingPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/sorting')} />
       <VisualizerHeader
         icon={<Layers size={22} />}
         title="Sorting Algorithms Studio"

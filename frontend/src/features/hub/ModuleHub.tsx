@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
 import { useAuthPrompt } from '../../contexts/AuthPromptContext'; 
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import './DSAHub.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
@@ -92,6 +94,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
 
   return (
     <div className="dsa-hub">
+      <SEOHead {...getSEOForRoute('/dashboard/' + moduleId)} />
       <div className="module-page-header">
         <button className="module-back-btn" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={16} /> Back to Dashboard

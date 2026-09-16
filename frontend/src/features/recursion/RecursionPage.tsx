@@ -1,5 +1,7 @@
 import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   GitBranch, Calculator, Binary, Sigma, Layers, Maximize2, Sparkles, Trash2,
 } from 'lucide-react';
@@ -375,6 +377,7 @@ export const RecursionPage: React.FC = () => {
   /* ── Render ─────────────────────────────────────────────────────── */
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/recursion')} />
       <VisualizerHeader
         icon={<GitBranch size={22} />}
         title="Recursion Studio"

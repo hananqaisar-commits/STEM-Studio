@@ -1,5 +1,7 @@
 import React, {useState, useMemo, useEffect} from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Share2,
   RotateCcw,
@@ -437,6 +439,7 @@ export const GraphPage: React.FC = () => {
 
   return (
     <div className="graph-container">
+      <SEOHead {...getSEOForRoute('/dashboard/graph')} />
       <VisualizerHeader
         icon={<Share2 size={22} />}
         title="Graph Algorithms Studio"
