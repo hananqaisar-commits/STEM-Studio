@@ -4,6 +4,7 @@ import {
   Eye, Target, Code2, Maximize2, Edit3, Star, User, Mail,
   MessageSquare, ChevronDown, Send, Sparkles, Plus,
   ArrowRight, BookOpen, Cpu, Monitor, Home as HomeIcon, Layers, Zap,
+  Terminal, FolderTree, CheckCircle2,
   type LucideIcon,
 } from 'lucide-react';
 import { DSA_CATEGORIES, MODULES } from '../../data/categories';
@@ -32,11 +33,11 @@ const BUBBLE_POSITIONS = [
 
 /* ── Features data ────────────────────────────────────────────────── */
 const FEATURES = [
+  { icon: Terminal, title: 'Linux Shell & VFS Simulator', desc: 'Interactive Linux terminal shell with live bash commands, tab-completion, and file permissions' },
+  { icon: FolderTree, title: 'FHS Tree Visualizer', desc: 'Visual Linux directory hierarchy with octal permissions, node traversal, and file inspection' },
   { icon: Eye, title: 'Interactive Visualizers', desc: 'Step-by-step algorithm visualization with play, pause, and seek controls' },
   { icon: Target, title: 'Quiz Mode', desc: 'Three learning modes: Concept, Guided, and Challenge with pre-quiz revision and post-quiz reports' },
   { icon: Code2, title: 'Multi-Language Debugger', desc: 'View code in Python, C++, Java, Go, and Pseudocode with variable tracking' },
-  { icon: Maximize2, title: 'Fullscreen Canvas', desc: 'Immersive fullscreen visualization mode for detailed exploration' },
-  { icon: Layers, title: '14 DSA Categories', desc: 'From Sorting to Trie, covering beginner to advanced topics' },
   { icon: Edit3, title: 'Custom Input Editor', desc: 'Test any algorithm with your own custom data inputs' },
 ];
 
@@ -243,6 +244,16 @@ export const DSAHub: React.FC = () => {
       {/* ── Hero Section ───────────────────────────────────────────── */}
       <section id="hero" className="hero-section">
         <div className="hero-text">
+          <Link
+            to="/dashboard/os/filesystem"
+            className="hero-feature-badge group"
+          >
+            <span className="hero-feature-badge-star">
+              <Star size={11} className="fill-amber-500 text-amber-500 animate-pulse" /> NEW FEATURE
+            </span>
+            <span className="hero-feature-badge-title">Linux Shell & VFS Simulator</span>
+            <ArrowRight size={13} className="hero-feature-badge-arrow" />
+          </Link>
           <h1 className="hero-title">
             STEM Studio
           </h1>
@@ -258,9 +269,9 @@ export const DSAHub: React.FC = () => {
             and comparing implementations across languages.
           </p>
           <div className="hero-cta">
-            <button className="hero-btn hero-btn-primary" onClick={() => navigate('/dashboard/dsa')}>
+            <Link to="/dashboard/dsa" className="hero-btn hero-btn-primary">
               Start Learning <ArrowRight size={16} />
-            </button>
+            </Link>
             <button className="hero-btn hero-btn-secondary" onClick={() => scrollToSection('features')}>
               Explore Features
             </button>
@@ -345,6 +356,38 @@ export const DSAHub: React.FC = () => {
 
       {/* ── Sparkles Divider (Gradients + Particle Effect) ── */}
       <SparklesDivider />
+
+      {/* ── Featured Update Banner (Ultra Premium Glass Pill Bar) ────────────────────────── */}
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 my-6 flex justify-center">
+        <Link
+          to="/dashboard/os/filesystem"
+          className="featured-star-pill group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="featured-star-icon-wrap">
+              <Star size={16} className="fill-amber-500 text-amber-500" />
+            </div>
+            <div className="text-left">
+              <div className="flex items-center gap-2">
+                <span className="featured-star-title">
+                  Linux Shell & VFS Simulator
+                </span>
+                <span className="featured-star-version-badge">
+                  NEW v2.0
+                </span>
+              </div>
+              <p className="featured-star-desc">
+                Live Bash interpreter, FHS 3.0 directory tree, octal permissions calculator & Vim editor
+              </p>
+            </div>
+          </div>
+
+          <div className="featured-star-action-btn">
+            <span>Try Simulator</span>
+            <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </Link>
+      </div>
 
       {/* ── Module Grid ──────────────────────────────────────────────── */}
       <section id="modules" className="hub-modules-section">
@@ -612,8 +655,8 @@ export const DSAHub: React.FC = () => {
                 Octa Team
               </span>
             </p>
-            <a href="mailto:hanankaesar316@gmail.com" className="footer-email">
-              <Mail size={15} /> hanankaesar316@gmail.com
+            <a href="mailto:hananqaisar316@gmail.com" className="footer-email">
+              <Mail size={15} /> hananqaisar316@gmail.com
             </a>
 
           </div>
@@ -721,8 +764,8 @@ export const DSAHub: React.FC = () => {
             </a>
           </p>
           <div className="footer-bottom-links">
-            <button onClick={() => navigate('/sitemap')}>Sitemap</button>
-            <button onClick={() => navigate('/contact')}>Contact</button>
+            <Link to="/sitemap">Sitemap</Link>
+            <Link to="/contact">Contact</Link>
           </div>
         </div>
 
