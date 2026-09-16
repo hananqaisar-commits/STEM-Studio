@@ -396,50 +396,47 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col bg-[var(--color-surface)] dark:bg-slate-950/90 text-[var(--color-text)] dark:text-slate-100 rounded-2xl border border-[var(--color-border)] dark:border-slate-800 shadow-inner overflow-hidden transition-colors">
+    <div className="w-full flex flex-col bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl border border-[var(--color-border)] shadow-md overflow-hidden transition-all">
       {/* Top Controls Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-elevated)] dark:bg-slate-900/90 border-b border-[var(--color-border)] dark:border-slate-800 text-xs font-sans">
-        <div className="flex items-center gap-2 font-bold">
-          <Circle size={10} className="fill-purple-600 dark:fill-cyan-400 text-purple-600 dark:text-cyan-400 animate-ping" />
-          <span>Linux Virtual File System (VFS) Hierarchy</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[var(--color-surface-elevated)] border-b border-[var(--color-border)] text-xs font-sans">
+        <div className="flex items-center gap-2.5 font-bold text-[var(--color-text)]">
+          <Circle size={10} className="fill-purple-500 text-purple-500 animate-pulse" />
+          <span>Linux Virtual File System (VFS) Renderer</span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 font-bold">
+            FHS Tree Canvas
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Branch Expand/Collapse Controls */}
           {viewMode === 'hierarchy' && (
-            <div className="flex items-center gap-1.5 mr-2">
+            <div className="flex items-center gap-1.5 mr-1">
               <button
                 type="button"
                 onClick={expandAllBranches}
-                className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-purple-500/10 text-purple-700 dark:text-cyan-300 border border-purple-500/20 hover:bg-purple-500/20"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all"
               >
                 Expand All
               </button>
               <button
                 type="button"
                 onClick={collapseAllBranches}
-                className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-slate-200"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-purple-500/10 transition-all"
               >
                 Collapse All
               </button>
             </div>
           )}
 
-          {/* Dual Scroll Indicator Badge */}
-          <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-800 hidden md:flex items-center gap-1.5">
-            <ArrowLeftRight size={13} className="text-purple-600 dark:text-cyan-400" />
-            <span>Dual-Axis Scroll</span>
-          </span>
-
           {/* View Mode Toggle Button */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-300 dark:border-slate-800">
+          <div className="flex items-center bg-[var(--color-surface)] p-1 rounded-xl border border-[var(--color-border)]">
             <button
               type="button"
               onClick={() => setViewMode('hierarchy')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'hierarchy'
-                  ? 'bg-purple-600 dark:bg-cyan-500/20 text-white dark:text-cyan-300 border border-purple-500 dark:border-cyan-500/30'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-purple-600 text-white shadow-sm font-bold'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
               title="Graphical Tree Hierarchy Diagram"
             >
@@ -448,10 +445,10 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('outline')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'outline'
-                  ? 'bg-purple-600 dark:bg-cyan-500/20 text-white dark:text-cyan-300 border border-purple-500 dark:border-cyan-500/30'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-purple-600 text-white shadow-sm font-bold'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
               title="Expandable Tree Outline List"
             >
@@ -464,14 +461,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       {/* Main Canvas Area */}
       <div
         ref={scrollContainerRef}
-        className={`w-full overflow-auto scrollbar-thin transition-all ${
-          isFullscreen ? 'h-[75vh] min-h-[550px]' : 'h-[420px]'
+        className={`w-full overflow-auto scrollbar-thin transition-all bg-[var(--color-surface-elevated)]/40 ${
+          isFullscreen ? 'h-[75vh] min-h-[550px]' : 'h-[440px]'
         }`}
       >
         {viewMode === 'hierarchy' ? (
           renderGraphicalHierarchy()
         ) : (
-          <div className="p-4">
+          <div className="p-4 space-y-1">
             {renderOutlineNode('root')}
           </div>
         )}
