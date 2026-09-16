@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, SEO_METADATA } from '../../data/seoMetadata';
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE, SEO_METADATA, getSEOForRoute } from '../../data/seoMetadata';
 
 export interface SEOHeadProps {
   title?: string;
@@ -80,19 +80,80 @@ export function SEOHead({
     setMetaTag('meta[name="twitter:description"]', 'content', finalDescription);
     setMetaTag('meta[name="twitter:image"]', 'content', image);
 
-    // Robots
+    // Keywords
+    const routeData = getSEOForRoute(finalCanonical);
+    const finalKeywords = routeData.keywords || defaultSEO.keywords || '';
+    if (finalKeywords) {
+      setMetaTag('meta[name="keywords"]', 'content', finalKeywords);
+    }
+
+    // Standard Search Robots
     if (noIndex) {
       setMetaTag('meta[name="robots"]', 'content', 'noindex, follow');
     } else {
-      const robotsTag = document.head.querySelector('meta[name="robots"]');
-      if (robotsTag) robotsTag.remove();
+      setMetaTag('meta[name="robots"]', 'content', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    }
+
+    // Dynamic JSON-LD Structured Data: BreadcrumbList & LearningResource
+    const breadcrumbName = routeData.breadcrumbName || finalTitle.split('|')[0].trim();
+    const breadcrumbSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'STEM Studio',
+          item: `${SITE_URL}/dashboard`,
+        },
+        ...(finalCanonical !== '/dashboard'
+          ? [
+              {
+                '@type': 'ListItem',
+                position: 2,
+                name: breadcrumbName,
+                item: finalCanonicalUrl,
+              },
+            ]
+          : []),
+      ],
+    };
+
+    const learningResourceSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'LearningResource',
+      name: finalTitle,
+      description: finalDescription,
+      learningResourceType: 'Interactive Visualizer & Practice Engine',
+      educationalUse: 'Data Structures, Algorithms & Computer Science Education',
+      educationalLevel: 'Beginner to Advanced',
+      provider: {
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+      },
+    };
+
+    // Inject JSON-LD Script elements
+    const injectJsonLd = (id: string, schemaObj: object) => {
+      let script = document.getElementById(id) as HTMLScriptElement | null;
+      if (!script) {
+        script = document.createElement('script');
+        script.id = id;
+        script.type = 'application/ld+json';
+        document.head.appendChild(script);
+      }
+      script.textContent = JSON.stringify(schemaObj);
+    };
+
+    if (!noIndex) {
+      injectJsonLd('seo-breadcrumb-jsonld', breadcrumbSchema);
+      injectJsonLd('seo-learning-resource-jsonld', learningResourceSchema);
     }
 
     // Cleanup on unmount
     return () => {
       document.title = prevTitle;
-      // In a strict SPA you might want to remove tags on unmount, 
-      // but usually the next page will overwrite them, which is cleaner.
     };
   }, [title, description, canonical, image, noIndex]);
 
