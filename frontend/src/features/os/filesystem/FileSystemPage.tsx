@@ -363,33 +363,9 @@ export const FileSystemPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main Learning Workspace matching DSA Layout (Image 1) */}
+      {/* Main Learning Workspace */}
       <div className="sorting-workspace scene-workspace">
-        {/* Card 1: Tree Hierarchy Visualizer Canvas */}
-        <div className="renderer-section">
-          <VFSTreeVisualizer
-            snapshot={snapshot}
-            activeNodeId={activeNodeId}
-            animatedPathIds={animatedPathIds}
-            onSelectNode={(id) => setActiveNodeId(id)}
-            isFullscreen={isFullscreen}
-          />
-          <FloatingController
-            isPlaying={isPlaying}
-            canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < stepHistory.length - 1}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onReset={handleReset}
-            onStepBack={handlePrevStep}
-            onStepForward={handleNextStep}
-            onStop={() => { setIsPlaying(false); handleReset(); }}
-            onResume={() => setIsPlaying(true)}
-            quizMode={quizEnabled}
-          />
-        </div>
-
-        {/* Card 2: Quiz Dock matching DSA layout (Image 1) */}
+        {/* Quiz Dock */}
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -399,7 +375,7 @@ export const FileSystemPage: React.FC = () => {
           />
         </div>
 
-        {/* Middle Row: Resizable Panel Row for Card 3 (Terminal) & Card 4 (Explanation Card) */}
+        {/* Resizable Panel Row for Visualizer, Terminal & Explanation */}
         <ResizablePanelRow
           storageKey="filesystem"
           customizeModeEnabled={customizeModeEnabled}

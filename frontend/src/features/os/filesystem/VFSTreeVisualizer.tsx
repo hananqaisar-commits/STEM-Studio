@@ -147,10 +147,10 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       .filter(Boolean);
 
     return (
-      <div className="w-full min-w-[1300px] p-6 flex flex-col items-center gap-8 select-none transition-all">
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 flex flex-col items-center gap-6 select-none transition-all">
         {/* ROOT NODE CARD */}
         <div className="flex flex-col items-center relative group">
-          <div className="px-3 py-1 rounded-t-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-mono text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1.5 z-10 border border-purple-400/40">
+          <div className="px-3.5 py-1 rounded-t-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-mono text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1.5 z-10 border border-purple-400/40">
             <Sparkles size={11} className="animate-spin text-amber-300" />
             <span>Linux Root Hierarchy (FHS 3.0)</span>
           </div>
@@ -191,7 +191,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
 
         {/* LEVEL 1: FHS DIRECTORIES ROW & CONNECTORS */}
         <div className="w-full relative pt-5 border-t-2 border-purple-500/30 rounded-t-3xl">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3.5 items-start">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 items-start">
             {topLevelChildren.map(child => {
               const cat = getNodeCategory(child);
               const isChildDir = child.type === 'directory' || child.type === 'mount-point';
