@@ -18,7 +18,19 @@ export const CircleNode: React.FC<CircleNodeProps> = ({
   onClick,
 }) => {
   return (
-    <div className="node-wrapper" onClick={onClick}>
+    <div
+      className="node-wrapper"
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={label ? `${label}: ${value}` : `Node ${value}`}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+    >
       <div
         className={`primitive-circle-node state-${state}`}
         style={{ width: size, height: size, fontSize: size * 0.36 }}

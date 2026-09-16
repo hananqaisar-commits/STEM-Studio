@@ -190,6 +190,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
             className={`sidebar-dashboard-btn ${location.pathname === '/dashboard' ? 'active' : ''}`}
             onClick={handleDashboardClick}
             title="Dashboard"
+            aria-label="Dashboard"
           >
             <div className="sidebar-item-icon">
               <Home size={18} />
@@ -229,6 +230,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                   onClick={() => mod.available && toggleModule(mod.id)}
                   disabled={!mod.available}
                   title={mod.available ? (isModuleExpanded ? 'Click to collapse module' : 'Click to expand module') : 'Coming Soon'}
+                  aria-label={mod.name}
                 >
                   <div className="sidebar-item-icon">
                     <ModuleIcon size={18} />

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Terminal as TerminalIcon, Trash2, HelpCircle, CornerDownLeft, Sparkles } from 'lucide-react';
+import { Terminal as TerminalIcon, Trash2, Sparkles, Command, CheckCircle2 } from 'lucide-react';
 import { type VFSSnapshot, getAbsolutePath } from './vfs';
 
 interface HistoryItem {
@@ -32,7 +32,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   const [lineText, setLineText] = useState<string>('');
   const [cursorPos, setCursorPos] = useState<number>(0);
   const [historyIdx, setHistoryIdx] = useState<number>(-1);
-  const [tabPressCount, setTabPressCount] = useState<number>(0);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +51,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
     focusTerminal();
   }, [focusTerminal]);
 
-  // Auto scroll terminal output ONLY when output history changes (not when typing)
+  // Auto scroll terminal output ONLY when output history changes
   useEffect(() => {
     if (terminalEndRef.current && history.length > 0) {
       terminalEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -70,14 +69,12 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
       filterPrefix = targetPath.slice(lastSlashIdx + 1);
     }
 
-    // Resolve target directory node
     let targetDirId = snapshot.currentDirId;
     if (parentPath === '' && targetPath.startsWith('/')) {
       targetDirId = 'root';
     } else if (parentPath === '/') {
       targetDirId = 'root';
     } else if (parentPath) {
-      // Find matching directory node
       const matchingNode = Object.values(snapshot.nodes).find(n => {
         if (n.type !== 'directory' && n.type !== 'mount-point') return false;
         return getAbsolutePath(snapshot.nodes, n.id) === parentPath;
@@ -100,88 +97,55 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
     return { dirPath: parentPath, filter: filterPrefix, matches };
   };
 
-  // Tab Completion Handler
+  // Tab Autocomplete handler
   const handleTabCompletion = () => {
-    const textBeforeCursor = lineText.slice(0, cursorPos);
-    const tokens = textBeforeCursor.split(/\s+/);
-    const isFirstToken = tokens.length <= 1;
-    const lastToken = tokens[tokens.length - 1] || '';
+    const trimmed = lineText.trimStart();
+    if (!trimmed) return;
 
-    if (isFirstToken) {
-      // Complete system command
-      const matches = COMMAND_LIST.filter(cmd => cmd.toLowerCase().startsWith(lastToken.toLowerCase()));
+    const parts = trimmed.split(/\s+/);
+    if (parts.length === 1) {
+      const prefix = parts[0].toLowerCase();
+      const matches = COMMAND_LIST.filter(c => c.startsWith(prefix));
       if (matches.length === 1) {
-        const completed = matches[0] + ' ';
-        setLineText(completed + lineText.slice(cursorPos));
-        setCursorPos(completed.length);
-        setTabPressCount(0);
-      } else if (matches.length > 1) {
-        if (tabPressCount > 0) {
-          onExecuteCommand(`echo "\nCommand completions:\n${matches.join('   ')}"`);
-          setTabPressCount(0);
-        } else {
-          setTabPressCount(1);
-        }
+        setLineText(matches[0] + ' ');
+        setCursorPos(matches[0].length + 1);
       }
     } else {
-      // Complete path argument
-      const { dirPath, filter, matches } = getPathCompletions(lastToken);
+      const targetArg = parts[parts.length - 1];
+      const { dirPath, filter, matches } = getPathCompletions(targetArg);
       if (matches.length === 1) {
-        const match = matches[0];
-        const completedPath = dirPath ? (dirPath.endsWith('/') ? `${dirPath}${match}` : `${dirPath}/${match}`) : match;
-        const prefixBeforeToken = textBeforeCursor.slice(0, textBeforeCursor.length - lastToken.length);
-        const newLine = prefixBeforeToken + completedPath + (completedPath.endsWith('/') ? '' : ' ') + lineText.slice(cursorPos);
-        setLineText(newLine);
-        setCursorPos((prefixBeforeToken + completedPath).length + (completedPath.endsWith('/') ? 0 : 1));
-        setTabPressCount(0);
-      } else if (matches.length > 1) {
-        if (tabPressCount > 0) {
-          onExecuteCommand(`echo "\nPath completions:\n${matches.join('   ')}"`);
-          setTabPressCount(0);
-        } else {
-          setTabPressCount(1);
+        const completedSegment = matches[0];
+        let replacement = completedSegment;
+        if (dirPath) {
+          replacement = dirPath.endsWith('/') ? `${dirPath}${completedSegment}` : `${dirPath}/${completedSegment}`;
         }
+        parts[parts.length - 1] = replacement;
+        const newText = parts.join(' ');
+        setLineText(newText);
+        setCursorPos(newText.length);
       }
     }
   };
 
-  // Main KeyDown Event Handler for Real Terminal Interaction
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    setTabPressCount(0);
-
-    // Ctrl Shortcuts
+  // Keyboard Handler for terminal navigation & shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.ctrlKey) {
-      if (e.key === 'c' || e.key === 'C') {
-        e.preventDefault();
-        onExecuteCommand(`${lineText} ^C`);
-        setLineText('');
-        setCursorPos(0);
-        return;
-      }
       if (e.key === 'l' || e.key === 'L') {
         e.preventDefault();
         onClearTerminal();
         return;
       }
-      if (e.key === 'a' || e.key === 'A') {
+      if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
+        setLineText('');
         setCursorPos(0);
-        return;
-      }
-      if (e.key === 'e' || e.key === 'E') {
-        e.preventDefault();
-        setCursorPos(lineText.length);
         return;
       }
       if (e.key === 'u' || e.key === 'U') {
         e.preventDefault();
-        setLineText(lineText.slice(cursorPos));
+        const after = lineText.slice(cursorPos);
+        setLineText(after);
         setCursorPos(0);
-        return;
-      }
-      if (e.key === 'k' || e.key === 'K') {
-        e.preventDefault();
-        setLineText(lineText.slice(0, cursorPos));
         return;
       }
       if (e.key === 'w' || e.key === 'W') {
@@ -285,14 +249,12 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
     }
   };
 
-  // Handle Input Changes from Hidden Input (Catch-all for character insertion & IME)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setLineText(val);
     setCursorPos(val.length);
   };
 
-  // Handle Paste
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text');
@@ -306,11 +268,11 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   const quickCommands = [
     'pwd',
     'ls -la',
-    'cd /home',
+    'cd /home/octa',
     'touch notes.txt',
     'useradd Alice',
     'chmod 755 notes.txt',
-    'vim document.txt',
+    'vim main.py',
     'cat /etc/passwd',
   ];
 
@@ -322,9 +284,9 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
     <div
       ref={containerRef}
       onClick={focusTerminal}
-      className="w-full h-full min-h-[420px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-xl p-4 font-mono flex flex-col justify-between overflow-hidden cursor-text select-text transition-all relative"
+      className="w-full h-full min-h-[420px] bg-[var(--color-surface)]/95 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl shadow-2xl p-4 font-mono flex flex-col justify-between overflow-hidden cursor-text select-text transition-all relative"
     >
-      {/* Hidden input to catch keyboard focus & IME */}
+      {/* Hidden input catching keyboard focus */}
       <input
         ref={hiddenInputRef}
         type="text"
@@ -333,6 +295,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         className="opacity-0 absolute -z-10 w-0 h-0 pointer-events-none"
+        aria-label="Terminal command input"
         autoFocus
       />
 
@@ -340,59 +303,61 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
       <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--color-border)] text-xs font-sans shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block shadow-sm" />
-            <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block shadow-sm" />
-            <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block shadow-sm" />
+            <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block shadow-sm hover:opacity-100 transition-opacity" />
+            <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block shadow-sm hover:opacity-100 transition-opacity" />
+            <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block shadow-sm hover:opacity-100 transition-opacity" />
           </div>
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 font-semibold text-xs">
-            <Sparkles size={13} className="text-purple-500" />
-            <span>Octa Interactive Shell</span>
+          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 font-extrabold text-xs shadow-sm">
+            <Sparkles size={13} className="text-purple-500 animate-pulse" />
+            <span>Octa Interactive Linux Shell</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-block font-mono text-[11px] text-[var(--color-text-muted)] bg-[var(--color-surface-elevated)] px-2.5 py-1 rounded-lg border border-[var(--color-border)]">
+          <span className="hidden sm:inline-block font-mono text-[11px] text-purple-700 dark:text-cyan-300 bg-purple-500/10 px-3 py-1 rounded-xl border border-purple-500/20 font-bold shadow-sm">
             {displayPath}
           </span>
           <button
             type="button"
             onClick={onClearTerminal}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 flex items-center gap-1 transition-all"
+            className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 flex items-center gap-1.5 transition-all shadow-sm"
             title="Clear terminal screen (Ctrl+L)"
           >
-            <Trash2 size={12} /> Clear
+            <Trash2 size={13} /> Clear
           </button>
         </div>
       </div>
 
       {/* Terminal Output Log Area */}
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 text-xs leading-relaxed font-mono min-h-[220px]">
-        <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/15 text-[11px] text-[var(--color-text-secondary)] leading-normal flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <TerminalIcon size={15} className="text-purple-500" />
-            <span>STEM Studio Virtual Shell 5.15 — Type bash commands or click quick exec chips below.</span>
+      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs leading-relaxed font-mono min-h-[220px]">
+        {/* Shell Welcome Header */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/5 border border-purple-500/20 text-[11px] text-[var(--color-text-secondary)] leading-normal flex items-center justify-between mb-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <TerminalIcon size={16} className="text-purple-500 shrink-0" />
+            <span className="font-semibold">STEM Studio Linux Shell v5.15 — Interactive VFS Engine with live bash tab-completion.</span>
           </div>
-          <span className="hidden md:inline-block text-[10px] font-mono text-purple-600 dark:text-purple-300 font-bold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
-            Tab Autocomplete Ready
+          <span className="hidden md:flex items-center gap-1 text-[10px] font-mono text-purple-700 dark:text-purple-300 font-bold bg-purple-500/15 px-2.5 py-1 rounded-lg border border-purple-500/25">
+            <CheckCircle2 size={11} className="text-emerald-500" /> Tab Autocomplete
           </span>
         </div>
 
         {history.map((item, idx) => (
-          <div key={idx} className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-mono">
-              <span className="text-purple-600 dark:text-purple-400 font-bold">octa@stem-studio</span>
-              <span className="text-[var(--color-text-muted)]">:</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{item.prompt ? item.prompt.split(':')[1]?.replace('$', '') : displayPath}</span>
-              <span className="text-purple-600 dark:text-purple-400 font-bold">$</span>
-              <span className="text-[var(--color-text)] font-semibold">{item.command}</span>
+          <div key={idx} className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white font-bold text-[10px]">octa</span>
+              <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold border border-cyan-400/30 text-[10px]">
+                {item.prompt ? item.prompt.split(':')[1]?.replace('$', '') : displayPath}
+              </span>
+              <span className="text-purple-500 font-extrabold">$</span>
+              <span className="text-[var(--color-text)] font-bold">{item.command}</span>
             </div>
 
             {item.output && (
               <div
-                className={`whitespace-pre-wrap text-xs pl-3 py-1.5 border-l-2 font-mono ${
+                className={`whitespace-pre-wrap text-xs pl-3.5 py-2 border-l-2 font-mono ${
                   item.isError
-                    ? 'text-red-600 dark:text-red-400 border-red-500/50 bg-red-500/10 rounded-r-lg'
-                    : 'text-[var(--color-text-secondary)] border-purple-500/30'
+                    ? 'text-red-700 dark:text-red-300 border-red-500/60 bg-red-500/10 rounded-r-xl font-medium'
+                    : 'text-[var(--color-text-secondary)] border-purple-500/40 bg-[var(--color-surface-muted)]/50 rounded-r-xl'
                 }`}
               >
                 {item.output}
@@ -401,16 +366,17 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
           </div>
         ))}
 
-        {/* ACTIVE LIVE PROMPT LINE WITH IN-LINE BLINKING CURSOR */}
-        <div className="flex items-center gap-1.5 text-xs font-mono pt-1">
-          <span className="text-purple-600 dark:text-purple-400 font-bold shrink-0">octa@stem-studio</span>
-          <span className="text-[var(--color-text-muted)] shrink-0">:</span>
-          <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">{displayPath}</span>
-          <span className="text-purple-600 dark:text-purple-400 font-bold shrink-0">$</span>
+        {/* ACTIVE LIVE PROMPT LINE WITH IN-LINE GLOW CURSOR */}
+        <div className="flex items-center gap-2 text-xs font-mono pt-1">
+          <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white font-bold text-[10px]">octa</span>
+          <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold border border-cyan-400/30 text-[10px]">
+            {displayPath}
+          </span>
+          <span className="text-purple-500 font-extrabold">$</span>
           
-          <div className="flex items-center font-mono text-[var(--color-text)] font-semibold leading-none min-w-[20px]">
+          <div className="flex items-center font-mono text-[var(--color-text)] font-bold leading-none min-w-[20px]">
             <span>{beforeCursor}</span>
-            <span className="bg-purple-600 text-white font-bold px-0.5 rounded-sm animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.8)]">
+            <span className="bg-purple-600 text-white font-bold px-0.5 rounded-sm animate-pulse shadow-[0_0_12px_rgba(168,85,247,0.9)]">
               {charAtCursor}
             </span>
             <span>{afterCursor}</span>
@@ -421,10 +387,11 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
       </div>
 
       {/* Quick Exec Shortcuts Strip */}
-      <div className="pt-3 border-t border-[var(--color-border)] flex items-center gap-1.5 overflow-x-auto whitespace-nowrap shrink-0 py-1 scrollbar-none">
-        <span className="text-[10px] text-[var(--color-text-muted)] font-sans font-semibold shrink-0">
-          Quick Commands:
-        </span>
+      <div className="pt-3 border-t border-[var(--color-border)] flex items-center gap-2 overflow-x-auto whitespace-nowrap shrink-0 py-1 scrollbar-none">
+        <div className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] font-sans font-bold shrink-0">
+          <Command size={12} className="text-purple-500" />
+          <span>Quick Exec:</span>
+        </div>
         {quickCommands.map((qCmd, idx) => (
           <button
             key={idx}
@@ -434,7 +401,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
               onExecuteCommand(qCmd);
               focusTerminal();
             }}
-            className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/20 shrink-0 transition-all cursor-pointer font-medium"
+            className="text-[11px] font-mono px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/25 hover:border-purple-500/50 hover:bg-purple-500/20 shrink-0 transition-all cursor-pointer font-bold shadow-sm hover:scale-105 active:scale-95"
           >
             $ {qCmd}
           </button>

@@ -6,12 +6,6 @@ export interface RouteSEO {
   title: string;
   description: string;
   canonical: string;
-}
-
-export interface RouteSEO {
-  title: string;
-  description: string;
-  canonical: string;
   keywords?: string;
   breadcrumbName?: string;
 }

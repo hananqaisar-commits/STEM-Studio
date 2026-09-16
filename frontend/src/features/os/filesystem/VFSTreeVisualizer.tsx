@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import {
-  Folder, FolderOpen, FileText, FileCode, HardDrive, Link2, ChevronRight, ChevronDown,
-  User, Shield, Sparkles, Circle, Network, LayoutList, Move, ArrowLeftRight,
-  Maximize2, Settings, Sliders, Terminal, Cpu, FileCheck
+  Folder, FolderOpen, FileText, HardDrive, ChevronRight, ChevronDown,
+  Sparkles, Circle, Network, LayoutList, Sliders, Terminal, Cpu, CheckCircle2,
+  FolderTree, Eye
 } from 'lucide-react';
-import { type VFSNode, type VFSSnapshot } from './vfs';
+import { type VFSNode, type VFSSnapshot, getAbsolutePath } from './vfs';
 
 interface VFSTreeVisualizerProps {
   snapshot: VFSSnapshot;
@@ -81,35 +81,35 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   // Light/Dark theme adaptive node color & shape border classes
   const getNodeColorClasses = (node: VFSNode, isCurrentDir: boolean, isTargetActive: boolean, isPathHighlighted: boolean) => {
     if (isCurrentDir) {
-      return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.3)] ring-2 ring-purple-500/50 font-bold';
+      return 'bg-purple-500/20 text-purple-900 dark:text-purple-200 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)] ring-2 ring-purple-500/60 font-bold';
     }
     if (isTargetActive) {
-      return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/50 font-semibold';
+      return 'bg-emerald-500/20 text-emerald-900 dark:text-emerald-200 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)] ring-2 ring-emerald-500/60 font-semibold';
     }
     if (isPathHighlighted) {
-      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]';
+      return 'bg-amber-500/20 text-amber-900 dark:text-amber-200 border-amber-500 animate-pulse shadow-[0_0_16px_rgba(245,158,11,0.4)] font-semibold';
     }
 
     const cat = getNodeCategory(node);
     if (cat === 'root') {
-      return 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/40 hover:bg-purple-500/20';
+      return 'bg-gradient-to-br from-purple-500/15 to-indigo-500/15 text-purple-900 dark:text-purple-200 border-purple-500/50 hover:border-purple-500 shadow-md';
     }
     if (cat === 'mount') {
-      return 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20';
+      return 'bg-gradient-to-br from-indigo-500/10 to-blue-500/10 text-indigo-900 dark:text-indigo-200 border-indigo-500/40 hover:border-indigo-500 shadow-sm';
     }
     if (cat === 'config') {
-      return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:border-amber-500';
+      return 'bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-900 dark:text-amber-200 border-amber-500/40 hover:border-amber-500 shadow-sm';
     }
     if (cat === 'script') {
-      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:border-emerald-500';
+      return 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10 text-emerald-900 dark:text-emerald-200 border-emerald-500/40 hover:border-emerald-500 shadow-sm';
     }
     if (cat === 'directory') {
-      return 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-500 hover:bg-purple-500/5';
+      return 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-500 hover:shadow-lg hover:scale-[1.02] shadow-sm';
     }
-    return 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-400';
+    return 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-400 shadow-sm';
   };
 
-  // Track expanded branches in hierarchy view (interactive branch expansion)
+  // Track expanded branches in hierarchy view
   const [expandedBranchIds, setExpandedBranchIds] = useState<Set<string>>(() => {
     const initial = new Set<string>(['home', 'etc', 'var', 'bin']);
     if (currentDirId && currentDirId !== 'root') initial.add(currentDirId);
@@ -136,7 +136,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     setExpandedBranchIds(new Set<string>());
   };
 
-  // ── GRAPHICAL HIERARCHY TREE RENDER WITH INTERACTIVE BRANCHES ─────────────────────
+  // ── GRAPHICAL HIERARCHY TREE RENDER ─────────────────────
   const renderGraphicalHierarchy = () => {
     const rootNode = nodes['root'];
     if (!rootNode) return null;
@@ -147,48 +147,51 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       .filter(Boolean);
 
     return (
-      <div className="w-full min-w-[1400px] p-8 flex flex-col items-center gap-10 select-none transition-colors">
-        {/* ROOT NODE (LEVEL 0) - ROOT FOLDER CARD WITH TAB */}
+      <div className="w-full min-w-[1300px] p-6 flex flex-col items-center gap-8 select-none transition-all">
+        {/* ROOT NODE CARD */}
         <div className="flex flex-col items-center relative group">
-          {/* Folder Tab Header Accent */}
-          <div className="w-24 h-2.5 bg-amber-400 dark:bg-amber-500 rounded-t-lg -mb-0.5 z-0 self-start ml-4 border-t border-x border-amber-400/80" />
+          <div className="px-3 py-1 rounded-t-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-mono text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1.5 z-10 border border-purple-400/40">
+            <Sparkles size={11} className="animate-spin text-amber-300" />
+            <span>Linux Root Hierarchy (FHS 3.0)</span>
+          </div>
+
           <div
             onClick={() => onSelectNode && onSelectNode('root')}
-            className={`z-10 px-8 py-4 rounded-2xl border flex items-center gap-3.5 cursor-pointer transition-all shadow-xl backdrop-blur-md ${getNodeColorClasses(
+            className={`z-10 px-7 py-3.5 rounded-2xl border flex items-center gap-4 cursor-pointer transition-all shadow-xl backdrop-blur-xl ${getNodeColorClasses(
               rootNode,
               rootId === currentDirId,
               rootId === activeNodeId,
               animatedPathIds.includes('root')
             )}`}
           >
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+            <div className="p-3 rounded-xl bg-purple-600 text-white shadow-lg shadow-purple-500/30 border border-purple-400/30">
               <FolderOpen size={24} />
             </div>
             <div>
               <div className="font-mono text-base font-extrabold flex items-center gap-2">
-                <span>/ (Root Directory)</span>
+                <span>/ (Root)</span>
                 {currentDirId === 'root' && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/30 text-cyan-900 dark:text-cyan-200 font-bold border border-cyan-400/40">
-                    PWD
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500 text-white font-bold shadow-sm flex items-center gap-1">
+                    <CheckCircle2 size={10} /> PWD
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs font-mono opacity-90 mt-1">
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+              <div className="flex items-center gap-2 text-xs font-mono mt-1">
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
                   {rootNode.octalPermissions} ({rootNode.permissions})
                 </span>
-                <span className="text-slate-500 dark:text-slate-400">{rootNode.owner}:{rootNode.group}</span>
+                <span className="text-[var(--color-text-muted)] font-semibold">{rootNode.owner}:{rootNode.group}</span>
               </div>
             </div>
           </div>
 
-          {/* Trunk Vertical Line */}
-          <div className="w-0.5 h-10 bg-gradient-to-b from-amber-500 to-purple-500/80" />
+          {/* Trunk Connector Line */}
+          <div className="w-1 h-8 bg-gradient-to-b from-purple-600 via-indigo-500 to-purple-400/80 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
         </div>
 
-        {/* LEVEL 1: FHS DIRECTORIES ROW & SVG CONNECTORS */}
-        <div className="w-full relative pt-6 border-t-2 border-purple-500/40 dark:border-purple-500/30 rounded-t-3xl">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-4 items-start">
+        {/* LEVEL 1: FHS DIRECTORIES ROW & CONNECTORS */}
+        <div className="w-full relative pt-5 border-t-2 border-purple-500/30 rounded-t-3xl">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3.5 items-start">
             {topLevelChildren.map(child => {
               const cat = getNodeCategory(child);
               const isChildDir = child.type === 'directory' || child.type === 'mount-point';
@@ -200,59 +203,67 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
               const Icon = getNodeIcon(child, !isBranchExpanded);
 
               return (
-                <div key={child.id} className="flex flex-col items-center space-y-3 relative group">
-                  {/* Top Connector stub */}
-                  <div className={`w-0.5 h-6 -mt-6 transition-colors ${
-                    isPath ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]' : 'bg-purple-500/40 dark:bg-purple-500/30'
-                  }`} />
+                <div
+                  key={child.id}
+                  className="flex flex-col items-center relative transition-all"
+                >
+                  {/* Vertical Connector Stem */}
+                  <div className={`w-0.5 h-3 ${isPath ? 'bg-amber-500' : 'bg-purple-500/40 dark:bg-purple-500/30'}`} />
 
-                  {/* Realistic Folder Tab for Directory Nodes */}
-                  {isChildDir && (
-                    <div className="w-16 h-2 bg-purple-300 dark:bg-purple-700/60 rounded-t-md -mb-2 z-0 self-start ml-2" />
-                  )}
-
-                  {/* Level 1 Node Card */}
+                  {/* FHS Directory Node Card */}
                   <div
-                    onClick={() => {
-                      if (onSelectNode) onSelectNode(child.id);
-                      if (isChildDir && childSubItems.length > 0) {
-                        toggleBranchExpanded(child.id);
-                      }
-                    }}
-                    className={`z-10 w-full p-3 rounded-2xl border flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 shadow-md backdrop-blur-sm ${getNodeColorClasses(
+                    onClick={() => onSelectNode && onSelectNode(child.id)}
+                    className={`w-full p-3.5 rounded-2xl border flex flex-col items-center justify-between min-h-[110px] cursor-pointer transition-all hover:scale-[1.03] shadow-md backdrop-blur-md relative overflow-hidden ${getNodeColorClasses(
                       child,
                       isCurrent,
                       isActive,
                       isPath
                     )}`}
                   >
-                    <div className="flex items-center gap-1.5 font-mono text-xs font-bold truncate max-w-full">
-                      <Icon size={16} className={`shrink-0 ${
-                        cat === 'config' ? 'text-amber-600 dark:text-amber-400' :
-                        cat === 'script' ? 'text-emerald-600 dark:text-emerald-400' :
-                        cat === 'mount' ? 'text-purple-600 dark:text-purple-400' : 'text-purple-600 dark:text-cyan-400'
-                      }`} />
-                      <span className="truncate">/{child.name}</span>
+                    {/* Folder Accent Pill */}
+                    <div className="w-full flex items-center justify-between text-[10px] font-mono mb-2">
+                      <span className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider text-[9px] ${
+                        cat === 'mount' ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-400/30' :
+                        cat === 'config' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-400/30' :
+                        'bg-purple-500/20 text-purple-800 dark:text-purple-300 border border-purple-400/30'
+                      }`}>
+                        {cat}
+                      </span>
+                      <span className="font-bold text-[10px] text-[var(--color-text-muted)]">
+                        {child.childrenIds?.length || 0} items
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 my-1">
+                      <div className={`p-2 rounded-xl ${
+                        isCurrent ? 'bg-purple-600 text-white shadow-md' :
+                        isActive ? 'bg-emerald-600 text-white shadow-md' :
+                        'bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20'
+                      }`}>
+                        <Icon size={18} />
+                      </div>
+                      <span className="font-mono text-sm font-bold truncate tracking-tight">{child.name}</span>
                     </div>
 
                     {isCurrent && (
-                      <span className="mt-1 text-[9px] px-1.5 py-0.2 rounded-full bg-cyan-500/30 text-cyan-900 dark:text-cyan-200 font-bold border border-cyan-400/30">
+                      <span className="mt-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-purple-600 text-white font-bold shadow-sm">
                         PWD
                       </span>
                     )}
 
-                    <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] font-mono">
-                      <span className="text-emerald-700 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+                    <div className="mt-2 flex items-center justify-between w-full text-[10px] font-mono pt-1.5 border-t border-[var(--color-border)]/60">
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)] border border-[var(--color-border)]">
                         {child.octalPermissions}
                       </span>
                       {isChildDir && childSubItems.length > 0 && (
                         <button
                           type="button"
                           onClick={(e) => toggleBranchExpanded(child.id, e)}
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-sans font-semibold transition-all ${
+                          aria-label={isBranchExpanded ? 'Hide branch' : `Expand branch (${childSubItems.length} items)`}
+                          className={`px-2 py-0.5 rounded text-[9px] font-sans font-bold transition-all shadow-sm ${
                             isBranchExpanded
-                              ? 'bg-purple-500/20 text-purple-700 dark:text-cyan-300 border border-purple-500/30'
-                              : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-purple-100'
+                              ? 'bg-purple-600 text-white hover:bg-purple-700'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-purple-500/20'
                           }`}
                         >
                           {isBranchExpanded ? 'Hide' : `+${childSubItems.length}`}
@@ -261,11 +272,11 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                     </div>
                   </div>
 
-                  {/* LEVEL 2 SUB-BRANCHES - DISTINCT SHAPES FOR FILES VS FOLDERS */}
+                  {/* LEVEL 2 SUB-BRANCHES */}
                   {isChildDir && childSubItems.length > 0 && isBranchExpanded && (
-                    <div className="w-full flex flex-col items-center pt-1 space-y-1.5 relative animate-fade-in">
-                      <div className={`w-0.5 h-3 ${isPath ? 'bg-amber-500' : 'bg-purple-500/40 dark:bg-slate-800'}`} />
-                      <div className="w-full space-y-1.5 bg-white/90 dark:bg-slate-950/90 p-2 rounded-2xl border border-slate-200 dark:border-slate-800/90 shadow-md max-h-[240px] overflow-y-auto scrollbar-thin">
+                    <div className="w-full flex flex-col items-center pt-2 space-y-1.5 relative animate-fade-in">
+                      <div className={`w-0.5 h-3 ${isPath ? 'bg-amber-500' : 'bg-purple-500/40'}`} />
+                      <div className="w-full space-y-1.5 bg-[var(--color-surface)]/90 backdrop-blur-md p-2 rounded-2xl border border-[var(--color-border)] shadow-xl max-h-[240px] overflow-y-auto scrollbar-thin">
                         {childSubItems.map(sub => {
                           const subCat = getNodeCategory(sub);
                           const isSubCurrent = sub.id === currentDirId;
@@ -280,7 +291,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                                 e.stopPropagation();
                                 onSelectNode && onSelectNode(sub.id);
                               }}
-                              className={`p-2 rounded-xl border text-[11px] font-mono flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] ${getNodeColorClasses(
+                              className={`p-2 rounded-xl border text-[11px] font-mono flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] shadow-sm ${getNodeColorClasses(
                                 sub,
                                 isSubCurrent,
                                 isSubActive,
@@ -293,7 +304,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                                   subCat === 'script' ? 'text-emerald-500' :
                                   subCat === 'directory' ? 'text-purple-500' : 'text-blue-500'
                                 }`} />
-                                <span className="truncate font-semibold">{sub.name}</span>
+                                <span className="truncate font-bold">{sub.name}</span>
                               </div>
                               
                               <div className="flex items-center gap-1">
@@ -307,7 +318,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                                     SH
                                   </span>
                                 )}
-                                <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono px-1 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                                <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-mono px-1 rounded bg-[var(--color-surface-muted)] border border-[var(--color-border)] font-bold">
                                   {sub.octalPermissions}
                                 </span>
                               </div>
@@ -325,7 +336,6 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       </div>
     );
   };
-
 
   // ── OUTLINE LIST TREE RENDER ─────────────────────────────────────────────
   const renderOutlineNode = (nodeId: string, depth = 0): React.ReactNode => {
@@ -346,7 +356,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
         <div
           onClick={() => onSelectNode && onSelectNode(nodeId)}
           style={{ paddingLeft: `${depth * 20 + 8}px` }}
-          className={`flex items-center justify-between py-1.5 pr-3 rounded-xl text-xs font-mono transition-all cursor-pointer group ${getNodeColorClasses(
+          className={`flex items-center justify-between py-2 pr-3 rounded-xl text-xs font-mono transition-all cursor-pointer shadow-sm group ${getNodeColorClasses(
             node,
             isCurrentDir,
             isTargetActive,
@@ -358,36 +368,31 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
               <button
                 type="button"
                 onClick={(e) => toggleCollapse(nodeId, e)}
-                className="p-0.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                aria-label={isCollapsed ? 'Expand directory' : 'Collapse directory'}
+                className="p-1 rounded hover:bg-purple-500/20 transition-all text-[var(--color-text-muted)]"
               >
                 {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
               </button>
             ) : (
-              <span className="w-3.5" />
+              <span className="w-4" />
             )}
 
-            <NodeIcon size={16} className="shrink-0 text-purple-600 dark:text-cyan-400" />
-            <span className="truncate font-semibold">{node.name}</span>
-
-            {isCurrentDir && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/30 text-cyan-900 dark:text-cyan-200 font-sans font-medium">
-                PWD
-              </span>
-            )}
+            <NodeIcon size={16} className="shrink-0 text-purple-600 dark:text-purple-400" />
+            <span className="truncate font-bold">{node.name}</span>
           </div>
 
           <div className="flex items-center gap-2 shrink-0 ml-3">
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 text-emerald-700 dark:text-emerald-400 border border-slate-300 dark:border-slate-800">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)] text-emerald-700 dark:text-emerald-400 border border-[var(--color-border)] font-bold">
               {node.octalPermissions}
             </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-800 hidden sm:inline">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)] text-[var(--color-text-muted)] border border-[var(--color-border)] hidden sm:inline">
               {node.permissions}
             </span>
           </div>
         </div>
 
         {isDirectory && !isCollapsed && children.length > 0 && (
-          <div className="relative pl-2 border-l border-slate-300 dark:border-slate-800/70 ml-3">
+          <div className="relative pl-2 border-l-2 border-purple-500/30 ml-4 space-y-1">
             {children.map(child => renderOutlineNode(child.id, depth + 1))}
           </div>
         )}
@@ -396,13 +401,13 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl border border-[var(--color-border)] shadow-md overflow-hidden transition-all">
-      {/* Top Controls Header */}
+    <div className="w-full flex flex-col bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl border border-[var(--color-border)] shadow-xl overflow-hidden transition-all">
+      {/* Top Controls Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[var(--color-surface-elevated)] border-b border-[var(--color-border)] text-xs font-sans">
         <div className="flex items-center gap-2.5 font-bold text-[var(--color-text)]">
-          <Circle size={10} className="fill-purple-500 text-purple-500 animate-pulse" />
-          <span>Linux Virtual File System (VFS) Renderer</span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 font-bold">
+          <FolderTree size={18} className="text-purple-500" />
+          <span className="font-extrabold text-sm">Linux Virtual File System (VFS) Renderer</span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 font-bold hidden sm:inline-block">
             FHS Tree Canvas
           </span>
         </div>
@@ -414,14 +419,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
               <button
                 type="button"
                 onClick={expandAllBranches}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all"
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all flex items-center gap-1"
               >
-                Expand All
+                <Eye size={12} /> Expand All
               </button>
               <button
                 type="button"
                 onClick={collapseAllBranches}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--color-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-purple-500/10 transition-all"
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--color-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-purple-500/10 transition-all"
               >
                 Collapse All
               </button>
@@ -429,13 +434,13 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
           )}
 
           {/* View Mode Toggle Button */}
-          <div className="flex items-center bg-[var(--color-surface)] p-1 rounded-xl border border-[var(--color-border)]">
+          <div className="flex items-center bg-[var(--color-surface)] p-1 rounded-xl border border-[var(--color-border)] shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode('hierarchy')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
                 viewMode === 'hierarchy'
-                  ? 'bg-purple-600 text-white shadow-sm font-bold'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
               title="Graphical Tree Hierarchy Diagram"
@@ -445,9 +450,9 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('outline')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
                 viewMode === 'outline'
-                  ? 'bg-purple-600 text-white shadow-sm font-bold'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
               title="Expandable Tree Outline List"
@@ -458,21 +463,58 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Main Canvas Area */}
+      {/* Main Canvas Area with subtle Dot Matrix Pattern */}
       <div
         ref={scrollContainerRef}
-        className={`w-full overflow-auto scrollbar-thin transition-all bg-[var(--color-surface-elevated)]/40 ${
+        className={`w-full overflow-auto scrollbar-thin transition-all relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/5 via-[var(--color-surface-elevated)] to-[var(--color-surface-elevated)] ${
           isFullscreen ? 'h-[75vh] min-h-[550px]' : 'h-[440px]'
         }`}
       >
         {viewMode === 'hierarchy' ? (
           renderGraphicalHierarchy()
         ) : (
-          <div className="p-4 space-y-1">
+          <div className="p-4 space-y-1.5">
             {renderOutlineNode('root')}
           </div>
         )}
       </div>
+
+      {/* Active Node Detail Inspector Drawer */}
+      {(() => {
+        const selNode = activeNodeId ? nodes[activeNodeId] : nodes[currentDirId] || nodes['root'];
+        if (!selNode) return null;
+        return (
+          <div className="px-4 py-3 bg-[var(--color-surface-elevated)] border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3 text-xs font-sans animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-600 dark:text-purple-300 font-bold">
+                <FolderTree size={16} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 font-mono">
+                  <span className="font-extrabold text-sm text-[var(--color-text)]">
+                    {getAbsolutePath(nodes, selNode.id)}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-400 font-bold border border-emerald-500/30 text-[10px]">
+                    {selNode.octalPermissions} ({selNode.permissions})
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-[var(--color-text-muted)] mt-0.5 font-mono">
+                  <span>Owner: {selNode.owner}:{selNode.group}</span>
+                  <span>Modified: {selNode.modifiedAt}</span>
+                  <span>Type: {selNode.type}</span>
+                </div>
+              </div>
+            </div>
+
+            {selNode.content && (
+              <div className="max-w-md hidden lg:block p-2 rounded-xl bg-slate-950 text-emerald-400 font-mono text-[11px] border border-slate-800 truncate">
+                <span className="text-purple-400 font-bold">$ cat {selNode.name}: </span>
+                <span>{selNode.content.length > 50 ? `${selNode.content.slice(0, 50)}...` : selNode.content}</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };

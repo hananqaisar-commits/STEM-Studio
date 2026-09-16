@@ -70,10 +70,11 @@
 
   --color-text: var(--slate-900);
   --color-text-secondary: var(--slate-700);
-  --color-text-muted: var(--slate-500);
+  --color-text-muted: var(--slate-600);
   --color-text-on-primary: #ffffff;
 
   --color-primary: var(--purple-600);
+  --color-primary-text: var(--purple-700);
   --color-primary-hover: var(--purple-700);
   --color-primary-active: var(--purple-800);
 

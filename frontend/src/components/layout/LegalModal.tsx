@@ -72,7 +72,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ docType, onClose }) => {
                 </p>
                 <div className="legal-contact-box">
                   <Mail size={16} />
-                  <a href="mailto:hanankaesar316@gmail.com">hanankaesar316@gmail.com</a>
+                  <a href="mailto:hananqaisar316@gmail.com">hananqaisar316@gmail.com</a>
                 </div>
               </section>
             </div>
@@ -108,7 +108,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ docType, onClose }) => {
                 </p>
                 <div className="legal-contact-box">
                   <Mail size={16} />
-                  <a href="mailto:hanankaesar316@gmail.com">hanankaesar316@gmail.com</a>
+                  <a href="mailto:hananqaisar316@gmail.com">hananqaisar316@gmail.com</a>
                 </div>
               </section>
             </div>
@@ -142,7 +142,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ docType, onClose }) => {
                 </p>
                 <div className="legal-contact-box">
                   <Mail size={16} />
-                  <a href="mailto:hanankaesar316@gmail.com">hanankaesar316@gmail.com</a>
+                  <a href="mailto:hananqaisar316@gmail.com">hananqaisar316@gmail.com</a>
                 </div>
               </section>
             </div>
