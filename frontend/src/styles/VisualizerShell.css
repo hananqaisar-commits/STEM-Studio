@@ -1196,3 +1196,298 @@
   color: #ef4444;
   background: rgba(239, 68, 68, 0.15);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   12. UNIFIED GLOBAL TOOLBAR & CONTROLS SYSTEM (All 110+ Algorithms)
+   Guarantees 100% consistent, ultra-luxurious action toolbars, input
+   groups, dataset mode selectors, buttons, and canvas header titles.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── A. Canvas Headers & Title Badges ───────────────────────────── */
+.sorting-canvas-header,
+.ll-canvas-header,
+.bs-canvas-header,
+.bt-canvas-header,
+.dp-canvas-header,
+.graph-canvas-header,
+.bst-canvas-header,
+.tree-canvas-header,
+.hashmap-canvas-header,
+.trie-canvas-header,
+.canvas-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.75rem 1.25rem !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  background: color-mix(in srgb, var(--color-surface) 95%, var(--color-app-bg)) !important;
+  min-height: 48px !important;
+  box-sizing: border-box !important;
+  gap: 0.75rem !important;
+  flex-wrap: wrap !important;
+}
+
+.canvas-header-left,
+.ll-canvas-title,
+.bst-canvas-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  flex-wrap: wrap !important;
+}
+
+.bst-title {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 800 !important;
+  color: var(--color-primary) !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.bst-subtitle {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.18rem 0.55rem !important;
+  border-radius: 9999px !important;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)) !important;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border)) !important;
+  font-size: 0.6875rem !important;
+  color: var(--color-primary-text, var(--color-primary)) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ── B. Action Toolbars ─────────────────────────────────────────── */
+.ll-toolbar,
+.bst-toolbar,
+.bs-toolbar,
+.dp-toolbar,
+.sort-toolbar,
+.graph-toolbar,
+.tree-toolbar,
+.toolbar-container,
+.controls-bar,
+.action-toolbar,
+.bst-controls,
+.ll-toolbar-actions,
+.scene-toolbar,
+.viz-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 0.65rem !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 14px !important;
+  padding: 0.65rem 1rem !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+  margin-bottom: 1rem !important;
+  box-sizing: border-box !important;
+}
+
+/* ── C. Input Groups & Labels ───────────────────────────────────── */
+.bst-input-group,
+.ll-input-group,
+.bs-input-group,
+.dp-input-group,
+.bt-input-group,
+.sort-input-group,
+.graph-input-group,
+.tree-input-group,
+.input-group-pill,
+.viz-input-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  background: var(--color-app-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 10px !important;
+  padding: 0.35rem 0.75rem !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 600 !important;
+  color: var(--color-text-secondary) !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.bst-input-group:focus-within,
+.ll-input-group:focus-within,
+.bs-input-group:focus-within,
+.dp-input-group:focus-within,
+.bt-input-group:focus-within,
+.sort-input-group:focus-within,
+.graph-input-group:focus-within,
+.tree-input-group:focus-within,
+.input-group-pill:focus-within,
+.viz-input-group:focus-within {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
+}
+
+.bst-input-group span,
+.ll-input-group span,
+.bs-input-group span,
+.dp-input-group span,
+.bt-input-group span,
+.sort-input-group span,
+.graph-input-group span,
+.tree-input-group span {
+  font-size: var(--text-xs) !important;
+  font-weight: 700 !important;
+  color: var(--color-text-secondary) !important;
+  white-space: nowrap !important;
+}
+
+.bst-input,
+.ll-input,
+.bs-input,
+.dp-input,
+.bt-input,
+.sort-input,
+.graph-input,
+.tree-input,
+.viz-input {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  padding: 0.15rem 0.35rem !important;
+}
+
+/* ── D. Dataset Mode Selectors (Empty, Sample, Random) ──────────── */
+.dataset-mode-selector,
+.traversal-btn-group,
+.mode-selector-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  background: var(--color-app-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  padding: 0.25rem 0.4rem !important;
+  border-radius: 10px !important;
+  box-sizing: border-box !important;
+}
+
+.dataset-mode-selector .bst-btn,
+.dataset-mode-selector .ll-btn,
+.dataset-mode-selector .btn-mode,
+.traversal-btn-group .bst-btn,
+.traversal-btn-group .btn-traversal,
+.bst-btn.btn-mode,
+.bst-btn.btn-traversal,
+.ll-btn.btn-mode {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.38rem !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 600 !important;
+  color: var(--color-text-secondary) !important;
+  padding: 0.32rem 0.65rem !important;
+  border-radius: 7px !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+  white-space: nowrap !important;
+}
+
+.dataset-mode-selector .bst-btn:hover,
+.dataset-mode-selector .ll-btn:hover,
+.dataset-mode-selector .btn-mode:hover,
+.traversal-btn-group .bst-btn:hover,
+.traversal-btn-group .btn-traversal:hover,
+.bst-btn.btn-mode:hover,
+.bst-btn.btn-traversal:hover,
+.ll-btn.btn-mode:hover {
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* ── E. Action Buttons ──────────────────────────────────────────── */
+.bst-btn,
+.ll-btn,
+.bs-btn,
+.dp-btn,
+.bt-btn,
+.sort-btn,
+.graph-btn,
+.tree-btn,
+.viz-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.38rem !important;
+  padding: 0.42rem 0.85rem !important;
+  border-radius: 9px !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+  border: 1px solid var(--color-border) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  white-space: nowrap !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.bst-btn:hover,
+.ll-btn:hover,
+.bs-btn:hover,
+.dp-btn:hover,
+.bt-btn:hover,
+.sort-btn:hover,
+.graph-btn:hover,
+.tree-btn:hover,
+.viz-btn:hover {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.bst-btn.ll-btn-primary,
+.ll-btn.ll-btn-primary,
+.bst-btn-primary,
+.btn-primary-action,
+.ll-btn-primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #ffffff !important;
+}
+
+.bst-btn.ll-btn-primary:hover,
+.ll-btn.ll-btn-primary:hover,
+.bst-btn-primary:hover,
+.btn-primary-action:hover,
+.ll-btn-primary:hover {
+  background: var(--color-primary-hover, #7e22ce) !important;
+  border-color: var(--color-primary-hover, #7e22ce) !important;
+  color: #ffffff !important;
+}
+
+.bst-btn.ll-btn-danger,
+.ll-btn.ll-btn-danger,
+.ll-btn-danger {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #f87171 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.bst-btn.ll-btn-danger:hover,
+.ll-btn.ll-btn-danger:hover,
+.ll-btn-danger:hover {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.18) !important;
+}
+
