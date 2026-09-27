@@ -339,7 +339,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 2.5rem 1rem 1.5rem 1rem;
+  padding: 3.2rem 1rem 1.5rem 1rem;
   width: max-content;
   min-width: 100%;
   box-sizing: border-box;
@@ -354,7 +354,7 @@
 /* Floating Pointer Tags */
 .ll-pointer-tags-top {
   position: absolute;
-  top: -36px;
+  top: -42px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -410,17 +410,18 @@
   100% { transform: translateY(0); opacity: 1; }
 }
 
-/* Node Box */
+/* Node Box — two-row layout: data on top, next pointer below */
 .ll-node-box {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
   transition: all 0.25s ease;
   user-select: none;
+  min-width: 100px;
 }
 
 .ll-node-box.status-active {
@@ -448,22 +449,41 @@
 }
 
 .ll-val-compartment {
-  padding: 0.6rem 0.9rem;
+  padding: 0.5rem 0.9rem;
   font-size: var(--text-base);
   font-weight: 700;
   color: var(--color-text);
   min-width: 38px;
   text-align: center;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.ll-val-label {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .ll-ptr-compartment {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 0.6rem;
-  background: rgba(0, 0, 0, 0.08);
-  border-left: 1px solid var(--color-border);
+  padding: 0.4rem 0.7rem;
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-app-bg));
+  border-top: 1px solid var(--color-border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  gap: 0.25rem;
+}
+
+[data-theme="dark"] .ll-ptr-compartment {
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
 }
 
 .ll-ptr-dot {
@@ -471,6 +491,7 @@
   height: 8px;
   border-radius: 50%;
   background: #818cf8;
+  display: none; /* Hidden in new layout — replaced by next text */
 }
 
 /* Arrow Connector */
@@ -490,13 +511,48 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.4rem 0.7rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed var(--color-border);
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  background: var(--color-app-bg);
+  border: 2px dashed var(--color-border);
   font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  font-family: monospace;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
   margin-left: 0.25rem;
+  letter-spacing: 0.05em;
 }
+
+/* ─── EDUCATIONAL NODE LABEL (N1, N2, N3) ────────────────────────── */
+.ll-node-label {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ─── NEXT POINTER TEXT ──────────────────────────────────────────── */
+.ll-next-text {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.ll-next-arrow {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.ll-next-target {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+

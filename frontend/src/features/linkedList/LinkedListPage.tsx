@@ -48,6 +48,8 @@ import './LinkedList.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
 import { useTutorContext } from '../../contexts/TutorContext';
+import { StateSummaryBar, type StateSummaryItem } from '../../components/common/StateSummaryBar';
+import { DefinitionCardPanel, type DefinitionItem } from '../../components/common/DefinitionCardPanel';
 
 interface AlgorithmMeta {
   id: LinkedListCategory;
@@ -83,6 +85,7 @@ export const LinkedListPage: React.FC = () => {
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
+  const [showDefinitions, setShowDefinitions] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -105,6 +108,37 @@ export const LinkedListPage: React.FC = () => {
     reset,
     seekTo,
   } = useStepPlayer<LinkedListStep>({ steps: activeSteps });
+
+  const summaryItems: StateSummaryItem[] = useMemo(() => {
+    const nodes = currentStep ? currentStep.nodes : baseNodes;
+    const headVal = nodes.length > 0 ? nodes[0].value : 'NULL';
+    const tailVal = nodes.length > 0 ? nodes[nodes.length - 1].value : 'NULL';
+    const ruleMap: Record<string, string> = {
+      singly: 'Singly Linked',
+      doubly: 'Doubly Linked',
+      circular: 'Circular Ring',
+      detectCycle: 'Floyd Cycle',
+      reverse: '3-Pointer Reverse',
+      middleNode: 'Fast/Slow Pointer',
+    };
+    return [
+      { key: 'HEAD', value: headVal },
+      { key: 'TAIL', value: tailVal },
+      { key: 'Size', value: nodes.length },
+      { key: 'Rule', value: ruleMap[category] || 'Singly Linked' },
+    ];
+  }, [currentStep, baseNodes, category]);
+
+  const definitions: DefinitionItem[] = useMemo(
+    () => [
+      { term: 'NODE', explanation: 'Element containing data value and next pointer link.' },
+      { term: 'POINTER', explanation: 'Reference storing target node location.' },
+      { term: 'HEAD / TAIL', explanation: 'Head is initial node; Tail is final node (next = NULL).' },
+      { term: 'NULL', explanation: 'Explicit marker denoting end of chain.' },
+      { term: 'REVERSAL', explanation: 'Pointer mutation technique reversing link direction in-place.' },
+    ],
+    []
+  );
 
   // Publish active context to Octa AI Tutor
   useEffect(() => {
@@ -552,21 +586,29 @@ export const LinkedListPage: React.FC = () => {
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
       <div className="ll-workspace scene-workspace">
         <div className="renderer-section">
-          <div className="ll-canvas-card">
-            <div className="ll-canvas-header">
+          <div className="ll-canvas-card" style={{ position: 'relative' }}>
+            <div className="ll-canvas-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div className="ll-canvas-title">
                 <Link2 size={16} className="text-accent" />
                 <span>
                   {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
                 </span>
               </div>
-              <button
-                className="bst-btn btn-fullscreen"
-                onClick={() => setIsFullScreenOpen(true)}
-                title="Full Screen Canvas"
-              >
-                <Maximize2 size={14} />
-              </button>
+              <StateSummaryBar items={summaryItems} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <DefinitionCardPanel
+                  definitions={definitions}
+                  visible={showDefinitions}
+                  onToggle={() => setShowDefinitions((v) => !v)}
+                />
+                <button
+                  className="bst-btn btn-fullscreen"
+                  onClick={() => setIsFullScreenOpen(true)}
+                  title="Full Screen Canvas"
+                >
+                  <Maximize2 size={14} />
+                </button>
+              </div>
             </div>
 
             <LinkedListRenderer step={currentStep} nodes={baseNodes} />
@@ -602,21 +644,29 @@ export const LinkedListPage: React.FC = () => {
           customizeModeEnabled={customizeModeEnabled}
           visualizerPanel={
             <>
-              <div className="ll-canvas-card">
-                <div className="ll-canvas-header">
+              <div className="ll-canvas-card" style={{ position: 'relative' }}>
+                <div className="ll-canvas-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <div className="ll-canvas-title">
                     <Link2 size={16} className="text-accent" />
                     <span>
                       {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
                     </span>
                   </div>
-                  <button
-                    className="bst-btn btn-fullscreen"
-                    onClick={() => setIsFullScreenOpen(true)}
-                    title="Full Screen Canvas"
-                  >
-                    <Maximize2 size={14} />
-                  </button>
+                  <StateSummaryBar items={summaryItems} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <DefinitionCardPanel
+                      definitions={definitions}
+                      visible={showDefinitions}
+                      onToggle={() => setShowDefinitions((v) => !v)}
+                    />
+                    <button
+                      className="bst-btn btn-fullscreen"
+                      onClick={() => setIsFullScreenOpen(true)}
+                      title="Full Screen Canvas"
+                    >
+                      <Maximize2 size={14} />
+                    </button>
+                  </div>
                 </div>
                 <LinkedListRenderer step={currentStep} nodes={baseNodes} />
               </div>

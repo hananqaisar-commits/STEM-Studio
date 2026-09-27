@@ -38,16 +38,41 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
     return targetIdx !== -1 && targetIdx <= selfIdx;
   });
 
+  /**
+   * Get the educational label for a node's next target.
+   * Returns "N{index+1}" if the target is in the list, or "NULL" otherwise.
+   */
+  const getNextLabel = (node: ListNodeItem, index: number): string => {
+    if (index === displayNodes.length - 1 && !cycleTargetNode) {
+      return 'NULL';
+    }
+    if (node.nextId) {
+      const targetIdx = displayNodes.findIndex((n) => n.id === node.nextId);
+      if (targetIdx !== -1) {
+        return `N${targetIdx + 1}`;
+      }
+    }
+    // Default: next sequential node
+    if (index < displayNodes.length - 1) {
+      return `N${index + 2}`;
+    }
+    return 'NULL';
+  };
+
   return (
     <div className="ll-canvas-body">
       <div className="ll-render-track">
         {displayNodes.map((node, index) => {
           const isTail = index === displayNodes.length - 1;
           const statusClass = node.status ? `status-${node.status}` : '';
+          const nextLabel = getNextLabel(node, index);
 
           return (
             <div key={node.id} className="ll-node-wrapper">
-              {/* Pointer Badges */}
+              {/* Educational Node Label: N1, N2, N3... */}
+              <span className="ll-node-label">N{index + 1}</span>
+
+              {/* Pointer Badges (HEAD, TAIL, CURR, etc.) */}
               {node.pointerLabels && node.pointerLabels.length > 0 && (
                 <div className="ll-pointer-tags-top">
                   {node.pointerLabels.map((tag) => (
@@ -61,16 +86,33 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
                 </div>
               )}
 
-              {/* Node Box */}
+              {/* Node Box: two-row layout */}
               <div className={`ll-node-box ${statusClass}`}>
-                {listType === 'doubly' && (
-                  <div className="ll-ptr-compartment" title="prev pointer">
-                    <div className="ll-ptr-dot" style={{ background: '#f59e0b' }} />
-                  </div>
-                )}
-                <div className="ll-val-compartment">{node.value}</div>
-                <div className="ll-ptr-compartment" title="next pointer">
-                  <div className="ll-ptr-dot" />
+                {/* Top row: data value */}
+                <div className="ll-val-compartment">
+                  <span className="ll-val-label">data:</span>
+                  <span>{node.value}</span>
+                </div>
+
+                {/* Bottom row: next pointer text */}
+                <div className="ll-ptr-compartment">
+                  {listType === 'doubly' && (
+                    <>
+                      <span className="ll-next-text">
+                        <span>prev</span>
+                        <span className="ll-next-arrow">→</span>
+                        <span className="ll-next-target">
+                          {index > 0 ? `N${index}` : 'NULL'}
+                        </span>
+                      </span>
+                      <span style={{ margin: '0 0.3rem', color: 'var(--color-text-muted)' }}>|</span>
+                    </>
+                  )}
+                  <span className="ll-next-text">
+                    <span>next</span>
+                    <span className="ll-next-arrow">→</span>
+                    <span className="ll-next-target">{nextLabel}</span>
+                  </span>
                 </div>
               </div>
 
