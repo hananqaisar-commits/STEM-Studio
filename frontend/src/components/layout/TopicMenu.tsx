@@ -326,7 +326,9 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                   <div className="module-categories-container">
                     {OS_CATEGORIES.map((cat, index) => {
                       const Icon = CATEGORY_ICON_MAP[cat.iconName] ?? Terminal;
-                      const isCategoryActive = location.pathname.includes(`/dashboard/os/${cat.id}`);
+                      const isCategoryActive = cat.id === activeCategory || location.pathname.includes(cat.id);
+                      const isCategoryExpanded = expandedCategories.has(cat.id);
+                      const topics = TOPICS_BY_CATEGORY.get(cat.id) ?? [];
 
                       return (
                         <div
@@ -336,9 +338,11 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                           <button
                             className="category-header"
                             onClick={() => {
+                              toggleCategory(cat.id);
                               requireAuth(() => navigate(`/dashboard/os/${cat.id}`), 'Sign in to open this interactive module and save your progress.');
                               if (onClose) onClose();
                             }}
+                            aria-expanded={isCategoryExpanded}
                             title={`${index + 1}. ${cat.name}`}
                           >
                             <div className="category-header-left">
@@ -352,7 +356,41 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
                                 </div>
                               )}
                             </div>
+                            {isExpanded && (
+                              <div className={`category-chevron ${isCategoryExpanded ? 'rotated' : ''}`}>
+                                <ChevronDown size={14} />
+                              </div>
+                            )}
                           </button>
+
+                          {/* Unordered List of OS Topics */}
+                          {isExpanded && isCategoryExpanded && (
+                            <div className="category-topics open">
+                              <ul className="category-topics-list">
+                                {topics.map((topic) => {
+                                  const isTopicActive = isCategoryActive && topic.id === activeTopic;
+                                  return (
+                                    <li key={topic.id}>
+                                      <button
+                                        className={`topic-item ${isTopicActive ? 'active' : ''}`}
+                                        onClick={() => {
+                                          setExpandedCategories((prev) => new Set(prev).add(cat.id));
+                                          requireAuth(() => navigate(`/dashboard/os/${cat.id}?topic=${topic.id}`), 'Sign in to open this interactive topic and save your progress.');
+                                          if (onClose) onClose();
+                                        }}
+                                      >
+                                        <span className="topic-dot" />
+                                        <span className="topic-item-name">{topic.name}</span>
+                                        {topic.group && (
+                                          <span className="topic-badge">{topic.group}</span>
+                                        )}
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
