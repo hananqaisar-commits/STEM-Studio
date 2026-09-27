@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Terminal, FolderTree, ArrowLeft, ChevronRight, BookOpen } from 'lucide-react';
+import { Terminal, FolderTree, ArrowLeft, ChevronRight } from 'lucide-react';
 import { OS_CATEGORIES, type CategoryDef } from '../../data/categories';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
@@ -22,7 +22,7 @@ export const OSCategoriesHub: React.FC = () => {
           <ArrowLeft size={16} /> Back to Operating System Module
         </button>
         <div className="flex items-center gap-3 mt-2">
-          <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+          <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
             <Terminal size={28} />
           </div>
           <div>
@@ -41,6 +41,7 @@ export const OSCategoriesHub: React.FC = () => {
       <div className="hub-grid mt-6">
         {OS_CATEGORIES.map((cat: CategoryDef) => {
           const IconComponent = OS_CAT_ICON_MAP[cat.iconName] ?? Terminal;
+          const diffClass = cat.difficulty === 'Beginner' ? 'diff-beginner' : 'diff-intermediate';
           return (
             <div
               key={cat.id}
@@ -48,16 +49,19 @@ export const OSCategoriesHub: React.FC = () => {
               onClick={() => cat.available && navigate(`/dashboard/os/${cat.id}`)}
               style={{ cursor: cat.available ? 'pointer' : 'not-allowed' }}
             >
-              <div className="hub-card-icon">
-                <IconComponent size={24} />
+              <div className="hub-card-header flex items-center justify-between">
+                <div className="hub-card-icon">
+                  <IconComponent size={24} />
+                </div>
+                <span className={`diff-badge ${diffClass}`}>{cat.difficulty}</span>
               </div>
               <div className="hub-card-body">
                 <h3>{cat.name}</h3>
                 <p>{cat.description}</p>
               </div>
               <div className="hub-card-footer flex items-center justify-between">
-                <span className="hub-card-topics">{cat.topicCount} Topics / Views</span>
-                <span className="flex items-center gap-1 text-cyan-400 text-xs font-semibold">
+                <span className="hub-card-topics">{cat.topicCount} {cat.id === 'commands' ? 'Groups' : 'Visualizers'}</span>
+                <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400 text-xs font-bold">
                   Open Category <ChevronRight size={14} />
                 </span>
               </div>
