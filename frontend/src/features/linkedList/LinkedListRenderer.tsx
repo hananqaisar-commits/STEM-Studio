@@ -1,14 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import type { ListNodeItem, LinkedListStep } from './linkedListEngine';
+import { hasPreviousPointers, type LinkedListStructureType, type ListNodeItem, type LinkedListStep } from './linkedListEngine';
 import { MotionPresets } from '../../engine/motionEngine';
 import './LinkedList.css';
 
 interface LinkedListRendererProps {
   step: LinkedListStep | null;
   nodes: ListNodeItem[];
+  listType?: LinkedListStructureType;
 }
 
-export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, nodes }) => {
+export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, nodes, listType: selectedListType = 'singly' }) => {
   const activeNodeRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -18,7 +19,8 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
   }, [step]);
 
   const displayNodes = step ? step.nodes : nodes;
-  const listType = step ? step.listType : 'singly';
+  const listType = step?.listType ?? selectedListType;
+  const hasPrev = hasPreviousPointers(listType);
 
   if (displayNodes.length === 0) {
     return (
@@ -96,13 +98,15 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
 
                 {/* Bottom row: next pointer text */}
                 <div className="ll-ptr-compartment">
-                  {listType === 'doubly' && (
+                  {hasPrev && (
                     <>
                       <span className="ll-next-text">
                         <span>prev</span>
                         <span className="ll-next-arrow">→</span>
                         <span className="ll-next-target">
-                          {index > 0 ? `N${index}` : 'NULL'}
+                          {node.prevId
+                            ? `N${displayNodes.findIndex((candidate) => candidate.id === node.prevId) + 1}`
+                            : 'NULL'}
                         </span>
                       </span>
                       <span style={{ margin: '0 0.3rem', color: 'var(--color-text-muted)' }}>|</span>
@@ -145,15 +149,15 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
                     {/* Next Forward Arrow */}
                     <line
                       x1="2"
-                      y1={listType === 'doubly' ? 8 : 12}
+                      y1={hasPrev ? 8 : 12}
                       x2="42"
-                      y2={listType === 'doubly' ? 8 : 12}
+                      y2={hasPrev ? 8 : 12}
                       stroke="#818cf8"
                       strokeWidth="2.5"
                       markerEnd={`url(#arrowhead-${index})`}
                     />
                     {/* Doubly Prev Backward Arrow */}
-                    {listType === 'doubly' && (
+                    {hasPrev && (
                       <line
                         x1="42"
                         y1="16"

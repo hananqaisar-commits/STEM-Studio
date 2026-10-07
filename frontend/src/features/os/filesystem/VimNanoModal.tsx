@@ -359,14 +359,17 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="linux-editor fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="w-full max-w-3xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[560px] font-mono animate-fade-in"
+        className="linux-editor__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${type} editor for ${filePath}`}
         onKeyDown={handleKeyDown}
         tabIndex={0}
       >
         {/* Editor Light Header Bar */}
-        <div className="flex items-center justify-between px-6 py-3 bg-slate-100 border-b border-slate-200 text-xs">
+        <div className="linux-editor__header text-xs">
           <div className="flex items-center gap-3">
             <span className="px-2.5 py-1 rounded-lg bg-purple-600 text-white font-bold text-[11px] uppercase tracking-wider shadow-sm">
               {type} EDITOR
@@ -395,6 +398,8 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
               onClick={() => setShowHelp(prev => !prev)}
               className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors"
               title="Keyboard Shortcuts Help"
+              aria-label="Toggle keyboard shortcut help"
+              aria-expanded={showHelp}
             >
               <HelpCircle size={17} />
             </button>
@@ -402,6 +407,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
               onClick={onCancel}
               className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors"
               title="Close Editor"
+              aria-label="Close editor"
             >
               <X size={18} />
             </button>
@@ -445,7 +451,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
         )}
 
         {/* Text Area Content Buffer - Clean Light Mode White Canvas */}
-        <div className="flex-1 p-6 bg-white relative">
+        <div className="linux-editor__body relative">
           <textarea
             ref={textareaRef}
             value={content}
@@ -457,7 +463,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
                 ? 'Vim Normal Mode: Press "i" to enter Insert mode and edit text, or ":" for command mode.'
                 : 'Type file text content here...'
             }
-            className="w-full h-full bg-white text-slate-900 text-sm font-mono leading-relaxed focus:outline-none resize-none placeholder:text-slate-400"
+            className="linux-editor__textarea focus:outline-none placeholder:text-slate-400"
           />
         </div>
 
@@ -479,7 +485,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
         )}
 
         {/* Editor Bottom Status Bar & Shortcuts Panel */}
-        <div className="bg-slate-900 text-white text-xs flex flex-col border-t border-slate-800">
+        <div className="linux-editor__status text-xs flex flex-col">
           {type === 'vim' ? (
             <div className="px-6 py-3 flex items-center justify-between">
               {vimMode === 'COMMAND' ? (
@@ -600,4 +606,3 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
     </div>
   );
 };
-

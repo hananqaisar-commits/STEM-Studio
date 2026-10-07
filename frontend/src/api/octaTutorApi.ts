@@ -23,6 +23,9 @@ export interface OctaTutorRequest {
   current_step_index?: number;
   total_steps?: number;
   step_data?: string;
+  current_page?: string;
+  site_catalog?: string;
+  topic_knowledge?: string;
   conversation_history?: OctaTutorMessage[];
   mode?: 'interactive' | 'natural';
   // BYOK LLM Config
@@ -47,6 +50,7 @@ export interface OctaTutorResponse {
   reply: string;
   function_calls: OctaTutorFunctionCall[];
   mascot_expression: string;
+  answer_source?: 'model' | 'offline';
 }
 
 /**

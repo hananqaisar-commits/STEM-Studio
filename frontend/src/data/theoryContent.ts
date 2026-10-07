@@ -475,6 +475,21 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
         ],
         applications: ['CPU scheduling', 'Multiplayer game turns'],
       },
+      {
+        id: 'doublyCircular',
+        name: 'Doubly Circular Linked List',
+        complexity: 'O(n) search, O(1) insert/delete given node',
+        description:
+          'Each node links to its next and previous neighbor. The tail points forward to the head, and the head points backward to the tail, forming a ring that can be traversed both ways.',
+        keyPoints: [
+          'Every node has both next and previous pointers.',
+          'tail.next points to head and head.prev points to tail.',
+          'Traversal must stop when it returns to the starting node.',
+          'Insertion and deletion must repair both forward and backward links.',
+        ],
+        example: '1 ⇄ 2 ⇄ 3, with 3.next = 1 and 1.prev = 3.',
+        applications: ['Round-robin navigation', 'Media playlists', 'Circular deques'],
+      },
     ],
   },
 
@@ -1646,4 +1661,3 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
     ],
   },
 };
-

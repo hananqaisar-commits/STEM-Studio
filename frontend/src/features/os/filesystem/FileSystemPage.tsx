@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FolderTree, RotateCcw, ChevronLeft, ChevronRight, Maximize2, Minimize2,
@@ -28,10 +28,11 @@ import type { QuizCadence } from '../../../engine/types/Quiz';
 import { CATEGORY_TOPICS } from '../../../data/categoryTopics';
 
 import '../../../features/complexity/Complexity.css';
+import '../linuxModule.css';
 
 export const FileSystemPage: React.FC = () => {
   const navigate = useNavigate();
-  const { toggleTutor } = useTutorContext();
+  const { toggleTutor, setTutorContext } = useTutorContext();
 
   // VFS Single Source of Truth Snapshot State
   const [snapshot, setSnapshot] = useState<VFSSnapshot>(() => createInitialVFS());
@@ -56,6 +57,11 @@ export const FileSystemPage: React.FC = () => {
   // Active Highlighted Node & Animated Path
   const [activeNodeId, setActiveNodeId] = useState<string | undefined>('student-home');
   const [animatedPathIds, setAnimatedPathIds] = useState<string[]>([]);
+  const pathHighlightTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (pathHighlightTimerRef.current !== null) window.clearTimeout(pathHighlightTimerRef.current);
+  }, []);
 
   // Playback state
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -135,7 +141,9 @@ export const FileSystemPage: React.FC = () => {
   }, [isPlaying, currentStepIndex, stepHistory.length, handleNextStep]);
 
   // --- Reset Handler ---
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
+    if (pathHighlightTimerRef.current !== null) window.clearTimeout(pathHighlightTimerRef.current);
+    pathHighlightTimerRef.current = null;
     setIsPlaying(false);
     quizSession.resetSession();
     const fresh = createInitialVFS();
@@ -153,10 +161,10 @@ export const FileSystemPage: React.FC = () => {
     setTerminalHistory([]);
     setActiveNodeId('student-home');
     setAnimatedPathIds([]);
-  };
+  }, [quizSession.resetSession]);
 
   // --- Command Execution Handler ---
-  const handleExecuteCommand = (commandLine: string) => {
+  const handleExecuteCommand = useCallback((commandLine: string) => {
     const currentSnap = snapshotHistory[currentStepIndex] || snapshot;
     const result = executeVFSCommand(currentSnap, commandLine);
 
@@ -194,8 +202,16 @@ export const FileSystemPage: React.FC = () => {
     setSnapshot(result.newSnapshot);
 
     if (result.stepRecord.targetNodeId) setActiveNodeId(result.stepRecord.targetNodeId);
-    if (result.stepRecord.animatedPathIds) setAnimatedPathIds(result.stepRecord.animatedPathIds);
-  };
+    const nextAnimatedPath = result.stepRecord.animatedPathIds || [];
+    setAnimatedPathIds(nextAnimatedPath);
+    if (pathHighlightTimerRef.current !== null) window.clearTimeout(pathHighlightTimerRef.current);
+    pathHighlightTimerRef.current = nextAnimatedPath.length
+      ? window.setTimeout(() => {
+          setAnimatedPathIds([]);
+          pathHighlightTimerRef.current = null;
+        }, 1000)
+      : null;
+  }, [currentStepIndex, snapshot, snapshotHistory, stepHistory]);
 
   // --- Editor Save Handler ---
   const handleSaveEditorContent = (savedContent: string) => {
@@ -224,6 +240,46 @@ export const FileSystemPage: React.FC = () => {
 
   const activeStepRecord = stepHistory[currentStepIndex] || stepHistory[0];
 
+  useEffect(() => {
+    const currentPath = getAbsolutePath(snapshot.nodes, snapshot.currentDirId);
+    const selectedNode = activeNodeId ? snapshot.nodes[activeNodeId] : undefined;
+    setTutorContext({
+      algorithmName: 'Linux Virtual File System',
+      algorithmId: 'virtual-file-system',
+      category: 'filesystem',
+      currentStepDescription: activeStepRecord?.explanation || '',
+      currentStepIndex,
+      totalSteps: stepHistory.length,
+      currentStep: {
+        command: activeStepRecord?.command || '',
+        diff: activeStepRecord?.diff || '',
+        explanation: activeStepRecord?.explanation || '',
+        currentPath,
+        currentUser: snapshot.currentUser,
+        currentGroup: snapshot.currentGroup,
+        selectedNode: selectedNode ? {
+          name: selectedNode.name,
+          type: selectedNode.type,
+          path: getAbsolutePath(snapshot.nodes, selectedNode.id),
+          owner: selectedNode.owner,
+          group: selectedNode.group,
+          permissions: selectedNode.permissions,
+        } : undefined,
+      },
+      steps: stepHistory,
+      onSetInput: undefined,
+      play: () => setIsPlaying(true),
+      pause: () => setIsPlaying(false),
+      stepForward: handleNextStep,
+      reset: handleReset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+      setSpeed: undefined,
+      toggleFullscreen: (enter: boolean) => setIsFullscreen(enter),
+      onExecuteCommand: handleExecuteCommand,
+    });
+  }, [activeNodeId, activeStepRecord, currentStepIndex, handleExecuteCommand, handleNextStep, handleReset, setTutorContext, snapshot, stepHistory]);
+
   // Key FHS Directory Explanations
   const fhsDirectories = [
     { name: '/', desc: 'Root directory — the top of the entire Linux filesystem tree hierarchy.' },
@@ -239,7 +295,7 @@ export const FileSystemPage: React.FC = () => {
   ];
 
   return (
-    <div className="bst-page-container animate-fade-in space-y-6">
+    <div className="bst-page-container linux-module-shell linux-filesystem-page animate-fade-in space-y-6">
       <SEOHead {...getSEOForRoute('/dashboard/os/filesystem')} />
       {/* Visualizer Header matching DSA Module (Image 1) */}
       <VisualizerHeader
@@ -300,7 +356,7 @@ export const FileSystemPage: React.FC = () => {
             <ChevronLeft size={14} />
             <span>Step Back</span>
           </button>
-          <span className="text-xs font-mono px-3 text-cyan-400 font-semibold bg-slate-950/80 py-1.5 rounded-lg border border-slate-800">
+          <span className="linux-step-count text-xs font-mono px-3 py-1.5 rounded-lg font-semibold">
             Step {currentStepIndex + 1} / {stepHistory.length}
           </span>
           <button
@@ -330,6 +386,8 @@ export const FileSystemPage: React.FC = () => {
             type="button"
             onClick={() => setShowKeyConcepts(!showKeyConcepts)}
             className={`bst-btn ${showKeyConcepts ? 'bst-btn-primary' : ''}`}
+            aria-expanded={showKeyConcepts}
+            aria-controls="linux-fhs-concepts"
           >
             <BookOpen size={14} />
             <span>FHS Concepts</span>
@@ -337,26 +395,26 @@ export const FileSystemPage: React.FC = () => {
         </div>
 
         {/* Quick Shell Indicator */}
-        <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
-          <TerminalIcon size={14} className="text-cyan-400" />
+        <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono">
+          <TerminalIcon size={14} className="text-[var(--color-primary)]" />
           <span>Prompt: octa@stem-studio:~</span>
         </div>
       </div>
 
       {/* FHS Key Concepts Drawer (Collapsible) */}
-      {showKeyConcepts && (
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-cyan-500/30 space-y-3 animate-fade-in">
-          <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
+        {showKeyConcepts && (
+        <div id="linux-fhs-concepts" className="linux-fhs-drawer space-y-3 animate-fade-in">
+          <div className="flex items-center gap-2 text-[var(--color-primary)] font-bold text-sm">
             <BookOpen size={18} /> Linux Filesystem Hierarchy Standard (FHS) Directory Roles
           </div>
-          <p className="text-xs text-slate-300">
+          <p className="text-xs text-[var(--color-text-secondary)]">
             The Linux FHS defines the exact directory structure and purpose of every folder in root /.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-            {fhsDirectories.map((dir, idx) => (
-              <div key={idx} className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-                <div className="font-mono text-xs font-bold text-cyan-400">{dir.name}</div>
-                <p className="text-[11px] text-slate-400 leading-tight">{dir.desc}</p>
+            {fhsDirectories.map((dir) => (
+              <div key={dir.name} className="linux-fhs-directory space-y-1">
+                <div className="font-mono text-xs font-bold text-[var(--color-primary)]">{dir.name}</div>
+                <p className="text-[11px] text-[var(--color-text-secondary)] leading-tight">{dir.desc}</p>
               </div>
             ))}
           </div>

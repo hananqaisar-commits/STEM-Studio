@@ -202,6 +202,9 @@ class OctaTutorRequest(BaseModel):
     current_step_index: int = Field(default=0)
     total_steps: int = Field(default=0)
     step_data: str = Field(default="")
+    current_page: str = Field(default="", max_length=300)
+    site_catalog: str = Field(default="", max_length=12000)
+    topic_knowledge: str = Field(default="", max_length=12000)
     conversation_history: List[OctaTutorMessage] = Field(default_factory=list)
     mode: str = Field(default="natural", description="natural | interactive")
     # Custom LLM provider configuration (Bring Your Own Key / BYOK)
@@ -233,3 +236,4 @@ class OctaTutorResponse(BaseModel):
     reply: str
     function_calls: List[OctaTutorFunctionCall] = Field(default_factory=list)
     mascot_expression: str = Field(default="helping")
+    answer_source: str = Field(default="model", description="model | offline")

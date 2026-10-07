@@ -95,6 +95,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     });
   };
 
+  const handleNodeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, nodeId: string) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelectNode?.(nodeId);
+    }
+  };
+
   const expandAllBranches = () => {
     const rootNode = snapshot.nodes['root'];
     if (!rootNode || !rootNode.childrenIds) return;
@@ -116,33 +124,13 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     return FileText;
   };
 
-  // Light & Dark theme adaptive node card styling
+  // Status classes use the current app theme through the shared Linux module stylesheet.
   const getNodeCardStyles = (node: VFSNode, isCurrentDir: boolean, isTargetActive: boolean, isPathHighlighted: boolean) => {
-    if (isCurrentDir) {
-      return 'bg-purple-50 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border-purple-500 shadow-lg shadow-purple-500/20 ring-2 ring-purple-500/50';
-    }
-    if (isTargetActive) {
-      return 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border-emerald-500 shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/50';
-    }
-    if (isPathHighlighted) {
-      return 'bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 border-amber-500 animate-pulse shadow-md';
-    }
-
+    if (isCurrentDir) return 'linux-node--current';
+    if (isTargetActive) return 'linux-node--active';
+    if (isPathHighlighted) return 'linux-node--path';
     const cat = getNodeCategory(node);
-    if (cat === 'root') {
-      return 'bg-gradient-to-br from-purple-900/10 via-purple-500/10 to-indigo-500/10 text-slate-900 dark:text-white border-purple-500/40 hover:border-purple-500 shadow-md';
-    }
-    if (cat === 'mount') {
-      return 'bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-950 dark:text-indigo-200 border-indigo-300 dark:border-indigo-800/60 hover:border-indigo-500 shadow-sm';
-    }
-    if (cat === 'config') {
-      return 'bg-amber-50/50 dark:bg-amber-950/30 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800/60 hover:border-amber-500 shadow-sm';
-    }
-    if (cat === 'script') {
-      return 'bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-950 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800/60 hover:border-emerald-500 shadow-sm';
-    }
-
-    return 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] border-[var(--color-border)] hover:border-purple-400 dark:hover:border-purple-500 shadow-sm hover:shadow-md';
+    return `linux-node--${cat === 'directory' || cat === 'file' ? 'default' : cat}`;
   };
 
   // ── GRAPHICAL HIERARCHY TREE RENDER ─────────────────────
@@ -160,17 +148,22 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     }
 
     return (
-      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 flex flex-col items-center gap-6 select-none transition-all">
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 flex flex-col items-center gap-6 select-none">
         {/* ROOT NODE CARD */}
         <div className="flex flex-col items-center relative group">
           <div className="px-3.5 py-1 rounded-t-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white font-mono text-[10px] font-bold tracking-wider uppercase shadow-md flex items-center gap-1.5 z-10 border border-purple-400/40">
-            <Sparkles size={11} className="animate-spin text-amber-300" />
+            <Sparkles size={11} className="text-white/80" />
             <span>Linux Root Hierarchy (FHS 3.0)</span>
           </div>
 
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Select root directory"
+            aria-pressed={activeNodeId === 'root'}
             onClick={() => onSelectNode && onSelectNode('root')}
-            className={`z-10 px-6 py-3.5 rounded-2xl border flex items-center gap-4 cursor-pointer transition-all shadow-xl backdrop-blur-xl ${getNodeCardStyles(
+            onKeyDown={(event) => handleNodeKeyDown(event, 'root')}
+            className={`linux-node-card z-10 px-6 py-3.5 rounded-2xl border flex items-center gap-4 cursor-pointer shadow-md ${getNodeCardStyles(
               rootNode,
               rootId === currentDirId,
               rootId === activeNodeId,
@@ -257,8 +250,13 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
 
                   {/* FHS Directory Node Card */}
                   <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Select /${child.name} directory`}
+                    aria-pressed={isActive || isCurrent}
                     onClick={() => onSelectNode && onSelectNode(child.id)}
-                    className={`w-full p-4 rounded-2xl border flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.01] shadow-sm backdrop-blur-md relative overflow-hidden ${getNodeCardStyles(
+                    onKeyDown={(event) => handleNodeKeyDown(event, child.id)}
+                    className={`linux-node-card w-full p-4 rounded-2xl border flex flex-col justify-between cursor-pointer shadow-sm relative overflow-hidden ${getNodeCardStyles(
                       child,
                       isCurrent,
                       isActive,
@@ -313,6 +311,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                           type="button"
                           onClick={(e) => toggleBranchExpanded(child.id, e)}
                           aria-label={isBranchExpanded ? 'Hide branch' : `Expand branch (${childSubItems.length} items)`}
+                          aria-expanded={isBranchExpanded}
                           className={`px-2.5 py-1 rounded-lg text-xs font-sans font-bold transition-all shadow-sm flex items-center gap-1 ${
                             isBranchExpanded
                               ? 'bg-purple-600 text-white hover:bg-purple-700'
@@ -348,11 +347,16 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                           return (
                             <div
                               key={sub.id}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Select ${getAbsolutePath(nodes, sub.id)}`}
+                              aria-pressed={isSubActive || isSubCurrent}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onSelectNode && onSelectNode(sub.id);
                               }}
-                              className={`p-2 rounded-xl border text-xs font-mono flex items-center justify-between cursor-pointer transition-all hover:scale-[1.01] shadow-sm ${getNodeCardStyles(
+                              onKeyDown={(event) => handleNodeKeyDown(event, sub.id)}
+                              className={`linux-node-row p-2 rounded-xl border text-xs font-mono flex items-center justify-between cursor-pointer shadow-sm ${getNodeCardStyles(
                                 sub,
                                 isSubCurrent,
                                 isSubActive,
@@ -415,9 +419,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     return (
       <div key={nodeId} className="select-none space-y-1">
         <div
+          role="button"
+          tabIndex={0}
+          aria-label={`Select ${getAbsolutePath(nodes, nodeId)}`}
+          aria-pressed={isCurrentDir || isTargetActive}
           onClick={() => onSelectNode && onSelectNode(nodeId)}
+          onKeyDown={(event) => handleNodeKeyDown(event, nodeId)}
           style={{ paddingLeft: `${depth * 22 + 10}px` }}
-          className={`flex items-center justify-between py-2.5 pr-3 rounded-xl text-xs font-mono transition-all cursor-pointer shadow-sm group ${getNodeCardStyles(
+          className={`linux-node-row flex items-center justify-between py-2.5 pr-3 rounded-xl text-xs font-mono cursor-pointer shadow-sm group ${getNodeCardStyles(
             node,
             isCurrentDir,
             isTargetActive,
@@ -430,6 +439,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
                 type="button"
                 onClick={(e) => toggleCollapse(nodeId, e)}
                 aria-label={isCollapsed ? 'Expand directory' : 'Collapse directory'}
+                aria-expanded={!isCollapsed}
                 className="p-1 rounded hover:bg-purple-500/20 transition-all text-[var(--color-text-muted)]"
               >
                 {isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
@@ -462,9 +472,9 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl border border-[var(--color-border)] shadow-xl overflow-hidden transition-all">
+    <div className="linux-vfs w-full flex flex-col bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl border overflow-hidden">
       {/* Top Controls Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 bg-[var(--color-surface-elevated)] border-b border-[var(--color-border)] text-xs font-sans">
+      <div className="linux-vfs__toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 border-b border-[var(--color-border)] text-xs font-sans">
         <div className="flex items-center gap-2.5 font-bold text-[var(--color-text)]">
           <FolderTree size={20} className="text-purple-500" />
           <span className="font-extrabold text-sm tracking-tight">Linux Virtual File System (VFS) Renderer</span>
@@ -499,6 +509,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('hierarchy')}
+              aria-pressed={viewMode === 'hierarchy'}
               className={`bst-btn ${
                 viewMode === 'hierarchy'
                   ? 'bst-btn-primary'
@@ -511,6 +522,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('outline')}
+              aria-pressed={viewMode === 'outline'}
               className={`bst-btn ${
                 viewMode === 'outline'
                   ? 'bst-btn-primary'
@@ -527,7 +539,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       {/* Main Canvas Area */}
       <div
         ref={scrollContainerRef}
-        className={`w-full overflow-auto scrollbar-thin transition-all relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-500/5 via-[var(--color-surface)] to-[var(--color-surface)] ${
+        className={`linux-vfs__canvas w-full overflow-auto scrollbar-thin relative ${
           isFullscreen ? 'h-[75vh] min-h-[550px]' : 'h-[480px]'
         }`}
       >
