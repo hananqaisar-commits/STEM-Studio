@@ -2,35 +2,36 @@ import React, { useMemo } from 'react';
 import type { MascotExpression, MascotSize } from './MascotState';
 import './Mascot.css';
 
-// ── SVG imports ─────────────────────────────────────────────────────
-// Each expression maps to an SVG asset: octa-<expression>.svg
-import confusedSvg from './octa-confused.svg';
-import excitedSvg from './octa-excited.svg';
-import focusedSvg from './octa-focused.svg';
-import happySvg from './octa-happy.svg';
-import helpingSvg from './octa-helping.svg';
-import neutralSvg from './octa-neutral.svg';
-import readingSvg from './octa-reading.svg';
-import reviewSvg from './octa-review.svg';
-import sadSvg from './octa-sad.svg';
-import surprisedSvg from './octa-surprised.svg';
-import thinkingSvg from './octa-thinking.svg';
-import tiredSvg from './octa-tired.svg';
+// Individually cropped transparent states from Octa's plush sprite sheet.
+import angrySprite from './fluffy/octa-angry.webp';
+import excitedSprite from './fluffy/octa-excited.webp';
+import focusedSprite from './fluffy/octa-focused.webp';
+import happySprite from './fluffy/octa-happy.webp';
+import helpingSprite from './fluffy/octa-helping.webp';
+import listeningSprite from './fluffy/octa-listening.webp';
+import neutralSprite from './fluffy/octa-neutral.webp';
+import sadSprite from './fluffy/octa-sad.webp';
+import surprisedSprite from './fluffy/octa-surprised.webp';
+import thinkingSprite from './fluffy/octa-thinking.webp';
+import tiredSprite from './fluffy/octa-tired.webp';
+import winkSprite from './fluffy/octa-wink.webp';
 
-const SVG_MAP: Record<MascotExpression, string> = {
-  neutral: neutralSvg,
-  happy: happySvg,
-  focused: focusedSvg,
-  thinking: thinkingSvg,
-  reading: readingSvg,
-  excited: excitedSvg,
-  confused: confusedSvg,
-  surprised: surprisedSvg,
-  tired: tiredSvg,
-  sad: sadSvg,
-  helping: helpingSvg,
-  review: reviewSvg,
-  listening: focusedSvg,
+const SPRITE_MAP: Record<MascotExpression, string> = {
+  neutral: neutralSprite,
+  happy: happySprite,
+  focused: focusedSprite,
+  thinking: thinkingSprite,
+  reading: focusedSprite,
+  excited: excitedSprite,
+  confused: thinkingSprite,
+  surprised: surprisedSprite,
+  tired: tiredSprite,
+  sad: sadSprite,
+  helping: helpingSprite,
+  review: focusedSprite,
+  listening: listeningSprite,
+  wink: winkSprite,
+  angry: angrySprite,
 };
 
 const SIZE_PX: Record<MascotSize, number> = {
@@ -44,7 +45,7 @@ const SIZE_PX: Record<MascotSize, number> = {
 export interface OctaProps {
   expression?: MascotExpression;
   size?: MascotSize | number;
-  /** Whether mascot reacts to hover (breathing/pulse). */
+  /** Whether Octa has gentle idle movement and a hover response. */
   interactive?: boolean;
   /** Extra className for the wrapper. */
   className?: string;
@@ -56,8 +57,8 @@ export interface OctaProps {
 
 /**
  * Octa — the STEM Studio mascot.
- * Renders a pre-authored SVG asset matching the given expression.
- * Animations are handled via CSS classes (idle breathing, hover).
+ * Renders a high-resolution plush sprite for the current expression.
+ * CSS adds gentle idle movement and a small hover reaction.
  */
 export const Octa: React.FC<OctaProps> = ({
   expression = 'neutral',
@@ -68,7 +69,7 @@ export const Octa: React.FC<OctaProps> = ({
   label,
 }) => {
   const px = typeof size === 'number' ? size : SIZE_PX[size];
-  const src = SVG_MAP[expression] ?? SVG_MAP.neutral;
+  const src = SPRITE_MAP[expression] ?? SPRITE_MAP.neutral;
   const accessibleLabel = label ?? `Octa the mascot, ${expression}`;
 
   const wrapperClass = useMemo(() => {
@@ -86,14 +87,17 @@ export const Octa: React.FC<OctaProps> = ({
       aria-label={accessibleLabel}
       data-expression={expression}
     >
-      <img
-        src={src}
-        alt=""
-        aria-hidden="true"
-        className="octa-img"
-        draggable={false}
-        loading="lazy"
-      />
+      <span className="octa-stage" aria-hidden="true">
+        <img
+          key={expression}
+          src={src}
+          alt=""
+          className="octa-img"
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+        />
+      </span>
     </span>
   );
 };

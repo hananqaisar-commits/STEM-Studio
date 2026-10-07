@@ -13,9 +13,11 @@ import { MODULES, DSA_CATEGORIES, OS_CATEGORIES } from './data/categories';
 import { TutorProvider } from './contexts/TutorContext';
 import { OctaTutor } from './components/tutor/OctaTutor';
 import { NotFoundPage } from './features/NotFoundPage';
+import { MarketingHome } from './features/marketing/MarketingHome';
+import { MarketingFooter } from './features/marketing/MarketingFooter';
 
 // Lazy-loaded page components for code-splitting
-const DSAHub = lazy(() => import('./features/hub/DSAHub').then(m => ({ default: m.DSAHub })));
+const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
 const ModuleHub = lazy(() => import('./features/hub/ModuleHub').then(m => ({ default: m.ModuleHub })));
 const ComplexityPage = lazy(() => import('./features/complexity/ComplexityPage').then(m => ({ default: m.ComplexityPage })));
 const SortingPage = lazy(() => import('./features/sorting/SortingPage').then(m => ({ default: m.SortingPage })));
@@ -80,7 +82,7 @@ const GatedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [isAuthenticated, isLoading, location.pathname, location.search, navigate, requireAuth]);
 
   if (isLoading) return <LoadingScreen message="Checking session..." />;
-  return isAuthenticated ? <>{children}</> : <DSAHub />;
+  return isAuthenticated ? <>{children}</> : <DashboardHome />;
 };
 
 
@@ -130,7 +132,7 @@ const DashboardLayout = () => {
         <main className="dashboard-main">
           <Suspense fallback={<LoadingScreen message="Loading module..." />}>
             <Routes>
-              <Route index element={<DSAHub />} />
+              <Route index element={<><DashboardHome /><MarketingFooter /></>} />
               <Route path="dsa" element={<ModuleHub moduleId="dsa" />} />
               <Route path="complexity" element={<GatedRoute><ComplexityPage /></GatedRoute>} />
               <Route path="sorting" element={<GatedRoute><SortingPage /></GatedRoute>} />
@@ -168,14 +170,21 @@ const DashboardLayout = () => {
 
 const AppContent = () => {
   const { isLoading } = useAuth();
+  const location = useLocation();
   const [splashExited, setSplashExited] = useState(false);
   const handleSplashExited = useCallback(() => setSplashExited(true), []);
+
+  useEffect(() => {
+    // Keep the public landing page readable immediately; the studio splash is
+    // reserved for routes that need the app session to initialize.
+    if (location.pathname === '/') setSplashExited(true);
+  }, [location.pathname]);
 
   return (
     <>
       <Suspense fallback={<LoadingScreen message="Loading..." />}>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<MarketingHome />} />
           <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
           <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
           <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
@@ -184,7 +193,7 @@ const AppContent = () => {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
-      {!splashExited && (
+      {!splashExited && location.pathname !== '/' && (
         <BootSplash loading={isLoading} onExited={handleSplashExited} />
       )}
     </>

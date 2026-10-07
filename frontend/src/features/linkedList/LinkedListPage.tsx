@@ -29,7 +29,7 @@ import {
   generateReverseSteps,
   generateCycleDetectionSteps,
   generateMiddleNodeSteps,
-  generateDoublyInsertHeadSteps,
+  type LinkedListStructureType,
   type ListNodeItem,
   type LinkedListCategory,
   type LinkedListStep,
@@ -65,18 +65,19 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
   { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers', description: "Floyd's Tortoise & Hare meeting point and cycle origin" },
   { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly', description: 'Bidirectional nodes with forward and backward pointers' },
   { id: 'circular', name: 'Circular Linked List', group: 'Circular', description: 'Ring-buffered list where tail.next loops to head' },
+  { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular', description: 'Bidirectional ring with head.prev and tail.next connected' },
 ];
+
+const getStructureType = (category: LinkedListCategory): LinkedListStructureType => {
+  if (category === 'doubly' || category === 'doublyCircular' || category === 'circular') return category;
+  return 'singly';
+};
 
 export const LinkedListPage: React.FC = () => {
   const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<LinkedListCategory>('singly');
+  const structureType = getStructureType(category);
   const [searchParams] = useSearchParams();
-  useEffect(() => {
-    const topic = searchParams.get('topic');
-    if (topic && ALGORITHMS_LIST.some((a) => a.id === topic)) {
-      setCategory(topic as LinkedListCategory);
-    }
-  }, [searchParams]);
 
   const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40');
   const [inputError, setInputError] = useState<string | null>(null);
@@ -94,6 +95,34 @@ export const LinkedListPage: React.FC = () => {
   const [baseNodes, setBaseNodes] = useState<ListNodeItem[]>(() =>
     createInitialNodes([10, 20, 30, 40], 'singly')
   );
+
+  useEffect(() => {
+    const topic = searchParams.get('topic') as LinkedListCategory | null;
+    if (!topic || !ALGORITHMS_LIST.some((algorithm) => algorithm.id === topic)) return;
+
+    const kind = getStructureType(topic);
+    const values = topic === 'doubly' || topic === 'circular' || topic === 'doublyCircular'
+      ? [12, 24, 36, 48]
+      : topic === 'reverse'
+      ? [1, 2, 3, 4, 5]
+      : topic === 'middleNode'
+      ? [10, 20, 30, 40, 50, 60]
+      : topic === 'detectCycle'
+      ? [10, 20, 30, 40, 50]
+      : [10, 20, 30, 40];
+    const nodes = createInitialNodes(values, kind, topic === 'detectCycle' ? 2 : -1);
+    setCategory(topic);
+    setBaseNodes(nodes);
+    setActiveSteps(
+      topic === 'reverse'
+        ? generateReverseSteps(nodes)
+        : topic === 'middleNode'
+        ? generateMiddleNodeSteps(nodes)
+        : topic === 'detectCycle'
+        ? generateCycleDetectionSteps(nodes, 2)
+        : []
+    );
+  }, [searchParams]);
 
   // Step Player Hook
   const {
@@ -117,6 +146,7 @@ export const LinkedListPage: React.FC = () => {
       singly: 'Singly Linked',
       doubly: 'Doubly Linked',
       circular: 'Circular Ring',
+      doublyCircular: 'Doubly Circular Ring',
       detectCycle: 'Floyd Cycle',
       reverse: '3-Pointer Reverse',
       middleNode: 'Fast/Slow Pointer',
@@ -131,13 +161,13 @@ export const LinkedListPage: React.FC = () => {
 
   const definitions: DefinitionItem[] = useMemo(
     () => [
-      { term: 'NODE', explanation: 'Element containing data value and next pointer link.' },
+      { term: 'NODE', explanation: structureType === 'doubly' || structureType === 'doublyCircular' ? 'Element containing data plus next and previous pointer links.' : 'Element containing data value and next pointer link.' },
       { term: 'POINTER', explanation: 'Reference storing target node location.' },
-      { term: 'HEAD / TAIL', explanation: 'Head is initial node; Tail is final node (next = NULL).' },
-      { term: 'NULL', explanation: 'Explicit marker denoting end of chain.' },
+      { term: 'HEAD / TAIL', explanation: structureType === 'circular' || structureType === 'doublyCircular' ? 'Head is the entry point; the tail links back to the head to close the ring.' : 'Head is the first node; the tail marks the end of the chain.' },
+      { term: 'NULL', explanation: structureType === 'circular' || structureType === 'doublyCircular' ? 'The ring has no null tail; the last node links back to the head.' : 'Explicit marker denoting the end of a linear chain.' },
       { term: 'REVERSAL', explanation: 'Pointer mutation technique reversing link direction in-place.' },
     ],
-    []
+    [structureType]
   );
 
   // Publish active context to Octa AI Tutor
@@ -206,6 +236,10 @@ export const LinkedListPage: React.FC = () => {
       const cNodes = createInitialNodes([12, 24, 36, 48], 'circular');
       setBaseNodes(cNodes);
       setActiveSteps([]);
+    } else if (cat === 'doublyCircular') {
+      const dcNodes = createInitialNodes([12, 24, 36, 48], 'doublyCircular');
+      setBaseNodes(dcNodes);
+      setActiveSteps([]);
     } else if (cat === 'detectCycle') {
       const cycleNodes = createInitialNodes([10, 20, 30, 40, 50], 'singly', 2);
       setBaseNodes(cycleNodes);
@@ -246,10 +280,7 @@ export const LinkedListPage: React.FC = () => {
     const allSteps: LinkedListStep[] = [];
 
     for (const val of rawValues) {
-      const opSteps =
-        category === 'doubly'
-          ? generateDoublyInsertHeadSteps(current, val)
-          : generateInsertHeadSteps(current, val);
+      const opSteps = generateInsertHeadSteps(current, val, structureType);
       allSteps.push(...opSteps);
       if (opSteps.length > 0) {
         current = opSteps[opSteps.length - 1].nodes;
@@ -279,7 +310,7 @@ export const LinkedListPage: React.FC = () => {
     const allSteps: LinkedListStep[] = [];
 
     for (const val of rawValues) {
-      const opSteps = generateInsertTailSteps(current, val);
+      const opSteps = generateInsertTailSteps(current, val, structureType);
       allSteps.push(...opSteps);
       if (opSteps.length > 0) {
         current = opSteps[opSteps.length - 1].nodes;
@@ -309,10 +340,7 @@ export const LinkedListPage: React.FC = () => {
     const allSteps: LinkedListStep[] = [];
 
     for (const val of rawValues) {
-      const opSteps =
-        category === 'doubly'
-          ? generateInsertTailSteps(current, val)
-          : generateInsertTailSteps(current, val);
+      const opSteps = generateInsertTailSteps(current, val, structureType);
       allSteps.push(...opSteps);
       if (opSteps.length > 0) {
         current = opSteps[opSteps.length - 1].nodes;
@@ -327,54 +355,54 @@ export const LinkedListPage: React.FC = () => {
   };
 
   const handleDeleteHead = () => {
-    const steps = generateDeleteHeadSteps(baseNodes);
+    const steps = generateDeleteHeadSteps(baseNodes, structureType);
     setActiveSteps(steps);
   };
 
   const handleReverse = () => {
-    const steps = generateReverseSteps(baseNodes);
+    const steps = generateReverseSteps(baseNodes, structureType);
     setActiveSteps(steps);
   };
 
   const handleCycleDetect = () => {
+    const cycleIndex = structureType === 'singly' ? 2 : 0;
     const cycleNodes = createInitialNodes(
       baseNodes.map((n) => n.value),
-      'singly',
-      2
+      structureType,
+      structureType === 'singly' ? 2 : -1
     );
-    const steps = generateCycleDetectionSteps(cycleNodes, 2);
+    const steps = generateCycleDetectionSteps(cycleNodes, cycleIndex, structureType);
     setActiveSteps(steps);
   };
 
   const handleFindMiddle = () => {
-    const steps = generateMiddleNodeSteps(baseNodes);
+    const steps = generateMiddleNodeSteps(baseNodes, structureType);
     setActiveSteps(steps);
   };
 
   const handleRandomize = () => {
     const randomVals = Array.from({ length: 5 }, () => Math.floor(Math.random() * 90) + 10);
-    const newNodes = createInitialNodes(randomVals, category === 'doubly' ? 'doubly' : 'singly');
+    const newNodes = createInitialNodes(randomVals, structureType);
     setBaseNodes(newNodes);
     setActiveSteps([]);
   };
 
   const handleResetList = () => {
-    const defaultNodes = createInitialNodes([10, 20, 30, 40], category === 'doubly' ? 'doubly' : 'singly');
+    const defaultNodes = createInitialNodes([10, 20, 30, 40], structureType);
     setBaseNodes(defaultNodes);
     setActiveSteps([]);
     reset();
   };
 
   const handleEmpty = () => {
-    const emptyNodes = createInitialNodes([0], category === 'doubly' ? 'doubly' : 'singly');
-    setBaseNodes(emptyNodes);
+    setBaseNodes([]);
     setActiveSteps([]);
     reset();
     quizSession.resetSession();
   };
 
   const handleSample = () => {
-    const sampleNodes = createInitialNodes([10, 20, 30, 40], category === 'doubly' ? 'doubly' : 'singly');
+    const sampleNodes = createInitialNodes([10, 20, 30, 40], structureType);
     setBaseNodes(sampleNodes);
     setActiveSteps([]);
     reset();
@@ -406,13 +434,11 @@ export const LinkedListPage: React.FC = () => {
       setBaseNodes(nodes);
       setActiveSteps(generateCycleDetectionSteps(nodes, 2));
     } else {
-      const kind = category === 'doubly' ? 'doubly' : category === 'circular' ? 'circular' : 'singly';
+      const kind = structureType;
       const nodes = createInitialNodes(randomVals, kind);
       setBaseNodes(nodes);
       setActiveSteps(
-        kind === 'doubly'
-          ? generateDoublyInsertHeadSteps(nodes, randomVals[0])
-          : generateInsertHeadSteps(nodes, randomVals[0])
+        generateInsertHeadSteps(nodes, randomVals[0], kind)
       );
     }
   };
@@ -424,6 +450,12 @@ export const LinkedListPage: React.FC = () => {
       ? 'detect_cycle'
       : category === 'middleNode'
       ? 'middle_node'
+      : category === 'doubly'
+      ? 'doubly'
+      : category === 'circular'
+      ? 'circular'
+      : category === 'doublyCircular'
+      ? 'doubly_circular'
       : 'singly_insert_head';
 
   const renderFullscreenPlayerControls = () => (
@@ -611,7 +643,7 @@ export const LinkedListPage: React.FC = () => {
               </div>
             </div>
 
-            <LinkedListRenderer step={currentStep} nodes={baseNodes} />
+            <LinkedListRenderer step={currentStep} nodes={baseNodes} listType={structureType} />
           </div>
 
           <FloatingController
@@ -668,7 +700,7 @@ export const LinkedListPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <LinkedListRenderer step={currentStep} nodes={baseNodes} />
+                <LinkedListRenderer step={currentStep} nodes={baseNodes} listType={structureType} />
               </div>
               <FloatingController
                 isPlaying={isPlaying}
@@ -743,7 +775,7 @@ export const LinkedListPage: React.FC = () => {
           />
         }
       >
-        <LinkedListRenderer step={currentStep} nodes={baseNodes} />
+        <LinkedListRenderer step={currentStep} nodes={baseNodes} listType={structureType} />
       </FullScreenCanvasModal>
       <TheoryPanel categoryId="linkedList" activeTopic={category} />
 

@@ -21,6 +21,7 @@ export interface TutorAlgorithmContext {
   setSpeed?: (speed: number) => void;
   // NEW: Fullscreen control
   toggleFullscreen?: (enter: boolean) => void;
+  onExecuteCommand?: (command: string) => void;
 }
 
 interface TutorContextType {

@@ -24,6 +24,7 @@ export function SEOHead({
     const finalDescription = description || defaultSEO.description;
     const finalCanonical = canonical || defaultSEO.canonical;
     const finalCanonicalUrl = finalCanonical.startsWith('http') ? finalCanonical : `${SITE_URL}${finalCanonical}`;
+    const canonicalPath = new URL(finalCanonicalUrl).pathname;
 
     // Set document title
     const prevTitle = document.title;
@@ -72,6 +73,7 @@ export function SEOHead({
     setMetaTag('meta[property="og:url"]', 'content', finalCanonicalUrl);
     setMetaTag('meta[property="og:type"]', 'content', 'website');
     setMetaTag('meta[property="og:image"]', 'content', image);
+    setMetaTag('meta[property="og:image:alt"]', 'content', `${SITE_NAME} learning platform`);
     setMetaTag('meta[property="og:site_name"]', 'content', SITE_NAME);
 
     // Twitter
@@ -80,12 +82,7 @@ export function SEOHead({
     setMetaTag('meta[name="twitter:description"]', 'content', finalDescription);
     setMetaTag('meta[name="twitter:image"]', 'content', image);
 
-    // Keywords
-    const routeData = getSEOForRoute(finalCanonical);
-    const finalKeywords = routeData.keywords || defaultSEO.keywords || '';
-    if (finalKeywords) {
-      setMetaTag('meta[name="keywords"]', 'content', finalKeywords);
-    }
+    const routeData = getSEOForRoute(canonicalPath);
 
     // Standard Search Robots
     if (noIndex) {
@@ -104,9 +101,9 @@ export function SEOHead({
           '@type': 'ListItem',
           position: 1,
           name: 'STEM Studio',
-          item: `${SITE_URL}/dashboard`,
+          item: `${SITE_URL}/`,
         },
-        ...(finalCanonical !== '/dashboard'
+        ...(canonicalPath !== '/' && canonicalPath !== '/dashboard'
           ? [
               {
                 '@type': 'ListItem',
@@ -149,6 +146,9 @@ export function SEOHead({
     if (!noIndex) {
       injectJsonLd('seo-breadcrumb-jsonld', breadcrumbSchema);
       injectJsonLd('seo-learning-resource-jsonld', learningResourceSchema);
+    } else {
+      document.getElementById('seo-breadcrumb-jsonld')?.remove();
+      document.getElementById('seo-learning-resource-jsonld')?.remove();
     }
 
     // Cleanup on unmount

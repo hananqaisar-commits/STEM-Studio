@@ -65,8 +65,8 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   {
     id: 'linkedList',
     name: 'Linked List',
-    description: 'Singly, Doubly, Circular — Insert/Delete, Reverse, Floyd\'s Cycle Detection, Middle Node',
-    topicCount: 6,
+    description: 'Singly, Doubly, Circular, Doubly Circular — Insert/Delete, Reverse, Floyd\'s Cycle Detection, Middle Node',
+    topicCount: 7,
     difficulty: 'Intermediate',
     available: true,
     iconName: 'GitCommit',
@@ -289,4 +289,3 @@ export function getCategoryById(id: string): CategoryDef | undefined {
 export function getOSCategoryById(id: string): CategoryDef | undefined {
   return OS_CATEGORIES.find((c) => c.id === id);
 }
-

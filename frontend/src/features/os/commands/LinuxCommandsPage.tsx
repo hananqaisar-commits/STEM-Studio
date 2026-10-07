@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Terminal, Search, ArrowLeft, FolderGit2, Compass, FolderPlus,
@@ -6,15 +6,17 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Sparkles, BookOpen, Key, Info, HelpCircle, FileText, CheckCircle2,
   Copy, Check
 } from 'lucide-react';
-import { LINUX_COMMAND_GROUPS, type CommandGroup, type CommandItem } from '../../../data/linuxCommandsData';
+import { LINUX_COMMAND_GROUPS } from '../../../data/linuxCommandsData';
 import { VisualizerHeader } from '../../../components/layout/VisualizerHeader';
 import { SEOHead } from '../../../components/common/SEOHead';
 import { getSEOForRoute } from '../../../data/seoMetadata';
 import { VisualizerActions } from '../../../components/layout/VisualizerActions';
 import { TheoryPanel } from '../../../components/layout/TheoryPanel';
 import { CATEGORY_TOPICS } from '../../../data/categoryTopics';
+import { useTutorContext } from '../../../contexts/TutorContext';
 import '../../../features/complexity/Complexity.css';
 import './LinuxCommandsPage.css';
+import '../linuxModule.css';
 
 const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
   FolderGit2,
@@ -34,6 +36,7 @@ const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: strin
 
 export const LinuxCommandsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { setTutorContext } = useTutorContext();
   const [activeGroupId, setActiveGroupId] = useState<string>('path-concepts');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -49,6 +52,12 @@ export const LinuxCommandsPage: React.FC = () => {
 
   // Track copied feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyAnnouncement, setCopyAnnouncement] = useState('');
+  const copyTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (copyTimeoutRef.current !== null) window.clearTimeout(copyTimeoutRef.current);
+  }, []);
 
   const toggleCommandExpanded = (id: string) => {
     setExpandedCmdIds(prev => {
@@ -69,10 +78,20 @@ export const LinuxCommandsPage: React.FC = () => {
     setExpandedCmdIds(new Set<string>());
   };
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setCopyAnnouncement('Copied to clipboard.');
+      if (copyTimeoutRef.current !== null) window.clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = window.setTimeout(() => {
+        setCopiedId(null);
+        setCopyAnnouncement('');
+      }, 1800);
+    } catch {
+      setCopiedId(null);
+      setCopyAnnouncement('Clipboard access was blocked by the browser.');
+    }
   };
 
   // Items for VisualizerHeader dropdown search
@@ -84,17 +103,17 @@ export const LinuxCommandsPage: React.FC = () => {
     }));
   }, []);
 
-  // Filter groups and commands based on active group tab and search query
+  // Search spans every command group; the group filter applies when search is empty.
   const filteredGroups = useMemo(() => {
-    let result = LINUX_COMMAND_GROUPS;
-    if (activeGroupId !== 'all') {
-      result = result.filter(g => g.id === activeGroupId);
+    if (!searchQuery.trim()) {
+      return activeGroupId === 'all'
+        ? LINUX_COMMAND_GROUPS
+        : LINUX_COMMAND_GROUPS.filter(g => g.id === activeGroupId);
     }
 
-    if (!searchQuery.trim()) return result;
-
     const query = searchQuery.toLowerCase();
-    return result.map(g => {
+    return LINUX_COMMAND_GROUPS.map(g => {
+      if (g.title.toLowerCase().includes(query) || g.description.toLowerCase().includes(query)) return g;
       const matchingCommands = g.commands.filter(c =>
         c.name.toLowerCase().includes(query) ||
         c.shortDesc.toLowerCase().includes(query) ||
@@ -106,8 +125,39 @@ export const LinuxCommandsPage: React.FC = () => {
     }).filter(g => g.commands.length > 0);
   }, [activeGroupId, searchQuery]);
 
+  useEffect(() => {
+    const activeGroup = LINUX_COMMAND_GROUPS.find((group) => group.id === activeGroupId);
+    const visibleCommands = filteredGroups.flatMap((group) => group.commands);
+    const selectedCommand = [...visibleCommands].reverse().find((command) => expandedCmdIds.has(command.id));
+    const selectedCommandGroupId = selectedCommand && LINUX_COMMAND_GROUPS.find((group) => group.commands.some((command) => command.id === selectedCommand.id))?.id;
+    setTutorContext({
+      algorithmName: selectedCommand?.name || activeGroup?.title || 'Linux Command Lessons',
+      algorithmId: selectedCommand?.id || activeGroup?.id || '',
+      category: 'commands',
+      currentStepDescription: selectedCommand?.shortDesc || activeGroup?.description || '',
+      currentStepIndex: 0,
+      totalSteps: 0,
+      currentStep: selectedCommand ? {
+        selectedCommandId: selectedCommand.id,
+        groupId: selectedCommandGroupId || activeGroup?.id,
+        name: selectedCommand.name,
+      } : null,
+      steps: [],
+      onSetInput: undefined,
+      play: undefined,
+      pause: undefined,
+      stepForward: undefined,
+      reset: undefined,
+      setShowDebugger: undefined,
+      onLaunchQuiz: undefined,
+      setSpeed: undefined,
+      toggleFullscreen: undefined,
+      onExecuteCommand: undefined,
+    });
+  }, [activeGroupId, expandedCmdIds, filteredGroups, setTutorContext]);
+
   return (
-    <div className="bst-page-container linux-commands-page animate-fade-in space-y-6">
+    <div className="bst-page-container linux-module-shell linux-commands-page animate-fade-in space-y-6">
       <SEOHead {...getSEOForRoute('/dashboard/os/commands')} />
       {/* Universal Visualizer Header matching Complexity & DSA Studio */}
       <VisualizerHeader
@@ -160,12 +210,14 @@ export const LinuxCommandsPage: React.FC = () => {
         <div className="linux-commands-search">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
           <input
-            type="text"
-            placeholder="Filter by command name, syntax, or keyword..."
+            type="search"
+            aria-label="Search Linux commands across all groups"
+            placeholder="Search every group by command, syntax, or keyword..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-inner"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
           />
+          <span className="linux-commands-copy-status" role="status" aria-live="polite">{copyAnnouncement}</span>
         </div>
       </div>
 
@@ -178,6 +230,8 @@ export const LinuxCommandsPage: React.FC = () => {
           </div>
           <button
             onClick={() => setActiveGroupId('all')}
+            aria-pressed={activeGroupId === 'all'}
+            type="button"
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
               activeGroupId === 'all'
                 ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
@@ -204,6 +258,8 @@ export const LinuxCommandsPage: React.FC = () => {
               <button
                 key={group.id}
                 onClick={() => setActiveGroupId(group.id)}
+                aria-pressed={isActive}
+                type="button"
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
@@ -264,12 +320,16 @@ export const LinuxCommandsPage: React.FC = () => {
                       return (
                         <div
                           key={cmd.id}
-                          className="rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm hover:shadow-md transition-all overflow-hidden"
+                          className="linux-command-card"
                         >
                           {/* Accordion Card Header */}
-                          <div
+                          <button
+                            type="button"
                             onClick={() => toggleCommandExpanded(cmd.id)}
-                            className="p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--color-surface-elevated)] transition-colors select-none"
+                            className="linux-command-card__trigger"
+                            aria-expanded={isExpanded}
+                            aria-controls={`command-panel-${cmd.id}`}
+                            id={`command-trigger-${cmd.id}`}
                           >
                             <div className="flex items-center gap-3.5 flex-1 min-w-0 pr-4">
                               <span className="font-mono text-sm font-bold text-purple-600 dark:text-purple-300 bg-purple-500/10 px-3.5 py-1.5 rounded-xl border border-purple-500/20 shrink-0">
@@ -299,13 +359,13 @@ export const LinuxCommandsPage: React.FC = () => {
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </div>
                             </div>
-                          </div>
+                          </button>
 
                           {/* Accordion Card Body */}
                           {isExpanded && (
-                            <div className="p-5 pt-3 border-t border-[var(--color-border)] space-y-4 bg-[var(--color-surface-elevated)]/50 animate-fade-in">
+                            <div id={`command-panel-${cmd.id}`} role="region" aria-labelledby={`command-trigger-${cmd.id}`} className="linux-command-card__body space-y-4 animate-fade-in">
                               {/* Theory Block */}
-                              <div className="text-sm text-[var(--color-text)] leading-relaxed bg-purple-500/5 dark:bg-purple-950/20 p-4 rounded-xl border border-purple-500/20">
+                              <div className="linux-command-card__theory text-sm leading-relaxed">
                                 <div className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-1.5 flex items-center gap-1.5 uppercase tracking-wider">
                                   <Info size={14} className="text-purple-500" /> Theory & Purpose
                                 </div>
@@ -321,6 +381,7 @@ export const LinuxCommandsPage: React.FC = () => {
                                   <button
                                     onClick={() => copyToClipboard(cmd.syntax, `syntax-${cmd.id}`)}
                                     type="button"
+                                    aria-label={`Copy ${cmd.name} syntax`}
                                     className="px-2.5 py-1 rounded-lg text-[11px] font-mono text-purple-600 dark:text-purple-300 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 flex items-center gap-1 transition-all"
                                   >
                                     {copiedId === `syntax-${cmd.id}` ? (
@@ -334,7 +395,7 @@ export const LinuxCommandsPage: React.FC = () => {
                                     )}
                                   </button>
                                 </div>
-                                <div className="font-mono text-xs bg-slate-900 text-emerald-400 p-3.5 rounded-xl border border-slate-800 overflow-x-auto whitespace-pre-wrap shadow-inner">
+                                <div className="linux-command-card__syntax font-mono">
                                   {cmd.syntax}
                                 </div>
                               </div>
@@ -384,6 +445,7 @@ export const LinuxCommandsPage: React.FC = () => {
                                         <button
                                           onClick={() => copyToClipboard(ex.cmd, `ex-${cmd.id}-${idx}`)}
                                           type="button"
+                                          aria-label={`Copy example command: ${ex.cmd}`}
                                           className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
                                           title="Copy command"
                                         >

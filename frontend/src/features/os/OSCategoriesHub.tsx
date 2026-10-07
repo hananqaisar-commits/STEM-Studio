@@ -5,6 +5,7 @@ import { OS_CATEGORIES, type CategoryDef } from '../../data/categories';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
 import '../hub/DSAHub.css';
+import './linuxModule.css';
 
 const OS_CAT_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
   Terminal,
@@ -15,7 +16,7 @@ export const OSCategoriesHub: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="dsa-hub">
+    <div className="dsa-hub linux-module-shell linux-os-hub">
       <SEOHead {...getSEOForRoute('/dashboard/os/linux')} />
       <div className="module-page-header">
         <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
@@ -43,11 +44,12 @@ export const OSCategoriesHub: React.FC = () => {
           const IconComponent = OS_CAT_ICON_MAP[cat.iconName] ?? Terminal;
           const diffClass = cat.difficulty === 'Beginner' ? 'diff-beginner' : 'diff-intermediate';
           return (
-            <div
+            <button
               key={cat.id}
+              type="button"
+              disabled={!cat.available}
               className={`hub-card ${!cat.available ? 'hub-card-disabled' : ''}`}
               onClick={() => cat.available && navigate(`/dashboard/os/${cat.id}`)}
-              style={{ cursor: cat.available ? 'pointer' : 'not-allowed' }}
             >
               <div className="hub-card-header flex items-center justify-between">
                 <div className="hub-card-icon">
@@ -65,7 +67,7 @@ export const OSCategoriesHub: React.FC = () => {
                   Open Category <ChevronRight size={14} />
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

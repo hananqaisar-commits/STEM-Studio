@@ -2,6 +2,7 @@ export type LinkedListCategory =
   | 'singly'
   | 'doubly'
   | 'circular'
+  | 'doublyCircular'
   | 'reverse'
   | 'detectCycle'
   | 'middleNode'
@@ -11,6 +12,14 @@ export type LinkedListCategory =
   | 'intersection'
   | 'flatten'
   | 'lruCache';
+
+export type LinkedListStructureType = 'singly' | 'doubly' | 'circular' | 'doublyCircular';
+
+export const hasPreviousPointers = (type: LinkedListStructureType) =>
+  type === 'doubly' || type === 'doublyCircular';
+
+export const isCircularList = (type: LinkedListStructureType) =>
+  type === 'circular' || type === 'doublyCircular';
 
 export interface ListNodeItem {
   id: string;
@@ -54,7 +63,7 @@ export interface LinkedListStep {
   highlightedNodeIds?: string[];
   brokenConnections?: BrokenConnection[];
   newConnections?: NewConnection[];
-  listType: 'singly' | 'doubly' | 'circular';
+  listType: LinkedListStructureType;
   auxiliaryData?: Record<string, any>;
   isQuizPoint?: boolean;
   quizData?: LinkedListQuizData;
@@ -64,7 +73,7 @@ export interface LinkedListStep {
 
 export function createInitialNodes(
   values: (number | string)[],
-  type: 'singly' | 'doubly' | 'circular' = 'singly',
+  type: LinkedListStructureType = 'singly',
   cycleTargetIndex: number = -1
 ): ListNodeItem[] {
   if (values.length === 0) return [];
@@ -73,18 +82,17 @@ export function createInitialNodes(
     id: `node-${idx}`,
     value: val,
     nextId: idx < values.length - 1 ? `node-${idx + 1}` : null,
-    prevId: type === 'doubly' && idx > 0 ? `node-${idx - 1}` : null,
+    prevId: hasPreviousPointers(type) && idx > 0 ? `node-${idx - 1}` : null,
     status: 'default',
-    pointerLabels: [],
+    pointerLabels: [
+      ...(idx === 0 ? ['HEAD'] : []),
+      ...(idx === values.length - 1 ? ['TAIL'] : []),
+    ],
   }));
 
-  if (type === 'doubly' && nodes.length > 0) {
-    nodes[0].prevId = null;
-  }
-
-  if (type === 'circular' && nodes.length > 0) {
+  if (isCircularList(type) && nodes.length > 0) {
     nodes[nodes.length - 1].nextId = nodes[0].id;
-    if ((type as string) === 'doubly') {
+    if (type === 'doublyCircular') {
       nodes[0].prevId = nodes[nodes.length - 1].id;
     }
   }
@@ -118,7 +126,8 @@ function assignPointerLabels(nodes: ListNodeItem[], pointers: Record<string, str
 
 export function generateInsertHeadSteps(
   currentNodes: ListNodeItem[],
-  newValue: number | string
+  newValue: number | string,
+  type: LinkedListStructureType = 'singly'
 ): LinkedListStep[] {
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
@@ -130,6 +139,7 @@ export function generateInsertHeadSteps(
     id: newId,
     value: newValue,
     nextId: null,
+    prevId: null,
     status: 'new',
     pointerLabels: ['NEW_NODE'],
   };
@@ -142,22 +152,32 @@ export function generateInsertHeadSteps(
     tailId: nodes.length > 0 ? nodes[nodes.length - 1].id : null,
     pointers: { head: oldHeadId, new_node: newId },
     phase: 'Allocate Memory',
-    explanation: `Created new Node(${newValue}) in memory with next pointer pointing to NULL.`,
+    explanation: `Created new Node(${newValue}) in memory before linking it into the list.`,
     codeLine: 2,
     highlightedNodeIds: [newId],
-    listType: 'singly',
+    listType: type,
     isQuizPoint: true,
     quizData: {
       prompt: `Where should newNode.next point to insert ${newValue} at the head?`,
       options: ['To NULL', 'To current HEAD node', 'To TAIL node', 'To itself'],
       correctIndex: 1,
-      explanation: 'In a singly linked list head insertion, newNode.next must point to the current head to maintain the chain.',
+      explanation: 'The new head points forward to the previous head; circular lists reconnect the tail to the new head.',
     },
   });
 
   // Step 2: Link newNode.next = head
   const step2Nodes = cloneNodes(step1Nodes);
-  step2Nodes[0].nextId = oldHeadId;
+  const tailId = step2Nodes[step2Nodes.length - 1].id;
+  step2Nodes[0].nextId = oldHeadId ?? (isCircularList(type) ? newId : null);
+  if (hasPreviousPointers(type)) {
+    step2Nodes[0].prevId = isCircularList(type) ? tailId : null;
+    if (oldHeadId) {
+      step2Nodes[1].prevId = newId;
+    }
+  }
+  if (isCircularList(type) && oldHeadId) {
+    step2Nodes[step2Nodes.length - 1].nextId = newId;
+  }
   step2Nodes[0].status = 'active';
   assignPointerLabels(step2Nodes, { head: oldHeadId, new: newId });
 
@@ -167,11 +187,19 @@ export function generateInsertHeadSteps(
     tailId: nodes.length > 0 ? nodes[nodes.length - 1].id : newId,
     pointers: { head: oldHeadId, new_node: newId },
     phase: 'Connect Pointer',
-    explanation: `Set newNode.next = head (connecting ${newValue} to ${oldHeadId ? nodes[0].value : 'NULL'}).`,
+    explanation: isCircularList(type)
+      ? `Linked ${newValue} before the old head and reconnected the tail to the new head.`
+      : `Set newNode.next = head (connecting ${newValue} to ${oldHeadId ? nodes[0].value : 'NULL'}).`,
     codeLine: 3,
     highlightedNodeIds: [newId],
-    newConnections: oldHeadId ? [{ fromId: newId, toId: oldHeadId, type: 'next' }] : [],
-    listType: 'singly',
+    newConnections: [
+      ...(oldHeadId ? [{ fromId: newId, toId: oldHeadId, type: 'next' as const }] : []),
+      ...(hasPreviousPointers(type) && oldHeadId ? [{ fromId: oldHeadId, toId: newId, type: 'prev' as const }] : []),
+      ...(isCircularList(type) && oldHeadId ? [{ fromId: tailId, toId: newId, type: 'next' as const }] : []),
+      ...(!oldHeadId && isCircularList(type) ? [{ fromId: newId, toId: newId, type: 'next' as const }] : []),
+      ...(!oldHeadId && type === 'doublyCircular' ? [{ fromId: newId, toId: newId, type: 'prev' as const }] : []),
+    ],
+    listType: type,
   });
 
   // Step 3: Update head = newNode
@@ -188,7 +216,7 @@ export function generateInsertHeadSteps(
     explanation: `Updated head pointer to point to newNode(${newValue}). Insertion complete in O(1) time!`,
     codeLine: 4,
     highlightedNodeIds: [newId],
-    listType: 'singly',
+    listType: type,
   });
 
   return steps;
@@ -198,10 +226,11 @@ export function generateInsertHeadSteps(
 
 export function generateInsertTailSteps(
   currentNodes: ListNodeItem[],
-  newValue: number | string
+  newValue: number | string,
+  type: LinkedListStructureType = 'singly'
 ): LinkedListStep[] {
   if (currentNodes.length === 0) {
-    return generateInsertHeadSteps(currentNodes, newValue);
+    return generateInsertHeadSteps(currentNodes, newValue, type);
   }
 
   const steps: LinkedListStep[] = [];
@@ -220,7 +249,7 @@ export function generateInsertTailSteps(
     explanation: `Locating the tail node of the list (value: ${currentNodes[currentNodes.length - 1].value}).`,
     codeLine: 1,
     highlightedNodeIds: [tailId],
-    listType: 'singly',
+    listType: type,
   });
 
   // Step 2: Allocate new node
@@ -228,6 +257,7 @@ export function generateInsertTailSteps(
     id: newId,
     value: newValue,
     nextId: null,
+    prevId: null,
     status: 'new',
     pointerLabels: ['NEW_NODE'],
   };
@@ -240,15 +270,21 @@ export function generateInsertTailSteps(
     tailId,
     pointers: { head: headId, tail: tailId, new_node: newId },
     phase: 'Allocate Memory',
-    explanation: `Allocated new Node(${newValue}) with next pointer = NULL.`,
+    explanation: `Allocated new Node(${newValue}) before connecting it to the tail.`,
     codeLine: 2,
     highlightedNodeIds: [newId],
-    listType: 'singly',
+    listType: type,
   });
 
   // Step 3: Link tail.next = newNode
   const step3Nodes = cloneNodes(step2Nodes);
+  const newTail = step3Nodes[step3Nodes.length - 1];
   step3Nodes[step3Nodes.length - 2].nextId = newId;
+  if (isCircularList(type)) newTail.nextId = headId;
+  if (hasPreviousPointers(type)) {
+    newTail.prevId = tailId;
+    if (type === 'doublyCircular') step3Nodes[0].prevId = newId;
+  }
   step3Nodes[step3Nodes.length - 2].status = 'active';
   assignPointerLabels(step3Nodes, { head: headId, curr: tailId, new: newId });
 
@@ -258,11 +294,18 @@ export function generateInsertTailSteps(
     tailId,
     pointers: { head: headId, curr: tailId, new_node: newId },
     phase: 'Link Tail Pointer',
-    explanation: `Updated tail.next to point to newNode(${newValue}).`,
+    explanation: isCircularList(type)
+      ? `Linked ${newValue} after the old tail and connected it back to the head.`
+      : `Updated tail.next to point to newNode(${newValue}).`,
     codeLine: 3,
     highlightedNodeIds: [tailId, newId],
-    newConnections: [{ fromId: tailId, toId: newId, type: 'next' }],
-    listType: 'singly',
+    newConnections: [
+      { fromId: tailId, toId: newId, type: 'next' },
+      ...(isCircularList(type) ? [{ fromId: newId, toId: headId, type: 'next' as const }] : []),
+      ...(hasPreviousPointers(type) ? [{ fromId: newId, toId: tailId, type: 'prev' as const }] : []),
+      ...(type === 'doublyCircular' ? [{ fromId: headId, toId: newId, type: 'prev' as const }] : []),
+    ],
+    listType: type,
   });
 
   // Step 4: Finalize Tail
@@ -279,7 +322,7 @@ export function generateInsertTailSteps(
     explanation: `Updated tail pointer to the new end node (${newValue}). Insertion complete!`,
     codeLine: 4,
     highlightedNodeIds: [newId],
-    listType: 'singly',
+    listType: type,
   });
 
   return steps;
@@ -287,7 +330,10 @@ export function generateInsertTailSteps(
 
 // ─── 3. SINGLY LINKED LIST: DELETE AT HEAD ────────────────────────────────────────
 
-export function generateDeleteHeadSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+export function generateDeleteHeadSteps(
+  currentNodes: ListNodeItem[],
+  type: LinkedListStructureType = 'singly'
+): LinkedListStep[] {
   if (currentNodes.length === 0) return [];
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
@@ -307,22 +353,29 @@ export function generateDeleteHeadSteps(currentNodes: ListNodeItem[]): LinkedLis
     explanation: `Targeting head node (${oldHead.value}) for removal.`,
     codeLine: 1,
     highlightedNodeIds: [oldHead.id],
-    listType: 'singly',
+    listType: type,
     isQuizPoint: true,
     quizData: {
-      prompt: `What is the time complexity to delete the head node in a Singly Linked List?`,
+      prompt: `What is the time complexity to delete the head node in a ${type === 'doublyCircular' ? 'Doubly Circular' : type === 'doubly' ? 'Doubly' : type === 'circular' ? 'Circular' : 'Singly'} Linked List?`,
       options: ['O(1) Constant Time', 'O(N) Linear Time', 'O(log N)', 'O(N^2)'],
       correctIndex: 0,
-      explanation: 'Deleting the head only requires advancing head = head.next, which takes O(1) constant time.',
+      explanation: 'Deleting the head advances the head reference and repairs the affected boundary links in O(1) time.',
     },
   });
 
   // Step 2: Detach head pointer
   const step2Nodes = cloneNodes(nodes);
   step2Nodes[0].nextId = null;
+  step2Nodes[0].prevId = null;
   step2Nodes[0].status = 'danger';
   if (step2Nodes.length > 1) {
     step2Nodes[1].status = 'active';
+    if (hasPreviousPointers(type)) {
+      step2Nodes[1].prevId = type === 'doublyCircular' ? nodes[nodes.length - 1].id : null;
+    }
+    if (isCircularList(type)) {
+      step2Nodes[step2Nodes.length - 1].nextId = step2Nodes[1].id;
+    }
   }
   assignPointerLabels(step2Nodes, { old_head: oldHead.id, head: nextHeadId });
 
@@ -332,15 +385,21 @@ export function generateDeleteHeadSteps(currentNodes: ListNodeItem[]): LinkedLis
     tailId: nodes[nodes.length - 1].id,
     pointers: { old_head: oldHead.id, head: nextHeadId },
     phase: 'Advance Head Pointer',
-    explanation: `Advanced head pointer: head = head.next (${nextHeadId ? nodes[1].value : 'NULL'}).`,
+    explanation: `Advanced head pointer to ${nextHeadId ? nodes[1].value : 'NULL'} and repaired the boundary pointers.`,
     codeLine: 2,
     highlightedNodeIds: nextHeadId ? [nextHeadId] : [],
     brokenConnections: nextHeadId ? [{ fromId: oldHead.id, toId: nextHeadId, type: 'next' }] : [],
-    listType: 'singly',
+    listType: type,
   });
 
   // Step 3: Remove node from list
   const remainingNodes = nodes.slice(1);
+  if (remainingNodes.length > 0 && isCircularList(type)) {
+    remainingNodes[remainingNodes.length - 1].nextId = remainingNodes[0].id;
+  }
+  if (remainingNodes.length > 0 && hasPreviousPointers(type)) {
+    remainingNodes[0].prevId = type === 'doublyCircular' ? remainingNodes[remainingNodes.length - 1].id : null;
+  }
   if (remainingNodes.length > 0) {
     remainingNodes[0].status = 'success';
     assignPointerLabels(remainingNodes, { head: remainingNodes[0].id, tail: remainingNodes[remainingNodes.length - 1].id });
@@ -354,7 +413,7 @@ export function generateDeleteHeadSteps(currentNodes: ListNodeItem[]): LinkedLis
     phase: 'Free Memory',
     explanation: `Deallocated memory for old head (${oldHead.value}). Head deletion complete in O(1)!`,
     codeLine: 3,
-    listType: 'singly',
+    listType: type,
   });
 
   return steps;
@@ -362,8 +421,62 @@ export function generateDeleteHeadSteps(currentNodes: ListNodeItem[]): LinkedLis
 
 // ─── 4. REVERSE LINKED LIST (3-POINTER TECHNIQUE) ──────────────────────────────────
 
-export function generateReverseSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+export function generateReverseSteps(
+  currentNodes: ListNodeItem[],
+  type: LinkedListStructureType = 'singly'
+): LinkedListStep[] {
   if (currentNodes.length === 0) return [];
+
+  if (type !== 'singly') {
+    const steps: LinkedListStep[] = [];
+    const originalNodes = cloneNodes(currentNodes);
+    const firstNodeId = originalNodes[0].id;
+    const lastNodeId = originalNodes[originalNodes.length - 1].id;
+    assignPointerLabels(originalNodes, { head: firstNodeId, tail: lastNodeId });
+    steps.push({
+      nodes: cloneNodes(originalNodes),
+      headId: firstNodeId,
+      tailId: lastNodeId,
+      pointers: { head: firstNodeId, tail: lastNodeId },
+      phase: 'Inspect List Boundaries',
+      explanation: hasPreviousPointers(type)
+        ? 'Reverse the traversal direction by swapping each node’s next and previous neighbors.'
+        : 'Reverse the forward links while keeping the circular list connected.',
+      codeLine: 2,
+      highlightedNodeIds: [firstNodeId, lastNodeId],
+      listType: type,
+    });
+
+    const reversedNodes = cloneNodes([...currentNodes].reverse());
+    reversedNodes.forEach((node, index) => {
+      node.nextId = index < reversedNodes.length - 1
+        ? reversedNodes[index + 1].id
+        : isCircularList(type) ? reversedNodes[0].id : null;
+      node.prevId = hasPreviousPointers(type)
+        ? index > 0
+          ? reversedNodes[index - 1].id
+          : isCircularList(type) ? reversedNodes[reversedNodes.length - 1].id : null
+        : null;
+      node.status = 'success';
+    });
+    const reversedHeadId = reversedNodes[0].id;
+    const reversedTailId = reversedNodes[reversedNodes.length - 1].id;
+    assignPointerLabels(reversedNodes, { head: reversedHeadId, tail: reversedTailId });
+    steps.push({
+      nodes: reversedNodes,
+      headId: reversedHeadId,
+      tailId: reversedTailId,
+      pointers: { head: reversedHeadId, tail: reversedTailId },
+      phase: 'Reverse Links',
+      explanation: `Reversed the list. The new head is ${reversedNodes[0].value}; all ${hasPreviousPointers(type) ? 'next and previous links' : 'next links'} now follow the opposite direction.`,
+      codeLine: 5,
+      highlightedNodeIds: [reversedHeadId, reversedTailId],
+      listType: type,
+    });
+
+    return steps;
+  }
+
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
 
@@ -480,15 +593,18 @@ export function generateReverseSteps(currentNodes: ListNodeItem[]): LinkedListSt
 
 export function generateCycleDetectionSteps(
   currentNodes: ListNodeItem[],
-  cycleIndex: number = 2
+  cycleIndex: number = 2,
+  type: LinkedListStructureType = 'singly'
 ): LinkedListStep[] {
   if (currentNodes.length < 3) return [];
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
 
   // Inject cycle link: tail.next = nodes[cycleIndex]
-  const targetNode = nodes[cycleIndex];
+  const targetIndex = Math.min(Math.max(cycleIndex, 0), nodes.length - 1);
+  const targetNode = nodes[targetIndex];
   nodes[nodes.length - 1].nextId = targetNode.id;
+  if (hasPreviousPointers(type)) targetNode.prevId = nodes[nodes.length - 1].id;
 
   let slowIdx = 0;
   let fastIdx = 0;
@@ -505,7 +621,7 @@ export function generateCycleDetectionSteps(
     explanation: 'Initialized slow and fast pointers at head. Slow moves 1 step, Fast moves 2 steps per iteration.',
     codeLine: 2,
     highlightedNodeIds: [nodes[0].id],
-    listType: 'circular',
+    listType: type,
     isQuizPoint: true,
     quizData: {
       prompt: 'If a cycle exists in a linked list, why are slow and fast pointers guaranteed to meet?',
@@ -559,7 +675,7 @@ export function generateCycleDetectionSteps(
         explanation: `Slow and Fast met at Node(${nodes[slowIdx].value})! Cycle detected with certainty.`,
         codeLine: 6,
         highlightedNodeIds: [currentSlowId],
-        listType: 'circular',
+        listType: type,
       });
       break;
     } else {
@@ -577,7 +693,7 @@ export function generateCycleDetectionSteps(
         explanation: `Slow advanced to Node(${nodes[slowIdx].value}) [1 step], Fast advanced to Node(${nodes[fastIdx].value}) [2 steps].`,
         codeLine: 4,
         highlightedNodeIds: [currentSlowId, currentFastId],
-        listType: 'circular',
+        listType: type,
       });
     }
   }
@@ -601,7 +717,7 @@ export function generateCycleDetectionSteps(
       explanation: 'Reset Pointer 1 to Head while leaving Pointer 2 at Meeting point. Advance both 1 step at a time.',
       codeLine: 8,
       highlightedNodeIds: [nodes[p1Idx].id, nodes[p2Idx].id],
-      listType: 'circular',
+      listType: type,
     });
 
     while (p1Idx !== p2Idx) {
@@ -626,7 +742,7 @@ export function generateCycleDetectionSteps(
           : `Advancing ptr1 (${nodes[p1Idx].value}) and ptr2 (${nodes[p2Idx].value}) by 1 step.`,
         codeLine: 10,
         highlightedNodeIds: [nodes[p1Idx].id, nodes[p2Idx].id],
-        listType: 'circular',
+        listType: type,
       });
     }
   }
@@ -636,7 +752,10 @@ export function generateCycleDetectionSteps(
 
 // ─── 6. FIND MIDDLE NODE (FAST & SLOW) ────────────────────────────────────────────
 
-export function generateMiddleNodeSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+export function generateMiddleNodeSteps(
+  currentNodes: ListNodeItem[],
+  type: LinkedListStructureType = 'singly'
+): LinkedListStep[] {
   if (currentNodes.length === 0) return [];
   const steps: LinkedListStep[] = [];
   const nodes = cloneNodes(currentNodes);
@@ -651,10 +770,12 @@ export function generateMiddleNodeSteps(currentNodes: ListNodeItem[]): LinkedLis
     tailId: nodes[nodes.length - 1].id,
     pointers: { slow: nodes[0].id, fast: nodes[0].id },
     phase: 'Initialize Pointers',
-    explanation: 'Start slow and fast pointers at head. Fast moves 2x speed of slow.',
+    explanation: isCircularList(type)
+      ? 'Start slow and fast pointers at head. Fast moves twice as far, and traversal stops after one lap.'
+      : 'Start slow and fast pointers at head. Fast moves 2x speed of slow.',
     codeLine: 2,
     highlightedNodeIds: [nodes[0].id],
-    listType: 'singly',
+    listType: type,
   });
 
   while (fastIdx < nodes.length && fastIdx + 1 < nodes.length) {
@@ -684,7 +805,7 @@ export function generateMiddleNodeSteps(currentNodes: ListNodeItem[]): LinkedLis
       explanation: `Slow moved to Node(${currentSlow.value}), Fast moved to ${currentFast ? `Node(${currentFast.value})` : 'NULL / End'}.`,
       codeLine: 4,
       highlightedNodeIds: [currentSlow.id, ...(currentFast ? [currentFast.id] : [])],
-      listType: 'singly',
+      listType: type,
     });
   }
 
@@ -701,7 +822,7 @@ export function generateMiddleNodeSteps(currentNodes: ListNodeItem[]): LinkedLis
     explanation: `Middle node identified: Node(${nodes[slowIdx].value}) at index ${slowIdx}.`,
     codeLine: 6,
     highlightedNodeIds: [nodes[slowIdx].id],
-    listType: 'singly',
+    listType: type,
   });
 
   return steps;

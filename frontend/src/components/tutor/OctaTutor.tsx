@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
-import { Settings, X, Trash2, Volume2, Sparkles, Bot, User as UserIcon, MessageSquare } from 'lucide-react';
+import { Settings, X, Trash2, Sparkles, User as UserIcon, MessageSquare, Check, ShieldCheck } from 'lucide-react';
 import { useOctaTutor, type SupportedSpeechLang } from '../../hooks/useOctaTutor';
 import { useTutorContext } from '../../contexts/TutorContext';
 import { useAuthPrompt } from '../../contexts/AuthPromptContext';
@@ -8,6 +8,28 @@ import { Octa } from '../mascot';
 import { LoaderOne } from '../ui/loader';
 import { PlaceholdersAndVanishInput } from '../ui/placeholders-and-vanish-input';
 import './OctaTutor.css';
+import { CATEGORY_TOPICS } from '../../data/categoryTopics';
+import type { OctaTutorFunctionCall } from '../../api/octaTutorApi';
+
+function describeAction(call: OctaTutorFunctionCall, currentPageLabel: string): string {
+  switch (call.name) {
+    case 'navigate_to_algorithm': {
+      const category = CATEGORY_TOPICS.find((item) => item.categoryId === call.args.category_id);
+      const topic = category?.topics.find((item) => item.id === call.args.topic_id);
+      return `Open ${topic?.name || category?.categoryName || call.args.category_id}`;
+    }
+    case 'control_playback':
+      return ({ play: 'Start the visualization', pause: 'Pause the visualization', step_forward: 'Move forward one step', reset: 'Reset the visualization' } as Record<string, string>)[call.args.action] || 'Control the visualization';
+    case 'set_speed': return `Set playback speed to ${call.args.speed}×`;
+    case 'set_input': return `Load input [${(call.args.values || []).join(', ')}]`;
+    case 'switch_theme': return `Switch the app to ${call.args.mode} mode`;
+    case 'toggle_debugger': return `${call.args.visible ? 'Show' : 'Hide'} ${currentPageLabel === 'Linux File System Simulator' ? 'the terminal panel' : 'the code panel'}`;
+    case 'toggle_fullscreen': return `${call.args.enter ? 'Enter' : 'Exit'} fullscreen`;
+    case 'generate_quiz': return 'Open the current topic quiz';
+    case 'execute_vfs_command': return `Run in the virtual file system: ${call.args.command}`;
+    default: return 'Perform an in-app action';
+  }
+}
 
 /**
  * Format & render rich markdown (bold, italic, code blocks, lists, headers)
@@ -119,7 +141,7 @@ function renderFormattedMessage(text: string) {
 }
 
 export const OctaTutor: React.FC = () => {
-  const { contextState, isTutorOpen, toggleTutor } = useTutorContext();
+  const { isTutorOpen, toggleTutor } = useTutorContext();
   const { requireAuth } = useAuthPrompt();
   const {
     messages,
@@ -136,9 +158,15 @@ export const OctaTutor: React.FC = () => {
     clearHistory,
     llmConfig,
     setIsSettingsOpen,
+    approveActions,
+    dismissActions,
     tutorMode,
     setTutorMode,
     suggestions,
+    currentPageLabel,
+    currentStepIndex,
+    totalSteps,
+    hasVisualizerContext,
   } = useOctaTutor();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -146,7 +174,8 @@ export const OctaTutor: React.FC = () => {
 
   useEffect(() => {
     if (messagesEndRef.current && isTutorOpen) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      messagesEndRef.current.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
     }
   }, [messages, isTutorOpen, isLoading, revealedChars]);
 
@@ -243,20 +272,21 @@ export const OctaTutor: React.FC = () => {
         <div className="tutor-context-ribbon">
           <span className="context-chip">
             <MessageSquare size={11} className="inline mr-1" />
-            {contextState.algorithmName || 'General DSA Curriculum'}
+            {currentPageLabel}
           </span>
-          {contextState.totalSteps ? (
+          {totalSteps ? (
             <span className="step-chip">
-              Step {contextState.currentStepIndex + 1} / {contextState.totalSteps}
+              Step {currentStepIndex + 1} / {totalSteps}
             </span>
           ) : null}
         </div>
 
         {/* Mode Switcher Bar */}
-        <div className="tutor-mode-bar">
+        <div className="tutor-mode-bar" role="group" aria-label="Tutor response mode">
           <button
             className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`}
             onClick={() => setTutorMode('natural')}
+            aria-pressed={tutorMode === 'natural'}
             title="ChatGPT-style algorithm teaching & conceptual explanations"
           >
             AI Concept Mode
@@ -264,11 +294,19 @@ export const OctaTutor: React.FC = () => {
           <button
             className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`}
             onClick={() => setTutorMode('interactive')}
+            aria-pressed={tutorMode === 'interactive'}
             title="Live step visualizer execution & state debugging"
           >
             Interactive Step Mode
           </button>
         </div>
+        <p className="tutor-mode-hint" aria-live="polite">
+          {tutorMode === 'natural'
+            ? 'Ask a concept or STEM Studio question. Octa grounds replies in this page’s lesson material.'
+            : hasVisualizerContext && totalSteps > 0
+              ? 'Ask about the live step or request a control. Octa shows each action for your approval first.'
+              : 'Open a visualizer or the file-system simulator for live step guidance. Any supported action needs your approval.'}
+        </p>
 
         {/* Message Output Scroll Box */}
         <div className="tutor-message-list">
@@ -283,7 +321,7 @@ export const OctaTutor: React.FC = () => {
               <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
                 <div className="message-icon-avatar">
                   {isAssis ? (
-                    <Octa expression="neutral" size={20} interactive={false} />
+                    <Octa expression={msg.expression || 'neutral'} size={26} interactive={false} />
                   ) : (
                     <UserIcon size={14} />
                   )}
@@ -294,6 +332,37 @@ export const OctaTutor: React.FC = () => {
                     <span className="inline-block w-1.5 h-3.5 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
                   )}
                 </div>
+                {isAssis && msg.answerSource === 'offline' && (
+                  <div className="tutor-offline-note">
+                    <span><ShieldCheck size={13} /> Offline guide</span>
+                    <button type="button" onClick={() => setIsSettingsOpen(true)}>Connect an AI model</button>
+                  </div>
+                )}
+                {isAssis && msg.proposedActions?.length ? (
+                  <div className="tutor-action-card" role="group" aria-label="Octa action approval">
+                    <div className="tutor-action-card__copy">
+                      <Octa expression={msg.actionDecision === 'pending' ? 'thinking' : msg.actionDecision === 'allowed' ? 'happy' : 'neutral'} size={32} interactive={false} />
+                      <div>
+                        <strong>{msg.actionDecision === 'pending' ? 'Octa is ready to' : msg.actionDecision === 'allowed' ? 'Approved' : 'Cancelled'}</strong>
+                        <ul>
+                          {msg.proposedActions.map((action, index) => <li key={`${action.name}-${index}`}>{describeAction(action, currentPageLabel)}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                    {msg.actionDecision === 'pending' ? (
+                      <div className="tutor-action-card__buttons">
+                        <button type="button" className="tutor-action-allow" onClick={() => approveActions(msg.id)}>
+                          <Check size={14} /> Allow
+                        </button>
+                        <button type="button" className="tutor-action-cancel" onClick={() => dismissActions(msg.id)}>Cancel</button>
+                      </div>
+                    ) : (
+                      <p className="tutor-action-result" role="status">
+                        {msg.actionDecision === 'allowed' ? 'Action approved and sent to this page.' : 'No action was run.'}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             );
           })}

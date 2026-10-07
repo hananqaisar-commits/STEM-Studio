@@ -1,44 +1,64 @@
-/* Linux Commands — dense reference, premium learning workspace */
-.linux-commands-page { max-width: 1540px; margin: 0 auto; padding-bottom: 2.5rem; }
+.linux-commands-page { max-width:1540px; margin:0 auto; padding-bottom:2.5rem; }
 
 .linux-commands-toolbar {
-  display: flex; align-items: center; justify-content: space-between; gap: 1.25rem;
-  padding: 0.85rem 1.25rem; border: 1px solid var(--color-border); border-radius: 18px;
-  background: var(--color-surface);
-  box-shadow: 0 10px 25px -5px rgba(107, 92, 231, 0.08); backdrop-filter: blur(18px);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(260px,380px);
+  align-items:center;
+  gap:1rem;
+  padding:1rem 1.15rem;
+  border:1px solid var(--color-border);
+  border-radius:16px;
+  background:var(--color-surface);
+  box-shadow:var(--shadow-sm);
 }
-.linux-commands-toolbar__intro, .linux-commands-toolbar__actions { display: flex; align-items: center; gap: 0.65rem; }
-.linux-commands-toolbar__actions { margin-left: 0.5rem; }
-.linux-commands-toolbar button { min-height: 32px; cursor: pointer; }
-.linux-commands-search { position: relative; width: min(100%, 380px); flex: 0 1 380px; }
-.linux-commands-search input { width: 100%; min-width: 0; }
+.linux-commands-toolbar__intro, .linux-commands-toolbar__actions { display:flex; align-items:center; gap:.65rem; }
+.linux-commands-toolbar__intro { justify-content:space-between; min-width:0; }
+.linux-commands-toolbar__actions { flex-shrink:0; }
+.linux-commands-search { position:relative; min-width:0; }
+.linux-commands-search input { width:100%; min-height:42px; }
+.linux-commands-copy-status { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
-.linux-commands-catalog { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 1.5rem; margin-top: 1.25rem; align-items: start; }
+.linux-commands-catalog { display:grid; grid-template-columns:250px minmax(0,1fr); gap:1.25rem; margin-top:1.1rem; align-items:start; }
 .linux-commands-groups {
-  position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto;
-  padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 18px;
-  background: var(--color-surface); box-shadow: var(--shadow-sm);
-  display: flex; flex-direction: column; gap: 0.25rem;
+  position:sticky; top:1rem; max-height:calc(100vh - 2rem); overflow-y:auto;
+  display:flex; flex-direction:column; gap:.25rem; padding:.65rem;
+  border:1px solid var(--color-border); border-radius:16px;
+  background:var(--color-surface); box-shadow:var(--shadow-sm);
 }
-.linux-commands-groups::-webkit-scrollbar { width: 4px; }
-.linux-commands-groups::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+.linux-commands-groups::-webkit-scrollbar { width:5px; }
+.linux-commands-groups::-webkit-scrollbar-thumb { background:var(--color-border); border-radius:8px; }
+.linux-commands-groups button { min-height:42px; text-align:left; }
+.linux-commands-groups button[aria-pressed="true"] { background:var(--color-primary); border-color:var(--color-primary); color:#fff; box-shadow:0 3px 9px color-mix(in srgb,var(--color-primary) 22%,transparent); }
+.linux-commands-groups button[aria-pressed="true"] :is(svg,span) { color:#fff; }
 
-.linux-commands-results { min-width: 0; }
-.linux-commands-results > div { margin-bottom: 2rem; }
-.linux-commands-results > div > div:first-child { padding: 0.15rem 0 0.75rem; }
-.linux-commands-results h2 { letter-spacing: -0.025em; }
-.linux-commands-results [class*="rounded-2xl"] { border-radius: 16px; }
-.linux-commands-results .font-mono { letter-spacing: -0.015em; }
+.linux-commands-results { min-width:0; }
+.linux-commands-results > div { margin-bottom:1.75rem; }
+.linux-commands-results > div > div:first-child { padding:.15rem 0 .75rem; }
+.linux-commands-results h2 { letter-spacing:-.025em; }
+.linux-commands-results .font-mono { letter-spacing:-.015em; }
+.linux-command-card { overflow:hidden; border:1px solid var(--color-border); border-radius:15px; background:var(--color-surface); box-shadow:var(--shadow-sm); transition:border-color 150ms ease,box-shadow 150ms ease; }
+.linux-command-card:hover { border-color:color-mix(in srgb,var(--color-primary) 28%,var(--color-border)); box-shadow:var(--shadow-md); }
+.linux-command-card__trigger { display:flex; align-items:center; justify-content:space-between; gap:.75rem; width:100%; min-height:68px; padding:.9rem 1rem; text-align:left; color:var(--color-text); background:transparent; transition:background-color 140ms ease; }
+.linux-command-card__trigger:hover { background:var(--color-surface-elevated); }
+.linux-command-card__trigger:focus-visible { outline-offset:-3px; }
+.linux-command-card__body { padding:1rem; border-top:1px solid var(--color-border); background:var(--color-surface-elevated); }
+.linux-command-card__theory { padding:.9rem 1rem; border:1px solid color-mix(in srgb,var(--color-primary) 20%,var(--color-border)); border-radius:12px; background:color-mix(in srgb,var(--color-primary) 5%,var(--color-surface)); }
+.linux-command-card__syntax { overflow:auto; padding:.85rem 1rem; border:1px solid var(--color-border); border-radius:10px; background:#141b27; color:#bbf7d0; font-size:12px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+.linux-commands-page :is(.linux-command-card__body,.linux-commands-toolbar) button { min-height:36px; }
+.linux-commands-page .linux-command-card__body > div:nth-child(2) button,
+.linux-commands-page .linux-command-card__body > div:nth-child(3) button { border-radius:8px; }
 
-@media (max-width: 900px) {
-  .linux-commands-catalog { grid-template-columns: 1fr; }
-  .linux-commands-groups { position: static; max-height: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
-  .linux-commands-groups > div { grid-column: 1 / -1; }
+@media (max-width: 980px) {
+  .linux-commands-catalog { grid-template-columns:1fr; }
+  .linux-commands-groups { position:static; max-height:260px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.35rem; }
+  .linux-commands-groups > div { grid-column:1 / -1; }
 }
-@media (max-width: 640px) {
-  .linux-commands-toolbar, .linux-commands-toolbar__intro { align-items: stretch; flex-direction: column; }
-  .linux-commands-toolbar__actions { margin-left: 0; }
-  .linux-commands-search { width: 100%; flex-basis: auto; }
-  .linux-commands-groups { grid-template-columns: 1fr; }
+@media (max-width: 680px) {
+  .linux-commands-toolbar { grid-template-columns:1fr; padding:.85rem; }
+  .linux-commands-toolbar__intro { align-items:flex-start; flex-direction:column; }
+  .linux-commands-toolbar__actions { width:100%; }
+  .linux-commands-toolbar__actions > button { flex:1; justify-content:center; }
+  .linux-commands-groups { grid-template-columns:1fr; max-height:220px; }
+  .linux-command-card__trigger { min-height:64px; padding:.8rem; }
+  .linux-command-card__body { padding:.8rem; }
 }
-
