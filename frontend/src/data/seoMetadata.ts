@@ -12,10 +12,9 @@ export interface RouteSEO {
 
 export const SEO_METADATA: Record<string, RouteSEO> = {
   '': {
-    title: 'STEM Studio – Interactive DSA & Algorithm Visualizer',
-    description: 'STEM Studio is an interactive Data Structures and Algorithms learning platform with step-by-step visualizers, multi-language debugger, quizzes, and 138+ topics designed to help students master algorithms.',
-    canonical: '/dashboard',
-    keywords: 'STEM Studio, STEM Studio DSA, STEM Studio algorithms, DSA visualizer, data structures and algorithms visualizer, algorithm visualizer, interactive DSA learning, learn data structures and algorithms, coding algorithm debugger, DSA quiz, algorithm learning platform',
+    title: 'Interactive Data Structures & Algorithms Learning | STEM Studio',
+    description: 'Learn data structures and algorithms by watching each step unfold. Explore visualizers, compare code in four languages, and practice with guided quizzes.',
+    canonical: '/',
     breadcrumbName: 'Home'
   },
   'dsa': {
@@ -55,9 +54,9 @@ export const SEO_METADATA: Record<string, RouteSEO> = {
   },
   'linkedList': {
     title: 'Linked List Visualizer | STEM Studio',
-    description: 'Visualize singly and doubly linked lists. Understand pointer manipulation, node insertion, and traversal with interactive animations.',
+    description: 'Explore singly, doubly, circular, and doubly circular linked lists with interactive pointer visualizations for insertion, deletion, and traversal.',
     canonical: '/dashboard/linkedList',
-    keywords: 'linked list visualizer, singly linked list animation, doubly linked list visualizer, pointer manipulation animation',
+    keywords: 'linked list visualizer, singly linked list, doubly linked list, circular linked list, doubly circular linked list, pointer animation',
     breadcrumbName: 'Linked List'
   },
   'stackQueue': {

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Terminal as TerminalIcon, Trash2, Sparkles, Command, CheckCircle2 } from 'lucide-react';
+import { Terminal as TerminalIcon, Trash2, Command, CheckCircle2 } from 'lucide-react';
 import { type VFSSnapshot, getAbsolutePath } from './vfs';
 
 interface HistoryItem {
@@ -34,7 +34,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const currentPath = getAbsolutePath(snapshot.nodes, snapshot.currentDirId);
   const displayPath = currentPath.startsWith('/home/octa')
@@ -46,14 +45,17 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   }, []);
 
   useEffect(() => {
-    focusInput();
-  }, [focusInput]);
-
-  useEffect(() => {
     if (terminalEndRef.current && history.length > 0) {
-      terminalEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      terminalEndRef.current.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest' });
     }
   }, [history.length]);
+
+  const clearTerminal = () => {
+    setLineText('');
+    setHistoryIdx(-1);
+    onClearTerminal();
+  };
 
   // Tab completion helper
   const getPathCompletions = (targetPath: string) => {
@@ -123,7 +125,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
       e.preventDefault();
-      onClearTerminal();
+      clearTerminal();
       return;
     }
 
@@ -137,7 +139,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
       e.preventDefault();
       const cmdToRun = lineText.trim();
       if (cmdToRun === 'clear') {
-        onClearTerminal();
+        clearTerminal();
       } else if (cmdToRun) {
         onExecuteCommand(cmdToRun);
       }
@@ -184,33 +186,33 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
 
   return (
     <div
-      ref={containerRef}
       onClick={focusInput}
-      className="w-full h-full min-h-[420px] bg-[#0c0d12] text-[#e2e8f0] border border-[var(--color-border)] rounded-2xl shadow-2xl p-4 font-mono flex flex-col justify-between overflow-hidden cursor-text select-text relative transition-all"
+      className="linux-terminal"
     >
       {/* Authentic Linux Window Header Bar */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-xs font-sans shrink-0">
+      <div className="linux-terminal__header shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[#ff5f56] inline-block shadow-sm" />
-            <span className="w-3 h-3 rounded-full bg-[#ffbd2e] inline-block shadow-sm" />
-            <span className="w-3 h-3 rounded-full bg-[#27c93f] inline-block shadow-sm" />
+            <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" />
+            <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-amber-300 inline-block" />
+            <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 font-extrabold text-xs shadow-sm">
-            <Sparkles size={13} className="text-purple-400 animate-pulse" />
-            <span>octa@stem-studio: ~ (bash)</span>
+          <div className="linux-terminal__identity">
+            <TerminalIcon size={14} aria-hidden="true" />
+            <span>octa@stem-studio · VFS shell</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-block font-mono text-[11px] text-cyan-300 bg-cyan-950/60 px-3 py-1 rounded-xl border border-cyan-800/50 font-bold shadow-sm">
+          <span className="linux-terminal__path font-mono text-[11px]" title={displayPath}>
             {displayPath}
           </span>
           <button
             type="button"
-            onClick={onClearTerminal}
+            onClick={clearTerminal}
             className="bst-btn bst-btn-danger text-xs py-1 px-3"
             title="Clear terminal screen (Ctrl+L)"
+            aria-label="Clear terminal output"
           >
             <Trash2 size={13} /> Clear
           </button>
@@ -218,38 +220,34 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
       </div>
 
       {/* Terminal Output Log Area */}
-      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs leading-relaxed font-mono min-h-[220px]">
+      <div className="linux-terminal__output space-y-2.5 text-xs">
         {/* Welcome Banner */}
-        <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-800/40 text-[11px] text-purple-200 leading-normal flex items-center justify-between mb-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <TerminalIcon size={16} className="text-purple-400 shrink-0" />
-            <span className="font-semibold">STEM Studio Linux Shell v5.15 — Interactive VFS Engine with tab-completion.</span>
+        <div className="linux-terminal__welcome">
+          <div className="linux-terminal__welcome-main">
+            <TerminalIcon size={15} className="shrink-0" aria-hidden="true" />
+            <span className="font-semibold">Interactive Linux shell with tab completion.</span>
           </div>
-          <span className="hidden md:flex items-center gap-1 text-[10px] font-mono text-purple-300 font-bold bg-purple-900/40 px-2 py-0.5 rounded border border-purple-700/50">
-            <CheckCircle2 size={11} className="text-emerald-400" /> Tab Autocomplete
+          <span className="hidden md:flex items-center gap-1 text-[10px] font-mono">
+            <CheckCircle2 size={12} className="text-emerald-300" aria-hidden="true" /> Tab autocomplete
           </span>
         </div>
 
         {/* Command History Output */}
         {history.map((item, idx) => (
-          <div key={idx} className="space-y-1.5">
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-emerald-400 font-bold">octa@stem-studio</span>
-              <span className="text-slate-400">:</span>
-              <span className="text-cyan-400 font-bold">
+          <div key={`${item.command}-${idx}`} className="space-y-1.5">
+            <div className="linux-terminal__prompt">
+              <span className="linux-terminal__user">octa@stem-studio</span>
+              <span className="linux-terminal__separator">:</span>
+              <span className="linux-terminal__cwd">
                 {item.prompt ? item.prompt.split(':')[1]?.replace('$', '') : displayPath}
               </span>
-              <span className="text-purple-400 font-extrabold">$</span>
-              <span className="text-slate-100 font-bold">{item.command}</span>
+              <span className="linux-terminal__symbol">$</span>
+              <span className="linux-terminal__command">{item.command}</span>
             </div>
 
             {item.output && (
               <div
-                className={`whitespace-pre-wrap text-xs pl-3.5 py-1.5 border-l-2 font-mono ${
-                  item.isError
-                    ? 'text-red-300 border-red-500/60 bg-red-950/20 rounded-r-xl font-medium'
-                    : 'text-slate-300 border-purple-500/40 bg-slate-900/40 rounded-r-xl'
-                }`}
+                className={`linux-terminal__output-line ${item.isError ? 'is-error' : ''}`}
               >
                 {item.output}
               </div>
@@ -258,11 +256,11 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
         ))}
 
         {/* LIVE PROMPT & REAL NATIVE INPUT LINE */}
-        <div className="flex items-center gap-2 text-xs font-mono pt-1">
-          <span className="text-emerald-400 font-bold shrink-0">octa@stem-studio</span>
-          <span className="text-slate-400 shrink-0">:</span>
-          <span className="text-cyan-400 font-bold shrink-0">{displayPath}</span>
-          <span className="text-purple-400 font-extrabold shrink-0">$</span>
+        <div className="linux-terminal__entry">
+          <span className="linux-terminal__user shrink-0">octa@stem-studio</span>
+          <span className="linux-terminal__separator shrink-0">:</span>
+          <span className="linux-terminal__cwd">{displayPath}</span>
+          <span className="linux-terminal__symbol shrink-0">$</span>
 
           <input
             ref={inputRef}
@@ -270,8 +268,9 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
             value={lineText}
             onChange={(e) => setLineText(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent border-none outline-none text-slate-100 font-mono text-xs font-bold p-0 m-0 focus:ring-0"
-            placeholder=""
+            className="flex-1 bg-transparent border-none outline-none p-0 m-0 focus:ring-0"
+            placeholder="Type a command…"
+            aria-label="Linux terminal command"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
@@ -283,10 +282,10 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
       </div>
 
       {/* Quick Execution Shortcuts Strip */}
-      <div className="pt-3 border-t border-slate-800 flex items-center gap-2 overflow-x-auto whitespace-nowrap shrink-0 py-1 scrollbar-none">
-        <div className="flex items-center gap-1 text-[11px] text-slate-400 font-sans font-bold shrink-0">
-          <Command size={12} className="text-purple-400" />
-          <span>Quick Exec:</span>
+      <div className="linux-terminal__shortcuts shrink-0 scrollbar-none" aria-label="Quick command shortcuts">
+        <div className="linux-terminal__shortcut-label shrink-0">
+          <Command size={12} aria-hidden="true" />
+          <span>Try:</span>
         </div>
         {quickCommands.map((qCmd, idx) => (
           <button
@@ -297,7 +296,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
               onExecuteCommand(qCmd);
               focusInput();
             }}
-            className="text-[11px] font-mono px-3 py-1 rounded-xl bg-purple-950/40 text-purple-300 border border-purple-800/40 hover:border-purple-500 hover:bg-purple-900/60 shrink-0 transition-all cursor-pointer font-bold shadow-sm hover:scale-105 active:scale-95"
+            className="linux-terminal__shortcut shrink-0 cursor-pointer"
           >
             $ {qCmd}
           </button>

@@ -263,4 +263,88 @@ export const LINKED_LIST_SNIPPETS: Record<string, LLCodeSnippets> = {
       '    return slow',
     ],
   },
+
+  doubly: {
+    python: [
+      'def insert_head(head, value):',
+      '    node = DoublyNode(value)',
+      '    node.next = head',
+      '    if head is not None: head.prev = node',
+      '    return node',
+    ],
+    cpp: [
+      'Node* insertHead(Node* head, int value) {',
+      '    Node* node = new Node(value);',
+      '    node->next = head;',
+      '    if (head) head->prev = node;',
+      '    return node;',
+      '}',
+    ],
+    javascript: [
+      'function insertHead(head, value) {',
+      '  const node = new DoublyNode(value);',
+      '  node.next = head;',
+      '  if (head) head.prev = node;',
+      '  return node;',
+      '}',
+    ],
+  },
+
+  circular: {
+    python: [
+      'def insert_head(head, tail, value):',
+      '    node = Node(value)',
+      '    if head is None: node.next = node',
+      '    else:',
+      '        node.next = head',
+      '        tail.next = node',
+      '    return node',
+    ],
+    cpp: [
+      'Node* insertHead(Node* head, Node* tail, int value) {',
+      '    Node* node = new Node(value);',
+      '    if (!head) node->next = node;',
+      '    else { node->next = head; tail->next = node; }',
+      '    return node;',
+      '}',
+    ],
+    javascript: [
+      'function insertHead(head, tail, value) {',
+      '  const node = new Node(value);',
+      '  if (!head) node.next = node;',
+      '  else { node.next = head; tail.next = node; }',
+      '  return node;',
+      '}',
+    ],
+  },
+
+  doubly_circular: {
+    python: [
+      'def insert_head(head, tail, value):',
+      '    node = DoublyNode(value)',
+      '    if head is None: node.next = node.prev = node',
+      '    else:',
+      '        node.next, node.prev = head, tail',
+      '        head.prev = tail.next = node',
+      '    return node',
+    ],
+    cpp: [
+      'Node* insertHead(Node* head, Node* tail, int value) {',
+      '    Node* node = new Node(value);',
+      '    if (!head) node->next = node->prev = node;',
+      '    else { node->next = head; node->prev = tail;',
+      '           head->prev = tail->next = node; }',
+      '    return node;',
+      '}',
+    ],
+    javascript: [
+      'function insertHead(head, tail, value) {',
+      '  const node = new DoublyNode(value);',
+      '  if (!head) node.next = node.prev = node;',
+      '  else { node.next = head; node.prev = tail;',
+      '         head.prev = tail.next = node; }',
+      '  return node;',
+      '}',
+    ],
+  },
 };

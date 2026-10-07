@@ -87,6 +87,7 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
       { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers' },
       { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly' },
       { id: 'circular', name: 'Circular Linked List', group: 'Circular' },
+      { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular' },
     ],
   },
   {
@@ -254,4 +255,3 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
     ],
   },
 ];
-

@@ -166,10 +166,27 @@ button {
   -webkit-appearance: none;
 }
 
+button:not(:disabled) {
+  transition: filter 160ms ease-out;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(0.97);
+}
+
+button:not(:disabled):active {
+  filter: brightness(0.93);
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+a:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
@@ -227,6 +244,21 @@ img, video, svg, canvas {
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Global Utility Classes */
