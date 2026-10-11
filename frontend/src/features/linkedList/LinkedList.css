@@ -730,3 +730,98 @@
   color: var(--color-primary);
   font-weight: 700;
 }
+
+/* Separate visual lanes for algorithms with multiple input/output lists. */
+.ll-lane-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: max-content;
+  min-width: 100%;
+  padding: 0.75rem 0.25rem 1.1rem;
+}
+
+.ll-lane {
+  min-width: 0;
+}
+
+.ll-lane-title {
+  margin: 0 0 0.65rem 0.2rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ll-lane-track {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 100px;
+  padding: 1rem 0.45rem 0.35rem;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
+}
+
+.ll-lane-node-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.ll-lane-node-wrap .ll-node-box {
+  min-width: 116px;
+}
+
+.ll-lane-arrow {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  padding: 0 0.3rem;
+}
+
+.ll-map-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  align-items: start;
+  gap: 0.8rem;
+  width: min(100%, 760px);
+  padding-top: 2.2rem;
+}
+
+.ll-map-track .ll-lane-node-wrap .ll-node-box {
+  width: 100%;
+  min-width: 0;
+}
+
+.ll-lru-operation-group {
+  align-items: flex-start;
+}
+
+.ll-lru-operations {
+  width: min(42vw, 440px);
+  min-width: 260px;
+  min-height: 3.3rem;
+  padding: 0.5rem 0.65rem;
+  resize: vertical;
+  font: 500 var(--text-xs)/1.5 'JetBrains Mono', monospace;
+}
+
+.ll-lane-null {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .ll-lane-stack {
+    padding-inline: 0;
+  }
+
+  .ll-lane-track {
+    margin-inline: -0.25rem;
+  }
+}

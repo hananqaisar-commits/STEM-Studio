@@ -22,11 +22,65 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
   const listType = step?.listType ?? selectedListType;
   const hasPrev = hasPreviousPointers(listType);
 
-  if (displayNodes.length === 0) {
+  if (displayNodes.length === 0 && !step?.lanes?.length) {
     return (
       <div className="ll-canvas-body">
         <div className="ll-null-box" style={{ padding: '1rem 2rem', fontSize: '0.9rem' }}>
           EMPTY LIST (HEAD → NULL)
+        </div>
+      </div>
+    );
+  }
+
+  if (step?.lanes?.length) {
+    return (
+      <div className="ll-canvas-body">
+        <div className="ll-lane-stack">
+          {step.lanes.map((lane) => (
+            <section className="ll-lane" key={lane.label}>
+              <div className="ll-lane-title">{lane.label}</div>
+              <div className={`ll-lane-track ${lane.kind === 'map' ? 'll-map-track' : ''}`}>
+                {lane.nodes.length === 0 ? (
+                  <div className="ll-null-box">EMPTY</div>
+                ) : (
+                  <>
+                    {lane.nodes.map((node, index) => {
+                      const nextIndex = lane.nodes.findIndex((candidate) => candidate.id === node.nextId);
+                      const prevIndex = lane.nodes.findIndex((candidate) => candidate.id === node.prevId);
+                      return (
+                        <React.Fragment key={node.id}>
+                          <div className="ll-lane-node-wrap">
+                            <span className="ll-node-label">{lane.kind === 'map' ? `ENTRY ${index + 1}` : `N${index + 1}`}</span>
+                            {node.pointerLabels?.length ? (
+                              <div className="ll-pointer-tags-top">
+                                {node.pointerLabels.map((tag) => (
+                                  <span key={tag} className={`ll-pointer-badge badge-${tag.toLowerCase().replace(/[^a-z0-9]/g, '_')}`}>{tag}</span>
+                                ))}
+                              </div>
+                            ) : null}
+                            <div className={`ll-node-box ${node.status ? `status-${node.status}` : ''}`}>
+                              <div className="ll-val-compartment">
+                                <span className="ll-val-label">data:</span><span>{node.value}</span>
+                              </div>
+                              <div className="ll-ptr-compartment">
+                                {lane.kind === 'map'
+                                  ? <span className="ll-next-text"><span>maps to</span><span className="ll-next-target">{String(node.value).split(' → ')[1] ?? 'NULL'}</span></span>
+                                  : <>
+                                    {lane.kind === 'doublyList' && <><span className="ll-next-text"><span>prev</span><span className="ll-next-arrow">←</span><span className="ll-next-target">{prevIndex >= 0 ? `N${prevIndex + 1}` : 'NULL'}</span></span><span style={{ margin: '0 0.3rem', color: 'var(--color-text-muted)' }}>|</span></>}
+                                    <span className="ll-next-text"><span>next</span><span className="ll-next-arrow">→</span><span className="ll-next-target">{nextIndex >= 0 ? `N${nextIndex + 1}` : 'NULL'}</span></span>
+                                  </>}
+                              </div>
+                            </div>
+                          </div>
+                          {lane.kind !== 'map' && (index < lane.nodes.length - 1 ? <span className="ll-lane-arrow" aria-hidden="true">{lane.kind === 'doublyList' ? '⇄' : '→'}</span> : <span className="ll-lane-arrow ll-lane-null" aria-hidden="true">{lane.kind === 'doublyList' ? 'END' : '→ NULL'}</span>)}
+                        </React.Fragment>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       </div>
     );
