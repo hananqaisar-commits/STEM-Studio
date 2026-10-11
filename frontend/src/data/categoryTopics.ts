@@ -85,6 +85,7 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
       { id: 'reverse', name: 'Reverse Linked List', group: 'Singly' },
       { id: 'middleNode', name: 'Find Middle Node', group: 'Two-Pointers' },
       { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers' },
+      { id: 'josephus', name: 'Josephus Problem', group: 'Circular' },
       { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly' },
       { id: 'circular', name: 'Circular Linked List', group: 'Circular' },
       { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular' },

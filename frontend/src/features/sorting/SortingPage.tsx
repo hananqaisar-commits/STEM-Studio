@@ -15,6 +15,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -110,7 +111,6 @@ export const SortingPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Custom code execution state
@@ -261,8 +261,8 @@ export const SortingPage: React.FC = () => {
         reset();
         setSandboxMessage(
           correct
-            ? `Correct — your ${lang.toUpperCase()} code produced the expected sorted array.`
-            : 'Ran successfully, but the output does not match the expected sorted array. Check your logic.'
+            ? `Your pasted ${lang.toUpperCase()} code ran in the sandbox and produced the expected sorted array.`
+            : `Your pasted ${lang.toUpperCase()} code ran in the sandbox, but the output does not match the expected sorted array. Check your logic.`
         );
       } else {
         setSandboxMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
@@ -455,7 +455,7 @@ export const SortingPage: React.FC = () => {
   );
 
   return (
-    <div className="bst-page-container">
+    <div className="bst-page-container sorting-page-container">
       <SEOHead {...getSEOForRoute('/dashboard/sorting')} />
       <VisualizerHeader
         icon={<Layers size={22} />}
@@ -480,9 +480,6 @@ export const SortingPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-            customizeModeEnabled={customizeModeEnabled}
-            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -532,6 +529,7 @@ export const SortingPage: React.FC = () => {
         </div>
 
         {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -541,31 +539,9 @@ export const SortingPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
+        <ResizableWorkspaceHandle storageKey="sorting" />
         <ResizablePanelRow
           storageKey="sorting"
-          customizeModeEnabled={customizeModeEnabled}
-          visualizerPanel={
-            <>
-              <SortingRenderer
-                currentStep={currentStep}
-                onElementClick={handleBarElementClick}
-                onToggleFullscreen={() => setIsFullScreenOpen(true)}
-              />
-              <FloatingController
-                isPlaying={isPlaying}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < totalSteps - 1}
-                onPlay={play}
-                onPause={pause}
-                onReset={reset}
-                onStepBack={stepBack}
-                onStepForward={stepForward}
-                onStop={() => { pause(); reset(); }}
-                onResume={play}
-                quizMode={quizEnabled}
-              />
-            </>
-          }
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}

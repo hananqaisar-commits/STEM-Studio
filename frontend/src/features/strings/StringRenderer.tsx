@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Maximize2 } from 'lucide-react';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import '../sorting/Sorting.css';
 import './Strings.css';
-import { MotionPresets } from '../../engine/motionEngine';
+import { useBarMotion } from '../sorting/useBarMotion';
 
 interface StringRendererProps {
   currentStep: ArrayStep | null;
@@ -12,17 +12,7 @@ interface StringRendererProps {
 }
 
 export const StringRenderer: React.FC<StringRendererProps> = ({ currentStep, originalString: _originalString, onToggleFullscreen }) => {
-  const cellsRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!currentStep || !cellsRef.current) return;
-    const cells = Array.from(cellsRef.current.querySelectorAll<HTMLElement>('.string-cell'));
-    const [first, second] = currentStep.comparingIndices ?? [];
-    if (first !== undefined && cells[first]) MotionPresets.pointerConverge(cells[first], second === undefined ? cells[first] : cells[second], { xA: first === second ? 0 : 4, xB: second === undefined || first === second ? 0 : -4 });
-    currentStep.sortedIndices?.forEach(index => { if (cells[index]) MotionPresets.flashState(cells[index], '16,185,129'); });
-    const [swapA, swapB] = currentStep.swappingIndices ?? [];
-    if (swapA !== undefined && cells[swapA]) MotionPresets.liftShiftDrop(cells[swapA], 34);
-    if (swapB !== undefined && cells[swapB]) MotionPresets.liftShiftDrop(cells[swapB], -34);
-  }, [currentStep]);
+  const { canvasRef: cellsRef, barIds } = useBarMotion(currentStep?.array ?? []);
   if (!currentStep) return <div className="sorting-canvas-empty"><span>No string data</span></div>;
 
   const { array, comparingIndices = [], swappingIndices = [], sortedIndices = [] } = currentStep;
@@ -51,9 +41,11 @@ export const StringRenderer: React.FC<StringRendererProps> = ({ currentStep, ori
       </div>
       <div ref={cellsRef} className="string-cells-canvas">
         {chars.map((char, i) => (
-          <div key={i} className={`string-cell state-${getState(i)}`}>
-            <span className="cell-char">{char}</span>
-            <span className="cell-index">{i}</span>
+          <div key={barIds[i]} data-bar-id={barIds[i]} className="string-cell-motion">
+            <div className={`string-cell state-${getState(i)}`}>
+              <span className="cell-char">{char}</span>
+              <span className="cell-index">{i}</span>
+            </div>
           </div>
         ))}
       </div>

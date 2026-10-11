@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Bar } from '../../components/primitives/Bar';
 import { TreeRenderer } from './TreeRenderer';
 import { Maximize2 } from 'lucide-react';
 import type { ArrayStep, ElementState } from '../../engine/types/Step';
 import './Sorting.css';
-import { MotionPresets } from '../../engine/motionEngine';
+import { useBarMotion } from './useBarMotion';
 
 interface SortingRendererProps {
   currentStep: ArrayStep | null;
@@ -23,20 +23,7 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
   onElementClick,
   onToggleFullscreen,
 }) => {
-  const canvasRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!currentStep || !canvasRef.current) return;
-    const bars = Array.from(canvasRef.current.querySelectorAll<HTMLElement>('.interactive-bar-wrapper'));
-    currentStep.comparingIndices?.slice(0, 2).forEach((index, order) => {
-      const other = currentStep.comparingIndices?.[order === 0 ? 1 : 0];
-      if (order === 0 && bars[index]) MotionPresets.pulseCompare(bars[index], other === undefined ? undefined : bars[other]);
-    });
-    currentStep.swappingIndices?.slice(0, 2).forEach((index, order) => {
-      if (order === 0 && bars[index]) MotionPresets.liftShiftDrop(bars[index], 28);
-      if (order === 1 && bars[index]) MotionPresets.liftShiftDrop(bars[index], -28);
-    });
-    if (currentStep.pivotIndex !== undefined && bars[currentStep.pivotIndex]) MotionPresets.flashState(bars[currentStep.pivotIndex]);
-  }, [currentStep]);
+  const { canvasRef, barIds } = useBarMotion(currentStep?.array ?? []);
   if (!currentStep) {
     return (
       <div className="sorting-canvas-empty">
@@ -115,8 +102,9 @@ export const SortingRenderer: React.FC<SortingRendererProps> = ({
 
           return (
             <div
-              key={index}
+              key={barIds[index]}
               className="interactive-bar-wrapper"
+              data-bar-id={barIds[index]}
               onClick={() => onElementClick && onElementClick(index, value)}
               title="Click to edit value"
             >

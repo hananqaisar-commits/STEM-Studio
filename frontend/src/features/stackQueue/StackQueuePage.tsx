@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
-import { ResizableStudioLayout } from '../../components/layout/ResizableStudioLayout';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
 import { buildStackQueueCheckpoints, buildRevisionData } from './quizAdapter';
@@ -51,6 +50,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { StackQueueCodePanel, type StackQueueCustomState } from './StackQueueCodePanel';
@@ -123,7 +123,6 @@ export const StackQueuePage: React.FC = () => {
   // Modes & Modals matching BST
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -1439,9 +1438,6 @@ export const StackQueuePage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-            customizeModeEnabled={customizeModeEnabled}
-            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -1496,115 +1492,71 @@ export const StackQueuePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Workspace Layout (Canvas + Drag Splitter + Quiz Dock + Code Debugger) */}
-      <ResizableStudioLayout
-        initialLeftPercent={68}
-        leftContent={
-          <div className="renderer-section" style={{ height: '100%' }}>
-            <div className="bst-canvas-card">
-              <div className="bst-canvas-header">
-                <div className="ll-canvas-title">
-                  <Layers size={16} className="text-accent" />
-                  <span>
-                    {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
-                  </span>
-                </div>
-                <button
-                  className="bst-btn btn-fullscreen"
-                  onClick={() => setIsFullScreenOpen(true)}
-                  title="Full Screen Canvas View"
-                >
-                  <Maximize2 size={14} />
-                </button>
+      {/* Main Learning Workspace: visualizer + quiz above debugger + execution trace */}
+      <div className="sorting-workspace scene-workspace stack-queue-workspace">
+        <div className="renderer-section">
+          <div className="bst-canvas-card">
+            <div className="bst-canvas-header">
+              <div className="ll-canvas-title">
+                <Layers size={16} className="text-accent" />
+                <span>{(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS</span>
               </div>
-
-              {renderCanvas()}
+              <button
+                className="bst-btn btn-fullscreen"
+                onClick={() => setIsFullScreenOpen(true)}
+                title="Full Screen Canvas View"
+              >
+                <Maximize2 size={14} />
+              </button>
             </div>
-
-            <FloatingController
-              isPlaying={isPlaying}
-              canStepBack={currentStepIndex > 0}
-              canStepForward={currentStepIndex < totalSteps - 1}
-              onPlay={play}
-              onPause={pause}
-              onReset={reset}
-              onStepBack={stepBack}
-              onStepForward={stepForward}
-              onStop={() => { pause(); reset(); }}
-              onResume={play}
-              quizMode={quizEnabled}
-            />
+            {renderCanvas()}
           </div>
-        }
-        rightContent={
-          <div className="quiz-rail">
-            <QuizDock
-              session={quizSession}
-              cadence={cadence}
-              onCadenceChange={setCadence}
-              onEnableQuiz={() => setQuizEnabled(true)}
-              onProveIt={handleProveIt}
-            />
-          </div>
-        }
-        bottomContent={
-          <ResizablePanelRow
-            storageKey="stackQueue"
-            customizeModeEnabled={customizeModeEnabled}
-            visualizerPanel={
-              <div className="renderer-section" style={{ height: '100%', minHeight: 400 }}>
-                <div className="bst-canvas-card">
-                  <div className="bst-canvas-header">
-                    <div className="ll-canvas-title">
-                      <Layers size={16} className="text-accent" />
-                      <span>
-                        {(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? category).toUpperCase()} CANVAS
-                      </span>
-                    </div>
-                    <button
-                      className="bst-btn btn-fullscreen"
-                      onClick={() => setIsFullScreenOpen(true)}
-                      title="Full Screen Canvas View"
-                    >
-                      <Maximize2 size={14} />
-                    </button>
-                  </div>
-                  {renderCanvas()}
-                </div>
-                <FloatingController
-                  isPlaying={isPlaying}
-                  canStepBack={currentStepIndex > 0}
-                  canStepForward={currentStepIndex < totalSteps - 1}
-                  onPlay={play}
-                  onPause={pause}
-                  onReset={reset}
-                  onStepBack={stepBack}
-                  onStepForward={stepForward}
-                  onStop={() => { pause(); reset(); }}
-                  onResume={play}
-                  quizMode={quizEnabled}
-                />
-              </div>
-            }
-            debuggerPanel={showDebugger ? (
-              <StackQueueCodePanel
-                category={category}
-                activeLine={currentStep?.codeLine ?? 1}
-                onCustomStateChange={setCustomState}
-                customBusy={sandboxBusy}
-                customMessage={sandboxMessage}
-              />
-            ) : null}
 
-            explanationPanel={<ExplanationPanel
+          <FloatingController
+            isPlaying={isPlaying}
+            canStepBack={currentStepIndex > 0}
+            canStepForward={currentStepIndex < totalSteps - 1}
+            onPlay={play}
+            onPause={pause}
+            onReset={reset}
+            onStepBack={stepBack}
+            onStepForward={stepForward}
+            onStop={() => { pause(); reset(); }}
+            onResume={play}
+            quizMode={quizEnabled}
+          />
+        </div>
+
+        <div className="quiz-rail">
+          <QuizDock
+            session={quizSession}
+            cadence={cadence}
+            onCadenceChange={setCadence}
+            onEnableQuiz={() => setQuizEnabled(true)}
+            onProveIt={handleProveIt}
+          />
+        </div>
+        <ResizableWorkspaceHandle storageKey="stackQueue" />
+        <ResizablePanelRow
+          storageKey="stackQueue"
+          debuggerPanel={showDebugger ? (
+            <StackQueueCodePanel
+              category={category}
+              activeLine={currentStep?.codeLine ?? 1}
+              onCustomStateChange={setCustomState}
+              customBusy={sandboxBusy}
+              customMessage={sandboxMessage}
+            />
+          ) : null}
+          explanationPanel={(
+            <ExplanationPanel
               description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
               steps={activeSteps}
               currentStepIndex={currentStepIndex}
             />
-            }
-          />
-        }
-      />
+          )}
+        />
+      </div>
 
       {/* FullScreen Canvas Modal matching BST */}
       <FullScreenCanvasModal

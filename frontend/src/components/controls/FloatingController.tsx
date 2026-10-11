@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useLayoutEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -32,6 +32,50 @@ interface Position {
   y: number;
 }
 
+interface ControllerBounds {
+  parent: HTMLElement;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+const EDGE_INSET = 12;
+
+function getControllerBounds(element: HTMLElement): ControllerBounds | null {
+  const renderer = element.closest<HTMLElement>('.renderer-section');
+  const modalBody = element.closest<HTMLElement>('.fs-modal-body');
+  const parent = renderer ?? modalBody ?? element.offsetParent as HTMLElement | null;
+  if (!parent) return null;
+
+  // In fullscreen the controller is a sibling of the scrollable workspace,
+  // so use that visible workspace as its drag boundary while positioning it
+  // relative to the modal body.
+  const boundary = renderer ?? modalBody?.querySelector<HTMLElement>('.fs-workspace-scrollable') ?? parent;
+  const parentRect = parent.getBoundingClientRect();
+  const boundaryRect = boundary.getBoundingClientRect();
+
+  return {
+    parent,
+    left: boundaryRect.left - parentRect.left - parent.clientLeft,
+    top: boundaryRect.top - parentRect.top - parent.clientTop,
+    width: boundary.clientWidth,
+    height: boundary.clientHeight,
+  };
+}
+
+function clampPosition(value: Position, bounds: ControllerBounds, width: number, height: number): Position {
+  const minX = bounds.left + EDGE_INSET;
+  const minY = bounds.top + EDGE_INSET;
+  const maxX = Math.max(minX, bounds.left + bounds.width - width - EDGE_INSET);
+  const maxY = Math.max(minY, bounds.top + bounds.height - height - EDGE_INSET);
+
+  return {
+    x: Math.min(Math.max(value.x, minX), maxX),
+    y: Math.min(Math.max(value.y, minY), maxY),
+  };
+}
+
 const SHORTCUTS: Record<string, string> = {
   play: 'Space',
   reset: 'R',
@@ -63,15 +107,60 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
     initialLeft: 0,
     initialTop: 0,
   });
-
-  const [position, setPosition] = useState<Position>({
-    x: typeof window !== 'undefined' ? window.innerWidth / 2 - 160 : 24,
-    y: 24
-  });
+  const positionRef = useRef<Position>({ x: 0, y: 0 });
+  const hasDraggedRef = useRef(false);
+  const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  /* Once the user drags, the controller switches from its default
-     in-flow placement to absolute positioning at the dragged spot. */
   const [isPositioned, setIsPositioned] = useState(false);
+
+  const updatePosition = useCallback((next: Position) => {
+    positionRef.current = next;
+    setPosition(next);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const placeController = () => {
+      const currentElement = containerRef.current;
+      if (!currentElement) return;
+      const bounds = getControllerBounds(currentElement);
+      if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+
+      const width = currentElement.offsetWidth;
+      const height = currentElement.offsetHeight;
+      if (width <= 0 || height <= 0) return;
+
+      const next = hasDraggedRef.current
+        ? clampPosition(positionRef.current, bounds, width, height)
+        : clampPosition({
+            x: bounds.left + (bounds.width - width) / 2,
+            y: bounds.top + bounds.height - height - EDGE_INSET,
+          }, bounds, width, height);
+
+      updatePosition(next);
+      setIsPositioned(true);
+    };
+
+    placeController();
+    const bounds = getControllerBounds(el);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(placeController) : null;
+    if (bounds) {
+      observer?.observe(bounds.parent);
+      const boundary = bounds.parent.matches('.renderer-section')
+        ? bounds.parent
+        : bounds.parent.querySelector<HTMLElement>('.fs-workspace-scrollable');
+      if (boundary && boundary !== bounds.parent) observer?.observe(boundary);
+    }
+    observer?.observe(el);
+    window.addEventListener('resize', placeController);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', placeController);
+    };
+  }, [updatePosition]);
 
   const handleTogglePlay = useCallback(() => {
     if (isPlaying) onPause();
@@ -94,14 +183,13 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
 
     const el = containerRef.current;
     if (!el) return;
-
-    const rect = el.getBoundingClientRect();
+    e.preventDefault();
     dragRef.current = {
       isDragging: true,
       startX: e.clientX,
       startY: e.clientY,
-      initialLeft: rect.left,
-      initialTop: rect.top,
+      initialLeft: positionRef.current.x,
+      initialTop: positionRef.current.y,
     };
     setIsDragging(true);
     el.setPointerCapture(e.pointerId);
@@ -114,51 +202,23 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
 
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
+    const bounds = getControllerBounds(el);
+    if (!bounds) return;
 
-    const parent = el.offsetParent as HTMLElement | null;
-    const parentRect = parent?.getBoundingClientRect() ?? {
-      left: 0,
-      top: 0,
-      width: window.innerWidth,
-      height: window.innerHeight,
-    };
+    const next = clampPosition({
+      x: dragRef.current.initialLeft + dx,
+      y: dragRef.current.initialTop + dy,
+    }, bounds, el.offsetWidth, el.offsetHeight);
 
-    const newLeft = Math.min(
-      Math.max(0, dragRef.current.initialLeft - parentRect.left + dx),
-      parentRect.width - el.offsetWidth
-    );
-    const newTop = Math.min(
-      Math.max(0, dragRef.current.initialTop - parentRect.top + dy),
-      parentRect.height - el.offsetHeight
-    );
-
-    setPosition({ x: newLeft, y: newTop });
-    setIsPositioned(true);
-  }, [quizMode]);
+    hasDraggedRef.current = true;
+    updatePosition(next);
+  }, [quizMode, updatePosition]);
 
   const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     dragRef.current.isDragging = false;
     setIsDragging(false);
-    containerRef.current?.releasePointerCapture(e.pointerId);
-  }, []);
-
-  // Keep the controller inside the viewport on resize.
-  useEffect(() => {
-    const handleResize = () => {
-      const el = containerRef.current;
-      if (!el) return;
-      const parent = el.offsetParent as HTMLElement | null;
-      const parentRect = parent?.getBoundingClientRect() ?? {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      };
-      setPosition((prev) => ({
-        x: Math.min(prev.x, Math.max(0, parentRect.width - el.offsetWidth)),
-        y: Math.min(prev.y, Math.max(0, parentRect.height - el.offsetHeight)),
-      }));
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const el = containerRef.current;
+    if (el?.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
   }, []);
 
   if (quizMode) return null;
@@ -171,6 +231,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
       role="toolbar"
       aria-label="Playback controls"
     >

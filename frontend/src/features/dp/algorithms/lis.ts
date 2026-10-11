@@ -7,33 +7,33 @@ export function runLIS(arr: number[]): AlgorithmExecution<ArrayStep> {
   const dp: number[] = new Array(n).fill(1);
 
   steps.push({
-    array: [...arr],
+    array: [...dp],
     description: `Starting LIS DP. arr=[${arr.join(',')}]. dp initialized to all 1s (each element alone is length 1).`,
     codeLine: 1,
-    variables: { n, i: 0, j: 0 },
+    variables: { n, i: 0, j: 0, sourceValues: arr.join(','), sourceLabel: 'Input sequence' },
     callStack: ['main() -> LIS(arr)'],
   });
 
   for (let i = 1; i < n; i++) {
     steps.push({
-      array: [...arr],
+      array: [...dp],
       comparingIndices: [i],
       sortedIndices: Array.from({ length: i }, (_, k) => k),
       description: `Computing dp[${i}] for arr[${i}]=${arr[i]}. Checking all j < ${i}...`,
       codeLine: 2,
-      variables: { n, i, 'arr[i]': arr[i], 'dp[i]': dp[i] },
+      variables: { n, i, 'arr[i]': arr[i], 'dp[i]': dp[i], sourceValues: arr.join(','), sourceLabel: 'Input sequence' },
       callStack: ['main() -> LIS(arr)'],
     });
 
     for (let j = 0; j < i; j++) {
       if (arr[j] < arr[i]) {
         steps.push({
-          array: [...arr],
+          array: [...dp],
           comparingIndices: [i, j],
           sortedIndices: Array.from({ length: i }, (_, k) => k),
           description: `  arr[${j}]=${arr[j]} < arr[${i}]=${arr[i]}: dp[${i}] = max(${dp[i]}, dp[${j}]+1) = max(${dp[i]}, ${dp[j] + 1})`,
           codeLine: 3,
-          variables: { n, i, j, 'arr[i]': arr[i], 'arr[j]': arr[j], 'dp[i]': dp[i], 'dp[j]': dp[j] },
+          variables: { n, i, j, 'arr[i]': arr[i], 'arr[j]': arr[j], 'dp[i]': dp[i], 'dp[j]': dp[j], sourceValues: arr.join(','), sourceLabel: 'Input sequence' },
           callStack: ['main() -> LIS(arr)'],
         });
         dp[i] = Math.max(dp[i], dp[j] + 1);
@@ -41,23 +41,23 @@ export function runLIS(arr: number[]): AlgorithmExecution<ArrayStep> {
     }
 
     steps.push({
-      array: [...arr],
+      array: [...dp],
       comparingIndices: [i],
       sortedIndices: Array.from({ length: i + 1 }, (_, k) => k),
       description: `dp[${i}] = ${dp[i]}. Longest increasing subsequence ending at index ${i} has length ${dp[i]}.`,
       codeLine: 4,
-      variables: { n, i, 'dp[i]': dp[i] },
+      variables: { n, i, 'dp[i]': dp[i], sourceValues: arr.join(','), sourceLabel: 'Input sequence' },
       callStack: ['main() -> LIS(arr)'],
     });
   }
 
   const result = Math.max(...dp);
   steps.push({
-    array: [...arr],
+    array: [...dp],
     sortedIndices: Array.from({ length: n }, (_, k) => k),
     description: `LIS complete. Longest increasing subsequence length = ${result}.`,
     codeLine: 5,
-    variables: { result, status: 'COMPLETE' },
+    variables: { result, status: 'COMPLETE', sourceValues: arr.join(','), sourceLabel: 'Input sequence' },
     callStack: ['main() -> LIS(arr) [RETURN]'],
   });
 

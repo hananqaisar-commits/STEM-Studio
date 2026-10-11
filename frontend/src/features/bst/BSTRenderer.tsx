@@ -10,6 +10,7 @@ interface ExtendedBSTNodeData extends BSTNodeData {
   balanceFactor?: number;
   label?: string;
   isEndOfWord?: boolean;
+  color?: 'RED' | 'BLACK';
 }
 
 interface BSTRendererProps {
@@ -46,6 +47,7 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
   const nodes = currentStep.nodes as ExtendedBSTNodeData[];
   const edges = currentStep.edges;
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  const isRedBlackTree = nodes.some((node) => node.color === 'RED' || node.color === 'BLACK');
 
   // Dynamically compute canvas height so SVG layer never clips lines on deep/large trees
   const maxY = Math.max(480, ...nodes.map((n) => (n.y ?? 0) + 90));
@@ -58,16 +60,26 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
           <span className="bst-subtitle">{nodes.length} nodes · {edges.length} edges</span>
         </div>
 
-        {onToggleFullscreen && (
-          <button
-            className="fullscreen-toggle-btn"
-            onClick={onToggleFullscreen}
-            title="Enter Full Screen Interactive Mode"
-          >
-            <Maximize2 size={14} />
-            <span>Fullscreen</span>
-          </button>
-        )}
+        <div className="bst-canvas-header-actions">
+          {isRedBlackTree && (
+            <div className="rb-tree-legend" aria-label="Red-black tree node colors">
+              <span><i className="rb-tree-legend-swatch is-red" aria-hidden="true" />Red</span>
+              <span><i className="rb-tree-legend-swatch is-black" aria-hidden="true" />Black</span>
+            </div>
+          )}
+          {onToggleFullscreen && (
+            <button
+              type="button"
+              className="fullscreen-toggle-btn"
+              onClick={onToggleFullscreen}
+              title="Enter full screen interactive mode"
+              aria-label="Enter full screen interactive mode"
+            >
+              <Maximize2 size={14} aria-hidden="true" />
+              <span>Fullscreen</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bst-canvas-workspace">
@@ -151,6 +163,8 @@ export const BSTRenderer: React.FC<BSTRendererProps> = ({
                   value={displayVal}
                   state={node.state}
                   size={46}
+                  className={node.color ? `rb-color-${node.color.toLowerCase()}` : undefined}
+                  ariaLabel={node.color ? `${node.color.toLowerCase()} node ${displayVal}` : undefined}
                 />
               </div>
             );

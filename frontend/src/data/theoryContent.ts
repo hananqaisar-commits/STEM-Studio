@@ -451,6 +451,20 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
         applications: ['Memory leak detection', 'Duplicate number detection'],
       },
       {
+        id: 'josephus',
+        name: 'Josephus Problem',
+        complexity: 'O(n·k) time for the visual simulation, O(n) space',
+        description:
+          'Repeatedly count k nodes in a circle, remove the kth node, and resume at its successor until one survivor remains.',
+        keyPoints: [
+          'Count the current node as 1 on each round.',
+          'The previous node skips the eliminated node and links to its successor.',
+          'Counting resumes at that successor; stop when only one node remains.',
+        ],
+        example: 'For 1→2→3→4→5→6→7 and k=3, eliminate 3, 6, 2, 7, 5, 1. Node 4 survives.',
+        applications: ['Circular elimination games', 'Round-robin scheduling demonstrations'],
+      },
+      {
         id: 'doubly',
         name: 'Doubly Linked List',
         complexity: 'O(n) search, O(1) insert/delete given node',

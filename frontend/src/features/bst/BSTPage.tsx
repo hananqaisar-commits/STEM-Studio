@@ -13,6 +13,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
@@ -53,6 +54,33 @@ import { useTutorContext } from '../../contexts/TutorContext';
 
 type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie' | 'rbt' | 'segTree';
 
+const TREE_CATEGORY_LABELS: Record<TreeCategory, string> = {
+  bst: 'Binary Search Tree',
+  avl: 'AVL Tree',
+  heap: 'Binary Heap',
+  trie: 'Trie',
+  rbt: 'Red-Black Tree',
+  segTree: 'Segment Tree',
+};
+
+const TREE_OPERATION_LABELS: Record<BSTAlgorithmKey, string> = {
+  insert: 'Insertion',
+  search: 'Search',
+  delete: 'Deletion',
+  inorder: 'In-order traversal',
+  preorder: 'Pre-order traversal',
+  postorder: 'Post-order traversal',
+  avlInsert: 'Insertion',
+  heapInsert: 'Heap insertion',
+  heapExtract: 'Extract maximum',
+  trieInsert: 'Trie insertion',
+  trieSearch: 'Trie search',
+  rbtInsert: 'Insertion',
+  segBuild: 'Build',
+  segQuery: 'Range query',
+  segUpdate: 'Point update',
+};
+
 const DEFAULT_BST_TREE: BSTTreeStructure = {
   value: 50,
   id: 'node_50',
@@ -86,7 +114,7 @@ export const BSTPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  const [inputValue, setInputValue] = useState<string>('20, 10, 30, 5, 15');
+  const [inputValue, setInputValue] = useState<string>('45');
   const [wordValue, setWordValue] = useState<string>('cat, car, dog');
   const [segInputValue, setSegInputValue] = useState<string>('1, 3, 5, 7, 9, 11');
   const [segQueryRange, setSegQueryRange] = useState<{ start: number; end: number }>({ start: 1, end: 4 });
@@ -95,7 +123,6 @@ export const BSTPage: React.FC = () => {
   const [inputError, setInputError] = useState<string | null>(null);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
   const [activeOperationSteps, setActiveOperationSteps] = useState<BSTStep[]>([]);
@@ -119,16 +146,24 @@ export const BSTPage: React.FC = () => {
   // Initialize steps when switching category
   useEffect(() => {
     if (treeCategory === 'bst') {
+      setRevisionKey('insert');
+      setInputValue('45');
       const { steps } = generateBSTInsertSteps(DEFAULT_BST_TREE, 45);
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'avl') {
+      setRevisionKey('avlInsert');
+      setInputValue('30');
       const { steps, newTree } = generateAVLInsertSteps(undefined, 30);
       setAvlTree(newTree);
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'heap') {
+      setRevisionKey('heapInsert');
+      setInputValue('85');
       const { steps } = generateHeapInsertSteps([90, 75, 60, 40, 55, 20], 85, 'max');
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'trie') {
+      setRevisionKey('trieInsert');
+      setWordValue('cat');
       let root = createTrieRoot();
       SAMPLE_TRIE_WORDS.forEach((w) => {
         const res = generateTrieInsertSteps(root, w);
@@ -138,6 +173,8 @@ export const BSTPage: React.FC = () => {
       const { steps } = generateTrieInsertSteps(root, 'cat');
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'rbt') {
+      setRevisionKey('rbtInsert');
+      setInputValue('25');
       // Show insertion of 25 into sample tree
       const sampleTree = buildSampleRBTree();
       setRbtTree(sampleTree);
@@ -146,6 +183,8 @@ export const BSTPage: React.FC = () => {
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'segTree') {
       const arr = [1, 3, 5, 7, 9, 11];
+      setRevisionKey('segBuild');
+      setSegInputValue(arr.join(', '));
       setSegArray(arr);
       const { steps, tree } = generateSegTreeBuildSteps(arr);
       setSegTree(tree);
@@ -177,18 +216,20 @@ export const BSTPage: React.FC = () => {
 
   const bstStep = isSegTreeMode ? null : (currentStep as BSTStep | null);
   const currentSegStep = isSegTreeMode ? (segTreeSteps[currentStepIndex] ?? activeSegStep) : null;
+  const tutorCurrentStep = isSegTreeMode ? currentSegStep : bstStep;
+  const tutorSteps = isSegTreeMode ? segTreeSteps : activeOperationSteps;
 
   // Publish active context to Octa AI Tutor
   useEffect(() => {
     setTutorContext({
-      algorithmName: `${treeCategory.toUpperCase()} Trees`,
+      algorithmName: `${TREE_CATEGORY_LABELS[treeCategory]} — ${TREE_OPERATION_LABELS[revisionKey]}`,
       algorithmId: treeCategory,
       category: 'bst',
-      currentStepDescription: bstStep?.description || '',
+      currentStepDescription: tutorCurrentStep?.description || '',
       currentStepIndex,
       totalSteps,
-      currentStep: bstStep,
-      steps: activeOperationSteps,
+      currentStep: tutorCurrentStep,
+      steps: tutorSteps,
       play,
       pause,
       stepForward,
@@ -196,7 +237,7 @@ export const BSTPage: React.FC = () => {
       setShowDebugger,
       onLaunchQuiz: () => setQuizEnabled(true),
     });
-  }, [treeCategory, currentStepIndex, totalSteps, bstStep, activeOperationSteps, setTutorContext, play, pause, stepForward, reset]);
+  }, [treeCategory, revisionKey, currentStepIndex, totalSteps, tutorCurrentStep, tutorSteps, setTutorContext, play, pause, stepForward, reset]);
 
   usePlaybackShortcuts({
     handlers: {
@@ -552,9 +593,13 @@ export const BSTPage: React.FC = () => {
 
   const handleSampleTree = () => {
     if (treeCategory === 'bst') {
+      setRevisionKey('insert');
+      setInputValue('45');
       setBstTree(DEFAULT_BST_TREE);
       setActiveOperationSteps(generateBSTInsertSteps(DEFAULT_BST_TREE, 45).steps);
     } else if (treeCategory === 'avl') {
+      setRevisionKey('avlInsert');
+      setInputValue('50');
       let tree: AVLNodeStructure | undefined = undefined;
       let lastSteps: BSTStep[] = [];
       [30, 20, 40, 10, 25, 35, 50].forEach((v) => {
@@ -566,9 +611,13 @@ export const BSTPage: React.FC = () => {
       setActiveOperationSteps(lastSteps);
     } else if (treeCategory === 'heap') {
       const sample = [90, 75, 60, 40, 55, 20];
+      setRevisionKey('heapInsert');
+      setInputValue('85');
       setHeapArray(sample);
       setActiveOperationSteps(generateHeapInsertSteps(sample, 85, heapType).steps);
     } else if (treeCategory === 'trie') {
+      setRevisionKey('trieInsert');
+      setWordValue('cat');
       let root = createTrieRoot();
       SAMPLE_TRIE_WORDS.forEach((w) => {
         const res = generateTrieInsertSteps(root, w);
@@ -577,6 +626,8 @@ export const BSTPage: React.FC = () => {
       setTrieRoot(root);
       setActiveOperationSteps(generateTrieInsertSteps(root, 'cat').steps);
     } else if (treeCategory === 'rbt') {
+      setRevisionKey('rbtInsert');
+      setInputValue('25');
       const sample = buildSampleRBTree();
       setRbtTree(sample);
       const { steps, newTree } = generateRBInsertSteps(sample, 25);
@@ -584,6 +635,8 @@ export const BSTPage: React.FC = () => {
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'segTree') {
       const arr = [1, 3, 5, 7, 9, 11];
+      setRevisionKey('segBuild');
+      setSegInputValue(arr.join(', '));
       setSegArray(arr);
       const { steps, tree } = generateSegTreeBuildSteps(arr);
       setSegTree(tree);
@@ -598,27 +651,38 @@ export const BSTPage: React.FC = () => {
   const handleRandomTree = () => {
     if (treeCategory === 'bst') {
       const rnd = generateRandomBST(6);
+      const insertedValue = Math.floor(Math.random() * 80) + 10;
+      setRevisionKey('insert');
+      setInputValue(String(insertedValue));
       setBstTree(rnd);
-      setActiveOperationSteps(generateBSTInsertSteps(rnd, Math.floor(Math.random() * 80) + 10).steps);
+      setActiveOperationSteps(generateBSTInsertSteps(rnd, insertedValue).steps);
     } else if (treeCategory === 'avl') {
       let tree: AVLNodeStructure | undefined = undefined;
       let lastSteps: BSTStep[] = [];
+      let lastValue = 0;
       for (let i = 0; i < 6; i++) {
-        const v = Math.floor(Math.random() * 80) + 10;
-        const res = generateAVLInsertSteps(tree, v);
+        lastValue = Math.floor(Math.random() * 80) + 10;
+        const res = generateAVLInsertSteps(tree, lastValue);
         tree = res.newTree;
         lastSteps = res.steps;
       }
+      setRevisionKey('avlInsert');
+      setInputValue(String(lastValue));
       setAvlTree(tree);
       setActiveOperationSteps(lastSteps);
     } else if (treeCategory === 'heap') {
       const rndArr = Array.from({ length: 6 }, () => Math.floor(Math.random() * 85) + 10);
+      const insertedValue = Math.floor(Math.random() * 85) + 10;
+      setRevisionKey('heapInsert');
+      setInputValue(String(insertedValue));
       setHeapArray(rndArr);
-      setActiveOperationSteps(generateHeapInsertSteps(rndArr, Math.floor(Math.random() * 85) + 10, heapType).steps);
+      setActiveOperationSteps(generateHeapInsertSteps(rndArr, insertedValue, heapType).steps);
     } else if (treeCategory === 'trie') {
       let root = createTrieRoot();
       const count = 4;
       const shuffled = [...RANDOM_WORD_POOL].sort(() => 0.5 - Math.random()).slice(0, count);
+      setRevisionKey('trieInsert');
+      setWordValue(shuffled[0]);
       shuffled.forEach((w) => {
         const res = generateTrieInsertSteps(root, w);
         root = res.newRoot;
@@ -628,16 +692,21 @@ export const BSTPage: React.FC = () => {
     } else if (treeCategory === 'rbt') {
       let tree: RBNodeStructure | undefined = undefined;
       let lastSteps: BSTStep[] = [];
+      let lastValue = 0;
       for (let i = 0; i < 5; i++) {
-        const v = Math.floor(Math.random() * 80) + 10;
-        const res = generateRBInsertSteps(tree, v);
+        lastValue = Math.floor(Math.random() * 80) + 10;
+        const res = generateRBInsertSteps(tree, lastValue);
         tree = res.newTree;
         lastSteps = res.steps;
       }
+      setRevisionKey('rbtInsert');
+      setInputValue(String(lastValue));
       setRbtTree(tree);
       setActiveOperationSteps(lastSteps);
     } else if (treeCategory === 'segTree') {
       const arr = Array.from({ length: 6 }, () => Math.floor(Math.random() * 20) + 1);
+      setRevisionKey('segBuild');
+      setSegInputValue(arr.join(', '));
       setSegArray(arr);
       const { steps, tree } = generateSegTreeBuildSteps(arr);
       setSegTree(tree);
@@ -898,9 +967,6 @@ export const BSTPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-          customizeModeEnabled={customizeModeEnabled}
-          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -967,6 +1033,7 @@ export const BSTPage: React.FC = () => {
         </div>
 
         {/* Right Column: Multi-Language Debugger & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -976,9 +1043,9 @@ export const BSTPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
+        <ResizableWorkspaceHandle storageKey="bst" />
         <ResizablePanelRow
           storageKey="bst"
-          customizeModeEnabled={customizeModeEnabled}
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={treeCategory}

@@ -36,6 +36,25 @@ export const DPRenderer: React.FC<DPRendererProps> = ({
   // Build row and column labels for string/item DP
   const s1 = typeof variables.s1 === 'string' ? variables.s1 : '';
   const s2 = typeof variables.s2 === 'string' ? variables.s2 : '';
+  const sourceValues = typeof variables.sourceValues === 'string'
+    ? variables.sourceValues.split(',').filter((value) => value.length > 0).map(Number)
+    : [];
+  const sourceLabel = typeof variables.sourceLabel === 'string' ? variables.sourceLabel : 'Input';
+
+  const renderSourceSequence = () => sourceValues.length > 0 ? (
+    <div className="dp-source-sequence" aria-label={`${sourceLabel}: ${sourceValues.join(', ')}`}>
+      <span className="dp-source-title">{sourceLabel}</span>
+      <div className="dp-source-cells">
+        {sourceValues.map((value, index) => (
+          <span className={`dp-source-cell${comparingIndices.includes(index) ? ' is-active' : ''}`} key={index}>
+            <strong>{value}</strong><small>[{index}]</small>
+          </span>
+        ))}
+      </div>
+      <span className="dp-source-arrow" aria-hidden="true">↓</span>
+      <span className="dp-source-caption">input values feed the DP states</span>
+    </div>
+  ) : null;
 
   const rowLabels: string[] = [];
   if (rows > 0) {
@@ -66,35 +85,41 @@ export const DPRenderer: React.FC<DPRendererProps> = ({
 
   if (isGrid && rows > 0 && cols > 0) {
     return (
-      <Grid2D
-        mode="2D"
-        array={array}
-        rows={rows}
-        cols={cols}
-        rowLabels={rowLabels}
-        colLabels={colLabels}
-        activeIndices={comparingIndices}
-        computedIndices={sortedIndices}
-        backtrackPath={backtrackPath}
-        cellDependencies={cellDependencies}
-        title="DP TABLE MATRIX"
-        subtitle={`${rows} \u00d7 ${cols} matrix`}
-        onToggleFullscreen={onToggleFullscreen}
-      />
+      <div className="dp-renderer-stack">
+        {renderSourceSequence()}
+        <Grid2D
+          mode="2D"
+          array={array}
+          rows={rows}
+          cols={cols}
+          rowLabels={rowLabels}
+          colLabels={colLabels}
+          activeIndices={comparingIndices}
+          computedIndices={sortedIndices}
+          backtrackPath={backtrackPath}
+          cellDependencies={cellDependencies}
+          title="DP TABLE MATRIX"
+          subtitle={`${rows} \u00d7 ${cols} matrix`}
+          onToggleFullscreen={onToggleFullscreen}
+        />
+      </div>
     );
   }
 
   return (
-    <Grid2D
-      mode="1D"
-      array={array}
-      activeIndices={comparingIndices}
-      computedIndices={sortedIndices}
-      backtrackPath={backtrackPath}
-      cellDependencies={cellDependencies}
-      title="DP TABLE ARRAY"
-      subtitle={`${array.length} cells`}
-      onToggleFullscreen={onToggleFullscreen}
-    />
+    <div className="dp-renderer-stack">
+      {renderSourceSequence()}
+      <Grid2D
+        mode="1D"
+        array={array}
+        activeIndices={comparingIndices}
+        computedIndices={sortedIndices}
+        backtrackPath={backtrackPath}
+        cellDependencies={cellDependencies}
+        title="DP TABLE ARRAY"
+        subtitle={`${array.length} cells`}
+        onToggleFullscreen={onToggleFullscreen}
+      />
+    </div>
   );
 };

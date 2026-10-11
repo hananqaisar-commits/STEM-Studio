@@ -19,6 +19,7 @@ import { VisualizerActions } from '../../../components/layout/VisualizerActions'
 import { FloatingController } from '../../../components/controls/FloatingController';
 import { ExplanationPanel } from '../../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../../components/layout/ResizableWorkspaceHandle';
 import { TheoryPanel } from '../../../components/layout/TheoryPanel';
 import { FullScreenCanvasModal } from '../../../components/layout/FullScreenCanvasModal';
 import { QuizDock } from '../../../components/quiz/QuizDock';
@@ -73,7 +74,6 @@ export const FileSystemPage: React.FC = () => {
   // Layout Toggles matching DSA module
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [showKeyConcepts, setShowKeyConcepts] = useState<boolean>(false);
 
   // Editor Modal Trigger State
@@ -324,9 +324,6 @@ export const FileSystemPage: React.FC = () => {
               onToggleQuiz={() => setQuizEnabled(v => !v)}
               debuggerVisible={showDebugger}
               onToggleDebugger={() => setShowDebugger(v => !v)}
-              customizeModeEnabled={customizeModeEnabled}
-              onToggleCustomizeMode={() => setCustomizeModeEnabled(v => !v)}
-              onResetLayout={() => setCustomizeModeEnabled(false)}
             >
               <button
                 type="button"
@@ -424,6 +421,9 @@ export const FileSystemPage: React.FC = () => {
       {/* Main Learning Workspace */}
       <div className="sorting-workspace scene-workspace">
         {/* Quiz Dock */}
+
+
+        {/* Resizable Panel Row for Visualizer, Terminal & Explanation */}
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -432,36 +432,9 @@ export const FileSystemPage: React.FC = () => {
             onEnableQuiz={() => setQuizEnabled(true)}
           />
         </div>
-
-        {/* Resizable Panel Row for Visualizer, Terminal & Explanation */}
+        <ResizableWorkspaceHandle storageKey="filesystem" />
         <ResizablePanelRow
           storageKey="filesystem"
-          customizeModeEnabled={customizeModeEnabled}
-          onResetLayout={() => setCustomizeModeEnabled(false)}
-          visualizerPanel={
-            <div className="relative h-full flex flex-col justify-between">
-              <VFSTreeVisualizer
-                snapshot={snapshot}
-                activeNodeId={activeNodeId}
-                animatedPathIds={animatedPathIds}
-                onSelectNode={(id) => setActiveNodeId(id)}
-                isFullscreen={isFullscreen}
-              />
-              <FloatingController
-                isPlaying={isPlaying}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < stepHistory.length - 1}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onReset={handleReset}
-                onStepBack={handlePrevStep}
-                onStepForward={handleNextStep}
-                onStop={() => { setIsPlaying(false); handleReset(); }}
-                onResume={() => setIsPlaying(true)}
-                quizMode={quizEnabled}
-              />
-            </div>
-          }
           debuggerPanel={
             showDebugger ? (
               <VFSTerminal

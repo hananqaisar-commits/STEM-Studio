@@ -17,7 +17,14 @@ export function collapseRemove(el: Target, siblingsAfter?: Target, shiftBy = 64)
 export function pulseCompare(a: Target, b?: Target) { return run(b ? [a, b] : a, { scale: 1.12, duration: 0.18, yoyo: true, repeat: 1, ease: EASE.smooth }); }
 export function flashState(el: Target, color = '59,130,246') { return gsap.fromTo(el, { boxShadow: `0 0 0 rgba(${color},0)` }, { boxShadow: `0 0 18px rgba(${color},.8)`, duration: 0.2, yoyo: true, repeat: 1 }); }
 export function shakeReject(el: Target) { return run(el, { x: 8, duration: 0.06, repeat: 5, yoyo: true, ease: EASE.smooth, onComplete: () => gsap.set(el, { x: 0 }) }); }
-export function liftShiftDrop(el: Target, targetX: number) { return gsap.timeline().to(el, { y: -20, duration: .15, ease: EASE.settle }).to(el, { x: targetX, duration: .28, ease: EASE.smooth }, '-=.02').to(el, { y: 0, duration: .15, ease: EASE.sharp }); }
+export function liftShiftDrop(el: Target, targetX: number) {
+  if (reduced()) return gsap.set(el, { x: 0, y: 0 });
+  const reset = () => gsap.set(el, { x: 0, y: 0 });
+  return gsap.timeline({ onComplete: reset, onInterrupt: reset })
+    .to(el, { y: -20, duration: .15, ease: EASE.settle })
+    .to(el, { x: targetX, duration: .28, ease: EASE.smooth }, '-=.02')
+    .to(el, { x: 0, y: 0, duration: .15, ease: EASE.sharp });
+}
 export function prepEdgeForTraverse(el: SVGGeometryElement) { const length = el.getTotalLength(); gsap.set(el, { strokeDasharray: length, strokeDashoffset: length }); return length; }
 export function edgeTraverse(el: SVGGeometryElement | null, length: number, reverse = false) { return el ? gsap.fromTo(el, { strokeDashoffset: reverse ? 0 : length }, { strokeDashoffset: reverse ? length : 0, duration: DURATION.slow, ease: EASE.smooth }) : undefined; }
 export function rotateFlip(el: Target, direction: 'left' | 'right' = 'right') { return gsap.timeline().to(el, { rotate: direction === 'right' ? 15 : -15, duration: .15 }).to(el, { rotate: 0, duration: .25, ease: 'elastic.out(1,.6)' }); }
@@ -31,5 +38,5 @@ export function branchExpand(nodes: Target) { return gsap.fromTo(nodes, { scale:
 export function bucketDistribute(el: Target, targetX: number, targetY: number, delay = 0) { return gsap.timeline({ delay }).to(el, { y: '-=40', duration: .15 }).to(el, { x: targetX, duration: .3, ease: EASE.smooth }, '-=.05').to(el, { y: targetY, duration: .2, ease: EASE.sharp }); }
 export function trieDescend(nodes: Element[], stagger = .15) { const tl = gsap.timeline(); nodes.forEach((node, i) => tl.fromTo(node, { scale: .7, opacity: .4 }, { scale: 1, opacity: 1, duration: .2, ease: 'back.out(1.8)' }, i * stagger).to(node, { boxShadow: '0 0 12px rgba(37,99,235,.7)', duration: .15, yoyo: true, repeat: 1 }, '-=.05')); return tl; }
 
-export const MotionPresets = { dropSettle, popIn, slideInQueue, slideOutQueue, fadeGrow, flyAway, collapseRemove, pulseCompare, flashState, shakeReject, liftShiftDrop, prepEdgeForTraverse, edgeTraverse, rotateFlip, curveDraw, counterTick, windowSlide, pointerConverge, gridFillWave, treePruneCollapse, branchExpand, bucketDistribute, trieDescend, stackPush: dropSettle, stackPop: flyAway, peekPulse: (el: Target) => flashState(el), queueEnqueue: slideInQueue, queueDequeue: slideOutQueue, nodeEntrance: popIn, nodePulse: (el: Target) => pulseCompare(el), barSwap: (a: Target, b: Target, x: number) => { liftShiftDrop(a, x); return liftShiftDrop(b, -x); }, barLiftAndShift: liftShiftDrop };
+export const MotionPresets = { dropSettle, popIn, slideInQueue, slideOutQueue, fadeGrow, flyAway, collapseRemove, pulseCompare, flashState, shakeReject, liftShiftDrop, prepEdgeForTraverse, edgeTraverse, rotateFlip, curveDraw, counterTick, windowSlide, pointerConverge, gridFillWave, treePruneCollapse, branchExpand, bucketDistribute, trieDescend, stackPush: dropSettle, stackPop: flyAway, peekPulse: (el: Target) => flashState(el), queueEnqueue: slideInQueue, queueDequeue: slideOutQueue, nodeEntrance: popIn, nodePulse: (el: Target) => pulseCompare(el) };
 export const presets = MotionPresets;

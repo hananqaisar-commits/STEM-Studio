@@ -544,6 +544,27 @@
   color: #0f172a;
 }
 
+.badge-current {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+.ll-pointer-badge[class*="badge-count_"] {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.badge-victim {
+  background: var(--error-color);
+  color: #ffffff;
+}
+
+.badge-winner {
+  background: var(--success-color);
+  color: #ffffff;
+}
+
 .badge-prev, .badge-fast {
   background: #fbbf24;
   color: #0f172a;

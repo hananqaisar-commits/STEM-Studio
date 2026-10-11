@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Eye, EyeOff, Check, Cpu, Key, Globe, Sparkles, RefreshCw, Zap, ShieldCheck, AlertCircle } from 'lucide-react';
+import { AlertCircle, Bot, BrainCircuit, Check, Cpu, Eye, EyeOff, Globe, Settings2, ShieldCheck, X, Zap, type LucideIcon } from 'lucide-react';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './OctaTutorSettingsModal.css';
@@ -12,12 +12,12 @@ interface OctaTutorSettingsModalProps {
   onResetDefault: () => void;
 }
 
-const PROVIDERS: { id: LLMProvider; name: string; icon: string; desc: string }[] = [
-  { id: 'dashscope', name: 'Alibaba Qwen', icon: '⚡', desc: 'System Free Default' },
-  { id: 'openai', name: 'OpenAI', icon: '🤖', desc: 'GPT-4o & GPT-4o-mini' },
-  { id: 'openrouter', name: 'OpenRouter', icon: '🌐', desc: '100+ Models Unified' },
-  { id: 'anthropic', name: 'Claude', icon: '🧠', desc: 'Claude 3.5 Sonnet & Haiku' },
-  { id: 'custom', name: 'Custom / Local', icon: '⚙️', desc: 'Ollama, LMStudio, vLLM' },
+const PROVIDERS: { id: LLMProvider; name: string; icon: LucideIcon; desc: string }[] = [
+  { id: 'dashscope', name: 'Alibaba Qwen', icon: Zap, desc: 'System default' },
+  { id: 'openai', name: 'OpenAI', icon: Bot, desc: 'GPT models' },
+  { id: 'openrouter', name: 'OpenRouter', icon: Globe, desc: 'Multiple providers' },
+  { id: 'anthropic', name: 'Claude', icon: BrainCircuit, desc: 'Claude models' },
+  { id: 'custom', name: 'Custom / Local', icon: Settings2, desc: 'Ollama and compatible APIs' },
 ];
 
 const PRESETS: Record<LLMProvider, { models: string[]; baseUrl: string }> = {
@@ -106,8 +106,8 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   };
 
   return (
-    <div className="tutor-settings-backdrop" onClick={onClose}>
-      <div className="tutor-settings-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="tutor-settings-backdrop" onClick={onClose} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}>
+      <div className="tutor-settings-modal" role="dialog" aria-modal="true" aria-labelledby="tutor-settings-title" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="tutor-settings-header">
           <div className="tutor-settings-title">
@@ -115,12 +115,12 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
               <Cpu size={24} className="text-purple-600" />
             </div>
             <div>
-              <h3>AI Model Settings (BYOK)</h3>
+              <h3 id="tutor-settings-title">AI model settings</h3>
               <p>Configure custom LLM models, API keys & custom endpoints</p>
             </div>
           </div>
-          <button className="tutor-icon-btn" onClick={onClose} title="Close Settings">
-            <X size={18} />
+          <button type="button" className="tutor-icon-btn" onClick={onClose} title="Close settings" aria-label="Close settings">
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -130,18 +130,21 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
           <div className="tutor-field-group">
             <label className="tutor-field-label">
               <span>Select Model Provider</span>
-              <span style={{ fontSize: '0.7rem', color: '#a855f7' }}>Bring Your Own Key</span>
+                  <span style={{ fontSize: '0.7rem' }}>Bring your own key</span>
             </label>
             <div className="tutor-provider-grid">
               {PROVIDERS.map((p) => (
-                <div
+                <button
+                  type="button"
                   key={p.id}
                   className={`tutor-provider-card ${provider === p.id ? 'selected' : ''}`}
                   onClick={() => handleProviderSelect(p.id)}
+                  aria-pressed={provider === p.id}
                 >
-                  <span style={{ fontSize: '1.2rem' }}>{p.icon}</span>
-                  <span>{p.name}</span>
-                </div>
+                  <span className="tutor-provider-card__icon"><p.icon size={18} aria-hidden="true" /></span>
+                  <span className="tutor-provider-card__name">{p.name}</span>
+                  <span className="tutor-provider-card__description">{p.desc}</span>
+                </button>
               ))}
             </div>
           </div>
@@ -152,8 +155,8 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
               <label className="tutor-field-label">
                 <span>API Key</span>
                 {provider === 'dashscope' && (
-                  <span style={{ fontSize: '0.72rem', color: '#34d399' }}>
-                    <ShieldCheck size={12} style={{ display: 'inline', marginRight: 2 }} />
+                  <span className="tutor-key-optional">
+                    <ShieldCheck size={13} aria-hidden="true" />
                     Optional (System Key Active)
                   </span>
                 )}
@@ -171,8 +174,9 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
                   className="tutor-eye-btn"
                   onClick={() => setShowKey(!showKey)}
                   title={showKey ? 'Hide key' : 'Show key'}
+                  aria-label={showKey ? 'Hide API key' : 'Show API key'}
                 >
-                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showKey ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                 </button>
               </div>
             </div>
