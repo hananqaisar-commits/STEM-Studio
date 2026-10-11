@@ -32,6 +32,18 @@ import {
   generateCycleDetectionSteps,
   generateMiddleNodeSteps,
   generateJosephusSteps,
+  generateReverseSublistSteps,
+  generateReverseHalfSteps,
+  generateReverseKGroupSteps,
+  generateSwapPairsSteps,
+  generateMergeSortSteps,
+  generateAddTwoNumbersSteps,
+  generateRemoveNthFromEndSteps,
+  generateSplitHalvesSteps,
+  generateSplitKPartsSteps,
+  generateMergeKSortedSteps,
+  generateLRUCacheSteps,
+  type LRUOperation,
   type LinkedListStructureType,
   type ListNodeItem,
   type LinkedListCategory,
@@ -58,7 +70,7 @@ import { DefinitionCardPanel, type DefinitionItem } from '../../components/commo
 interface AlgorithmMeta {
   id: LinkedListCategory;
   name: string;
-  group: 'Singly' | 'Doubly' | 'Circular' | 'Two-Pointers';
+  group: 'Singly' | 'Doubly' | 'Circular' | 'Two-Pointers' | 'Classic Problems';
   description: string;
 }
 
@@ -68,10 +80,48 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
   { id: 'middleNode', name: 'Find Middle Node', group: 'Two-Pointers', description: 'Fast & slow pointer technique to locate center element' },
   { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers', description: "Floyd's Tortoise & Hare meeting point and cycle origin" },
   { id: 'josephus', name: 'Josephus Problem', group: 'Circular', description: 'Count around a circular list, remove every kth node, and find the survivor' },
+  { id: 'reverseSublist', name: 'Reverse Sublist (L–R)', group: 'Classic Problems', description: 'Reverse only an inclusive 1-based range while preserving the prefix and suffix' },
+  { id: 'reverseHalf', name: 'Reverse a Half', group: 'Classic Problems', description: 'Choose and reverse the first or second half; the middle belongs to the first half' },
+  { id: 'reverseKGroup', name: 'Reverse in K Groups', group: 'Classic Problems', description: 'Reverse complete groups of k nodes and leave a short final group unchanged' },
+  { id: 'swapPairs', name: 'Swap Nodes in Pairs', group: 'Classic Problems', description: 'Swap adjacent node links in place without swapping their values' },
+  { id: 'mergeSort', name: 'Merge Sort a List', group: 'Classic Problems', description: 'Stable bottom-up merge sort with O(n log n) time' },
+  { id: 'addTwoNumbers', name: 'Add Two Numbers', group: 'Classic Problems', description: 'Add reverse-order digit lists with a carry at each position' },
+  { id: 'removeNthFromEnd', name: 'Remove Nth from End', group: 'Classic Problems', description: 'Keep a fixed two-pointer gap to remove the nth node from the tail' },
+  { id: 'splitHalves', name: 'Split into Two Halves', group: 'Classic Problems', description: 'Split the list into two independent lanes; the first gets the middle when odd' },
+  { id: 'splitKParts', name: 'Split into K Parts', group: 'Classic Problems', description: 'Split a list into balanced consecutive parts, with earlier parts receiving extra nodes' },
+  { id: 'mergeKSorted', name: 'Merge K Sorted Lists', group: 'Classic Problems', description: 'Merge any number of sorted inputs by repeatedly selecting the smallest current head' },
+  { id: 'lruCache', name: 'LRU Cache', group: 'Classic Problems', description: 'Trace cache hits, key lookup, recency movement, and least-recently-used eviction' },
   { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly', description: 'Bidirectional nodes with forward and backward pointers' },
   { id: 'circular', name: 'Circular Linked List', group: 'Circular', description: 'Ring-buffered list where tail.next loops to head' },
   { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular', description: 'Bidirectional ring with head.prev and tail.next connected' },
 ];
+
+const isClassicProblem = (category: LinkedListCategory) =>
+  ['reverseSublist', 'reverseHalf', 'reverseKGroup', 'swapPairs', 'mergeSort', 'addTwoNumbers', 'removeNthFromEnd', 'splitHalves', 'splitKParts', 'mergeKSorted', 'lruCache'].includes(category);
+
+const parseListValues = (input: string): (number | string)[] => input
+  .split(/[\s,;]+/)
+  .map((part) => part.trim())
+  .filter(Boolean)
+  .map((part) => Number.isFinite(Number(part)) ? Number(part) : part);
+
+function parseLRUOperations(input: string): LRUOperation[] | null {
+  const entries = input.split(/[;\n]+/).map((entry) => entry.trim()).filter(Boolean);
+  if (!entries.length || entries.length > 24) return null;
+  const operations: LRUOperation[] = [];
+  for (const entry of entries) {
+    const getMatch = entry.match(/^get\s*\(([^()]+)\)$/i);
+    const putMatch = entry.match(/^put\s*\(([^(),]+)\s*,\s*([^()]+)\)$/i);
+    if (getMatch?.[1]?.trim()) {
+      operations.push({ type: 'get', key: getMatch[1].trim() });
+    } else if (putMatch?.[1]?.trim() && putMatch[2]?.trim()) {
+      operations.push({ type: 'put', key: putMatch[1].trim(), value: putMatch[2].trim() });
+    } else {
+      return null;
+    }
+  }
+  return operations;
+}
 
 const getStructureType = (category: LinkedListCategory): LinkedListStructureType => {
   if (category === 'josephus') return 'circular';
@@ -92,6 +142,16 @@ export const LinkedListPage: React.FC = () => {
   const [operationIndex, setOperationIndex] = useState('1');
   const [operationTarget, setOperationTarget] = useState('30');
   const [josephusStep, setJosephusStep] = useState('3');
+  const [secondListInput, setSecondListInput] = useState('5, 6, 4');
+  const [mergeKInputs, setMergeKInputs] = useState(['2, 5, 8', '3, 6, 9']);
+  const [rangeLeft, setRangeLeft] = useState('2');
+  const [rangeRight, setRangeRight] = useState('4');
+  const [groupSize, setGroupSize] = useState('2');
+  const [selectedHalf, setSelectedHalf] = useState<'first' | 'second'>('first');
+  const [nthFromEnd, setNthFromEnd] = useState('2');
+  const [partCount, setPartCount] = useState('3');
+  const [lruCapacity, setLruCapacity] = useState('2');
+  const [lruOperationsInput, setLruOperationsInput] = useState('put(1,A); put(2,B); get(1); put(3,C); get(2)');
 
   // Interactive & Quiz Modes
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -121,10 +181,34 @@ export const LinkedListPage: React.FC = () => {
       ? [10, 20, 30, 40, 50, 60]
       : topic === 'detectCycle'
       ? [10, 20, 30, 40, 50]
+      : topic === 'addTwoNumbers'
+      ? [2, 4, 3]
+      : topic === 'mergeKSorted'
+      ? [1, 4, 7]
+      : topic === 'mergeSort'
+      ? [4, 2, 1, 3, 5]
+      : topic === 'lruCache'
+      ? [1, 2]
       : [10, 20, 30, 40];
     const nodes = createInitialNodes(values, kind, topic === 'detectCycle' ? 2 : -1);
     setCategory(topic);
-    setBaseNodes(nodes);
+    setBaseNodes(topic === 'lruCache' ? [] : nodes);
+    if (isClassicProblem(topic)) {
+      setInputValue(values.join(', '));
+      setSecondListInput(topic === 'addTwoNumbers' ? '5, 6, 4' : '2, 5, 8');
+      setMergeKInputs(['2, 5, 8', '3, 6, 9']);
+      setRangeLeft('2');
+      setRangeRight(String(Math.min(4, values.length)));
+      setGroupSize('2');
+      setNthFromEnd('2');
+      setPartCount('3');
+      setLruCapacity('2');
+      setLruOperationsInput('put(1,A); put(2,B); get(1); put(3,C); get(2)');
+    }
+    if (topic === 'addTwoNumbers') setSecondListInput('5, 6, 4');
+    if (topic === 'mergeKSorted') {
+      setMergeKInputs(['2, 5, 8', '3, 6, 9']);
+    }
     if (topic === 'josephus') {
       setInputValue(values.join(', '));
       setJosephusStep('3');
@@ -158,8 +242,13 @@ export const LinkedListPage: React.FC = () => {
 
   const summaryItems: StateSummaryItem[] = useMemo(() => {
     const nodes = currentStep ? currentStep.nodes : baseNodes;
-    const headVal = nodes.length > 0 ? nodes[0].value : 'NULL';
-    const tailVal = nodes.length > 0 ? nodes[nodes.length - 1].value : 'NULL';
+    const cacheLane = currentStep?.lanes?.find((lane) => lane.kind === 'doublyList');
+    const outputLane = currentStep?.lanes?.find((lane) => lane.label.startsWith('Merged output'));
+    const firstLaneNodes = cacheLane?.nodes ?? currentStep?.lanes?.[0]?.nodes;
+    const lastLaneNodes = cacheLane?.nodes ?? currentStep?.lanes?.[currentStep.lanes.length - 1]?.nodes;
+    const structureSize = cacheLane?.nodes.length ?? outputLane?.nodes.length ?? nodes.length;
+    const headVal = firstLaneNodes?.length ? firstLaneNodes[0].value : nodes.length > 0 ? nodes[0].value : 'NULL';
+    const tailVal = lastLaneNodes?.length ? lastLaneNodes[lastLaneNodes.length - 1].value : nodes.length > 0 ? nodes[nodes.length - 1].value : 'NULL';
     const ruleMap: Record<string, string> = {
       singly: 'Singly Linked',
       doubly: 'Doubly Linked',
@@ -169,11 +258,20 @@ export const LinkedListPage: React.FC = () => {
       reverse: '3-Pointer Reverse',
       middleNode: 'Fast/Slow Pointer',
       josephus: 'Circular Elimination',
+      reverseSublist: 'Inclusive Range Reverse',
+      reverseHalf: 'Selected Half Reverse',
+      reverseKGroup: 'Complete K-Group Reverse',
+      swapPairs: 'Link Pair Swap',
+      mergeSort: 'Stable Merge Sort',
+      addTwoNumbers: 'Digit Carry Addition',
+      removeNthFromEnd: 'Two-Pointer Gap',
+      splitHalves: 'Two-List Split',
+      mergeKSorted: 'K-Way Head Selection',
     };
     return [
       { key: 'HEAD', value: headVal },
       { key: 'TAIL', value: tailVal },
-      { key: 'Size', value: nodes.length },
+      { key: 'Size', value: structureSize },
       { key: 'Rule', value: ruleMap[category] || 'Singly Linked' },
     ];
   }, [currentStep, baseNodes, category]);
@@ -246,6 +344,7 @@ export const LinkedListPage: React.FC = () => {
     setCategory(cat);
     reset();
     quizSession.resetSession();
+    setInputError(null);
 
     if (cat === 'doubly') {
       const dNodes = createInitialNodes([15, 25, 35, 45], 'doubly');
@@ -281,6 +380,30 @@ export const LinkedListPage: React.FC = () => {
       setInputValue(values.join(', '));
       setJosephusStep('3');
       setActiveSteps([]);
+    } else if (isClassicProblem(cat)) {
+      const sampleValues = cat === 'addTwoNumbers'
+        ? [2, 4, 3]
+        : cat === 'mergeKSorted'
+        ? [1, 4, 7]
+        : cat === 'mergeSort'
+        ? [4, 2, 1, 3, 5]
+        : cat === 'lruCache'
+        ? [1, 2]
+        : [10, 20, 30, 40, 50];
+      const nodes = createInitialNodes(sampleValues, 'singly');
+      setBaseNodes(cat === 'lruCache' ? [] : nodes);
+      setInputValue(sampleValues.join(', '));
+      setActiveSteps([]);
+      setSecondListInput(cat === 'addTwoNumbers' ? '5, 6, 4' : '2, 5, 8');
+      setMergeKInputs(['2, 5, 8', '3, 6, 9']);
+      setRangeLeft('2');
+      setRangeRight(String(Math.min(4, sampleValues.length)));
+      setGroupSize('2');
+      setNthFromEnd('2');
+      setPartCount('3');
+      setLruCapacity('2');
+      setLruOperationsInput('put(1,A); put(2,B); get(1); put(3,C); get(2)');
+      setSelectedHalf('first');
     } else {
       const sNodes = createInitialNodes([10, 20, 30, 40], 'singly');
       setBaseNodes(sNodes);
@@ -498,6 +621,134 @@ export const LinkedListPage: React.FC = () => {
     play();
   };
 
+  const handleRunClassicProblem = () => {
+    const values = parseListValues(inputValue);
+    if (category !== 'lruCache' && !values.length) {
+      setInputError('Enter at least one list value');
+      return;
+    }
+    const numericValues = values.map(Number);
+    const allNumeric = values.every((value) => Number.isFinite(Number(value)));
+    const makeNodes = () => createInitialNodes(values, 'singly');
+    let steps: LinkedListStep[] = [];
+    let nextBaseNodes = category === 'lruCache' ? [] : makeNodes();
+
+    if (category === 'lruCache') {
+      const capacity = Number(lruCapacity);
+      const operations = parseLRUOperations(lruOperationsInput);
+      if (!Number.isInteger(capacity) || capacity < 1 || capacity > 20) {
+        setInputError('Cache capacity must be a whole number from 1 to 20');
+        return;
+      }
+      if (!operations) {
+        setInputError('Use one operation per line or semicolon, like put(1,A); get(1). Enter 1–24 operations.');
+        return;
+      }
+      steps = generateLRUCacheSteps(operations, capacity);
+    } else if (category === 'reverseSublist') {
+      const left = Number(rangeLeft);
+      const right = Number(rangeRight);
+      if (!Number.isInteger(left) || !Number.isInteger(right) || left < 1 || right > values.length || left > right) {
+        setInputError(`Enter a valid 1-based range with 1 ≤ L ≤ R ≤ ${values.length}`);
+        return;
+      }
+      steps = generateReverseSublistSteps(nextBaseNodes, left, right);
+    } else if (category === 'reverseHalf') {
+      steps = generateReverseHalfSteps(nextBaseNodes, selectedHalf);
+    } else if (category === 'reverseKGroup') {
+      const k = Number(groupSize);
+      if (!Number.isInteger(k) || k < 1 || k > values.length) {
+        setInputError(`Group size k must be between 1 and ${values.length}`);
+        return;
+      }
+      steps = generateReverseKGroupSteps(nextBaseNodes, k);
+    } else if (category === 'swapPairs') {
+      steps = generateSwapPairsSteps(nextBaseNodes);
+    } else if (category === 'mergeSort') {
+      if (!allNumeric) {
+        setInputError('Merge sort needs numeric values so it can compare nodes in ascending order');
+        return;
+      }
+      steps = generateMergeSortSteps(nextBaseNodes);
+    } else if (category === 'removeNthFromEnd') {
+      const n = Number(nthFromEnd);
+      if (!Number.isInteger(n) || n < 1 || n > values.length) {
+        setInputError(`n must be between 1 and ${values.length}`);
+        return;
+      }
+      steps = generateRemoveNthFromEndSteps(nextBaseNodes, n);
+    } else if (category === 'splitHalves') {
+      steps = generateSplitHalvesSteps(nextBaseNodes);
+    } else if (category === 'splitKParts') {
+      const k = Number(partCount);
+      if (!Number.isInteger(k) || k < 1 || k > 12) {
+        setInputError('Choose a whole-number part count from 1 to 12');
+        return;
+      }
+      steps = generateSplitKPartsSteps(nextBaseNodes, k);
+    } else if (category === 'addTwoNumbers') {
+      const digitsA = numericValues;
+      const digitsB = parseListValues(secondListInput).map(Number);
+      if (!allNumeric || !digitsB.length || !digitsA.every((digit) => Number.isInteger(digit) && digit >= 0 && digit <= 9) || !digitsB.every((digit) => Number.isInteger(digit) && digit >= 0 && digit <= 9)) {
+        setInputError('Enter both numbers as comma-separated digits from 0 to 9, least-significant digit first');
+        return;
+      }
+      steps = generateAddTwoNumbersSteps(digitsA, digitsB);
+      nextBaseNodes = createInitialNodes(digitsA, 'singly');
+    } else if (category === 'mergeKSorted') {
+      const lists = [values, ...mergeKInputs.map(parseListValues)];
+      if (lists.some((list) => !list.length || list.some((value) => !Number.isFinite(Number(value))))) {
+        setInputError('Enter numeric values for every sorted list');
+        return;
+      }
+      const sortedLists = lists.map((list) => list.map(Number));
+      if (sortedLists.some((list) => list.some((value, index) => index > 0 && list[index - 1] > value))) {
+        setInputError('Each input list must already be sorted in ascending order');
+        return;
+      }
+      steps = generateMergeKSortedSteps(sortedLists);
+    }
+
+    if (!steps.length) {
+      setInputError('This operation needs at least two nodes to show a meaningful trace');
+      return;
+    }
+    setInputError(null);
+    setBaseNodes(nextBaseNodes);
+    setActiveSteps(steps);
+    reset();
+    quizSession.resetSession();
+    play();
+  };
+
+  const handleResetClassicInputs = () => {
+    const values = category === 'addTwoNumbers'
+      ? [2, 4, 3]
+      : category === 'mergeKSorted'
+      ? [1, 4, 7]
+      : category === 'mergeSort'
+      ? [4, 2, 1, 3, 5]
+      : category === 'lruCache'
+      ? [1, 2]
+      : [10, 20, 30, 40, 50];
+    setInputValue(values.join(', '));
+    setSecondListInput(category === 'addTwoNumbers' ? '5, 6, 4' : '2, 5, 8');
+    setMergeKInputs(['2, 5, 8', '3, 6, 9']);
+    setRangeLeft('2');
+    setRangeRight(String(Math.min(4, values.length)));
+    setGroupSize('2');
+    setNthFromEnd('2');
+    setPartCount('3');
+    setLruCapacity('2');
+    setLruOperationsInput('put(1,A); put(2,B); get(1); put(3,C); get(2)');
+    setSelectedHalf('first');
+    setInputError(null);
+    setBaseNodes(category === 'lruCache' ? [] : createInitialNodes(values, 'singly'));
+    setActiveSteps([]);
+    reset();
+    quizSession.resetSession();
+  };
+
   const handleRandomize = () => {
     const randomVals = Array.from({ length: 5 }, () => Math.floor(Math.random() * 90) + 10);
     const newNodes = createInitialNodes(randomVals, structureType);
@@ -578,12 +829,30 @@ export const LinkedListPage: React.FC = () => {
     }
   };
 
-  const snippetKey = category === 'josephus'
+  const snippetKey = category === 'reverseSublist'
+      ? 'reverse_sublist'
+      : category === 'reverseHalf'
+      ? 'reverse_half'
+      : category === 'reverseKGroup'
+      ? 'reverse_k_group'
+      : category === 'swapPairs'
+      ? 'swap_pairs'
+      : category === 'mergeSort'
+      ? 'merge_sort'
+      : category === 'addTwoNumbers'
+      ? 'add_two_numbers'
+      : category === 'removeNthFromEnd'
+      ? 'remove_nth_from_end'
+      : category === 'splitHalves'
+      ? 'split_halves'
+      : category === 'splitKParts'
+      ? 'split_k_parts'
+      : category === 'mergeKSorted'
+      ? 'merge_k_sorted'
+      : category === 'lruCache'
+      ? 'lru_cache'
+      : category === 'josephus'
       ? 'josephus'
-      : positionOperation.startsWith('insert')
-      ? 'position_insert'
-      : positionOperation.startsWith('delete')
-      ? 'position_delete'
       : category === 'reverse'
       ? 'reverse'
       : category === 'detectCycle'
@@ -596,6 +865,10 @@ export const LinkedListPage: React.FC = () => {
       ? 'circular'
       : category === 'doublyCircular'
       ? 'doubly_circular'
+      : category === 'singly' && positionOperation.startsWith('delete')
+      ? 'position_delete'
+      : category === 'singly' && positionOperation.startsWith('insert')
+      ? 'position_insert'
       : 'singly_insert_head';
 
   const renderFullscreenPlayerControls = () => (
@@ -633,6 +906,76 @@ export const LinkedListPage: React.FC = () => {
      toolbar AND passed to the fullscreen modal, so the two states can
      never drift out of sync. */
   const renderToolbarControls = () => {
+    if (isClassicProblem(category)) {
+      const valueLabel = category === 'addTwoNumbers'
+        ? 'Number A digits:'
+        : category === 'mergeKSorted'
+        ? 'Sorted list 1:'
+        : 'Values:';
+      const inputPlaceholder = category === 'addTwoNumbers' ? '2, 4, 3' : category === 'mergeKSorted' ? '1, 4, 7' : '10, 20, 30, 40';
+      const helpText: Partial<Record<LinkedListCategory, string>> = {
+        reverseSublist: 'L and R are 1-based and inclusive. Example: L=2, R=4 reverses only positions 2 through 4.',
+        reverseHalf: 'For an odd-sized list, the first half receives the middle node.',
+        reverseKGroup: 'Only complete groups are reversed. A shorter final group stays in order.',
+        swapPairs: 'Swaps node links; values stay attached to their original nodes.',
+        mergeSort: 'Enter numeric values. The sort is stable and orders ascending.',
+        addTwoNumbers: 'Digits are entered least-significant first. Example: 2,4,3 represents 342.',
+        removeNthFromEnd: 'n=1 removes the tail; n equal to the list length removes the head.',
+        splitHalves: 'The first half gets ceil(n/2) nodes; the second half gets the rest.',
+        splitKParts: 'Parts stay consecutive and differ in size by at most one; earlier parts get any extra nodes. Empty parts are allowed when K > n.',
+        mergeKSorted: 'Enter two or more ascending numeric lists. Add or remove input lists below.',
+        lruCache: 'put(key,value) inserts or updates. get(key) is a hit or miss. Separate operations with semicolons or new lines.',
+      };
+      const renderListInput = (label: string, value: string, setValue: (next: string) => void, placeholder: string) => (
+        <label className="ll-input-group" title={label}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>{label}</span>
+          <input
+            type="text"
+            className="ll-input"
+            value={value}
+            onChange={(event) => { setValue(event.target.value); if (inputError) setInputError(null); }}
+            aria-label={label}
+            placeholder={placeholder}
+            style={{ width: '150px' }}
+          />
+        </label>
+      );
+      return (
+        <>
+          {category !== 'lruCache' && renderListInput(valueLabel, inputValue, setInputValue, inputPlaceholder)}
+          {category === 'addTwoNumbers' && renderListInput('Number B digits:', secondListInput, setSecondListInput, '5, 6, 4')}
+          {category === 'mergeKSorted' && <>
+            {mergeKInputs.map((value, index) => (
+              <div className="ll-input-group" key={`merge-list-input-${index}`}>
+                {renderListInput(`Sorted list ${index + 2}:`, value, (next) => setMergeKInputs((current) => current.map((item, itemIndex) => itemIndex === index ? next : item)), index === 0 ? '2, 5, 8' : '3, 6, 9')}
+                {mergeKInputs.length > 1 && <button type="button" className="ll-btn ll-btn-danger" aria-label={`Remove sorted list ${index + 2}`} title={`Remove sorted list ${index + 2}`} onClick={() => setMergeKInputs((current) => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={13} /></button>}
+              </div>
+            ))}
+            <button type="button" className="ll-btn ll-btn-secondary" disabled={mergeKInputs.length >= 7} title="Add another sorted input list (up to 8 total)" onClick={() => setMergeKInputs((current) => [...current, '0, 5, 10'])}><Plus size={14} /><span>Add list</span></button>
+          </>}
+          {category === 'reverseSublist' && <>
+            <label className="ll-input-group"><span className="ll-position-help">L:</span><input className="ll-input" aria-label="Left position L, 1-based" type="number" min={1} value={rangeLeft} onChange={(event) => setRangeLeft(event.target.value)} style={{ width: '58px' }} /></label>
+            <label className="ll-input-group"><span className="ll-position-help">R:</span><input className="ll-input" aria-label="Right position R, 1-based" type="number" min={1} value={rangeRight} onChange={(event) => setRangeRight(event.target.value)} style={{ width: '58px' }} /></label>
+          </>}
+          {category === 'reverseHalf' && <label className="ll-input-group"><span className="ll-position-help">Half:</span><select className="ll-input" aria-label="Half to reverse" value={selectedHalf} onChange={(event) => setSelectedHalf(event.target.value as 'first' | 'second')}><option value="first">First half</option><option value="second">Second half</option></select></label>}
+          {category === 'reverseKGroup' && <label className="ll-input-group"><span className="ll-position-help">k:</span><input className="ll-input" aria-label="Group size k" type="number" min={1} value={groupSize} onChange={(event) => setGroupSize(event.target.value)} style={{ width: '58px' }} /></label>}
+          {category === 'removeNthFromEnd' && <label className="ll-input-group"><span className="ll-position-help">n from end:</span><input className="ll-input" aria-label="Nth node from end" type="number" min={1} value={nthFromEnd} onChange={(event) => setNthFromEnd(event.target.value)} style={{ width: '58px' }} /></label>}
+          {category === 'splitKParts' && <label className="ll-input-group"><span className="ll-position-help">Parts k:</span><input className="ll-input" aria-label="Number of parts k" type="number" min={1} max={12} value={partCount} onChange={(event) => setPartCount(event.target.value)} style={{ width: '64px' }} /></label>}
+          {category === 'lruCache' && <>
+            <label className="ll-input-group"><span className="ll-position-help">Capacity:</span><input className="ll-input" aria-label="LRU cache capacity" type="number" min={1} max={20} value={lruCapacity} onChange={(event) => setLruCapacity(event.target.value)} style={{ width: '64px' }} /></label>
+            <label className="ll-input-group ll-lru-operation-group"><span className="ll-position-help">Operations:</span><textarea className="ll-input ll-lru-operations" aria-label="LRU cache operations" rows={2} value={lruOperationsInput} onChange={(event) => { setLruOperationsInput(event.target.value); if (inputError) setInputError(null); }} placeholder={'put(1,A); get(1); put(2,B)'} /></label>
+          </>}
+          <button className="ll-btn ll-btn-primary" onClick={handleRunClassicProblem}>
+            <Sparkles size={14} /><span>Run visualization</span>
+          </button>
+          <button className="ll-btn ll-btn-secondary" onClick={handleResetClassicInputs} title="Restore the example inputs">
+            <RotateCcw size={14} /><span>Reset sample</span>
+          </button>
+          <span className="ll-position-help">{helpText[category]}</span>
+        </>
+      );
+    }
+
     if (category === 'josephus') {
       return (
         <>
