@@ -34,6 +34,7 @@ pydantic-settings==2.15.0
 pydantic_core==2.46.4
 Pygments==2.21.0
 PyMySQL==1.2.0
+redis==6.4.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
 python-dotenv==1.2.3

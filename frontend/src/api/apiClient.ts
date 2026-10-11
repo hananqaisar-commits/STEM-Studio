@@ -5,6 +5,9 @@ import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from './tok
 // API host through VITE_API_BASE_URL.
 const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '');
 
+type RefreshResult = 'refreshed' | 'rejected' | 'unavailable';
+let refreshInFlight: Promise<RefreshResult> | null = null;
+
 interface ApiOptions {
   method?: string;
   body?: unknown;
@@ -44,14 +47,19 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
 
   // If 401 and we have a refresh token, try to refresh
   if (response.status === 401 && requiresAuth) {
-    const refreshed = await tryRefreshToken();
-    if (refreshed) {
+    const refreshResult = await tryRefreshToken();
+    if (refreshResult === 'refreshed') {
       // Retry the original request with new token
       const newToken = getAccessToken();
       if (newToken) {
         headers['Authorization'] = `Bearer ${newToken}`;
       }
       response = await fetch(`${API_BASE_URL}${endpoint}`, { ...config, headers });
+    } else if (refreshResult === 'unavailable') {
+      // Preserve the user's session when refresh failed due to a transient
+      // network, throttling, or server error. Returning the original 401 here
+      // would make AuthContext mistake that outage for an expired session.
+      throw new ApiError(503, 'Session refresh is temporarily unavailable. Please try again.');
     }
   }
 
@@ -82,9 +90,24 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
 /**
  * Attempt to refresh the access token using the stored refresh token.
  */
-async function tryRefreshToken(): Promise<boolean> {
+async function tryRefreshToken(): Promise<RefreshResult> {
+  if (!refreshInFlight) {
+    const refresh = typeof navigator !== 'undefined' && 'locks' in navigator
+      ? navigator.locks.request('stem-studio-refresh-token', requestTokenRefresh)
+      : requestTokenRefresh();
+    refreshInFlight = refresh.finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function requestTokenRefresh(): Promise<RefreshResult> {
   const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
+  if (!refreshToken) {
+    clearTokens();
+    return 'rejected';
+  }
 
   // Preserve the storage the session was created in: remembered sessions
   // (localStorage) stay remembered, short-lived ones (sessionStorage)
@@ -99,16 +122,23 @@ async function tryRefreshToken(): Promise<boolean> {
     });
 
     if (!response.ok) {
-      // Refresh token is also invalid, clear everything
-      clearTokens();
-      return false;
+      if (response.status === 401 || response.status === 403 || response.status === 400) {
+        // These responses mean the stored refresh credential is invalid,
+        // expired, or revoked. Do not clear credentials for 429/5xx responses.
+        clearTokens();
+        return 'rejected';
+      }
+      return 'unavailable';
     }
 
     const data = await response.json();
+    if (typeof data?.access_token !== 'string' || typeof data?.refresh_token !== 'string') {
+      return 'unavailable';
+    }
     storeTokens(data.access_token, data.refresh_token, remembered);
-    return true;
+    return 'refreshed';
   } catch {
-    return false;
+    return 'unavailable';
   }
 }
 
