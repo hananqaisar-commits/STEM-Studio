@@ -79,7 +79,12 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
 
       {/* Canvas Body */}
       <div className="graph-canvas-body">
-        <svg className="graph-svg-canvas" viewBox="0 0 560 300">
+        <svg
+          className="graph-svg-canvas"
+          viewBox="0 0 560 300"
+          role="img"
+          aria-label={`Graph with ${displayNodes.length} vertices and ${displayEdges.length} edges`}
+        >
           {/* ─── EDGES (drawn first so nodes render on top) ──────────────── */}
           {displayEdges.map((edge) => {
             const fromNode = displayNodes.find((n) => n.id === edge.from);

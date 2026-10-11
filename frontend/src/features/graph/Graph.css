@@ -178,6 +178,191 @@
   gap: 0.5rem;
 }
 
+.graph-control-label {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  margin-right: 4px;
+}
+
+.bs-input-group select {
+  min-height: 32px;
+  padding: 0 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.graph-editor {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.graph-editor-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.graph-editor-heading h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.graph-editor-heading p,
+.graph-editor-hint {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.graph-editor-count {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+.graph-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.8fr) minmax(360px, 1.5fr);
+  gap: 0.85rem;
+}
+
+.graph-editor-group {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  padding: 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-app-bg) 55%, transparent);
+}
+
+.graph-editor-group > strong {
+  color: var(--color-text);
+  font-size: 0.8rem;
+}
+
+.graph-editor-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.graph-editor-inline > label:not(.graph-editor-check) {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.graph-editor select,
+.graph-editor-weight {
+  min-width: 70px;
+  min-height: 36px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-app-bg);
+  color: var(--color-text);
+}
+
+.graph-editor select:disabled,
+.graph-editor button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.graph-editor-inline #graph-remove-edge {
+  flex: 1;
+  min-width: 150px;
+}
+
+.graph-editor-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.graph-editor-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #c084fc;
+}
+
+.graph-editor-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.graph-editor-button:hover:not(:disabled) {
+  background: var(--color-surface-elevated);
+}
+
+.graph-editor-button.graph-editor-primary {
+  border-color: rgba(192, 132, 252, 0.45);
+  background: rgba(192, 132, 252, 0.14);
+  color: var(--color-text);
+}
+
+.graph-editor-button.graph-editor-danger {
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #f87171;
+}
+
+.graph-editor-error {
+  margin: 0;
+  color: #f87171;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.graph-editor :focus-visible {
+  outline: 2px solid #c084fc;
+  outline-offset: 2px;
+}
+
+@media (max-width: 780px) {
+  .graph-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .graph-editor-heading {
+    flex-direction: column;
+  }
+
+  .graph-editor-inline > select {
+    flex: 1;
+  }
+}
+
 /* ─── MAIN WORKSPACE GRID — OVERRIDDEN BY VisualizerShell.css ─────── */
 /*
 .graph-workspace {

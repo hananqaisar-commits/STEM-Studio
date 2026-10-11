@@ -5,6 +5,59 @@ export interface CodeSnippet {
   lineMapping: Record<number, number>; // maps step codeLine -> code line index
 }
 
+/** Generic linked-node implementation adapted from the user's stack example.
+ * Push/pop operate at the top node, so both stay O(1), and clear frees nodes. */
+export const STACK_LINKED_CPP_SNIPPET: CodeSnippet = {
+  code: `#include <cstddef>
+#include <utility>
+
+template <typename T>
+class Stack {
+    struct Node {
+        T value;
+        Node* next;
+        Node(T item, Node* below) : value(std::move(item)), next(below) {}
+    };
+
+    Node* top_ = nullptr;
+    std::size_t size_ = 0;
+
+public:
+    Stack() = default;
+    Stack(const Stack&) = delete;
+    Stack& operator=(const Stack&) = delete;
+
+    ~Stack() { clear(); }
+
+    void push(T value) {
+        top_ = new Node(std::move(value), top_);
+        ++size_;
+    }
+
+    bool pop() {
+        if (!top_) return false;
+        Node* removed = top_;
+        top_ = top_->next;
+        delete removed;
+        --size_;
+        return true;
+    }
+
+    T* peek() { return top_ ? &top_->value : nullptr; }
+    std::size_t size() const { return size_; }
+
+    void clear() {
+        while (top_) {
+            Node* removed = top_;
+            top_ = top_->next;
+            delete removed;
+        }
+        size_ = 0;
+    }
+};`,
+  lineMapping: { 1: 23, 2: 24, 3: 26, 4: 31, 5: 34, 6: 37 },
+};
+
 export const STACK_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
   javascript: {
     code: `class Stack {
@@ -19,7 +72,7 @@ export const STACK_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
   peek() { return this.items[this.items.length - 1]; }
   isEmpty() { return this.items.length === 0; }
 }`,
-    lineMapping: { 1: 3, 2: 4, 3: 5 },
+    lineMapping: { 1: 3, 2: 4, 3: 5, 4: 9, 5: 10, 6: 11 },
   },
   python: {
     code: `class Stack:
@@ -36,25 +89,51 @@ export const STACK_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
         
     def peek(self):
         return self.items[-1]`,
-    lineMapping: { 1: 5, 2: 6, 3: 6 },
+    lineMapping: { 1: 5, 2: 6, 3: 7, 4: 11, 5: 12, 6: 13 },
   },
   cpp: {
-    code: `#include <iostream>
-#include <vector>
-using namespace std;
+    code: `#include <cstddef>
+#include <utility>
 
+template <typename T>
 class Stack {
-    vector<int> items;
+    std::size_t capacity_ = 2;
+    std::size_t size_ = 0;
+    T* data_;
+
+    void grow() {
+        const std::size_t nextCapacity = capacity_ * 2;
+        T* nextData = new T[nextCapacity];
+        for (std::size_t i = 0; i < size_; ++i)
+            nextData[i] = std::move(data_[i]);
+        delete[] data_;
+        data_ = nextData;
+        capacity_ = nextCapacity;
+    }
+
 public:
-    void push(int val) {
-        items.push_back(val);
+    Stack() : data_(new T[capacity_]) {}
+    Stack(const Stack&) = delete;
+    Stack& operator=(const Stack&) = delete;
+    ~Stack() { delete[] data_; }
+
+    void push(T value) {
+        if (size_ == capacity_) grow();
+        data_[size_++] = std::move(value);
     }
-    void pop() {
-        if (!items.empty()) items.pop_back();
+
+    bool pop() {
+        if (size_ == 0) return false;
+        --size_;
+        return true;
     }
-    int top() { return items.back(); }
+
+    T* peek() { return size_ == 0 ? nullptr : &data_[size_ - 1]; }
+    std::size_t size() const { return size_; }
+    std::size_t capacity() const { return capacity_; }
+    void clear() { size_ = 0; }
 };`,
-    lineMapping: { 1: 8, 2: 9, 3: 9 },
+    lineMapping: { 1: 26, 2: 28, 3: 29, 4: 31, 5: 33, 6: 37 },
   },
   java: {
     code: `import java.util.Stack;
@@ -70,8 +149,12 @@ public class StackDemo {
         if (stack.isEmpty()) throw new IllegalStateException("Underflow");
         return stack.pop();
     }
+
+    public Integer peek() {
+        return stack.isEmpty() ? null : stack.peek();
+    }
 }`,
-    lineMapping: { 1: 6, 2: 7, 3: 7 },
+    lineMapping: { 1: 6, 2: 7, 3: 8, 4: 13, 5: 14, 6: 16 },
   },
 };
 

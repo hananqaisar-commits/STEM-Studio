@@ -253,6 +253,104 @@ export function generateBSTSearchSteps(tree: BSTTreeStructure | undefined, targe
   return steps;
 }
 
+/** Delete a BST value and expose the search and in-order-successor steps. */
+export function generateBSTDeleteSteps(
+  initialTree: BSTTreeStructure | undefined,
+  targetValue: number
+): { steps: BSTStep[]; newTree: BSTTreeStructure | undefined } {
+  const steps: BSTStep[] = [];
+  let root = cloneTree(initialTree);
+  steps.push(createStepSnapshot(root, undefined, [], undefined, undefined, `Starting BST deletion for value ${targetValue}.`, 1, { targetValue, operation: 'delete' }));
+
+  let found = false;
+  let completion = '';
+
+  const remove = (node?: BSTTreeStructure): BSTTreeStructure | undefined => {
+    if (!node) return undefined;
+
+    steps.push(createStepSnapshot(
+      root,
+      node.id,
+      [node.id],
+      undefined,
+      undefined,
+      `Compare ${targetValue} with ${node.value}.`,
+      2,
+      { targetValue, currentNode: node.value, operation: 'delete' }
+    ));
+
+    if (targetValue < node.value) {
+      node.left = remove(node.left);
+      return node;
+    }
+    if (targetValue > node.value) {
+      node.right = remove(node.right);
+      return node;
+    }
+
+    found = true;
+    steps.push(createStepSnapshot(root, node.id, [], undefined, node.id, `Found ${targetValue}. Inspect its children to choose the BST deletion case.`, 3, { targetValue, operation: 'delete', status: 'FOUND' }));
+
+    if (!node.left && !node.right) {
+      completion = `${targetValue} is a leaf, so remove the node and leave its parent link empty.`;
+      return undefined;
+    }
+    if (!node.left || !node.right) {
+      const child = node.left ?? node.right;
+      completion = `${targetValue} has one child, so connect its parent directly to child ${child!.value}.`;
+      return child;
+    }
+
+    let successorParent = node;
+    let successor = node.right;
+    while (successor.left) {
+      steps.push(createStepSnapshot(
+        root,
+        successor.id,
+        [node.id, successor.id],
+        undefined,
+        undefined,
+        `Find the in-order successor by moving left from ${successor.value} in the right subtree.`,
+        4,
+        { targetValue, successorCandidate: successor.value, operation: 'delete' }
+      ));
+      successorParent = successor;
+      successor = successor.left;
+    }
+
+    const successorValue = successor.value;
+    steps.push(createStepSnapshot(
+      root,
+      successor.id,
+      [node.id, successor.id],
+      undefined,
+      successor.id,
+      `The in-order successor is ${successorValue}, the smallest value in the right subtree.`,
+      5,
+      { targetValue, successorValue, operation: 'delete' }
+    ));
+    node.value = successorValue;
+    if (successorParent === node) successorParent.right = successor.right;
+    else successorParent.left = successor.right;
+    completion = `Replace ${targetValue} with successor ${successorValue}, then remove the successor's old node.`;
+    return node;
+  };
+
+  root = remove(root);
+  steps.push(createStepSnapshot(
+    root,
+    undefined,
+    [],
+    undefined,
+    undefined,
+    found ? completion : `Value ${targetValue} is not in this BST, so the tree stays unchanged.`,
+    6,
+    { targetValue, operation: 'delete', status: found ? 'DELETED' : 'NOT_FOUND' }
+  ));
+
+  return { steps, newTree: root };
+}
+
 // 1. Inorder Traversal (LNR: Left -> Node -> Right)
 export function generateBSTInorderSteps(tree: BSTTreeStructure | undefined): BSTStep[] {
   const steps: BSTStep[] = [];

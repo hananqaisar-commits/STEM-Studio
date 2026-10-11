@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Code, Play, RotateCcw, AlertTriangle, Eye, Pencil, Loader2, Check } from 'lucide-react';
-import { getStackQueueSnippets, STACKQUEUE_GO_SNIPPETS, type LanguageKey } from './stackQueueSnippets';
+import { getStackQueueSnippets, STACKQUEUE_GO_SNIPPETS, STACK_LINKED_CPP_SNIPPET, type LanguageKey } from './stackQueueSnippets';
 import type { StackQueueCategory } from './stackQueueEngine';
 import {
   getStubEntry,
@@ -36,6 +36,7 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   customMessage = null,
 }) => {
   const [selectedLang, setSelectedLang] = useState<DebuggerLanguage>('python');
+  const [stackImplementation, setStackImplementation] = useState<'array' | 'linked'>('array');
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
   const [customLang, setCustomLang] = useState<CustomStubLanguage>('python');
 
@@ -67,7 +68,11 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   // Go references exist for the flagship set; anything else reports the gap
   // explicitly instead of silently falling back to another language.
   const goSnippet = STACKQUEUE_GO_SNIPPETS[category];
-  const currentSnippet = selectedLang === 'go' ? goSnippet : snippetObj[selectedLang as LanguageKey];
+  const currentSnippet = selectedLang === 'go'
+    ? goSnippet
+    : category === 'stack' && selectedLang === 'cpp' && stackImplementation === 'linked'
+    ? STACK_LINKED_CPP_SNIPPET
+    : snippetObj[selectedLang as LanguageKey];
   const codeLines = currentSnippet?.code.split('\n') ?? [];
   const highlightedIdx = currentSnippet?.lineMapping[activeLine] ?? 0;
 
@@ -126,6 +131,20 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
         <div className="code-toolbar">
           <LanguageDropdown value={selectedLang} onChange={setSelectedLang}
             available={['cpp', 'java', 'python', 'go']} ariaLabel="Reference code language" />
+          {category === 'stack' && selectedLang === 'cpp' && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
+              Storage
+              <select
+                value={stackImplementation}
+                onChange={(event) => setStackImplementation(event.target.value as 'array' | 'linked')}
+                aria-label="C++ stack implementation"
+                style={{ padding: '0.35rem 0.5rem', borderRadius: '0.5rem', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text)' }}
+              >
+                <option value="array">Resizable array</option>
+                <option value="linked">Linked list</option>
+              </select>
+            </label>
+          )}
         </div>
       )}
 

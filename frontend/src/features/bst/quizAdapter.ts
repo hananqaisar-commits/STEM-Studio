@@ -20,7 +20,7 @@ import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionD
    trivia — every question is derived from the tree on screen.
    ─────────────────────────────────────────────────────────────────── */
 
-type Operation = 'insert' | 'search' | 'traversal' | 'unknown';
+type Operation = 'insert' | 'search' | 'delete' | 'traversal' | 'unknown';
 
 const DIRECTION_OPTIONS = {
   left: 'Into the left subtree',
@@ -38,6 +38,7 @@ function detectOperation(steps: BSTStep[]): Operation {
   if (steps.some((step) => step.traversalLog !== undefined)) return 'traversal';
   const first = steps[0]?.variables ?? {};
   if (typeof first.newValue === 'number') return 'insert';
+  if (first.operation === 'delete') return 'delete';
   if (typeof first.targetValue === 'number') return 'search';
   return 'unknown';
 }
@@ -192,6 +193,7 @@ export function buildBSTCheckpoints(steps: BSTStep[]): QuizCheckpoint[] {
 export type BSTAlgorithmKey =
   | 'insert'
   | 'search'
+  | 'delete'
   | 'inorder'
   | 'preorder'
   | 'postorder'
@@ -221,6 +223,14 @@ const REVISION_DATA: Record<BSTAlgorithmKey, QuizRevisionData> = {
     watchFor: ['Direction decision', 'Termination conditions', 'Worst case (skewed tree)'],
     quickTip: 'If target < node go left, if target > node go right, if equal you found it',
     example: 'Search 6 in BST [8,3,10,1,6]: 6<8 go left, 6>3 go right, 6=6 → found.',
+  },
+  delete: {
+    description: 'Remove a value while preserving the binary search tree ordering rule',
+    complexity: 'O(h) time, O(h) space',
+    keyIdea: 'A node with two children is replaced by its in-order successor: the smallest value in its right subtree',
+    watchFor: ['Leaf removal', 'Promoting a single child', 'Successor replacement for two children'],
+    quickTip: 'After choosing a successor, remove its old node as well; it has at most one child',
+    example: 'Delete 8 from a node with two children: find the smallest value on the right, copy it to 8’s position, then unlink that successor node.',
   },
   inorder: {
     description: 'Traverse the tree in left-node-right order',

@@ -12,6 +12,7 @@ import {
   Waypoints,
   Network,
   GitMerge,
+  Plus,
   Trash2,
   Layers,
 } from 'lucide-react';
@@ -81,13 +82,56 @@ export const GraphPage: React.FC = () => {
   useEffect(() => {
     const topic = searchParams.get('topic');
     if (topic && ALGORITHMS_LIST.some((a) => a.id === topic)) {
-      setCategory(topic as GraphCategory);
+      const selected = topic as GraphCategory;
+      setCategory(selected);
+      setGraphError(null);
+      if (selected === 'aStar') {
+        const grid = getDefaultAStarGrid();
+        setAStarGrid(grid);
+        setAStarSteps(generateAStarSteps(grid));
+        setActiveSteps([]);
+      } else {
+        const preset = getPresetGraph(selected === 'topoSort' ? 'dag' : 'standard');
+        setNodes(preset.nodes);
+        setEdges(preset.edges);
+        setStartNode(preset.nodes[0]?.id ?? '');
+        setEndNode(preset.nodes[preset.nodes.length - 1]?.id ?? '');
+        setDirectedEdges(selected === 'topoSort');
+        setWeightedEdges(preset.edges.some((edge) => edge.weight !== undefined));
+        setActiveSteps([]);
+      }
     }
   }, [searchParams]);
 
   const [startNode, setStartNode] = useState<string>('A');
+  const [endNode, setEndNode] = useState<string>('F');
   const [nodes, setNodes] = useState<GraphNode[]>(() => getPresetGraph('standard').nodes);
   const [edges, setEdges] = useState<GraphEdge[]>(() => getPresetGraph('standard').edges);
+  const [edgeFrom, setEdgeFrom] = useState('A');
+  const [edgeTo, setEdgeTo] = useState('B');
+  const [edgeWeight, setEdgeWeight] = useState('1');
+  const [directedEdges, setDirectedEdges] = useState(false);
+  const [weightedEdges, setWeightedEdges] = useState(true);
+  const [removeNodeId, setRemoveNodeId] = useState('F');
+  const [removeEdgeId, setRemoveEdgeId] = useState('');
+  const [graphError, setGraphError] = useState<string | null>(null);
+
+  const nextVertexLabel = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].find((label) => !nodes.some((node) => node.id === label));
+
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    const firstId = nodes[0].id;
+    const secondId = nodes.find((node) => node.id !== firstId)?.id ?? firstId;
+    if (!nodes.some((node) => node.id === startNode)) setStartNode(firstId);
+    if (!nodes.some((node) => node.id === endNode)) setEndNode(nodes[nodes.length - 1].id);
+    if (!nodes.some((node) => node.id === edgeFrom)) setEdgeFrom(firstId);
+    if (!nodes.some((node) => node.id === edgeTo) || edgeTo === edgeFrom) setEdgeTo(secondId);
+    if (!nodes.some((node) => node.id === removeNodeId)) setRemoveNodeId(nodes[nodes.length - 1].id);
+  }, [nodes, startNode, endNode, edgeFrom, edgeTo, removeNodeId]);
+
+  useEffect(() => {
+    if (edges.length > 0 && !edges.some((edge) => edge.id === removeEdgeId)) setRemoveEdgeId(edges[0].id);
+  }, [edges, removeEdgeId]);
 
   // A* specific state
   const [aStarGrid, setAStarGrid] = useState<AStarCell[][]>(() => getDefaultAStarGrid());
@@ -206,6 +250,7 @@ export const GraphPage: React.FC = () => {
       setAStarGrid(grid);
       setAStarSteps(generateAStarSteps(grid));
       setActiveSteps([]);
+      setGraphError(null);
       return;
     }
 
@@ -213,6 +258,11 @@ export const GraphPage: React.FC = () => {
     const preset = getPresetGraph(topologyType);
     setNodes(preset.nodes);
     setEdges(preset.edges);
+    setStartNode(preset.nodes[0]?.id ?? '');
+    setEndNode(preset.nodes[preset.nodes.length - 1]?.id ?? '');
+    setDirectedEdges(cat === 'topoSort');
+    setWeightedEdges(preset.edges.some((edge) => edge.weight !== undefined));
+    setGraphError(null);
 
     let steps: GraphStep[] = [];
     if (cat === 'bfs') {
@@ -239,15 +289,42 @@ export const GraphPage: React.FC = () => {
       const newSteps = generateAStarSteps(aStarGrid);
       setAStarSteps(newSteps);
       quizSession.resetSession();
+      aStarReset();
+      if (!quizEnabled) aStarPlay();
       return;
     }
+    if (nodes.length === 0) {
+      setGraphError('Add at least one vertex before running an algorithm.');
+      return;
+    }
+    if (!nodes.some((node) => node.id === startNode)) {
+      setGraphError('Choose a source vertex that exists in this graph.');
+      return;
+    }
+    if (category === 'dijkstra' && !nodes.some((node) => node.id === endNode)) {
+      setGraphError('Choose a destination vertex that exists in this graph.');
+      return;
+    }
+    if (category === 'dijkstra' && edges.some((edge) => (edge.weight ?? 1) < 0)) {
+      setGraphError('Dijkstra requires non-negative edge weights. Use Bellman-Ford for negative edges.');
+      return;
+    }
+    if ((category === 'prim' || category === 'kruskal') && edges.some((edge) => edge.directed)) {
+      setGraphError('Minimum spanning trees require undirected edges. Turn off “New edges are directed” or switch algorithms.');
+      return;
+    }
+    if (category === 'topoSort' && edges.some((edge) => !edge.directed)) {
+      setGraphError('Topological sort requires directed edges. Mark each edge as directed before running it.');
+      return;
+    }
+    setGraphError(null);
     let steps: GraphStep[] = [];
     if (category === 'bfs') {
       steps = generateBFSSteps(nodes, edges, startNode);
     } else if (category === 'dfs') {
       steps = generateDFSSteps(nodes, edges, startNode);
     } else if (category === 'dijkstra') {
-      steps = generateDijkstraSteps(nodes, edges, startNode, 'F');
+      steps = generateDijkstraSteps(nodes, edges, startNode, endNode);
     } else if (category === 'bellmanFord') {
       steps = generateBellmanFordSteps(nodes, edges, startNode);
     } else if (category === 'prim') {
@@ -258,7 +335,9 @@ export const GraphPage: React.FC = () => {
       steps = generateTopoSortSteps(nodes, edges);
     }
     setActiveSteps(steps);
+    reset();
     quizSession.resetSession();
+    if (!quizEnabled) play();
   };
 
   const handleRandomizeWeights = () => {
@@ -267,9 +346,10 @@ export const GraphPage: React.FC = () => {
       weight: e.weight !== undefined ? Math.floor(Math.random() * 9) + 1 : undefined,
     }));
     setEdges(updatedEdges);
+    setGraphError(null);
 
     if (category === 'dijkstra') {
-      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNode, 'F'));
+      setActiveSteps(generateDijkstraSteps(nodes, updatedEdges, startNode, endNode));
     } else if (category === 'bellmanFord') {
       setActiveSteps(generateBellmanFordSteps(nodes, updatedEdges, startNode));
     } else if (category === 'prim') {
@@ -277,6 +357,9 @@ export const GraphPage: React.FC = () => {
     } else if (category === 'kruskal') {
       setActiveSteps(generateKruskalSteps(nodes, updatedEdges));
     }
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
   };
 
   const handleReset = () => {
@@ -284,13 +367,11 @@ export const GraphPage: React.FC = () => {
   };
 
   const handleEmpty = () => {
-    const preset = getPresetGraph(category === 'topoSort' ? 'dag' : 'standard');
-    const minimalNodes = preset.nodes.slice(0, 2);
-    const minimalEdges = preset.edges.filter(
-      (e) => minimalNodes.some((n) => n.id === e.from) && minimalNodes.some((n) => n.id === e.to)
-    );
-    setNodes(minimalNodes);
-    setEdges(minimalEdges);
+    setNodes([]);
+    setEdges([]);
+    setStartNode('');
+    setEndNode('');
+    setGraphError(null);
     setActiveSteps([]);
     reset();
     quizSession.resetSession();
@@ -310,6 +391,8 @@ export const GraphPage: React.FC = () => {
     const preset = getChallengeGraph(category === 'topoSort' ? 'dag' : 'standard');
     setNodes(preset.nodes);
     setEdges(preset.edges);
+    setStartNode(preset.nodes[0]?.id ?? '');
+    setEndNode(preset.nodes[preset.nodes.length - 1]?.id ?? '');
     let steps: GraphStep[] = [];
     if (category === 'bfs') {
       steps = generateBFSSteps(preset.nodes, preset.edges, 'A');
@@ -323,6 +406,73 @@ export const GraphPage: React.FC = () => {
       steps = generateTopoSortSteps(preset.nodes, preset.edges);
     }
     setActiveSteps(steps);
+  };
+
+  const resetGraphPlayback = () => {
+    setActiveSteps([]);
+    setGraphError(null);
+    reset();
+    quizSession.resetSession();
+  };
+
+  const handleAddVertex = () => {
+    if (!nextVertexLabel || nodes.length >= 12) {
+      setGraphError('This canvas supports up to 12 vertices.');
+      return;
+    }
+    const allNodes = [...nodes, { id: nextVertexLabel, label: nextVertexLabel, x: 0, y: 0, state: 'default' as const }];
+    const laidOutNodes = allNodes.map((node, index) => {
+      const angle = -Math.PI / 2 + (index * Math.PI * 2) / allNodes.length;
+      return { ...node, x: Math.round(280 + Math.cos(angle) * 210), y: Math.round(150 + Math.sin(angle) * 112) };
+    });
+    setNodes(laidOutNodes);
+    if (nodes.length === 0) {
+      setStartNode(nextVertexLabel);
+      setEndNode(nextVertexLabel);
+    }
+    resetGraphPlayback();
+  };
+
+  const handleRemoveVertex = () => {
+    if (!removeNodeId) return;
+    setNodes(nodes.filter((node) => node.id !== removeNodeId));
+    setEdges(edges.filter((edge) => edge.from !== removeNodeId && edge.to !== removeNodeId));
+    resetGraphPlayback();
+  };
+
+  const handleAddEdge = () => {
+    if (!edgeFrom || !edgeTo || edgeFrom === edgeTo) {
+      setGraphError('Choose two different vertices for an edge.');
+      return;
+    }
+    const duplicate = edges.some((edge) =>
+      edge.from === edgeFrom && edge.to === edgeTo || (!directedEdges && edge.from === edgeTo && edge.to === edgeFrom)
+    );
+    if (duplicate) {
+      setGraphError('Those vertices already have an edge between them.');
+      return;
+    }
+    const weight = Number(edgeWeight);
+    if (weightedEdges && (!edgeWeight.trim() || !Number.isFinite(weight))) {
+      setGraphError('Enter a numeric edge weight.');
+      return;
+    }
+    const edge: GraphEdge = {
+      id: `custom-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      from: edgeFrom,
+      to: edgeTo,
+      ...(weightedEdges ? { weight } : {}),
+      directed: directedEdges,
+      state: 'default',
+    };
+    setEdges([...edges, edge]);
+    resetGraphPlayback();
+  };
+
+  const handleRemoveEdge = () => {
+    if (!removeEdgeId) return;
+    setEdges(edges.filter((edge) => edge.id !== removeEdgeId));
+    resetGraphPlayback();
   };
 
   const snippetKey = category;
@@ -374,7 +524,7 @@ export const GraphPage: React.FC = () => {
      never drift out of sync. */
   const renderToolbarControls = () => (
     <>
-      {category !== 'topoSort' && (
+      {category !== 'topoSort' && !isAStarMode && (
         <div className="bs-input-group">
           <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
             Start:
@@ -400,6 +550,14 @@ export const GraphPage: React.FC = () => {
           </select>
         </div>
       )}
+      {category === 'dijkstra' && (
+        <div className="bs-input-group">
+          <span className="graph-control-label">Target:</span>
+          <select value={endNode} onChange={(e) => setEndNode(e.target.value)} aria-label="Destination vertex">
+            {nodes.map((node) => <option key={node.id} value={node.id}>Vertex {node.label}</option>)}
+          </select>
+        </div>
+      )}
 
       <button
         className="ll-btn ll-btn-primary"
@@ -407,7 +565,7 @@ export const GraphPage: React.FC = () => {
         style={{ background: '#c084fc', color: '#0f172a' }}
       >
         <Play size={14} />
-        <span>Run Traversal</span>
+        <span>Run Algorithm</span>
       </button>
 
       {(category === 'dijkstra' || category === 'bellmanFord' || category === 'prim' || category === 'kruskal') && (
@@ -430,11 +588,80 @@ export const GraphPage: React.FC = () => {
         <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
           <Layers size={14} className="text-amber-400" /><span>Sample</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleReset} title="Random">
-          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-        </button>
       </div>
     </>
+  );
+
+  const renderGraphEditor = () => (
+    <section className="graph-editor" aria-label="Graph builder">
+      <div className="graph-editor-heading">
+        <div>
+          <h2>Build your graph</h2>
+          <p>Add vertices and connect them, then choose a source and run the selected algorithm.</p>
+        </div>
+        <span className="graph-editor-count">{nodes.length} / 12 vertices · {edges.length} edges</span>
+      </div>
+      <div className="graph-editor-grid">
+        <div className="graph-editor-group">
+          <strong>Vertices</strong>
+          <button className="graph-editor-button graph-editor-primary" onClick={handleAddVertex} disabled={!nextVertexLabel || nodes.length >= 12}>
+            <Plus size={15} aria-hidden="true" /> Add Vertex {nextVertexLabel ?? ''}
+          </button>
+          <div className="graph-editor-inline">
+            <label htmlFor="graph-remove-node">Remove</label>
+            <select id="graph-remove-node" value={removeNodeId} onChange={(e) => setRemoveNodeId(e.target.value)} disabled={nodes.length === 0}>
+              {nodes.map((node) => <option key={node.id} value={node.id}>Vertex {node.label}</option>)}
+            </select>
+            <button className="graph-editor-button graph-editor-danger" onClick={handleRemoveVertex} disabled={nodes.length === 0} aria-label="Remove selected vertex and its edges">
+              <Trash2 size={14} aria-hidden="true" /> Remove
+            </button>
+          </div>
+        </div>
+
+        <div className="graph-editor-group">
+          <strong>Edges</strong>
+          <div className="graph-editor-inline">
+            <label htmlFor="graph-edge-from">From</label>
+            <select id="graph-edge-from" value={edgeFrom} onChange={(e) => setEdgeFrom(e.target.value)} disabled={nodes.length < 2}>
+              {nodes.map((node) => <option key={node.id} value={node.id}>{node.label}</option>)}
+            </select>
+            <label htmlFor="graph-edge-to">To</label>
+            <select id="graph-edge-to" value={edgeTo} onChange={(e) => setEdgeTo(e.target.value)} disabled={nodes.length < 2}>
+              {nodes.filter((node) => node.id !== edgeFrom).map((node) => <option key={node.id} value={node.id}>{node.label}</option>)}
+            </select>
+          </div>
+          <div className="graph-editor-inline">
+            <label className="graph-editor-check">
+              <input type="checkbox" checked={directedEdges} onChange={(e) => setDirectedEdges(e.target.checked)} />
+              New edges are directed
+            </label>
+            <label className="graph-editor-check">
+              <input type="checkbox" checked={weightedEdges} onChange={(e) => setWeightedEdges(e.target.checked)} />
+              Add a weight
+            </label>
+            {weightedEdges && <input aria-label="New edge weight" type="number" value={edgeWeight} onChange={(e) => setEdgeWeight(e.target.value)} className="graph-editor-weight" />}
+            <button className="graph-editor-button graph-editor-primary" onClick={handleAddEdge} disabled={nodes.length < 2}>
+              <Plus size={15} aria-hidden="true" /> Add Edge
+            </button>
+          </div>
+          <div className="graph-editor-inline">
+            <label htmlFor="graph-remove-edge">Remove</label>
+            <select id="graph-remove-edge" value={removeEdgeId} onChange={(e) => setRemoveEdgeId(e.target.value)} disabled={edges.length === 0}>
+              {edges.map((edge) => {
+                const from = nodes.find((node) => node.id === edge.from)?.label ?? edge.from;
+                const to = nodes.find((node) => node.id === edge.to)?.label ?? edge.to;
+                return <option key={edge.id} value={edge.id}>{from} {edge.directed ? '→' : '—'} {to}{edge.weight !== undefined ? ` · ${edge.weight}` : ''}</option>;
+              })}
+            </select>
+            <button className="graph-editor-button graph-editor-danger" onClick={handleRemoveEdge} disabled={edges.length === 0}>
+              <Trash2 size={14} aria-hidden="true" /> Remove Edge
+            </button>
+          </div>
+        </div>
+      </div>
+      <p className="graph-editor-hint">Directed edges have one-way arrows. Undirected edges can be traversed both ways. Bellman-Ford supports negative weights; Dijkstra does not. Prim and Kruskal need undirected edges.</p>
+      {graphError && <p className="graph-editor-error" role="alert">{graphError}</p>}
+    </section>
   );
 
   return (
@@ -479,6 +706,7 @@ export const GraphPage: React.FC = () => {
           {renderToolbarControls()}
         </div>
       </div>
+      {!isAStarMode && renderGraphEditor()}
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}
       <div className="graph-workspace scene-workspace">
