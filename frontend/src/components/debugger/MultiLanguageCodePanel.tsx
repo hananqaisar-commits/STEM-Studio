@@ -15,6 +15,7 @@ import {
   type CustomStubLanguage,
 } from '../../data/customCode';
 import { DEBUGGER_LANGUAGE_IDS, type DebuggerLanguage } from '../../data/languages';
+import { scrollWithinContainer } from '../../utils/scrollWithinContainer';
 import { LanguageDropdown } from './LanguageDropdown';
 import './Debugger.css';
 
@@ -160,6 +161,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
   const canRunCustom = true; // Always enable Reference Code vs Paste Code feature globally across all 144 algorithms
   const activeLineRef = useRef<HTMLDivElement | null>(null);
+  const codeEditorRef = useRef<HTMLDivElement | null>(null);
 
   // Keep the selected language valid as the available set changes per algorithm.
   useEffect(() => {
@@ -180,10 +182,11 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [algorithmKey, customLang, stubLang, stubEntry?.key]);
 
-  // Auto-scroll the executing line into view.
+  // Follow the executing line inside the code pane only. scrollIntoView would
+  // also move the document viewport when the pane sits below the fold.
   useEffect(() => {
     if (codeMode === 'default' && activeLine != null) {
-      activeLineRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      scrollWithinContainer(codeEditorRef.current, activeLineRef.current);
     }
   }, [activeLine, codeMode, selectedLang]);
 
@@ -339,7 +342,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
       {/* ── Default mode: read-only viewer with gutter + highlight ─ */}
       {codeMode === 'default' && (
-        <div className="code-editor-container">
+        <div ref={codeEditorRef} className="code-editor-container">
           {hasCode ? (
             currentCodeLines.map((line, idx) => {
               const lineNumber = idx + 1;

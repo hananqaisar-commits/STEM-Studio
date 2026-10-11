@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Code, Info, Clock, HardDrive, List, AlertTriangle, FileCode2 } from 'lucide-react';
 import { Octa } from '../mascot';
+import { scrollWithinContainer } from '../../utils/scrollWithinContainer';
 import '../mascot/Mascot.css';
 import './Layout.css';
 
@@ -65,10 +66,11 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
           ? `EXECUTION TRACE • ${Math.min(currentIdx + 1, steps.length)} OF ${steps.length}`
           : 'CURRENT STEP EXPLANATION';
 
-  // Auto-scroll the active bullet into view when the step changes.
+  // Keep the active trace bullet visible inside its own list. Do not let
+  // playback scroll the document while the learner is exploring the page.
   useEffect(() => {
-    if (hasHistory && activeItemRef.current) {
-      activeItemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (hasHistory && historyListRef.current?.closest('details')?.open) {
+      scrollWithinContainer(historyListRef.current, activeItemRef.current);
     }
   }, [currentIdx, hasHistory]);
 

@@ -4,6 +4,7 @@ import { Settings, X, Trash2, Sparkles, User as UserIcon, MessageSquare, Check, 
 import { useOctaTutor, type SupportedSpeechLang } from '../../hooks/useOctaTutor';
 import { useTutorContext } from '../../contexts/TutorContext';
 import { useAuthPrompt } from '../../contexts/AuthPromptContext';
+import { scrollWithinContainer } from '../../utils/scrollWithinContainer';
 import { Octa } from '../mascot';
 import { LoaderOne } from '../ui/loader';
 import { PlaceholdersAndVanishInput } from '../ui/placeholders-and-vanish-input';
@@ -170,12 +171,13 @@ export const OctaTutor: React.FC = () => {
   } = useOctaTutor();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
   const [revealedChars, setRevealedChars] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (messagesEndRef.current && isTutorOpen) {
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      messagesEndRef.current.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+      scrollWithinContainer(messageListRef.current, messagesEndRef.current, reducedMotion ? 'auto' : 'smooth');
     }
   }, [messages, isTutorOpen, isLoading, revealedChars]);
 
@@ -309,7 +311,7 @@ export const OctaTutor: React.FC = () => {
         </p>
 
         {/* Message Output Scroll Box */}
-        <div className="tutor-message-list">
+        <div ref={messageListRef} className="tutor-message-list">
           {messages.map((msg) => {
             const isAssis = msg.role === 'assistant';
             const maxChar = revealedChars[msg.id];
