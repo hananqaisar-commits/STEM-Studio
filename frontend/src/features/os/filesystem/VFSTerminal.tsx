@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Terminal as TerminalIcon, Trash2, Command, CheckCircle2 } from 'lucide-react';
 import { type VFSSnapshot, getAbsolutePath } from './vfs';
 
@@ -32,7 +32,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   const [lineText, setLineText] = useState<string>('');
   const [historyIdx, setHistoryIdx] = useState<number>(-1);
 
-  const terminalEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentPath = getAbsolutePath(snapshot.nodes, snapshot.currentDirId);
@@ -43,13 +42,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   const focusInput = useCallback(() => {
     inputRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    if (terminalEndRef.current && history.length > 0) {
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      terminalEndRef.current.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest' });
-    }
-  }, [history.length]);
 
   const clearTerminal = () => {
     setLineText('');
@@ -278,7 +270,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
           />
         </div>
 
-        <div ref={terminalEndRef} />
       </div>
 
       {/* Quick Execution Shortcuts Strip */}

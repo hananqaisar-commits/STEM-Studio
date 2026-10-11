@@ -241,3 +241,426 @@
     padding: 0.35rem 0.6rem;
   }
 }
+
+/* ── Hash Map learning modes ───────────────────────────────────────────── */
+.hash-studio-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.hash-studio-heading-icon,
+.hash-lab-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+}
+
+.hash-studio-heading p,
+.hash-studio-heading h1,
+.hash-studio-heading > div > span,
+.hash-lab-header p,
+.hash-lab-header h2 {
+  margin: 0;
+}
+
+.hash-studio-heading p,
+.hash-lab-kicker {
+  color: var(--color-primary-text, var(--color-primary));
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.hash-studio-heading h1 {
+  color: var(--color-text, #f8fafc);
+  font-size: clamp(1.3rem, 2.6vw, 1.8rem);
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+}
+
+.hash-studio-heading > div > span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+}
+
+.hash-view-switch {
+  display: flex;
+  gap: 0.4rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.hash-view-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 38px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hash-view-switch button.is-active {
+  color: var(--color-primary-text, var(--color-primary));
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+.hash-lab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  padding: clamp(0.85rem, 2vw, 1.35rem);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 10% 0%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 38%),
+    var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.hash-lab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hash-lab-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.hash-lab-icon {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+}
+
+.hash-lab-header h2 {
+  margin-top: 0.15rem;
+  color: var(--color-text);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  letter-spacing: -0.025em;
+}
+
+.hash-lab-header p:last-child {
+  margin-top: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.hash-lab-settings {
+  display: flex;
+  align-items: end;
+  gap: 0.55rem;
+}
+
+.hash-lab-settings label,
+.hash-lab-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.hash-lab-settings select,
+.hash-lab-form input {
+  min-height: 38px;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.hash-lab-settings select:focus-visible,
+.hash-lab-form input:focus-visible,
+.hash-view-switch button:focus-visible,
+.hash-lab button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.hash-lab-controls {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-muted);
+}
+
+.hash-lab-form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.hash-lab-form input {
+  width: min(180px, 28vw);
+}
+
+.hash-lab-operations,
+.hash-lab-secondary-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.hash-lab-action,
+.hash-lab-secondary-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+  font-size: 0.73rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.hash-lab-action:hover,
+.hash-lab-secondary-actions button:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.hash-lab-action.hash-lab-insert {
+  color: var(--success-color);
+  border-color: color-mix(in srgb, var(--success-color) 34%, var(--color-border));
+  background: color-mix(in srgb, var(--success-color) 9%, var(--color-surface));
+}
+
+.hash-lab-action.hash-lab-delete {
+  color: var(--error-color);
+  border-color: color-mix(in srgb, var(--error-color) 30%, var(--color-border));
+}
+
+.hash-lab-secondary-actions button {
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-weight: 600;
+}
+
+.hash-lab-explainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+}
+
+.hash-lab-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.hash-lab-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+
+.hash-lab-formula {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  color: var(--color-primary-text, var(--color-primary));
+  font-size: 0.75rem;
+}
+
+.hash-lab-formula code {
+  padding: 0.25rem 0.4rem;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  font-family: 'Fira Code', monospace;
+}
+
+.hash-lab-probe-count {
+  color: var(--color-text-secondary);
+}
+
+.hash-lab-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.73rem;
+}
+
+.hash-lab-summary strong {
+  color: var(--color-text);
+  font-family: 'Fira Code', monospace;
+}
+
+.hash-lab-buckets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.hash-lab-bucket {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 49px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-elevated);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hash-lab-bucket.is-home {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+.hash-lab-bucket.is-visited {
+  border-color: rgba(251, 191, 36, 0.58);
+  background: rgba(245, 158, 11, 0.1);
+  box-shadow: inset 3px 0 #fbbf24;
+}
+
+.hash-lab-bucket.is-home.is-visited {
+  border-color: var(--color-primary);
+  box-shadow: inset 3px 0 var(--color-primary);
+}
+
+.hash-lab-index {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  border-radius: 7px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.hash-lab-slot-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.hash-lab-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+  border-radius: 6px;
+  color: var(--color-primary-text, var(--color-primary));
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+  font-size: 0.73rem;
+  overflow-wrap: anywhere;
+}
+
+.hash-lab-entry strong { color: var(--color-text); }
+.hash-lab-entry i { color: var(--color-primary); font-style: normal; }
+
+.hash-lab-empty-slot,
+.hash-lab-tombstone {
+  color: var(--color-text-muted);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+}
+
+.hash-lab-tombstone { color: #b45309; }
+
+.hash-lab-slot-state {
+  color: var(--color-primary-text, var(--color-primary));
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.hash-lab-bucket.is-visited .hash-lab-slot-state { color: #b45309; }
+
+.hash-lab-footnote {
+  margin: 0;
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .hash-lab-controls { align-items: stretch; flex-direction: column; }
+  .hash-lab-secondary-actions { justify-content: flex-end; }
+}
+
+@media (max-width: 620px) {
+  .hash-view-switch { width: 100%; }
+  .hash-view-switch button { flex: 1; padding-inline: 0.45rem; font-size: 0.7rem; }
+  .hash-lab-header { align-items: stretch; flex-direction: column; }
+  .hash-lab-settings { display: grid; grid-template-columns: 1fr 1fr; }
+  .hash-lab-settings select { width: 100%; }
+  .hash-lab-form { align-items: stretch; display: grid; grid-template-columns: 1fr 1fr; }
+  .hash-lab-form input { width: 100%; }
+  .hash-lab-operations { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; }
+  .hash-lab-action { white-space: normal; font-size: 0.65rem; }
+  .hash-lab-secondary-actions { justify-content: stretch; }
+  .hash-lab-secondary-actions button { flex: 1; font-size: 0.68rem; }
+  .hash-lab-buckets { grid-template-columns: 1fr; }
+  .hash-lab-bucket { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 0.45rem; }
+}

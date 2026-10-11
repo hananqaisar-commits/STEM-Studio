@@ -4,7 +4,7 @@ import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Maximize2, Sparkles, Trash2, Layers,
-  Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins,
+  Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins, Gauge, SkipBack, SkipForward,
 } from 'lucide-react';
 import { DPRenderer } from './DPRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -13,6 +13,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -37,6 +38,49 @@ import './DP.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type DPAlgorithmKey = 'fibonacciDP' | 'coinChange' | 'houseRobber' | 'knapsack01' | 'lcs' | 'lis' | 'editDistance' | 'uniquePaths';
+
+const DP_GUIDES: Record<DPAlgorithmKey, { state: string; recurrence: string; baseCase: string }> = {
+  fibonacciDP: {
+    state: 'dp[i] stores the i-th Fibonacci number.',
+    recurrence: 'dp[i] = dp[i − 1] + dp[i − 2]',
+    baseCase: 'dp[0] = 0, dp[1] = 1',
+  },
+  coinChange: {
+    state: 'dp[x] stores the fewest coins needed to make amount x.',
+    recurrence: 'dp[x] = min(dp[x − coin] + 1)',
+    baseCase: 'dp[0] = 0; other amounts start unreachable.',
+  },
+  houseRobber: {
+    state: 'dp[i] is the most money we can take from houses 0…i.',
+    recurrence: 'dp[i] = max(dp[i − 1], dp[i − 2] + houses[i])',
+    baseCase: 'dp[0] = houses[0]; dp[1] = max(houses[0], houses[1])',
+  },
+  knapsack01: {
+    state: 'dp[i][w] is the best value using the first i items with capacity w.',
+    recurrence: 'max(skip item, value[i] + dp[i − 1][w − weight[i]])',
+    baseCase: 'With 0 items or 0 capacity, the best value is 0.',
+  },
+  lcs: {
+    state: 'dp[i][j] is the LCS length for the first i and j characters.',
+    recurrence: 'match: 1 + diagonal · else: max(top, left)',
+    baseCase: 'An empty string has an LCS of length 0.',
+  },
+  lis: {
+    state: 'dp[i] is the LIS length ending exactly at input index i.',
+    recurrence: 'dp[i] = max(dp[j] + 1) where j < i and a[j] < a[i]',
+    baseCase: 'Every single item is an increasing subsequence of length 1.',
+  },
+  editDistance: {
+    state: 'dp[i][j] is the fewest edits to turn the first i chars into j chars.',
+    recurrence: 'match: diagonal · else: 1 + min(insert, delete, replace)',
+    baseCase: 'Turning a prefix into empty needs its full length in edits.',
+  },
+  uniquePaths: {
+    state: 'dp[r][c] counts paths from the top-left to this grid cell.',
+    recurrence: 'dp[r][c] = dp[r − 1][c] + dp[r][c − 1]',
+    baseCase: 'Every cell in the top row or left column has 1 path.',
+  },
+};
 
 interface AlgMeta {
   key: DPAlgorithmKey;
@@ -71,7 +115,6 @@ export const DPPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Algorithm-specific inputs
@@ -107,7 +150,7 @@ export const DPPage: React.FC = () => {
 
   const {
     currentStepIndex, currentStep, totalSteps, isPlaying,
-    play, pause, stepForward, stepBack, reset,
+    play, pause, stepForward, stepBack, reset, speed, setSpeed,
   seekTo,
     } = useStepPlayer({ steps: executionData.steps });
 
@@ -479,9 +522,6 @@ export const DPPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-          customizeModeEnabled={customizeModeEnabled}
-          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -505,6 +545,44 @@ export const DPPage: React.FC = () => {
         </div>
       </div>
 
+      <section className="dp-guide" aria-label="How this dynamic programming solution works">
+        <div className="dp-guide-heading">
+          <div>
+            <p>Understand the recurrence</p>
+            <h2>{ALGORITHMS.find((algorithm) => algorithm.key === selectedAlg)?.name}</h2>
+          </div>
+          <span className="dp-approach-badge">Bottom-up · tabulation</span>
+        </div>
+        <div className="dp-guide-grid">
+          <article><span>State</span><p>{DP_GUIDES[selectedAlg].state}</p></article>
+          <article><span>Transition</span><code>{DP_GUIDES[selectedAlg].recurrence}</code></article>
+          <article><span>Base case</span><p>{DP_GUIDES[selectedAlg].baseCase}</p></article>
+        </div>
+        <p className="dp-guide-note">This trace fills a table from smaller answers to larger ones. Top-down memoization reuses the same recurrence but computes only states it needs.</p>
+      </section>
+
+      <div className="dp-playback-strip" aria-label="DP trace timeline and speed">
+        <span className="dp-playback-count">Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}</span>
+        <button type="button" onClick={stepBack} disabled={currentStepIndex <= 0} aria-label="Previous step"><SkipBack size={15} /></button>
+        <input
+          type="range"
+          min={0}
+          max={Math.max(0, totalSteps - 1)}
+          value={Math.min(currentStepIndex, Math.max(0, totalSteps - 1))}
+          onChange={(event) => seekTo(Number(event.target.value))}
+          aria-label="Choose current DP step"
+          aria-valuetext={`Step ${totalSteps > 0 ? currentStepIndex + 1 : 0} of ${totalSteps}`}
+        />
+        <button type="button" onClick={stepForward} disabled={currentStepIndex >= totalSteps - 1} aria-label="Next step"><SkipForward size={15} /></button>
+        <label className="dp-speed-control">
+          <Gauge size={14} aria-hidden="true" />
+          <span>Speed</span>
+          <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">
+            {[0.5, 1, 2, 4].map((rate) => <option key={rate} value={rate}>{rate}×</option>)}
+          </select>
+        </label>
+      </div>
+
       {/* Main Learning Workspace */}
       <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
@@ -524,6 +602,9 @@ export const DPPage: React.FC = () => {
           />
         </div>
 
+
+
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -532,14 +613,10 @@ export const DPPage: React.FC = () => {
             onEnableQuiz={() => setQuizEnabled(true)}
             onProveIt={handleProveIt}
           />
-
-
         </div>
-
-
+        <ResizableWorkspaceHandle storageKey="dp" />
         <ResizablePanelRow
           storageKey="dp"
-          customizeModeEnabled={customizeModeEnabled}
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}

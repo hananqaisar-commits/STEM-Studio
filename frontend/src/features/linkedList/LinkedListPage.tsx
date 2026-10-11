@@ -31,6 +31,7 @@ import {
   generateReverseSteps,
   generateCycleDetectionSteps,
   generateMiddleNodeSteps,
+  generateJosephusSteps,
   type LinkedListStructureType,
   type ListNodeItem,
   type LinkedListCategory,
@@ -45,6 +46,7 @@ import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './LinkedList.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
@@ -65,12 +67,14 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
   { id: 'reverse', name: 'Reverse Linked List', group: 'Singly', description: 'Classic 3-pointer (prev, curr, next) pointer reversal' },
   { id: 'middleNode', name: 'Find Middle Node', group: 'Two-Pointers', description: 'Fast & slow pointer technique to locate center element' },
   { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers', description: "Floyd's Tortoise & Hare meeting point and cycle origin" },
+  { id: 'josephus', name: 'Josephus Problem', group: 'Circular', description: 'Count around a circular list, remove every kth node, and find the survivor' },
   { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly', description: 'Bidirectional nodes with forward and backward pointers' },
   { id: 'circular', name: 'Circular Linked List', group: 'Circular', description: 'Ring-buffered list where tail.next loops to head' },
   { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular', description: 'Bidirectional ring with head.prev and tail.next connected' },
 ];
 
 const getStructureType = (category: LinkedListCategory): LinkedListStructureType => {
+  if (category === 'josephus') return 'circular';
   if (category === 'doubly' || category === 'doublyCircular' || category === 'circular') return category;
   return 'singly';
 };
@@ -87,11 +91,11 @@ export const LinkedListPage: React.FC = () => {
   const [operationValue, setOperationValue] = useState('25');
   const [operationIndex, setOperationIndex] = useState('1');
   const [operationTarget, setOperationTarget] = useState('30');
+  const [josephusStep, setJosephusStep] = useState('3');
 
   // Interactive & Quiz Modes
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [showDefinitions, setShowDefinitions] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
@@ -109,6 +113,8 @@ export const LinkedListPage: React.FC = () => {
     const kind = getStructureType(topic);
     const values = topic === 'doubly' || topic === 'circular' || topic === 'doublyCircular'
       ? [12, 24, 36, 48]
+      : topic === 'josephus'
+      ? [1, 2, 3, 4, 5, 6, 7]
       : topic === 'reverse'
       ? [1, 2, 3, 4, 5]
       : topic === 'middleNode'
@@ -119,6 +125,10 @@ export const LinkedListPage: React.FC = () => {
     const nodes = createInitialNodes(values, kind, topic === 'detectCycle' ? 2 : -1);
     setCategory(topic);
     setBaseNodes(nodes);
+    if (topic === 'josephus') {
+      setInputValue(values.join(', '));
+      setJosephusStep('3');
+    }
     setActiveSteps(
       topic === 'reverse'
         ? generateReverseSteps(nodes)
@@ -126,6 +136,8 @@ export const LinkedListPage: React.FC = () => {
         ? generateMiddleNodeSteps(nodes)
         : topic === 'detectCycle'
         ? generateCycleDetectionSteps(nodes, 2)
+        : topic === 'josephus'
+        ? generateJosephusSteps(nodes, 3)
         : []
     );
   }, [searchParams]);
@@ -156,6 +168,7 @@ export const LinkedListPage: React.FC = () => {
       detectCycle: 'Floyd Cycle',
       reverse: '3-Pointer Reverse',
       middleNode: 'Fast/Slow Pointer',
+      josephus: 'Circular Elimination',
     };
     return [
       { key: 'HEAD', value: headVal },
@@ -261,6 +274,13 @@ export const LinkedListPage: React.FC = () => {
       setBaseNodes(mNodes);
       const steps = generateMiddleNodeSteps(mNodes);
       setActiveSteps(steps);
+    } else if (cat === 'josephus') {
+      const values = [1, 2, 3, 4, 5, 6, 7];
+      const jNodes = createInitialNodes(values, 'circular');
+      setBaseNodes(jNodes);
+      setInputValue(values.join(', '));
+      setJosephusStep('3');
+      setActiveSteps([]);
     } else {
       const sNodes = createInitialNodes([10, 20, 30, 40], 'singly');
       setBaseNodes(sNodes);
@@ -446,21 +466,60 @@ export const LinkedListPage: React.FC = () => {
     setActiveSteps(steps);
   };
 
+  const handleRunJosephus = () => {
+    const parsed = parseNumberList(inputValue);
+    const values: (number | string)[] = parsed.isValid && parsed.values.length > 0
+      ? parsed.values
+      : inputValue.split(/[\s,;]+/).map((value) => value.trim()).filter(Boolean);
+    const stepSize = Number(josephusStep);
+
+    if (values.length === 0) {
+      setInputError('Enter at least one list value');
+      return;
+    }
+    if (!Number.isInteger(stepSize) || stepSize < 1 || stepSize > 50) {
+      setInputError('Enter a whole-number step size from 1 to 50');
+      return;
+    }
+
+    const ring = createInitialNodes(values, 'circular');
+    const steps = generateJosephusSteps(ring, stepSize);
+    if (steps.length === 0) {
+      setInputError('Build a non-empty circular list first');
+      return;
+    }
+
+    setInputValue(values.join(', '));
+    setInputError(null);
+    setBaseNodes(steps[steps.length - 1].nodes);
+    setActiveSteps(steps);
+    reset();
+    quizSession.resetSession();
+    play();
+  };
+
   const handleRandomize = () => {
     const randomVals = Array.from({ length: 5 }, () => Math.floor(Math.random() * 90) + 10);
     const newNodes = createInitialNodes(randomVals, structureType);
+    if (category === 'josephus') setInputValue(randomVals.join(', '));
     setBaseNodes(newNodes);
     setActiveSteps([]);
   };
 
   const handleResetList = () => {
-    const defaultNodes = createInitialNodes([10, 20, 30, 40], structureType);
+    const values = category === 'josephus' ? [1, 2, 3, 4, 5, 6, 7] : [10, 20, 30, 40];
+    const defaultNodes = createInitialNodes(values, structureType);
+    if (category === 'josephus') {
+      setInputValue(values.join(', '));
+      setJosephusStep('3');
+    }
     setBaseNodes(defaultNodes);
     setActiveSteps([]);
     reset();
   };
 
   const handleEmpty = () => {
+    if (category === 'josephus') setInputValue('');
     setBaseNodes([]);
     setActiveSteps([]);
     reset();
@@ -468,7 +527,12 @@ export const LinkedListPage: React.FC = () => {
   };
 
   const handleSample = () => {
-    const sampleNodes = createInitialNodes([10, 20, 30, 40], structureType);
+    const values = category === 'josephus' ? [1, 2, 3, 4, 5, 6, 7] : [10, 20, 30, 40];
+    const sampleNodes = createInitialNodes(values, structureType);
+    if (category === 'josephus') {
+      setInputValue(values.join(', '));
+      setJosephusStep('3');
+    }
     setBaseNodes(sampleNodes);
     setActiveSteps([]);
     reset();
@@ -499,6 +563,11 @@ export const LinkedListPage: React.FC = () => {
       const nodes = createInitialNodes(randomVals, 'singly', 2);
       setBaseNodes(nodes);
       setActiveSteps(generateCycleDetectionSteps(nodes, 2));
+    } else if (category === 'josephus') {
+      const nodes = createInitialNodes(randomVals, 'circular');
+      setInputValue(randomVals.join(', '));
+      setBaseNodes(nodes);
+      setActiveSteps(generateJosephusSteps(nodes, Number(josephusStep)));
     } else {
       const kind = structureType;
       const nodes = createInitialNodes(randomVals, kind);
@@ -509,7 +578,9 @@ export const LinkedListPage: React.FC = () => {
     }
   };
 
-  const snippetKey = positionOperation.startsWith('insert')
+  const snippetKey = category === 'josephus'
+      ? 'josephus'
+      : positionOperation.startsWith('insert')
       ? 'position_insert'
       : positionOperation.startsWith('delete')
       ? 'position_delete'
@@ -561,8 +632,71 @@ export const LinkedListPage: React.FC = () => {
      Single source of truth for every input/button: rendered in the page
      toolbar AND passed to the fullscreen modal, so the two states can
      never drift out of sync. */
-  const renderToolbarControls = () => (
-    <>
+  const renderToolbarControls = () => {
+    if (category === 'josephus') {
+      return (
+        <>
+          <div className="ll-input-group" title="Enter the values that make up the circular list">
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>
+              Values:
+            </span>
+            <input
+              type="text"
+              className="ll-input"
+              value={inputValue}
+              onChange={(event) => {
+                setInputValue(event.target.value);
+                if (inputError) setInputError(null);
+              }}
+              aria-label="Josephus list values"
+              placeholder="1, 2, 3, 4, 5, 6, 7"
+              style={{ width: '160px' }}
+            />
+          </div>
+          <label className="ll-input-group" title="The count restarts at the next node after each removal">
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>
+              k:
+            </span>
+            <input
+              type="number"
+              className="ll-input"
+              min={1}
+              max={50}
+              value={josephusStep}
+              onChange={(event) => {
+                setJosephusStep(event.target.value);
+                if (inputError) setInputError(null);
+              }}
+              aria-label="Josephus step size k"
+              style={{ width: '48px' }}
+            />
+          </label>
+          <button className="ll-btn ll-btn-primary" onClick={handleRunJosephus} title="Animate circular elimination until one node survives">
+            <RefreshCw size={14} />
+            <span>Run Josephus</span>
+          </button>
+          <button className="ll-btn ll-btn-secondary" onClick={handleResetList} title="Reset to the seven-node example">
+            <RotateCcw size={14} />
+            <span>Reset</span>
+          </button>
+          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
+            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty list">
+              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleSample} title="Load the seven-node example">
+              <Layers size={14} className="text-amber-400" /><span>Sample</span>
+            </button>
+            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Create a random circle">
+              <Shuffle size={14} className="text-emerald-400" /><span>Random</span>
+            </button>
+          </div>
+          <span className="ll-position-help">Count starts at HEAD; each kth node leaves the circle, and counting resumes at its next node. For 1–7 with k=3, node 4 survives.</span>
+        </>
+      );
+    }
+
+    return (
+      <>
       {/* Batch Custom Input */}
       <div className="ll-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px', fontWeight: 600 }}>
@@ -679,8 +813,9 @@ export const LinkedListPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-    </>
-  );
+      </>
+    );
+  };
 
   return (
     <div className="linked-list-container">
@@ -688,7 +823,7 @@ export const LinkedListPage: React.FC = () => {
       <VisualizerHeader
         icon={<Link2 size={22} />}
         title="Linked List Visualizer"
-        subtitle="Interactive Pointer Manipulations, Reversals, & Cycle Detection"
+        subtitle="Interactive Pointer Manipulations, Reversals, Cycle Detection, & Josephus Elimination"
         items={ALGORITHMS_LIST.map((alg) => ({ id: alg.id, name: alg.name, description: alg.description, group: alg.group }))}
         activeId={category}
         onSelect={(id) => handleSelectCategory(id as LinkedListCategory)}
@@ -699,9 +834,6 @@ export const LinkedListPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-            customizeModeEnabled={customizeModeEnabled}
-            onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-            onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -773,6 +905,7 @@ export const LinkedListPage: React.FC = () => {
         </div>
 
         {/* Right Column: Code & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -782,52 +915,9 @@ export const LinkedListPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
+        <ResizableWorkspaceHandle storageKey="linkedList" />
         <ResizablePanelRow
           storageKey="linkedList"
-          customizeModeEnabled={customizeModeEnabled}
-          visualizerPanel={
-            <>
-              <div className="ll-canvas-card" style={{ position: 'relative' }}>
-                <div className="ll-canvas-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <div className="ll-canvas-title">
-                    <Link2 size={16} className="text-accent" />
-                    <span>
-                      {category.toUpperCase()} CANVAS {currentStep ? `• Phase: ${currentStep.phase}` : ''}
-                    </span>
-                  </div>
-                  <StateSummaryBar items={summaryItems} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <DefinitionCardPanel
-                      definitions={definitions}
-                      visible={showDefinitions}
-                      onToggle={() => setShowDefinitions((v) => !v)}
-                    />
-                    <button
-                      className="bst-btn btn-fullscreen"
-                      onClick={() => setIsFullScreenOpen(true)}
-                      title="Full Screen Canvas"
-                    >
-                      <Maximize2 size={14} />
-                    </button>
-                  </div>
-                </div>
-                <LinkedListRenderer step={currentStep} nodes={baseNodes} listType={structureType} />
-              </div>
-              <FloatingController
-                isPlaying={isPlaying}
-                canStepBack={currentStepIndex > 0}
-                canStepForward={currentStepIndex < totalSteps - 1}
-                onPlay={play}
-                onPause={pause}
-                onReset={reset}
-                onStepBack={stepBack}
-                onStepForward={stepForward}
-                onStop={() => { pause(); reset(); }}
-                onResume={play}
-                quizMode={quizEnabled}
-              />
-            </>
-          }
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}

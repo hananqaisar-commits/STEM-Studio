@@ -38,9 +38,6 @@ export default defineConfig({
             if (id.includes('@tsparticles')) {
               return 'vendor-particles';
             }
-            if (id.includes('dockview')) {
-              return 'vendor-dockview';
-            }
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }

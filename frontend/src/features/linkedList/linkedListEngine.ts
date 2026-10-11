@@ -6,6 +6,7 @@ export type LinkedListCategory =
   | 'reverse'
   | 'detectCycle'
   | 'middleNode'
+  | 'josephus'
   | 'removeNthFromEnd'
   | 'palindrome'
   | 'mergeSorted'
@@ -1009,6 +1010,162 @@ export function generateMiddleNodeSteps(
     codeLine: 6,
     highlightedNodeIds: [nodes[slowIdx].id],
     listType: type,
+  });
+
+  return steps;
+}
+
+// ─── 7. JOSEPHUS PROBLEM (CIRCULAR ELIMINATION) ───────────────────────────────────
+
+export function generateJosephusSteps(
+  currentNodes: ListNodeItem[],
+  stepSize: number
+): LinkedListStep[] {
+  if (currentNodes.length === 0 || !Number.isInteger(stepSize) || stepSize < 1) return [];
+
+  const steps: LinkedListStep[] = [];
+  let ring = cloneNodes(currentNodes);
+  ring.forEach((node, index) => {
+    node.nextId = ring[(index + 1) % ring.length].id;
+    node.status = 'default';
+  });
+
+  let headId = ring[0].id;
+  let tailId = ring[ring.length - 1].id;
+  let currentIndex = 0;
+  const ordinalSuffix = stepSize % 100 >= 11 && stepSize % 100 <= 13
+    ? 'th'
+    : stepSize % 10 === 1
+    ? 'st'
+    : stepSize % 10 === 2
+    ? 'nd'
+    : stepSize % 10 === 3
+    ? 'rd'
+    : 'th';
+
+  const addStep = (
+    phase: string,
+    explanation: string,
+    codeLine: number,
+    currentId: string,
+    previousId: string | null,
+    status: ListNodeItem['status'] = 'active',
+    countLabel?: string,
+    victimId?: string,
+    isQuizPoint = false,
+    quizData?: LinkedListQuizData
+  ) => {
+    const snapshot = cloneNodes(ring);
+    snapshot.forEach((node) => { node.status = 'default'; });
+    const current = snapshot.find((node) => node.id === currentId);
+    const previous = previousId ? snapshot.find((node) => node.id === previousId) : null;
+    if (current) current.status = status;
+    if (previous && previous.id !== currentId) previous.status = 'comparing';
+
+    assignPointerLabels(snapshot, {
+      head: headId,
+      tail: tailId,
+      previous: previousId,
+      current: currentId,
+      victim: victimId ?? null,
+    });
+    if (current && countLabel) current.pointerLabels?.push(countLabel);
+
+    steps.push({
+      nodes: snapshot,
+      headId,
+      tailId,
+      pointers: { head: headId, tail: tailId, previous: previousId, current: currentId, victim: victimId ?? null },
+      phase,
+      explanation,
+      codeLine,
+      highlightedNodeIds: [currentId, ...(previousId ? [previousId] : [])],
+      listType: 'circular',
+      isQuizPoint,
+      quizData,
+    });
+  };
+
+  addStep(
+    'Start at HEAD',
+    `Start counting at node ${ring[currentIndex].value}. Remove every ${stepSize}${ordinalSuffix} node, then continue at the next node.`,
+    2,
+    ring[currentIndex].id,
+    ring[(currentIndex - 1 + ring.length) % ring.length].id
+  );
+
+  while (ring.length > 1) {
+    let previousIndex = (currentIndex - 1 + ring.length) % ring.length;
+
+    for (let count = 1; count <= stepSize; count += 1) {
+      const current = ring[currentIndex];
+      const previous = ring[previousIndex];
+      const isVictim = count === stepSize;
+      const otherValues = [...new Set(ring
+        .filter((node) => node.id !== current.id)
+        .map((node) => String(node.value)))];
+      const options = [String(current.value), ...otherValues.slice(0, 2)];
+
+      addStep(
+        isVictim ? 'Select node to eliminate' : `Count ${count} of ${stepSize}`,
+        isVictim
+          ? `Count ${count} lands on node ${current.value}; this node is eliminated from the circle.`
+          : `Count ${count} on node ${current.value}. Continue around the circle until count ${stepSize}.`,
+        isVictim ? 6 : count === 1 ? 4 : 5,
+        current.id,
+        previous.id,
+        isVictim ? 'danger' : 'active',
+        `COUNT ${count}`,
+        isVictim ? current.id : undefined,
+        isVictim && options.length > 1,
+        isVictim && options.length > 1 ? {
+          prompt: `Counting ${stepSize} from the current start, which node is eliminated?`,
+          options,
+          correctIndex: 0,
+          explanation: `Counting lands on node ${current.value}, so its previous node skips it and points to the next node.`,
+        } : undefined
+      );
+
+      previousIndex = currentIndex;
+      currentIndex = (currentIndex + 1) % ring.length;
+    }
+
+    const victimIndex = (currentIndex - 1 + ring.length) % ring.length;
+    const victim = ring[victimIndex];
+    const previousIndexToVictim = (victimIndex - 1 + ring.length) % ring.length;
+    const previousId = ring[previousIndexToVictim].id;
+    const successorId = ring[(victimIndex + 1) % ring.length].id;
+    const previousNode = ring[previousIndexToVictim];
+    previousNode.nextId = successorId;
+
+    ring = ring.filter((node) => node.id !== victim.id);
+    if (victim.id === headId) headId = successorId;
+    if (victim.id === tailId) tailId = previousId;
+    if (ring.length === 1) ring[0].nextId = ring[0].id;
+
+    currentIndex = ring.findIndex((node) => node.id === successorId);
+    addStep(
+      'Reconnect the circle',
+      `Remove node ${victim.value}: node ${ring.find((node) => node.id === previousId)?.value} now points to node ${ring.find((node) => node.id === successorId)?.value}. Counting restarts there.`,
+      7,
+      successorId,
+      previousId
+    );
+  }
+
+  const winner = ring[0];
+  winner.status = 'success';
+  assignPointerLabels(ring, { head: winner.id, tail: winner.id, winner: winner.id });
+  steps.push({
+    nodes: cloneNodes(ring),
+    headId: winner.id,
+    tailId: winner.id,
+    pointers: { head: winner.id, tail: winner.id, winner: winner.id },
+    phase: 'Survivor found',
+    explanation: `Node ${winner.value} is the last one in the circle and survives the Josephus elimination.`,
+    codeLine: 10,
+    highlightedNodeIds: [winner.id],
+    listType: 'circular',
   });
 
   return steps;

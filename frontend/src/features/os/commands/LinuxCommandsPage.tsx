@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Terminal, Search, ArrowLeft, FolderGit2, Compass, FolderPlus,
@@ -7,6 +7,8 @@ import {
   Copy, Check
 } from 'lucide-react';
 import { LINUX_COMMAND_GROUPS } from '../../../data/linuxCommandsData';
+import { LINUX_CORE_LESSONS, type LinuxCoreLesson } from '../../../data/linuxCoreLessons';
+import { LinuxCoreLessons } from './LinuxCoreLessons';
 import { VisualizerHeader } from '../../../components/layout/VisualizerHeader';
 import { SEOHead } from '../../../components/common/SEOHead';
 import { getSEOForRoute } from '../../../data/seoMetadata';
@@ -39,6 +41,7 @@ export const LinuxCommandsPage: React.FC = () => {
   const { setTutorContext } = useTutorContext();
   const [activeGroupId, setActiveGroupId] = useState<string>('path-concepts');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [coreStep, setCoreStep] = useState({ lesson: LINUX_CORE_LESSONS[0], stepIndex: 0 });
 
   // Track expanded command card IDs (accordion state)
   const [expandedCmdIds, setExpandedCmdIds] = useState<Set<string>>(() => {
@@ -96,11 +99,11 @@ export const LinuxCommandsPage: React.FC = () => {
 
   // Items for VisualizerHeader dropdown search
   const headerSearchItems = useMemo(() => {
-    return LINUX_COMMAND_GROUPS.map(g => ({
+    return [{ id: 'linux-core', name: 'Linux Core', description: 'Firewall, Wi-Fi file sharing, permissions, and services' }, ...LINUX_COMMAND_GROUPS.map(g => ({
       id: g.id,
       name: g.title,
       description: g.description,
-    }));
+    }))];
   }, []);
 
   // Search spans every command group; the group filter applies when search is empty.
@@ -126,6 +129,35 @@ export const LinuxCommandsPage: React.FC = () => {
   }, [activeGroupId, searchQuery]);
 
   useEffect(() => {
+    if (activeGroupId === 'linux-core') {
+      const step = coreStep.lesson.steps[coreStep.stepIndex];
+      setTutorContext({
+        algorithmName: 'Linux Core',
+        algorithmId: 'linux-core',
+        category: 'commands',
+        currentStepDescription: step?.explanation || coreStep.lesson.summary,
+        currentStepIndex: coreStep.stepIndex,
+        totalSteps: coreStep.lesson.steps.length,
+        currentStep: {
+          lessonId: coreStep.lesson.id,
+          lessonTitle: coreStep.lesson.title,
+          stepTitle: step?.title,
+          commands: step?.commands ?? [],
+        },
+        steps: coreStep.lesson.steps,
+        onSetInput: undefined,
+        play: undefined,
+        pause: undefined,
+        stepForward: undefined,
+        reset: undefined,
+        setShowDebugger: undefined,
+        onLaunchQuiz: undefined,
+        setSpeed: undefined,
+        toggleFullscreen: undefined,
+        onExecuteCommand: undefined,
+      });
+      return;
+    }
     const activeGroup = LINUX_COMMAND_GROUPS.find((group) => group.id === activeGroupId);
     const visibleCommands = filteredGroups.flatMap((group) => group.commands);
     const selectedCommand = [...visibleCommands].reverse().find((command) => expandedCmdIds.has(command.id));
@@ -154,7 +186,13 @@ export const LinuxCommandsPage: React.FC = () => {
       toggleFullscreen: undefined,
       onExecuteCommand: undefined,
     });
-  }, [activeGroupId, expandedCmdIds, filteredGroups, setTutorContext]);
+  }, [activeGroupId, coreStep, expandedCmdIds, filteredGroups, setTutorContext]);
+
+  const onCoreStepChange = useCallback((lesson: LinuxCoreLesson, stepIndex: number) => {
+    setCoreStep((previous) => previous.lesson.id === lesson.id && previous.stepIndex === stepIndex
+      ? previous
+      : { lesson, stepIndex });
+  }, []);
 
   return (
     <div className="bst-page-container linux-module-shell linux-commands-page animate-fade-in space-y-6">
@@ -163,7 +201,7 @@ export const LinuxCommandsPage: React.FC = () => {
       <VisualizerHeader
         icon={<Terminal size={22} />}
         title="Commands of Linux"
-        subtitle="Comprehensive reference catalog & interactive Linux terminal commands engine across 13 core functional groups"
+        subtitle="A practical Linux command reference with guided lessons for networking, security, permissions, and services"
         items={headerSearchItems}
         activeId={activeGroupId !== 'all' ? activeGroupId : undefined}
         onSelect={(id) => setActiveGroupId(id)}
@@ -186,7 +224,7 @@ export const LinuxCommandsPage: React.FC = () => {
         <div className="linux-commands-toolbar__intro">
           <div className="flex items-center gap-2 text-[var(--color-text)] font-bold text-sm">
             <BookOpen size={16} className="text-purple-600 dark:text-purple-400" />
-            <span>Interactive Command Reference Catalog</span>
+            <span>Linux Core & Command Reference</span>
           </div>
 
           <div className="linux-commands-toolbar__actions">
@@ -228,6 +266,23 @@ export const LinuxCommandsPage: React.FC = () => {
           <div className="px-3 py-2 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
             Command Groups ({LINUX_COMMAND_GROUPS.length})
           </div>
+          <button
+            onClick={() => setActiveGroupId('linux-core')}
+            aria-pressed={activeGroupId === 'linux-core'}
+            type="button"
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
+              activeGroupId === 'linux-core'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
+                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium border border-transparent'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <ShieldCheck size={16} className={activeGroupId === 'linux-core' ? 'text-white' : ''} />
+              <span>Linux Core</span>
+            </span>
+            <span className="text-[10px] font-semibold opacity-80">4 lessons</span>
+          </button>
+
           <button
             onClick={() => setActiveGroupId('all')}
             aria-pressed={activeGroupId === 'all'}
@@ -284,7 +339,10 @@ export const LinuxCommandsPage: React.FC = () => {
 
         {/* Command Reference Cards Catalog */}
         <div className="linux-commands-results">
-          {filteredGroups.length === 0 ? (
+          {activeGroupId === 'linux-core' ? (
+            <LinuxCoreLessons onStepChange={onCoreStepChange} />
+          ) : (
+          filteredGroups.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
               <HelpCircle size={40} className="mx-auto text-[var(--color-text-muted)] mb-3" />
               <h3 className="text-lg font-semibold text-[var(--color-text)] mb-1">No matching commands found</h3>
@@ -473,12 +531,13 @@ export const LinuxCommandsPage: React.FC = () => {
                 </div>
               );
             })
+          )
           )}
         </div>
       </div>
 
       {/* Theory & Concepts Panel matching DSA module */}
-      <TheoryPanel categoryId="commands" activeTopic={activeGroupId !== 'all' ? activeGroupId : undefined} />
+      {activeGroupId !== 'linux-core' && <TheoryPanel categoryId="commands" activeTopic={activeGroupId !== 'all' ? activeGroupId : undefined} />}
     </div>
   );
 };

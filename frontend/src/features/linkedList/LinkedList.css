@@ -344,10 +344,79 @@
 }
 
 @media (max-width: 620px) {
+  .ll-toolbar {
+    padding: 0.75rem;
+  }
+
+  .ll-toolbar-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    gap: 0.5rem !important;
+    width: 100%;
+    min-width: 0;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+  }
+
+  .ll-toolbar-actions > .ll-input-group,
+  .ll-toolbar-actions > .ll-position-controls,
+  .ll-toolbar-actions > .dataset-mode-selector {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ll-input-group {
+    min-height: 44px;
+  }
+
+  .ll-input-group .ll-input {
+    flex: 1;
+    width: 0;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .ll-toolbar-actions > .ll-btn {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding-inline: 0.4rem;
+    white-space: nowrap;
+  }
+
+  .ll-position-controls > summary {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
   .ll-position-controls-body {
     right: auto;
     left: 0;
     grid-template-columns: 1fr;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ll-toolbar-actions > .dataset-mode-selector {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-left: 0 !important;
+  }
+
+  .ll-toolbar-actions > .dataset-mode-selector .btn-mode {
+    min-width: 0;
+    justify-content: center;
+    padding-inline: 0.3rem;
   }
 }
 
@@ -473,6 +542,27 @@
 .badge-curr, .badge-slow {
   background: #38bdf8;
   color: #0f172a;
+}
+
+.badge-current {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+.ll-pointer-badge[class*="badge-count_"] {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.badge-victim {
+  background: var(--error-color);
+  color: #ffffff;
+}
+
+.badge-winner {
+  background: var(--success-color);
+  color: #ffffff;
 }
 
 .badge-prev, .badge-fast {

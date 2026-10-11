@@ -7,6 +7,8 @@ interface CircleNodeProps {
   state?: ElementState;
   size?: number;
   label?: string;
+  ariaLabel?: string;
+  className?: string;
   onClick?: () => void;
 }
 
@@ -15,6 +17,8 @@ export const CircleNode: React.FC<CircleNodeProps> = ({
   state = 'default',
   size = 48,
   label,
+  ariaLabel,
+  className,
   onClick,
 }) => {
   return (
@@ -23,7 +27,7 @@ export const CircleNode: React.FC<CircleNodeProps> = ({
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
-      aria-label={label ? `${label}: ${value}` : `Node ${value}`}
+      aria-label={ariaLabel || (label ? `${label}: ${value}` : `Node ${value}`)}
       onKeyDown={onClick ? (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -32,7 +36,7 @@ export const CircleNode: React.FC<CircleNodeProps> = ({
       } : undefined}
     >
       <div
-        className={`primitive-circle-node state-${state}`}
+        className={`primitive-circle-node state-${state}${className ? ` ${className}` : ''}`}
         style={{ width: size, height: size, fontSize: size * 0.36 }}
       >
         <span>{value}</span>

@@ -57,7 +57,7 @@
   align-items: center;
   justify-content: flex-end;
   height: 100%;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.25s ease;
 }
 
 .bar-value {
@@ -75,9 +75,12 @@
   border-radius: 5px 5px 2px 2px;
   position: relative;
   overflow: hidden;
-  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              background-color 0.3s ease,
-              box-shadow 0.3s ease;
+  transform: translateY(0) scaleX(1);
+  transform-origin: center bottom;
+  transition: height 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 0.18s ease,
+              box-shadow 0.18s ease;
 }
 
 .bar-glow {
@@ -107,13 +110,14 @@
 .state-comparing .primitive-bar-fill {
   background: linear-gradient(180deg, var(--viz-comparing-light) 0%, var(--viz-comparing-base) 50%, var(--viz-comparing-deep) 100%);
   box-shadow: 0 0 10px rgba(var(--viz-comparing-glow), 0.35);
+  transform: translateY(-3px) scaleX(1.025);
 }
 
 /* Bar State — Swapping */
 .state-swapping .primitive-bar-fill {
   background: linear-gradient(180deg, var(--viz-swapping-light) 0%, var(--viz-swapping-base) 50%, var(--viz-swapping-deep) 100%);
   box-shadow: 0 0 10px rgba(var(--viz-swapping-glow), 0.35);
-  animation: bar-swap-pulse 0.4s ease infinite alternate;
+  transform: translateY(-7px) scaleX(1.045);
 }
 
 /* Bar State — Sorted */
@@ -132,11 +136,6 @@
 .state-selected .primitive-bar-fill {
   background: linear-gradient(180deg, var(--viz-selected-light) 0%, var(--viz-selected-base) 50%, var(--viz-selected-deep) 100%);
   box-shadow: 0 0 8px rgba(var(--viz-selected-glow), 0.3);
-}
-
-@keyframes bar-swap-pulse {
-  0% { transform: scaleX(1); }
-  100% { transform: scaleX(1.04); }
 }
 
 

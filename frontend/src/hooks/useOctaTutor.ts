@@ -8,18 +8,20 @@ import { DSA_CATEGORIES, MODULES } from '../data/categories';
 import { CATEGORY_TOPICS } from '../data/categoryTopics';
 import { THEORY_CONTENT } from '../data/theoryContent';
 import { LINUX_COMMAND_GROUPS } from '../data/linuxCommandsData';
+import { LINUX_CORE_LESSONS } from '../data/linuxCoreLessons';
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  mode?: 'interactive' | 'natural';
   expression?: MascotExpression;
   timestamp: Date;
   isRevealing?: boolean;
   proposedActions?: OctaTutorFunctionCall[];
   actionDecision?: 'pending' | 'allowed' | 'cancelled';
   actionContextKey?: string;
-  answerSource?: 'model' | 'offline';
+  answerSource?: 'model' | 'offline' | 'grounded';
 }
 
 export type SupportedSpeechLang = 'en-US' | 'ur-PK' | 'zh-CN';
@@ -27,6 +29,7 @@ export type SupportedSpeechLang = 'en-US' | 'ur-PK' | 'zh-CN';
 export interface TutorSuggestion {
   label: string;
   text: string;
+  icon: 'book' | 'terminal' | 'shield' | 'route' | 'brain' | 'clock' | 'step' | 'compare' | 'network' | 'code' | 'workflow';
 }
 
 export interface UseOctaTutorReturn {
@@ -173,6 +176,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
       `${category.categoryName} (route /dashboard/${category.categoryId}): ${category.topics.map((topic) => topic.name).join(', ')}`,
     ),
     ...LINUX_COMMAND_GROUPS.map((group) => `Linux command group ${group.title}: ${group.commands.map((command) => command.name).join(', ')}`),
+    ...LINUX_CORE_LESSONS.map((lesson) => `Linux Core lesson ${lesson.title}: ${lesson.summary}`),
     'Octa AI Tutor offers AI Concept Mode for grounded concept explanations and Interactive Step Mode for the active DSA or file-system simulator state. Supported in-app actions are proposals and only run after the student approves them.',
     'Linux command lessons and the virtual file system are in-app learning simulations. Commands proposed by Octa can only run in the virtual file-system simulator after approval; Octa cannot execute commands on the host computer.',
   ].join('\n'), []);
@@ -189,6 +193,32 @@ export function useOctaTutor(): UseOctaTutorReturn {
       .slice(0, 3);
 
     if (isCommandsPage) {
+      if (contextState.algorithmId === 'linux-core') {
+        const mentionedLessons = LINUX_CORE_LESSONS.filter((lesson) => {
+          const title = lesson.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const id = lesson.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+          return compact.includes(title) || compact.includes(id) || (lesson.id === 'ufw' && /firewall/.test(prompt.toLowerCase()));
+        });
+        const activeLesson = LINUX_CORE_LESSONS.find((lesson) => lesson.id === contextState.currentStep?.lessonId);
+        const selectedLessons = mentionedLessons.length ? mentionedLessons : activeLesson ? [activeLesson] : LINUX_CORE_LESSONS.slice(0, 2);
+        return JSON.stringify({
+          source: 'STEM Studio Linux Core guided lessons',
+          instruction: 'Explain concepts in a clear tutor voice and ground Linux commands in this lesson. Never claim to run a command on the user\'s computer. Commands are examples the learner reviews and chooses to run.',
+          activeLesson: activeLesson ? {
+            title: activeLesson.title,
+            summary: activeLesson.summary,
+            activeStep: contextState.currentStep,
+            activeStepExplanation: contextState.currentStepDescription,
+          } : undefined,
+          lessons: selectedLessons.map((lesson) => ({
+            title: lesson.title,
+            summary: lesson.summary,
+            flow: lesson.flow,
+            steps: lesson.steps,
+            caution: lesson.caution,
+          })),
+        });
+      }
       const allCommands = LINUX_COMMAND_GROUPS.flatMap((group) => group.commands.map((command) => ({ group, command })));
       const mentioned = allCommands.filter(({ command }) => {
         const commandName = command.name.toLowerCase();
@@ -272,7 +302,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         ...( /\b(code|implementation|implement)\b/i.test(prompt) && theory?.codeSnippet ? { codeSnippet: theory.codeSnippet } : {}),
       };
     }));
-  }, [activeDsaCategory, contextState.algorithmId, contextState.category, hasRouteTutorContext, isCommandsPage, isFilesystemPage, pageTutorContext]);
+  }, [activeDsaCategory, contextState.algorithmId, contextState.category, contextState.currentStep, contextState.currentStepDescription, hasRouteTutorContext, isCommandsPage, isFilesystemPage, pageTutorContext]);
 
   // Load custom LLM config from localStorage
   const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
@@ -304,7 +334,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
     {
       id: 'welcome-1',
       role: 'assistant',
-      content: `Hi, I'm Octa, your STEM Studio learning guide. 🐙\n\n• **AI Concept Mode** uses this app's lesson material to explain concepts and answer questions about the current page.\n• **Interactive Step Mode** can explain the live visualizer state and propose supported page controls. You choose whether to allow each action.\n\nWhat would you like to understand or try?`,
+      content: `Hi, I'm Octa, your AI learning tutor.\n\n• **AI Concept Mode** answers open-ended questions, explains ideas, and can help with examples or code using your connected AI model.\n• **Interactive Step Mode** explains the live visualizer step and can propose supported controls for your approval.\n\nWhat would you like to learn?`,
+      mode: 'natural',
       expression: 'happy',
       timestamp: new Date(),
     },
@@ -318,6 +349,10 @@ export function useOctaTutor(): UseOctaTutorReturn {
   const [tutorMode, setTutorMode] = useState<'interactive' | 'natural'>('natural');
   const [isGuidedMode, setIsGuidedMode] = useState<boolean>(false);
   const [guidedStepIndex, setGuidedStepIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!hasVisualizerContext) setTutorMode('natural');
+  }, [hasVisualizerContext]);
 
   const recognitionRef = useRef<any>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -412,33 +447,34 @@ export function useOctaTutor(): UseOctaTutorReturn {
       {
         id: 'welcome-reset',
         role: 'assistant',
-        content: `Conversation reset. What would you like to learn about ${currentPageLabel}? 🐙`,
+        content: `Conversation reset. What would you like to learn about ${currentPageLabel}?`,
+        mode: tutorMode,
         expression: 'excited',
         timestamp: new Date(),
       },
     ]);
-  }, [currentPageLabel]);
+  }, [currentPageLabel, tutorMode]);
 
   // ── Context-aware smart suggestions ──
   const suggestions = useMemo<TutorSuggestion[]>(() => {
     if (location.pathname.includes('/os/filesystem') || location.pathname === '/dashboard/filesystem') {
       return [
-        { label: '🗂️ File system', text: 'How does the virtual file system work in this simulator?' },
-        { label: tutorMode === 'interactive' ? '⌨️ Run a task' : '⌨️ Learn a task', text: tutorMode === 'interactive'
+        { label: 'File system', icon: 'book', text: 'How does the virtual file system work in this simulator?' },
+        { label: tutorMode === 'interactive' ? 'Run a task' : 'Learn a task', icon: 'terminal', text: tutorMode === 'interactive'
           ? 'Run `mkdir octa-demo` in the virtual file system.'
           : 'How do I create a folder and move a file in the virtual file system?' },
       ];
     }
     if (location.pathname.includes('/os/commands') || location.pathname === '/dashboard/commands') {
       return [
-        { label: '📁 Navigation', text: 'Explain pwd, ls, and cd with a simple example.' },
-        { label: '🔐 Permissions', text: 'How do Linux file permissions work?' },
+        { label: 'Navigation', icon: 'route', text: 'Explain pwd, ls, and cd with a simple example.' },
+        { label: 'Permissions', icon: 'shield', text: 'How do Linux file permissions work?' },
       ];
     }
     if (!hasVisualizerContext) {
       return [
-        { label: '🧭 Learning paths', text: 'What can I learn in STEM Studio?' },
-        { label: '🐧 Linux module', text: 'How do I open the Linux command lessons?' },
+        { label: 'Learning paths', icon: 'route', text: 'What can I learn in STEM Studio?' },
+        { label: 'Linux module', icon: 'terminal', text: 'How do I open the Linux command lessons?' },
       ];
     }
 
@@ -447,16 +483,16 @@ export function useOctaTutor(): UseOctaTutorReturn {
     const totalSteps = pageTutorContext.totalSteps || 1;
     const category = pageTutorContext.category || '';
     const base: TutorSuggestion[] = [
-      { label: '💡 Explain intuition', text: `Explain how ${algName} works intuitively` },
-      { label: '⏱️ Time & space', text: `What is the time and space complexity of ${algName}?` },
+      { label: 'Explain intuition', icon: 'brain', text: `Explain how ${algName} works intuitively` },
+      { label: 'Time & space', icon: 'clock', text: `What is the time and space complexity of ${algName}?` },
     ];
     if (tutorMode === 'interactive' && pageTutorContext.totalSteps > 0 && pageTutorContext.algorithmName) {
-      base.unshift({ label: `🔍 Explain step ${stepNum}`, text: `Explain step ${stepNum} of ${totalSteps} in detail` });
+      base.unshift({ label: `Explain step ${stepNum}`, icon: 'step', text: `Explain step ${stepNum} of ${totalSteps} in detail` });
     }
-    if (category === 'sorting') base.push({ label: '⚖️ Compare', text: `Compare ${algName} with Quick Sort and Merge Sort` });
-    else if (category === 'graph') base.push({ label: '🌐 Real-world use', text: `Where is ${algName} used in real systems?` });
-    else if (category === 'dp') base.push({ label: '🧩 DP logic', text: `Explain the subproblems and state transition for ${algName}` });
-    else base.push({ label: '💻 Code', text: `Show me the Python implementation for ${algName}` });
+    if (category === 'sorting') base.push({ label: 'Compare', icon: 'compare', text: `Compare ${algName} with Quick Sort and Merge Sort` });
+    else if (category === 'graph') base.push({ label: 'Real-world use', icon: 'network', text: `Where is ${algName} used in real systems?` });
+    else if (category === 'dp') base.push({ label: 'DP logic', icon: 'workflow', text: `Explain the subproblems and state transition for ${algName}` });
+    else base.push({ label: 'Code example', icon: 'code', text: `Show me the Python implementation for ${algName}` });
     return base;
   }, [location.pathname, hasVisualizerContext, pageTutorContext, tutorMode, activeDsaCategory?.name]);
 
@@ -591,6 +627,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         id: userMsgId,
         role: 'user',
         content: promptToUse,
+        mode: tutorMode,
         timestamp: new Date(),
       };
 
@@ -629,10 +666,13 @@ export function useOctaTutor(): UseOctaTutorReturn {
       }
 
       // Prepare payload
-      const historyPayload: OctaTutorMessage[] = messages.slice(-10).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      const historyPayload: OctaTutorMessage[] = messages
+        .filter((message) => !message.mode || message.mode === tutorMode)
+        .slice(-10)
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
 
       try {
         const response: OctaTutorResponse = await sendTutorMessage({
@@ -672,6 +712,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
             id: botMsgId,
             role: 'assistant',
             content: response.reply,
+            mode: tutorMode,
             expression: expr,
             timestamp: new Date(),
             isRevealing: true,
@@ -691,6 +732,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
             id: `err-${Date.now()}`,
             role: 'assistant',
             content: `Oops! ${errorDetail} Please check your AI Settings ⚙️ or server key configuration.`,
+            mode: tutorMode,
             expression: 'confused',
             timestamp: new Date(),
           },
@@ -699,7 +741,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         setIsLoading(false);
       }
     },
-    [inputText, isLoading, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, llmConfig]
+    [inputText, isLoading, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, tutorMode, llmConfig]
   );
 
   return {

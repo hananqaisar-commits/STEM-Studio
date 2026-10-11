@@ -133,18 +133,18 @@ export function PlaceholdersAndVanishInput({
   return (
     <div className="w-full flex flex-col gap-1.5">
       {onSelectLang && (
-        <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">Voice Language</span>
-          <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-neutral-800/90 p-0.5 rounded-full border border-slate-300 dark:border-neutral-700/60 shadow-sm">
+        <div className="octa-chat-language-row">
+          <span>Voice language</span>
+          <div className="octa-chat-language-options">
             {(["en-US", "ur-PK", "zh-CN"] as const).map((lang) => (
               <button
                 key={lang}
                 type="button"
                 className={cn(
-                  "px-2 py-0.5 text-[10px] font-bold rounded-full transition-all",
+                  "octa-chat-language-option",
                   speechLang === lang
-                    ? "bg-purple-600 text-white shadow-sm"
-                    : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-foreground"
+                    ? "is-active"
+                    : ""
                 )}
                 onClick={() => onSelectLang(lang)}
               >
@@ -157,7 +157,7 @@ export function PlaceholdersAndVanishInput({
 
       <form
         className={cn(
-          "relative mx-auto flex h-11 w-full items-center overflow-hidden rounded-full border border-purple-300 dark:border-purple-900/60 bg-white text-slate-900 dark:bg-neutral-950 dark:text-neutral-100 p-1 pl-4 shadow-md dark:shadow-xl backdrop-blur-md transition-all duration-300 focus-within:border-purple-600 dark:focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/20",
+          "octa-chat-form",
           className
         )}
         onSubmit={vanishAndSubmit}
@@ -173,12 +173,13 @@ export function PlaceholdersAndVanishInput({
         <input
           ref={inputRef}
           type="text"
+          aria-label="Message Octa AI Tutor"
           value={value}
           onChange={handleInputChange}
           disabled={disabled}
           className={cn(
-            "relative z-20 h-full w-full bg-transparent pl-1 pr-28 text-xs md:text-sm font-semibold text-slate-900 dark:text-neutral-100 outline-none border-none placeholder:text-transparent disabled:opacity-50 min-w-0 overflow-x-auto",
-            animating && "text-transparent"
+            "octa-chat-input",
+            animating && "is-animating"
           )}
         />
 
@@ -192,7 +193,7 @@ export function PlaceholdersAndVanishInput({
                 animate={{ y: 0, opacity: 0.65 }}
                 exit={{ y: -8, opacity: 0 }}
                 transition={{ duration: 0.25, ease: "linear" }}
-                className="truncate text-xs md:text-sm text-slate-500 dark:text-neutral-400 font-medium"
+                className="octa-chat-placeholder"
               >
                 {placeholders[currentPlaceholder]}
               </motion.p>
@@ -207,24 +208,27 @@ export function PlaceholdersAndVanishInput({
               type="button"
               onClick={onToggleListening}
               className={cn(
-                "flex size-8 items-center justify-center rounded-full transition-all duration-200",
+                "octa-chat-voice-button",
                 isListening
-                  ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse"
-                  : "bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-500/10"
+                  ? "is-listening"
+                  : ""
               )}
               title="Voice Input (Speech Recognition)"
+              aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+              aria-pressed={isListening}
             >
-              {isListening ? <MicOff className="size-3.5" /> : <Mic className="size-3.5" />}
+              {isListening ? <MicOff className="size-4" aria-hidden="true" /> : <Mic className="size-4" aria-hidden="true" />}
             </button>
           )}
 
           <button
             type="submit"
             disabled={!value.trim() || disabled}
-            className="flex size-8 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+            className="octa-chat-send-button"
             title="Send message to Octa AI Tutor"
+            aria-label="Send message"
           >
-            <Send className="size-3.5" />
+            <Send className="size-4" aria-hidden="true" />
           </button>
         </div>
       </form>
