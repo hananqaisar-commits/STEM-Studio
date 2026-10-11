@@ -85,6 +85,13 @@ const GatedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return isAuthenticated ? <>{children}</> : <DashboardHome />;
 };
 
+/** Send signed-in users straight into the interactive studio from the root URL. */
+const RootRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <LoadingScreen message="Checking session..." />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <MarketingHome />;
+};
+
 
 
 /**
@@ -184,7 +191,7 @@ const AppContent = () => {
     <>
       <Suspense fallback={<LoadingScreen message="Loading..." />}>
         <Routes>
-          <Route path="/" element={<MarketingHome />} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/login" element={<GuestRoute><SignIn /></GuestRoute>} />
           <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
           <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />

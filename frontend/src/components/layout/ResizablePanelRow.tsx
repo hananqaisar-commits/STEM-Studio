@@ -1,53 +1,32 @@
-import React, { useCallback, useLayoutEffect, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
-import { DockviewLayout, resetDockviewLayout } from './DockviewLayout';
 import './ResizablePanelRow.css';
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   ResizablePanelRow — the ONE shared constraint-aware dock for the
-   Debugger (left) and Explanation Card (right) used by every studio.
-
-   Uses `react-resizable-panels` for the horizontal split (shared divider).
-   This guarantees the panels NEVER overlap — resizing one automatically 
-   shrinks the other because they share the same container width.
-   
-   Independent heights are managed via a simple manual bottom handle.
-   ─────────────────────────────────────────────────────────────────────────── */
 
 const MIN_W_PX = 320;
 const MIN_H = 220;
 const MAX_H = 760;
 const DEFAULT_H = 380;
-/** Below this container width the dock stacks vertically. */
 const STACKED_MAX_W = MIN_W_PX * 2 + 60;
-
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 interface Sizes {
   lh: number;
   rh: number;
-  layout: Record<string, number>; // percentages {left, right}
+  layout: Record<string, number>;
 }
 
 interface ResizablePanelRowProps {
   storageKey: string;
   debuggerPanel: React.ReactNode;
   explanationPanel: React.ReactNode;
-  /** Optional visualizer content. Required for Dockview customize mode. */
-  visualizerPanel?: React.ReactNode;
-  /** When true and screen >= 1024px, replaces normal layout with Dockview. */
-  customizeModeEnabled?: boolean;
-  /** Callback for when user clicks Reset Layout in Dockview mode. */
-  onResetLayout?: () => void;
 }
 
 const storageId = (key: string) => `stemstudio.rp.${key}`;
+const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
 
 function loadSizes(key: string): Partial<Sizes> | null {
   try {
     const raw = window.localStorage.getItem(storageId(key));
-    if (!raw) return null;
-    return JSON.parse(raw) as Partial<Sizes>;
+    return raw ? JSON.parse(raw) as Partial<Sizes> : null;
   } catch {
     return null;
   }
@@ -57,7 +36,7 @@ function saveSizes(key: string, sizes: Sizes) {
   try {
     window.localStorage.setItem(storageId(key), JSON.stringify(sizes));
   } catch {
-    /* storage unavailable */
+    // Browser storage can be disabled.
   }
 }
 
@@ -65,192 +44,142 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
   storageKey,
   debuggerPanel,
   explanationPanel,
-  visualizerPanel,
-  customizeModeEnabled = false,
-  onResetLayout,
 }) => {
-  const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
-
-  useEffect(() => {
-    const handleResize = () => setIsLargeScreen(window.innerWidth >= 1024);
-    window.addEventListener('resize', handleResize, { passive: true });
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const handleResetLayout = useCallback(() => {
-    resetDockviewLayout();
-    onResetLayout?.();
-  }, [onResetLayout]);
   const rowRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
   const [containerW, setContainerW] = useState(0);
   const [sizes, setSizes] = useState<Sizes>({ lh: DEFAULT_H, rh: DEFAULT_H, layout: { left: 50, right: 50 } });
-  const initializedRef = useRef(false);
-
-  const hasDebugger =
-    debuggerPanel !== null && debuggerPanel !== undefined && debuggerPanel !== false;
+  const hasDebugger = debuggerPanel !== null && debuggerPanel !== undefined && debuggerPanel !== false;
   const stacked = containerW > 0 && containerW < STACKED_MAX_W;
   const twoUp = hasDebugger && !stacked;
 
-  /* ── Measure the row ───────────────────────────────────────────── */
   useLayoutEffect(() => {
-    const el = rowRef.current;
-    if (!el) return;
+    const element = rowRef.current;
+    if (!element) return;
     const measure = () => {
-      const w = el.getBoundingClientRect().width;
-      setContainerW((prev) => (Math.abs(prev - w) < 1 ? prev : w));
+      const width = element.getBoundingClientRect().width;
+      setContainerW((previous) => Math.abs(previous - width) < 1 ? previous : width);
     };
     measure();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    ro?.observe(el);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    observer?.observe(element);
     window.addEventListener('resize', measure);
     return () => {
-      ro?.disconnect();
+      observer?.disconnect();
       window.removeEventListener('resize', measure);
     };
   }, []);
 
-  /* ── Initialize from storage ────────────────────────────────────── */
   useLayoutEffect(() => {
-    if (containerW <= 0) return;
-    setSizes((prev) => {
-      if (!initializedRef.current) {
-        const saved = loadSizes(storageKey);
-        initializedRef.current = true;
-        return {
-          lh: clamp(saved?.lh ?? DEFAULT_H, MIN_H, MAX_H),
-          rh: clamp(saved?.rh ?? DEFAULT_H, MIN_H, MAX_H),
-          layout: saved?.layout && Object.keys(saved.layout).length === 2 ? saved.layout : { left: 50, right: 50 },
-        };
-      }
-      return prev;
+    if (containerW <= 0 || initializedRef.current) return;
+    const saved = loadSizes(storageKey);
+    const validLayout = saved?.layout && Number.isFinite(saved.layout.left) && Number.isFinite(saved.layout.right);
+    setSizes({
+      lh: clamp(saved?.lh ?? DEFAULT_H, MIN_H, MAX_H),
+      rh: clamp(saved?.rh ?? DEFAULT_H, MIN_H, MAX_H),
+      layout: validLayout ? saved.layout! : { left: 50, right: 50 },
     });
+    initializedRef.current = true;
   }, [containerW, storageKey]);
 
-  const onLayout = useCallback(
-    (layout: Record<string, number>) => {
-      setSizes((prev) => {
-        const next = { ...prev, layout };
-        saveSizes(storageKey, next);
-        return next;
-      });
-    },
-    [storageKey]
-  );
+  const onLayout = useCallback((layout: Record<string, number>) => {
+    setSizes((previous) => {
+      const next = { ...previous, layout };
+      saveSizes(storageKey, next);
+      return next;
+    });
+  }, [storageKey]);
+
+  const saveHeight = useCallback((panel: 'left' | 'right', height: number) => {
+    setSizes((previous) => {
+      const next = { ...previous, [panel === 'left' ? 'lh' : 'rh']: clamp(height, MIN_H, MAX_H) };
+      saveSizes(storageKey, next);
+      return next;
+    });
+  }, [storageKey]);
 
   const resetLayout = useCallback(() => {
-    const next: Sizes = { lh: DEFAULT_H, rh: DEFAULT_H, layout: { left: 50, right: 50 } };
+    const next = { lh: DEFAULT_H, rh: DEFAULT_H, layout: { left: 50, right: 50 } };
     setSizes(next);
     saveSizes(storageKey, next);
   }, [storageKey]);
 
-  /* ── Manual Height Resize Logic (Bottom Handles) ────────────────── */
-  const startDragHeight = (panel: 'left' | 'right') => (e: React.PointerEvent) => {
-    e.preventDefault();
-    const startY = e.clientY;
-    const startH = panel === 'left' ? sizes.lh : sizes.rh;
-
-    const onMove = (moveEvt: PointerEvent) => {
-      const delta = moveEvt.clientY - startY;
-      setSizes((prev) => {
-        const newH = clamp(startH + delta, MIN_H, MAX_H);
-        const next = { ...prev, [panel === 'left' ? 'lh' : 'rh']: newH };
-        saveSizes(storageKey, next);
-        return next;
-      });
-    };
-
+  const startDragHeight = (panel: 'left' | 'right') => (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const startY = event.clientY;
+    const startHeight = panel === 'left' ? sizes.lh : sizes.rh;
+    const onMove = (moveEvent: PointerEvent) => saveHeight(panel, startHeight + moveEvent.clientY - startY);
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       document.body.style.cursor = '';
     };
-
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     document.body.style.cursor = 'row-resize';
   };
 
-  const { lh, rh, layout } = sizes;
-  const minPct = containerW > 0 ? (MIN_W_PX / containerW) * 100 : 20;
+  const nudgeHeight = (panel: 'left' | 'right') => (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const current = panel === 'left' ? sizes.lh : sizes.rh;
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      saveHeight(panel, current + (event.key === 'ArrowUp' ? 24 : -24));
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      saveHeight(panel, event.key === 'Home' ? MIN_H : MAX_H);
+    }
+  };
 
-  // ── Dockview Customize Mode ────────────────────────────────────────────────
-  // When customize mode is enabled on a large screen, render a full-width
-  // Dockview container that replaces the normal static 3-area layout.
-  // We occupy the full grid-column "bottom" area and add a full-page overlay.
-  if (customizeModeEnabled && isLargeScreen && visualizerPanel !== undefined) {
-    return (
-      <div
-        className="rp-dockview-overlay"
-        style={{
-          // Full-width row spanning the entire workspace grid (bottom + canvas)
-          gridColumn: '1 / -1',
-          gridRow: '1 / -1',
-          height: '82vh',
-          minHeight: 520,
-        }}
-      >
-        <DockviewLayout
-          visualizerContent={visualizerPanel}
-          debuggerContent={debuggerPanel}
-          explanationContent={explanationPanel}
-          customizeModeEnabled={customizeModeEnabled}
-          onResetLayout={handleResetLayout}
-        />
-      </div>
-    );
-  }
+  const minPercent = containerW > 0 ? (MIN_W_PX / containerW) * 100 : 20;
+  const heightHandle = (panel: 'left' | 'right', height: number, label: string) => (
+    <div
+      className="rp-handle rp-handle--ns rp-handle--bottom"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label={`Resize ${label} panel height`}
+      aria-valuenow={height}
+      aria-valuemin={MIN_H}
+      aria-valuemax={MAX_H}
+      tabIndex={0}
+      onPointerDown={startDragHeight(panel)}
+      onKeyDown={nudgeHeight(panel)}
+      onDoubleClick={resetLayout}
+    />
+  );
 
   return (
-    <div
-      ref={rowRef}
-      className={`bottom-row rp-row${stacked ? ' rp-stacked' : ''}${!hasDebugger ? ' bottom-row--single' : ''}`}
-    >
-
+    <div ref={rowRef} className={`bottom-row rp-row${stacked ? ' rp-stacked' : ''}${!hasDebugger ? ' bottom-row--single' : ''}`}>
       {twoUp ? (
         <PanelGroup orientation="horizontal" onLayoutChanged={onLayout} id={storageKey}>
-          <Panel id="left" defaultSize={layout.left ?? 50} minSize={minPct} className="rp-panel-wrapper">
-            <div className="rp-slot" style={{ height: lh }}>
+          <Panel id="left" defaultSize={sizes.layout.left ?? 50} minSize={minPercent} className="rp-panel-wrapper">
+            <div className="rp-slot" style={{ height: sizes.lh }}>
               {debuggerPanel}
-              <div
-                className="rp-handle rp-handle--ns rp-handle--bottom"
-                onPointerDown={startDragHeight('left')}
-                onDoubleClick={resetLayout}
-              />
+              {heightHandle('left', sizes.lh, 'Debugger')}
             </div>
           </Panel>
-          <PanelResizeHandle className="rp-shared-divider">
+          <PanelResizeHandle className="rp-shared-divider" aria-label="Resize debugger and execution trace panels">
             <div className="rp-shared-divider-grip" />
           </PanelResizeHandle>
-          <Panel id="right" defaultSize={layout.right ?? 50} minSize={minPct} className="rp-panel-wrapper">
-            <div className="rp-slot" style={{ height: rh }}>
+          <Panel id="right" defaultSize={sizes.layout.right ?? 50} minSize={minPercent} className="rp-panel-wrapper">
+            <div className="rp-slot" style={{ height: sizes.rh }}>
               {explanationPanel}
-              <div
-                className="rp-handle rp-handle--ns rp-handle--bottom"
-                onPointerDown={startDragHeight('right')}
-                onDoubleClick={resetLayout}
-              />
+              {heightHandle('right', sizes.rh, 'Execution trace')}
             </div>
           </Panel>
         </PanelGroup>
       ) : (
         <>
           {hasDebugger && (
-            <div className="rp-slot" style={{ height: lh, width: '100%' }}>
+            <div className="rp-slot" style={{ height: sizes.lh, width: '100%' }}>
               {debuggerPanel}
-              <div
-                className="rp-handle rp-handle--ns rp-handle--bottom"
-                onPointerDown={startDragHeight('left')}
-                onDoubleClick={resetLayout}
-              />
+              {heightHandle('left', sizes.lh, 'Debugger')}
             </div>
           )}
-          <div className="rp-slot" style={{ height: rh, width: '100%' }}>
+          <div className="rp-slot" style={{ height: sizes.rh, width: '100%' }}>
             {explanationPanel}
-            <div
-              className="rp-handle rp-handle--ns rp-handle--bottom"
-              onPointerDown={startDragHeight('right')}
-              onDoubleClick={resetLayout}
-            />
+            {heightHandle('right', sizes.rh, 'Execution trace')}
           </div>
         </>
       )}

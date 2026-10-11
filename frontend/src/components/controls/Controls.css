@@ -93,13 +93,15 @@
 /* ─── Floating Controller ───────────────────────────────────────── */
 
 .floating-controller {
-  position: relative;
+  position: absolute;
   z-index: 50;
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 1.25rem;
-  margin: 0.75rem auto 0 auto;
+  margin: 0;
+  box-sizing: border-box;
+  max-width: calc(100% - 1.5rem);
   background: rgba(255, 255, 255, 0.95);
   border: 1.5px solid var(--purple-300, #d8b4fe);
   border-radius: 9999px;
@@ -109,6 +111,7 @@
   user-select: none;
   touch-action: none;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
+  visibility: hidden;
 }
 
 [data-theme='dark'] .floating-controller {
@@ -122,13 +125,8 @@
   transform: scale(1.02);
 }
 
-/* After the first drag the controller becomes absolutely positioned at the
-   dragged spot (inside .renderer-section / .fs-modal-body, both of which
-   are position: relative). Until then it keeps its default in-flow pill
-   placement below the canvas. */
 .floating-controller.is-positioned {
-  position: absolute;
-  margin: 0;
+  visibility: visible;
 }
 
 .floating-controller-grip {
@@ -224,6 +222,17 @@
     height: 42px;
     padding-top: 6px;
     border-radius: 9px;
+  }
+}
+
+@media (max-width: 420px) {
+  .floating-controller-buttons {
+    gap: 0.15rem;
+  }
+
+  .floating-controller-buttons .fc-icon-btn {
+    width: 25px;
+    height: 25px;
   }
 }
 

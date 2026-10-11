@@ -35,6 +35,23 @@
   box-sizing: border-box;
 }
 
+/* Several algorithm routes share this page-shell class without loading
+   BST.css. Keep their base spacing and theme independent of route order. */
+.bst-page-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--navbar-height));
+  width: 100%;
+  min-width: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--space-page);
+  gap: var(--space-section);
+  background-color: var(--color-app-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
 /* ─── 0b. SHARED PAGE HEADER + ⌘K PALETTE ──────────────────────────
    Styling for `VisualizerHeader`, which replaces the three byte-identical
    header copies in LinkedList.css / Graph.css / BinarySearch.css and adds
@@ -189,6 +206,12 @@
   }
   .viz-dropdown-group {
     min-width: 100%;
+  }
+
+  .bst-page-container {
+    min-height: calc(100dvh - var(--navbar-height));
+    padding: 0.75rem;
+    gap: 0.875rem;
   }
 }
 
@@ -806,38 +829,6 @@
 .viz-action-debugger.is-active:hover {
   color: #ffffff;
 }
-
-/* Customize Layout button — active state (indigo/violet gradient) */
-.viz-action-layout.is-active {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #ffffff;
-  border-color: #6366f1;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
-  animation: layoutPulse 2s ease-in-out infinite;
-}
-
-.viz-action-layout.is-active:hover {
-  color: #ffffff;
-}
-
-@keyframes layoutPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(99, 102, 241, 0.35); }
-  50% { box-shadow: 0 0 24px rgba(99, 102, 241, 0.6); }
-}
-
-/* Reset Layout button */
-.viz-action-reset {
-  border-color: rgba(239, 68, 68, 0.4);
-  color: rgba(239, 68, 68, 0.8);
-}
-
-.viz-action-reset:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
-  transform: translateY(-1px);
-}
-
 
 /* ─── 9. RENDERER VIEWPORTS — internal scrolling, no clipping ──────
    Oversized visualizer content scrolls inside its own canvas instead
@@ -1490,4 +1481,3 @@
   color: #ef4444 !important;
   background: rgba(239, 68, 68, 0.18) !important;
 }
-

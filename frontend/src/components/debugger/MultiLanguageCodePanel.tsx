@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Play, Layers, RotateCcw,
   AlertTriangle, ChevronDown, Check, Copy, CopyCheck, Bug, FileCode2,
-  Pencil, Eye, Loader2,
+  Pencil, Eye, Loader2, CheckCircle2,
 } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
 import { FALLBACK_SNIPPETS } from '../../features/debugger/data/fallbackSnippets';
@@ -16,6 +16,7 @@ import {
 } from '../../data/customCode';
 import { DEBUGGER_LANGUAGE_IDS, type DebuggerLanguage } from '../../data/languages';
 import { LanguageDropdown } from './LanguageDropdown';
+import { executeCustomCode } from '../../api/customCode';
 import './Debugger.css';
 
 type CodeMode = 'default' | 'custom';
@@ -113,6 +114,47 @@ function validateCustomCode(code: string, lang: CustomLanguage): string | null {
   return null;
 }
 
+function sampleValue(type: string, name: string, entry: AlgorithmStubEntry, currentArray?: number[]): unknown {
+  if (type === 'intArray') return currentArray?.length ? currentArray : [4, 2, 7, 1, 3];
+  if (type === 'intMatrix') {
+    if (name === 'edges') return [[0, 1, 1], [1, 2, 2], [0, 2, 4], [2, 3, 1]];
+    if (name === 'activities') return [[1, 3], [2, 4], [4, 6], [5, 7]];
+    if (name === 'items') return [[2, 10], [3, 12], [1, 5]];
+    if (name === 'jobs') return [[1, 2, 50], [2, 1, 25], [3, 2, 30]];
+    return [[2, 3, 1], [3, 4, 2], [4, 5, 3]];
+  }
+  if (type === 'node') return { values: [1, 2, 3, 4], cycleIndex: -1 };
+  if (type === 'string') {
+    if (entry.topicId === 'anagram' && (name === 's' || name === 't')) return name === 's' ? 'listen' : 'silent';
+    const values: Record<string, string> = {
+      s: 'level', t: 'silent', a: 'abcde', b: 'ace', text: 'abracadabra',
+      expr: '23+', path: '/home/user/../tmp', word: 'apple', prefix: 'app',
+      pattern: 'a.', ch: 'a',
+    };
+    return values[name] ?? 'hello';
+  }
+  if (type === 'int') {
+    const values: Record<string, number> = { n: 5, target: 9, k: 3, amount: 6, capacity: 10, windowSize: 3, m: 3, base: 2, exponent: 4, start: 0 };
+    return values[name] ?? 5;
+  }
+  return 0;
+}
+
+function buildSampleState(entry: AlgorithmStubEntry, currentArray?: number[]): Record<string, unknown> {
+  if (entry.kind === 'class') {
+    return {
+      ctorArgs: (entry.ctorParams ?? []).map((param) => sampleValue(param.type, param.name, entry, currentArray)),
+      operations: (entry.methods ?? []).map((method) => ({
+        method: method.name,
+        args: method.params.map((param) => sampleValue(param.type, param.name, entry, currentArray)),
+      })),
+    };
+  }
+  return {
+    args: Object.fromEntries((entry.params ?? []).map((param) => [param.name, sampleValue(param.type, param.name, entry, currentArray)])),
+  };
+}
+
 export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   algorithmKey,
   activeLine,
@@ -155,12 +197,11 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runSuccess, setRunSuccess] = useState<string | null>(null);
+  const [executionResult, setExecutionResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
 
-  const canRunCustom = true; // Always enable Reference Code vs Paste Code feature globally across all 144 algorithms
-  const activeLineRef = useRef<HTMLDivElement | null>(null);
-
+  const canRunCustom = Boolean(stubEntry || (onCustomCodeRun && currentArray?.length));
   // Keep the selected language valid as the available set changes per algorithm.
   useEffect(() => {
     if (availableReferenceLangs.length === 0) return;
@@ -180,13 +221,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [algorithmKey, customLang, stubLang, stubEntry?.key]);
 
-  // Auto-scroll the executing line into view.
-  useEffect(() => {
-    if (codeMode === 'default' && activeLine != null) {
-      activeLineRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
-  }, [activeLine, codeMode, selectedLang]);
-
   const currentCodeLines = resolvedSnippets?.[selectedLang] ?? [];
   const hasCode = currentCodeLines.length > 0;
 
@@ -201,7 +235,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     }
   };
 
-  const handleRunCustomCode = () => {
+  const handleRunCustomCode = async () => {
     // Stub-backed algorithms use the fill-in-the-body contract: the signature
     // is pre-filled, so skip the legacy single-function paste validation
     // (classes legitimately contain several methods).
@@ -211,10 +245,31 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         return;
       }
       setExecutionError(null);
+      setRunSuccess(null);
+      setExecutionResult(null);
       if (onCustomExecute) {
         onCustomExecute(customCode, stubLang, stubEntry);
       } else {
-        setExecutionError('Sandbox execution for this studio is being rolled out. Reference Mode and the Sorting / Stack & Queue studios run custom code today.');
+        setIsRunning(true);
+        try {
+          const response = await executeCustomCode({
+            algorithm_key: stubEntry.key,
+            language: stubLang,
+            code: customCode,
+            state: buildSampleState(stubEntry, currentArray),
+          });
+          if (response.status !== 'ok') {
+            setExecutionError(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
+            return;
+          }
+          const result = response.result?.result ?? response.result?.returned ?? response.result ?? null;
+          setExecutionResult(JSON.stringify(result, null, 2));
+          setRunSuccess(`Your pasted ${stubLang.toUpperCase()} code ran in the sandbox with demo inputs. ${response.trace_steps.length} trace steps were recorded.`);
+        } catch (error: unknown) {
+          setExecutionError(`Sandbox unavailable: ${error instanceof Error ? error.message : 'execution service unavailable'}`);
+        } finally {
+          setIsRunning(false);
+        }
       }
       return;
     }
@@ -228,10 +283,10 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
     setExecutionError(null);
     setRunSuccess(null);
+    setExecutionResult(null);
 
     if (!onCustomCodeRun || !currentArray || currentArray.length === 0) {
-      // No executor is wired on this page — validation passed, nothing to play.
-      setRunSuccess('Code is valid ✓ — this page has no visualizer wired to play it.');
+      setExecutionError('This algorithm has no custom-code runner wired yet. Reference Mode remains available.');
       return;
     }
 
@@ -249,7 +304,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         if (result.error) {
           setExecutionError(result.error.message);
         } else {
-          setRunSuccess(`Code executed ✓ — ${result.steps.length} steps now playing in the visualizer.`);
+          setRunSuccess(`Your pasted ${customLang.toUpperCase()} code ran through the visualizer engine; ${result.steps.length} steps are ready to play.`);
         }
         onCustomCodeRun(result.steps);
       };
@@ -263,6 +318,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     setCustomCode(stubEntry ? stubEntry.stubs[stubLang] : getStarterTemplate(algorithmKey, customLang as CustomLanguage));
     setExecutionError(null);
     setRunSuccess(null);
+    setExecutionResult(null);
   };
 
   return (
@@ -281,7 +337,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               role="tab"
               aria-selected={codeMode === 'default'}
               className={`mode-btn ${codeMode === 'default' ? 'active' : ''}`}
-              onClick={() => { setCodeMode('default'); setExecutionError(null); }}
+              onClick={() => { setCodeMode('default'); setExecutionError(null); setRunSuccess(null); setExecutionResult(null); }}
             >
               <Eye size={12} />
               <span>Reference</span>
@@ -290,7 +346,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               role="tab"
               aria-selected={codeMode === 'custom'}
               className={`mode-btn ${codeMode === 'custom' ? 'active' : ''}`}
-              onClick={() => setCodeMode('custom')}
+              onClick={() => { setCodeMode('custom'); setExecutionError(null); setRunSuccess(null); setExecutionResult(null); }}
             >
               <Pencil size={12} />
               <span>Paste code</span>
@@ -332,6 +388,9 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               const nextTemplate = stubEntry ? stubEntry.stubs[language] : getStarterTemplate(algorithmKey, language as CustomLanguage);
               if (customCode !== nextTemplate && !window.confirm('Switching languages will clear your current code. Continue?')) return;
               if (stubEntry) setStubLang(language); else setCustomLang(language);
+              setExecutionError(null);
+              setRunSuccess(null);
+              setExecutionResult(null);
             }}
           />
         </div>
@@ -348,7 +407,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               return (
                 <div
                   key={idx}
-                  ref={isCurrentLine ? activeLineRef : null}
                   className={`code-editor-line ${isCurrentLine ? 'active-execution-line' : ''}`}
                 >
                   <div
@@ -393,11 +451,11 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             <textarea
               className="custom-editor-textarea"
               value={customCode}
-              onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); setRunSuccess(null); }}
+              onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); setRunSuccess(null); setExecutionResult(null); }}
               spellCheck={false}
               placeholder={
                 stubEntry
-                  ? `Fill in the ${stubLang.toUpperCase()} body for ${stubEntry.entry}(...). Run sends your code to the sandbox with the current studio inputs.`
+                  ? `Fill in ${stubEntry.entry}(...). Run sends your pasted ${stubLang.toUpperCase()} code to the sandbox with ${onCustomExecute ? 'the current studio inputs' : 'representative demo inputs'}.`
                   : `Paste your ${customLang.toUpperCase()} function here. Only one function is allowed — no top-level variables or statements.`
               }
 
@@ -412,16 +470,29 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           )}
 
           {customMessage && (
-            <div className="code-error-banner" role="status">
-              <Check size={14} />
+            <div className={/ran successfully|correct|produced the expected/i.test(customMessage) ? 'code-success-banner' : 'code-error-banner'} role="status">
+              {/ran successfully|correct|produced the expected/i.test(customMessage) ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
               <span>{customMessage}</span>
             </div>
           )}
 
+          {runSuccess && (
+            <div className="code-success-banner" role="status">
+              <CheckCircle2 size={14} />
+              <span>{runSuccess}</span>
+            </div>
+          )}
+          {executionResult !== null && (
+            <div className="code-execution-result" aria-label="Sandbox output">
+              <strong>Sandbox output</strong>
+              <pre>{executionResult}</pre>
+            </div>
+          )}
+
           <div className="code-run-bar">
-            <button className="run-code-btn" onClick={handleRunCustomCode} disabled={customBusy}>
-              {customBusy ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />}
-              <span>{customBusy ? 'Running in sandbox…' : 'Run Code'}</span>
+            <button className="run-code-btn" onClick={handleRunCustomCode} disabled={customBusy || isRunning}>
+              {customBusy || isRunning ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />}
+              <span>{customBusy || isRunning ? 'Running in sandbox…' : 'Run Code'}</span>
             </button>
             <button className="reset-code-btn" onClick={handleResetTemplate}>
               <RotateCcw size={14} />

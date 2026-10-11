@@ -10,11 +10,17 @@
   box-sizing: border-box; overflow: auto;
 }
 
+.string-cell-motion {
+  display: flex; flex: 0 0 50px; width: 50px; height: 58px;
+  align-items: center; justify-content: center;
+}
+
 .string-cell {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   width: 48px; height: 56px; border-radius: 8px;
   border: 1px solid var(--color-border); background: var(--color-surface);
-  transition: all 0.2s ease;
+  transform: translateY(0) scale(1);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .string-cell .cell-char {
@@ -27,9 +33,9 @@
 }
 
 /* State colors — match the Bar component's state colors */
-.string-cell.state-comparing { border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
+.string-cell.state-comparing { transform: translateY(-3px); border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
 .string-cell.state-comparing .cell-char { color: #f59e0b; }
-.string-cell.state-swapping { border-color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+.string-cell.state-swapping { transform: translateY(-6px) scale(1.035); border-color: #ef4444; background: rgba(239, 68, 68, 0.15); box-shadow: 0 7px 18px -12px rgba(239, 68, 68, .8); }
 .string-cell.state-swapping .cell-char { color: #ef4444; }
 .string-cell.state-sorted { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); }
 .string-cell.state-sorted .cell-char { color: #22c55e; }

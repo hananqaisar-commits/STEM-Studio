@@ -50,7 +50,7 @@ export interface OctaTutorResponse {
   reply: string;
   function_calls: OctaTutorFunctionCall[];
   mascot_expression: string;
-  answer_source?: 'model' | 'offline';
+  answer_source?: 'model' | 'offline' | 'grounded';
 }
 
 /**

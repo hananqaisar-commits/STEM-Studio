@@ -246,10 +246,10 @@
 
 /* BST Canvas */
 .bst-canvas-container {
-  height: 440px;
+  height: 500px;
   width: 100%;
   box-sizing: border-box;
-  background-color: var(--color-app-bg);
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
@@ -261,14 +261,14 @@
 }
 
 .bst-canvas-empty {
-  height: 440px;
+  height: 500px;
   width: 100%;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  background-color: var(--color-app-bg);
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   color: var(--color-text-muted);
@@ -327,7 +327,7 @@
   z-index: 9999 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background-color: #0b0f19 !important;
+  background-color: var(--color-surface) !important;
   padding: 1rem 1.5rem !important;
   overflow: hidden !important;
 }
@@ -351,7 +351,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: rgba(15, 23, 42, 0.95);
+  background-color: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   padding: 0.5rem 1rem;
@@ -391,9 +391,9 @@
   width: 100%;
   flex: 1;
   min-height: 380px;
-  background-color: rgba(15, 23, 42, 0.35);
+  background-color: var(--color-surface);
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--color-border);
   overflow: auto !important;
   scroll-behavior: smooth;
 }
@@ -405,7 +405,7 @@
 }
 
 .bst-canvas-workspace::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(15, 23, 42, 0.08);
   border-radius: 4px;
 }
 
@@ -455,6 +455,41 @@
   cursor: pointer;
   z-index: 5;
   transition: left 0.45s cubic-bezier(0.4, 0, 0.2, 1), top 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Red-Black Tree node color is semantic state, so keep it visible during playback. */
+.primitive-circle-node.rb-color-red {
+  background: linear-gradient(145deg, #ef5a62 0%, #c9323e 52%, #9f2631 100%);
+  border-color: #8f1f2a;
+  box-shadow: 0 3px 10px rgba(159, 38, 49, 0.28), inset 0 1px 2px rgba(255, 255, 255, 0.25), inset 0 -2px 4px rgba(72, 11, 17, 0.25);
+}
+
+.primitive-circle-node.rb-color-black {
+  background: linear-gradient(145deg, #444b57 0%, #252a33 52%, #15191f 100%);
+  border-color: #11151a;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.28), inset 0 1px 2px rgba(255, 255, 255, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.primitive-circle-node.rb-color-red.state-comparing,
+.primitive-circle-node.rb-color-black.state-comparing { outline: 3px solid #f59e0b; outline-offset: 2px; }
+.primitive-circle-node.rb-color-red.state-selected,
+.primitive-circle-node.rb-color-black.state-selected { outline: 3px solid #8b5cf6; outline-offset: 2px; }
+.primitive-circle-node.rb-color-red.state-sorted,
+.primitive-circle-node.rb-color-black.state-sorted { outline: 3px solid #10b981; outline-offset: 2px; }
+.primitive-circle-node.rb-color-red.state-current,
+.primitive-circle-node.rb-color-black.state-current { outline: 3px solid #2563eb; outline-offset: 2px; }
+
+.bst-canvas-header-actions { display: flex; align-items: center; gap: 12px; }
+.rb-tree-legend { display: flex; align-items: center; gap: 10px; color: var(--color-text-secondary); font-size: 0.72rem; font-weight: 650; }
+.rb-tree-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.rb-tree-legend-swatch { width: 12px; height: 12px; border: 1px solid rgba(15, 23, 42, 0.22); border-radius: 50%; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18); }
+.rb-tree-legend-swatch.is-red { background: linear-gradient(145deg, #ef5a62, #a92330); }
+.rb-tree-legend-swatch.is-black { background: linear-gradient(145deg, #444b57, #15191f); }
+
+@media (max-width: 520px) {
+  .bst-canvas-header-actions { gap: 7px; }
+  .rb-tree-legend { gap: 7px; font-size: 0.67rem; }
+  .rb-tree-legend-swatch { width: 11px; height: 11px; }
 }
 
 /* AVL Balance Factor & Trie Badges — Absolutely Positioned Floating Labels (Zero Overlap) */
@@ -746,7 +781,7 @@
 }
 
 .theme-light .bst-canvas-workspace {
-  background-color: #f8fafc !important;
+  background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
 }
 
@@ -935,11 +970,11 @@
   }
 
   .bst-canvas-container {
-    height: clamp(340px, 50vw, 480px);
+    height: clamp(480px, 50vw, 520px);
   }
 
   .bst-canvas-empty {
-    height: clamp(340px, 50vw, 480px);
+    height: clamp(480px, 50vw, 520px);
   }
 
   .spotlight-dropdown-menu {
@@ -987,12 +1022,12 @@
   }
 
   .bst-canvas-container {
-    height: clamp(260px, 55vw, 400px);
+    height: clamp(360px, 70vw, 460px);
     padding: 0.75rem;
   }
 
   .bst-canvas-empty {
-    height: clamp(260px, 55vw, 400px);
+    height: clamp(360px, 70vw, 460px);
   }
 
   .bst-canvas-workspace {

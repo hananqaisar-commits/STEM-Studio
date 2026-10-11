@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
 import {
-  Search, Hash, Maximize2, Sparkles, Trash2, Layers, Copy, Map
+  Search, Hash, Maximize2, Sparkles, Trash2, Layers, Copy, Map, Database
 } from 'lucide-react';
 import { HashMapRenderer } from './HashMapRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -12,6 +12,7 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -32,6 +33,7 @@ import './HashMaps.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
 import { useTutorContext } from '../../contexts/TutorContext';
+import { HashTablePlayground } from './HashTablePlayground';
 
 interface AlgMeta {
   key: HashMapsAlgorithmKey;
@@ -56,12 +58,14 @@ const DEFAULT_INPUTS: Record<HashMapsAlgorithmKey, { arr: number[]; target?: num
 };
 
 export const HashMapsPage: React.FC = () => {
+  const [activeView, setActiveView] = useState<'table' | 'algorithms'>('table');
   const [selectedAlg, setSelectedAlg] = useState<HashMapsAlgorithmKey>('twoSum');
   const [searchParams] = useSearchParams();
   useEffect(() => {
     const topic = searchParams.get('topic');
     if (topic && ALGORITHMS.some((a) => a.key === topic)) {
       setSelectedAlg(topic as HashMapsAlgorithmKey);
+      setActiveView('algorithms');
     }
   }, [searchParams]);
 
@@ -75,7 +79,6 @@ export const HashMapsPage: React.FC = () => {
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   // Sync inputs when algorithm changes
@@ -356,6 +359,16 @@ export const HashMapsPage: React.FC = () => {
   return (
     <div className="bst-page-container">
       <SEOHead {...getSEOForRoute('/dashboard/hashMaps')} />
+      {activeView === 'table' ? (
+        <header className="hash-studio-heading">
+          <span className="hash-studio-heading-icon"><Database size={22} aria-hidden="true" /></span>
+          <div>
+            <p>Hash Maps Learning Studio</p>
+            <h1>See how keys find their place.</h1>
+            <span>Build a table, compare collisions, and trace hash map patterns.</span>
+          </div>
+        </header>
+      ) : (
       <VisualizerHeader
         icon={<Hash size={22} />}
         title="Hash Map Algorithms Studio"
@@ -378,9 +391,6 @@ export const HashMapsPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-          customizeModeEnabled={customizeModeEnabled}
-          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -394,10 +404,33 @@ export const HashMapsPage: React.FC = () => {
           </VisualizerActions>
         }
       />
+      )}
 
-      {/* Category Tabs Bar */}
+      <div className="hash-view-switch" role="tablist" aria-label="Hash map learning mode">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'table'}
+          className={activeView === 'table' ? 'is-active' : ''}
+          onClick={() => { pause(); setIsFullScreenOpen(false); setActiveView('table'); }}
+        >
+          <Database size={15} aria-hidden="true" /> Hash Table Playground
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'algorithms'}
+          className={activeView === 'algorithms' ? 'is-active' : ''}
+          onClick={() => { setActiveView('algorithms'); }}
+        >
+          <Hash size={15} aria-hidden="true" /> Algorithm Patterns
+        </button>
+      </div>
 
-
+      {activeView === 'table' ? (
+        <HashTablePlayground />
+      ) : (
+      <>
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
@@ -431,6 +464,7 @@ export const HashMapsPage: React.FC = () => {
         </div>
 
         {/* Right Column: Quiz & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -440,9 +474,9 @@ export const HashMapsPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
+        <ResizableWorkspaceHandle storageKey="hashMaps" />
         <ResizablePanelRow
           storageKey="hashMaps"
-          customizeModeEnabled={customizeModeEnabled}
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
@@ -510,6 +544,8 @@ export const HashMapsPage: React.FC = () => {
           onElementClick={handleBarElementClick}
         />
       </FullScreenCanvasModal>
+      </>
+      )}
     </div>
   );
 };

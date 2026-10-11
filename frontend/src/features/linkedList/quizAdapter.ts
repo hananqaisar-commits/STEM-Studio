@@ -17,6 +17,7 @@ const CATEGORY_HINTS: Partial<Record<LinkedListCategory, string>> = {
   reverse: "Reversing a list re-points each node's next to its predecessor.",
   detectCycle: "Floyd's algorithm uses a slow pointer and a fast pointer; they meet if and only if a cycle exists.",
   middleNode: 'The fast pointer moves twice as fast; when it reaches the end the slow pointer is at the middle.',
+  josephus: 'Count around the circular list; after removing every kth node, restart at its successor.',
 };
 
 const CATEGORY_CONCEPTS: Partial<Record<LinkedListCategory, string>> = {
@@ -27,6 +28,7 @@ const CATEGORY_CONCEPTS: Partial<Record<LinkedListCategory, string>> = {
   reverse: 'Pointer reversal',
   detectCycle: 'Cycle detection',
   middleNode: 'Two-pointer technique',
+  josephus: 'Circular elimination',
 };
 
 function weightFor(occurrence: number): QuizWeight {
@@ -140,6 +142,14 @@ const REVISION_DATA: Record<LinkedListCategory, QuizRevisionData> = {
     watchFor: ['Pointer speeds', 'Even vs odd length', 'Termination condition'],
     quickTip: 'When fast reaches null (or fast.next is null), slow is at the middle',
     example: 'List 1→2→3→4→5: slow moves 1,2,3; fast moves 1,3,5. When fast hits end, slow=3 (middle).',
+  },
+  josephus: {
+    description: 'Repeatedly remove every kth node from a circular linked list until one survivor remains',
+    complexity: 'O(n·k) time, O(n) space for the step-by-step simulation',
+    keyIdea: 'After each elimination, resume counting at the removed node’s successor',
+    watchFor: ['Counting starts at 1', 'Reconnect the previous node to the successor', 'Continue until one node remains'],
+    quickTip: 'For k = 1, the current head is removed each round; for k > 1, move k − 1 links before removing',
+    example: 'Circle 1→2→3→4→5→6→7 with k=3: remove 3, 6, 2, 7, 5, 1; node 4 survives.',
   },
   removeNthFromEnd: {
     description: 'Remove the nth node from the end of a linked list',

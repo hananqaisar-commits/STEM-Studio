@@ -52,6 +52,7 @@ import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import './Graph.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
@@ -141,7 +142,6 @@ export const GraphPage: React.FC = () => {
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = React.useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
 
@@ -681,9 +681,6 @@ export const GraphPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-          customizeModeEnabled={customizeModeEnabled}
-          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -766,6 +763,7 @@ export const GraphPage: React.FC = () => {
         </div>
 
         {/* Right Column: Code & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -775,9 +773,9 @@ export const GraphPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
+        <ResizableWorkspaceHandle storageKey="graph" />
         <ResizablePanelRow
           storageKey="graph"
-          customizeModeEnabled={customizeModeEnabled}
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}

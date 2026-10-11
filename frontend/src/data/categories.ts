@@ -65,8 +65,8 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   {
     id: 'linkedList',
     name: 'Linked List',
-    description: 'Singly, Doubly, Circular, Doubly Circular — Insert/Delete, Reverse, Floyd\'s Cycle Detection, Middle Node',
-    topicCount: 7,
+    description: 'Singly, Doubly, Circular, Doubly Circular — Insert/Delete, Reverse, Floyd\'s Cycle Detection, Middle Node, Josephus Problem',
+    topicCount: 8,
     difficulty: 'Intermediate',
     available: true,
     iconName: 'GitCommit',

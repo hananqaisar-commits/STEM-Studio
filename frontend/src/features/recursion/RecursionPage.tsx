@@ -13,6 +13,7 @@ import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageC
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -74,7 +75,6 @@ export const RecursionPage: React.FC = () => {
   // Quiz state
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
-  const [customizeModeEnabled, setCustomizeModeEnabled] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
 
@@ -194,8 +194,8 @@ export const RecursionPage: React.FC = () => {
         const expected = expectedFor();
         setSandboxMessage(
           actual === expected
-            ? `Correct — your ${lang.toUpperCase()} code returned ${actual}.`
-            : `Ran successfully, but returned ${JSON.stringify(actual)} instead of ${expected}. Check your logic.`
+            ? `Your pasted ${lang.toUpperCase()} code ran in the sandbox and returned the expected value ${actual}.`
+            : `Your pasted ${lang.toUpperCase()} code ran in the sandbox, but returned ${JSON.stringify(actual)} instead of ${expected}. Check your logic.`
         );
       } else {
         setSandboxMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
@@ -396,9 +396,6 @@ export const RecursionPage: React.FC = () => {
             onToggleQuiz={() => setQuizEnabled((v) => !v)}
             debuggerVisible={showDebugger}
             onToggleDebugger={() => setShowDebugger((v) => !v)}
-          customizeModeEnabled={customizeModeEnabled}
-          onToggleCustomizeMode={() => setCustomizeModeEnabled((v) => !v)}
-          onResetLayout={() => setCustomizeModeEnabled(false)}
           >
             <button
               type="button"
@@ -444,6 +441,8 @@ export const RecursionPage: React.FC = () => {
             quizMode={quizEnabled}
           />
         </div>
+
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -452,12 +451,10 @@ export const RecursionPage: React.FC = () => {
             onEnableQuiz={() => setQuizEnabled(true)}
             onProveIt={handleProveIt}
           />
-
         </div>
-
+        <ResizableWorkspaceHandle storageKey="recursion" />
         <ResizablePanelRow
           storageKey="recursion"
-          customizeModeEnabled={customizeModeEnabled}
           debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
