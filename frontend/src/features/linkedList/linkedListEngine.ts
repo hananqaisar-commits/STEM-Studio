@@ -8,6 +8,15 @@ export type LinkedListCategory =
   | 'middleNode'
   | 'josephus'
   | 'removeNthFromEnd'
+  | 'reverseSublist'
+  | 'reverseHalf'
+  | 'reverseKGroup'
+  | 'swapPairs'
+  | 'mergeSort'
+  | 'addTwoNumbers'
+  | 'splitHalves'
+  | 'splitKParts'
+  | 'mergeKSorted'
   | 'palindrome'
   | 'mergeSorted'
   | 'intersection'
@@ -68,6 +77,13 @@ export interface LinkedListStep {
   auxiliaryData?: Record<string, any>;
   isQuizPoint?: boolean;
   quizData?: LinkedListQuizData;
+  lanes?: LinkedListLane[];
+}
+
+export interface LinkedListLane {
+  label: string;
+  nodes: ListNodeItem[];
+  kind?: 'list' | 'doublyList' | 'map';
 }
 
 // ─── HELPER TO CREATE INITIAL LIST NODES ──────────────────────────────────────────
@@ -1251,5 +1267,640 @@ export function generateDoublyInsertHeadSteps(
     listType: 'doubly',
   });
 
+  return steps;
+}
+
+// ─── INTERVIEW PROBLEMS: RANGE / GROUP REVERSALS ────────────────────────────────
+
+function problemSnapshot(
+  orderedNodes: ListNodeItem[],
+  phase: string,
+  explanation: string,
+  codeLine: number,
+  pointerIndexes: Record<string, number | null> = {},
+  highlightedIndexes: number[] = [],
+  status: ListNodeItem['status'] = 'active',
+  isQuizPoint = false,
+  quizData?: LinkedListQuizData
+): LinkedListStep {
+  const nodes = cloneNodes(orderedNodes);
+  nodes.forEach((node, index) => {
+    node.nextId = index < nodes.length - 1 ? nodes[index + 1].id : null;
+    node.prevId = null;
+    node.status = 'default';
+  });
+  const pointers: Record<string, string | null> = {};
+  for (const [label, index] of Object.entries(pointerIndexes)) {
+    const id = index !== null && index >= 0 && index < nodes.length ? nodes[index].id : null;
+    pointers[label] = id;
+  }
+  assignPointerLabels(nodes, pointers);
+  highlightedIndexes.forEach((index, offset) => {
+    if (nodes[index]) nodes[index].status = offset === 0 ? status : 'comparing';
+  });
+  const headId = nodes[0]?.id ?? null;
+  const tailId = nodes[nodes.length - 1]?.id ?? null;
+  return {
+    nodes,
+    headId,
+    tailId,
+    pointers,
+    phase,
+    explanation,
+    codeLine,
+    highlightedNodeIds: highlightedIndexes.map((index) => nodes[index]?.id).filter((id): id is string => Boolean(id)),
+    listType: 'singly',
+    isQuizPoint,
+    quizData,
+  };
+}
+
+function generateReverseRangeSteps(
+  currentNodes: ListNodeItem[],
+  left: number,
+  right: number,
+  title: string,
+  positionLabel: '1-based' | '0-based' = '1-based'
+): LinkedListStep[] {
+  const count = currentNodes.length;
+  if (!count || !Number.isInteger(left) || !Number.isInteger(right) || left < 0 || right < left || right >= count) return [];
+  let order = cloneNodes(currentNodes);
+  const toPosition = (index: number) => positionLabel === '1-based' ? index + 1 : index;
+  const label = (index: number) => `${positionLabel === '1-based' ? 'position' : 'index'} ${toPosition(index)}`;
+  const steps: LinkedListStep[] = [problemSnapshot(
+    order,
+    'Mark the sublist',
+    `${title}: keep the nodes before ${label(left)} and after ${label(right)} in place. Reverse only the inclusive range ${toPosition(left)}–${toPosition(right)}.`,
+    1,
+    { sublist_head: left, sublist_tail: right },
+    [left, right],
+  )];
+
+  for (let moving = left + 1; moving <= right; moving += 1) {
+    const movedNode = order[moving];
+    order = [
+      ...order.slice(0, left),
+      movedNode,
+      ...order.slice(left, moving),
+      ...order.slice(moving + 1),
+    ];
+    steps.push(problemSnapshot(
+      order,
+      `Move node at ${label(moving)} to sublist front`,
+      `Detach node ${movedNode.value} and link it before the current sublist head. Nodes outside the requested range keep their relative order.`,
+      4,
+      { sublist_head: left, moved: left, next_to_move: Math.min(moving, right) },
+      [left, Math.min(moving, right)],
+      'active',
+      moving === left + 1,
+      moving === left + 1 ? {
+        prompt: `After the first head insertion, which value is at the front of the reversed range?`,
+        options: [String(movedNode.value), String(order[left + 1]?.value ?? movedNode.value), String(order[right]?.value ?? movedNode.value)],
+        correctIndex: 0,
+        explanation: `The first node after the range head is moved to the front, so ${movedNode.value} becomes the range's new head.`,
+      } : undefined,
+    ));
+  }
+  steps.push(problemSnapshot(
+    order,
+    'Sublist reversed',
+    `Positions ${toPosition(left)}–${toPosition(right)} are reversed. The prefix and suffix remain unchanged.`,
+    7,
+    { head: 0, tail: order.length - 1 },
+    [left, right],
+    'success',
+  ));
+  return steps;
+}
+
+export function generateReverseSublistSteps(currentNodes: ListNodeItem[], left: number, right: number): LinkedListStep[] {
+  // The learner-facing positions are 1-based; convert to array indexes.
+  if (!Number.isInteger(left) || !Number.isInteger(right) || left < 1 || right < left) return [];
+  return generateReverseRangeSteps(currentNodes, left - 1, right - 1, 'Reverse the selected sublist');
+}
+
+export function generateReverseHalfSteps(
+  currentNodes: ListNodeItem[],
+  half: 'first' | 'second'
+): LinkedListStep[] {
+  if (currentNodes.length < 2) return [];
+  // For odd lengths, the middle node belongs to the first half.
+  const firstHalfLength = Math.ceil(currentNodes.length / 2);
+  const left = half === 'first' ? 0 : firstHalfLength;
+  const right = half === 'first' ? firstHalfLength - 1 : currentNodes.length - 1;
+  if (right < left) return [];
+  return generateReverseRangeSteps(currentNodes, left, right, `Reverse the ${half} half`, '0-based');
+}
+
+export function generateReverseKGroupSteps(currentNodes: ListNodeItem[], groupSize: number): LinkedListStep[] {
+  if (!currentNodes.length || !Number.isInteger(groupSize) || groupSize < 1 || groupSize > currentNodes.length) return [];
+  let order = cloneNodes(currentNodes);
+  const steps: LinkedListStep[] = [problemSnapshot(
+    order,
+    'Set group size',
+    `Reverse each complete group of ${groupSize}. Any final group with fewer than ${groupSize} nodes stays in its original order.`,
+    1,
+    { head: 0 },
+    [0],
+  )];
+  for (let start = 0; start + groupSize <= order.length; start += groupSize) {
+    const group = order.slice(start, start + groupSize);
+    for (let offset = 1; offset < groupSize; offset += 1) {
+      steps.push(problemSnapshot(
+        order,
+        `Reverse group ${Math.floor(start / groupSize) + 1}`,
+        `The current group spans indexes ${start}–${start + groupSize - 1}. Preserve the next pointer before redirecting a link so no node is lost.`,
+        3,
+        { group_head: start, current: start + offset, previous: start + offset - 1 },
+        [start + offset, start + offset - 1],
+      ));
+    }
+    order = [...order.slice(0, start), ...group.reverse(), ...order.slice(start + groupSize)];
+    steps.push(problemSnapshot(
+      order,
+      `Group ${Math.floor(start / groupSize) + 1} complete`,
+      `The ${groupSize}-node group is now reversed. Continue at the first node after this group.`,
+      6,
+      { group_head: start, group_tail: start + groupSize - 1 },
+      [start, start + groupSize - 1],
+      'success',
+      true,
+      {
+        prompt: `What happens to a trailing group smaller than k = ${groupSize}?`,
+        options: ['It stays in its original order', 'It is reversed anyway', 'It is deleted'],
+        correctIndex: 0,
+        explanation: 'The standard reverse-in-k-groups operation only reverses complete groups.',
+      },
+    ));
+  }
+  steps.push(problemSnapshot(order, 'All complete groups processed', 'Every complete group has been reversed; the final incomplete suffix was left untouched.', 8, { head: 0, tail: order.length - 1 }, [0, order.length - 1], 'success'));
+  return steps;
+}
+
+export function generateSwapPairsSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+  if (currentNodes.length < 2) return [];
+  let order = cloneNodes(currentNodes);
+  const steps: LinkedListStep[] = [problemSnapshot(order, 'Inspect first pair', 'Swap adjacent nodes by changing links, not by exchanging the values stored in the nodes.', 1, { first: 0, second: 1 }, [0, 1])];
+  for (let left = 0; left + 1 < order.length; left += 2) {
+    const first = order[left];
+    const second = order[left + 1];
+    steps.push(problemSnapshot(order, `Swap ${first.value} and ${second.value}`, `Save the pair's successor, point the second node to the first, then reconnect the previous pair (if any) to the second node.`, 3, { first: left, second: left + 1, previous_pair_tail: left > 0 ? left - 1 : null }, [left, left + 1]));
+    order = [...order.slice(0, left), second, first, ...order.slice(left + 2)];
+    steps.push(problemSnapshot(order, 'Pair links updated', `The pair is now ${second.value} → ${first.value}; all node values are unchanged.`, 6, { pair_head: left, pair_tail: left + 1 }, [left, left + 1], 'success'));
+  }
+  steps.push(problemSnapshot(order, 'Pairwise swap complete', 'Each complete adjacent pair has been swapped. A final unpaired node remains in place.', 8, { head: 0, tail: order.length - 1 }, [0, order.length - 1], 'success'));
+  return steps;
+}
+
+// ─── INTERVIEW PROBLEMS: SORT / DELETE / SPLIT ──────────────────────────────────
+
+export function generateMergeSortSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+  if (currentNodes.length < 2 || currentNodes.some((node) => !Number.isFinite(Number(node.value)))) return [];
+  let order = cloneNodes(currentNodes);
+  const steps: LinkedListStep[] = [problemSnapshot(order, 'Begin bottom-up merge sort', 'Merge sort repeatedly combines adjacent sorted runs. It is stable, runs in O(n log n), and uses O(n) auxiliary storage in this bottom-up visualization.', 1, { head: 0, width: null }, [0])];
+  for (let width = 1; width < order.length; width *= 2) {
+    let passOrder = [...order];
+    for (let start = 0; start < passOrder.length; start += width * 2) {
+      const leftRun = passOrder.slice(start, Math.min(start + width, passOrder.length));
+      const rightRun = passOrder.slice(start + width, Math.min(start + width * 2, passOrder.length));
+      if (!rightRun.length) continue;
+      const merged: ListNodeItem[] = [];
+      let i = 0;
+      let j = 0;
+      while (i < leftRun.length && j < rightRun.length) {
+        const leftIndex = passOrder.findIndex((node) => node.id === leftRun[i].id);
+        const rightIndex = passOrder.findIndex((node) => node.id === rightRun[j].id);
+        const leftValue = Number(leftRun[i].value);
+        const rightValue = Number(rightRun[j].value);
+        steps.push(problemSnapshot(
+          passOrder,
+          `Compare run heads (width ${width})`,
+          `${leftValue} and ${rightValue} are the current heads of two sorted runs. Take the smaller value; on a tie, take the left node to keep the sort stable.`,
+          4,
+          { left: leftIndex, right: rightIndex, run_width: null },
+          [leftIndex, rightIndex],
+          'comparing',
+          steps.length === 1,
+          steps.length === 1 ? {
+            prompt: 'When two run-head values are equal, which node should stable merge sort take first?',
+            options: ['The node from the left run', 'The node from the right run', 'Either node, stability is unaffected'],
+            correctIndex: 0,
+            explanation: 'Taking the left run on equality preserves the original relative order of equal values.',
+          } : undefined,
+        ));
+        if (leftValue <= rightValue) merged.push(leftRun[i++]);
+        else merged.push(rightRun[j++]);
+      }
+      merged.push(...leftRun.slice(i), ...rightRun.slice(j));
+      passOrder = [...passOrder.slice(0, start), ...merged, ...passOrder.slice(start + leftRun.length + rightRun.length)];
+      steps.push(problemSnapshot(passOrder, `Merge runs of width ${width}`, `Merged the adjacent runs into one sorted run: ${merged.map((node) => node.value).join(' → ')}.`, 7, { merged_head: start, merged_tail: start + merged.length - 1 }, [start, start + merged.length - 1], 'success'));
+    }
+    order = passOrder;
+  }
+  steps.push(problemSnapshot(order, 'List sorted', 'The final run contains every node in ascending order. The node links, not just the displayed values, have been reordered.', 10, { head: 0, tail: order.length - 1 }, [0, order.length - 1], 'success'));
+  return steps;
+}
+
+export function generateRemoveNthFromEndSteps(currentNodes: ListNodeItem[], n: number): LinkedListStep[] {
+  if (!currentNodes.length || !Number.isInteger(n) || n < 1 || n > currentNodes.length) return [];
+  const nodes = cloneNodes(currentNodes);
+  const steps: LinkedListStep[] = [problemSnapshot(nodes, 'Create a gap of n nodes', `Advance fast by n = ${n} links. Then move fast and slow together; slow will stop immediately before the target.`, 1, { fast: Math.min(n - 1, nodes.length - 1), slow: null }, [Math.min(n - 1, nodes.length - 1)])];
+  for (let fast = n; fast < nodes.length; fast += 1) {
+    const slow = fast - n;
+    steps.push(problemSnapshot(nodes, 'Move both pointers', `Fast is at ${nodes[fast].value}; slow is at ${nodes[slow]?.value ?? 'the dummy node'}. Their n-node gap stays constant.`, 4, { fast, slow: slow >= 0 ? slow : null }, [fast, ...(slow >= 0 ? [slow] : [])]));
+  }
+  const targetIndex = nodes.length - n;
+  const target = nodes[targetIndex];
+  steps.push(problemSnapshot(nodes, 'Identify target from the end', `Fast has reached the tail. The node ${n} from the end is ${target.value} at zero-based index ${targetIndex}.`, 6, { slow: targetIndex - 1 >= 0 ? targetIndex - 1 : null, target: targetIndex }, [targetIndex], 'danger'));
+  const result = nodes.filter((_, index) => index !== targetIndex);
+  steps.push(problemSnapshot(result, 'Remove target and reconnect', `${target.value} is removed; its predecessor now links directly to its successor. The dummy-node setup also handles removing the original head.`, 8, { head: 0, tail: result.length - 1 }, result.map((_, index) => index), 'success'));
+  return steps;
+}
+
+export function generateSplitHalvesSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+  if (!currentNodes.length) return [];
+  const nodes = cloneNodes(currentNodes);
+  const splitAt = Math.ceil(nodes.length / 2);
+  const first = nodes.slice(0, splitAt);
+  const second = nodes.slice(splitAt);
+  if (first.length) first[first.length - 1].nextId = null;
+  const lanes: LinkedListLane[] = [
+    { label: `First half · ${first.length} node${first.length === 1 ? '' : 's'}`, nodes: first },
+    { label: `Second half · ${second.length} node${second.length === 1 ? '' : 's'}`, nodes: second },
+  ];
+  const flatNodes = [...first, ...second].map((node) => ({ ...node }));
+  return [{
+    ...problemSnapshot(nodes, 'Find the split point', `Split after index ${splitAt - 1}. For an odd-length list, the first half gets the extra middle node.`, 3, { first_half_tail: splitAt - 1, second_half_head: second.length ? splitAt : null }, [splitAt - 1, ...(second.length ? [splitAt] : [])], 'success'),
+    nodes: flatNodes,
+    lanes: lanes.map((lane) => ({ ...lane, nodes: cloneNodes(lane.nodes) })),
+    phase: 'Two lists produced',
+    explanation: `The original chain is split into two independent lists with lengths ${first.length} and ${second.length}. ${second.length === 0 ? 'There is no second-half node.' : ''}`,
+    isQuizPoint: true,
+    quizData: {
+      prompt: 'How is an odd-length list divided here?',
+      options: ['The first half receives the middle node', 'The second half receives the middle node', 'The middle node is discarded'],
+      correctIndex: 0,
+      explanation: 'This visualizer uses ceil(n/2) nodes in the first half, so it receives the middle node when n is odd.',
+    },
+  }];
+}
+
+export function generateSplitKPartsSteps(currentNodes: ListNodeItem[], partCount: number): LinkedListStep[] {
+  if (!Number.isInteger(partCount) || partCount < 1 || partCount > 12 || !currentNodes.length) return [];
+  const original = cloneNodes(currentNodes);
+  const sizes = Array.from({ length: partCount }, (_, index) =>
+    Math.floor(original.length / partCount) + (index < original.length % partCount ? 1 : 0)
+  );
+  const steps: LinkedListStep[] = [makeLaneStep(
+    [{ label: `Input list · ${original.length} nodes`, nodes: original }],
+    'Plan balanced parts',
+    `Create ${partCount} consecutive parts. Each gets floor(n/k) = ${Math.floor(original.length / partCount)} node(s), and the first ${original.length % partCount} part(s) get one extra node.`,
+    1,
+  )];
+  const parts: ListNodeItem[][] = [];
+  let cursor = 0;
+  for (let index = 0; index < partCount; index += 1) {
+    const size = sizes[index];
+    const part = original.slice(cursor, cursor + size);
+    const remainder = original.slice(cursor + size);
+    if (part.length) part[part.length - 1].nextId = null;
+    parts.push(part);
+    cursor += size;
+    const lanes: LinkedListLane[] = [
+      ...parts.map((nodes, partIndex) => ({
+        label: `Part ${partIndex + 1} · ${nodes.length} node${nodes.length === 1 ? '' : 's'}`,
+        nodes,
+      })),
+      ...Array.from({ length: partCount - parts.length }, (_, emptyIndex) => ({
+        label: `Part ${parts.length + emptyIndex + 1} · pending`,
+        nodes: [] as ListNodeItem[],
+      })),
+      { label: `Unassigned remainder · ${remainder.length} node${remainder.length === 1 ? '' : 's'}`, nodes: remainder },
+    ];
+    steps.push(makeLaneStep(
+      lanes,
+      `Part ${index + 1} separated`,
+      size === 0
+        ? `No nodes remain for Part ${index + 1}; it is an empty list. Empty parts are allowed when k exceeds the input length.`
+        : `Cut after ${size} node${size === 1 ? '' : 's'} for Part ${index + 1}. The remaining suffix begins at ${remainder[0]?.value ?? 'NULL'}.`,
+      4,
+      { part_head: part[0]?.id ?? null, part_tail: part[part.length - 1]?.id ?? null, remainder_head: remainder[0]?.id ?? null },
+      [part[0]?.id, part[part.length - 1]?.id, remainder[0]?.id].filter((id): id is string => Boolean(id)),
+    ));
+  }
+  const final = steps[steps.length - 1];
+  final.lanes = parts.map((nodes, index) => ({
+    label: `Part ${index + 1} · ${nodes.length} node${nodes.length === 1 ? '' : 's'}`,
+    nodes: cloneNodes(nodes),
+  }));
+  final.nodes = final.lanes.flatMap((lane) => lane.nodes.map((node) => ({ ...node })));
+  final.phase = 'K parts created';
+  final.explanation = `The list is split into ${partCount} independent parts with sizes ${sizes.join(', ')}. Part sizes differ by at most one, and earlier parts receive the extra nodes.`;
+  final.pointers = {};
+  final.isQuizPoint = true;
+  final.quizData = {
+    prompt: `For n=${original.length} and k=${partCount}, how are the extra nodes distributed?`,
+    options: ['One extra node goes to each of the earliest n mod k parts', 'All extra nodes go to the last part', 'Extra nodes are discarded'],
+    correctIndex: 0,
+    explanation: 'Balanced splitting gives every part floor(n/k) nodes, then distributes the remainder one per earliest part.',
+  };
+  return steps;
+}
+
+// ─── INTERVIEW PROBLEMS: MULTI-LIST DIGIT ADDITION / MERGE K ────────────────────
+
+function createValueNodes(values: (number | string)[], prefix: string): ListNodeItem[] {
+  return values.map((value, index) => ({
+    id: `${prefix}-${index}`,
+    value,
+    nextId: index < values.length - 1 ? `${prefix}-${index + 1}` : null,
+    prevId: null,
+    status: 'default',
+    pointerLabels: index === 0 ? ['HEAD'] : [],
+  }));
+}
+
+function makeLaneStep(
+  lanes: LinkedListLane[],
+  phase: string,
+  explanation: string,
+  codeLine: number,
+  pointers: Record<string, string | null> = {},
+  highlightedIds: string[] = [],
+  isQuizPoint = false,
+  quizData?: LinkedListQuizData,
+  highlightStatus: ListNodeItem['status'] = 'active'
+): LinkedListStep {
+  const copiedLanes = lanes.map((lane) => ({ label: lane.label, kind: lane.kind, nodes: cloneNodes(lane.nodes) }));
+  highlightedIds.forEach((id) => {
+    for (const lane of copiedLanes) {
+      const node = lane.nodes.find((candidate) => candidate.id === id);
+      if (node) node.status = highlightStatus;
+    }
+  });
+  for (const [label, id] of Object.entries(pointers)) {
+    if (!id) continue;
+    const node = copiedLanes.flatMap((lane) => lane.nodes).find((candidate) => candidate.id === id);
+    if (node && !node.pointerLabels?.includes(label.toUpperCase())) node.pointerLabels = [...(node.pointerLabels ?? []), label.toUpperCase()];
+  }
+  const nodes = copiedLanes.flatMap((lane) => lane.nodes.map((node) => ({ ...node })));
+  const firstNonEmpty = copiedLanes.find((lane) => lane.nodes.length)?.nodes ?? [];
+  const lastNonEmpty = [...copiedLanes].reverse().find((lane) => lane.nodes.length)?.nodes ?? [];
+  return {
+    nodes,
+    lanes: copiedLanes,
+    headId: firstNonEmpty[0]?.id ?? null,
+    tailId: lastNonEmpty[lastNonEmpty.length - 1]?.id ?? null,
+    pointers,
+    phase,
+    explanation,
+    codeLine,
+    highlightedNodeIds: highlightedIds,
+    listType: 'singly',
+    isQuizPoint,
+    quizData,
+  };
+}
+
+export function generateAddTwoNumbersSteps(
+  firstDigits: number[],
+  secondDigits: number[]
+): LinkedListStep[] {
+  const validDigits = (digits: number[]) => digits.length > 0 && digits.every((digit) => Number.isInteger(digit) && digit >= 0 && digit <= 9);
+  if (!validDigits(firstDigits) || !validDigits(secondDigits)) return [];
+  const first = createValueNodes(firstDigits, 'add-a');
+  const second = createValueNodes(secondDigits, 'add-b');
+  const result: ListNodeItem[] = [];
+  const steps: LinkedListStep[] = [];
+  let carry = 0;
+  let index = 0;
+  while (index < first.length || index < second.length || carry > 0) {
+    const a = Number(first[index]?.value ?? 0);
+    const b = Number(second[index]?.value ?? 0);
+    const sum = a + b + carry;
+    const digit = sum % 10;
+    const nextCarry = Math.floor(sum / 10);
+    const resultNode = createValueNodes([digit], `add-result-${index}`)[0];
+    resultNode.id = `add-result-${index}`;
+    if (result.length) result[result.length - 1].nextId = resultNode.id;
+    result.push(resultNode);
+    const lanes = [
+      { label: 'Number A · least-significant digit first', nodes: first },
+      { label: 'Number B · least-significant digit first', nodes: second },
+      { label: `Sum · carry ${nextCarry}`, nodes: result },
+    ];
+    steps.push(makeLaneStep(
+      lanes,
+      `Add digit ${index + 1}`,
+      `${a} + ${b} + carry ${carry} = ${sum}. Write ${digit} in the result and carry ${nextCarry} to the next position.`,
+      4,
+      { digit_a: first[index]?.id ?? null, digit_b: second[index]?.id ?? null, result: resultNode.id },
+      [first[index]?.id, second[index]?.id, resultNode.id].filter((id): id is string => Boolean(id)),
+      index === 0,
+      index === 0 ? {
+        prompt: `For ${a} + ${b} + carry ${carry} = ${sum}, what digit is written at this position?`,
+        options: [String(digit), String(nextCarry), String(sum)],
+        correctIndex: 0,
+        explanation: 'Write sum modulo 10 at the current digit; carry floor(sum / 10) to the next digit.',
+      } : undefined,
+    ));
+    carry = nextCarry;
+    index += 1;
+  }
+  if (steps.length) {
+    const last = steps[steps.length - 1];
+    last.phase = 'Addition complete';
+    last.explanation += ` Result digits are stored in reverse order: ${result.map((node) => node.value).join(' → ')}.`;
+  }
+  return steps;
+}
+
+export function generateMergeKSortedSteps(sortedLists: number[][]): LinkedListStep[] {
+  if (sortedLists.length < 2 || sortedLists.some((list) => list.some((value, index) => !Number.isFinite(value) || (index > 0 && list[index - 1] > value)))) return [];
+  const sourceNodes = sortedLists.map((list, index) => createValueNodes(list, `merge-list-${index + 1}`));
+  const positions = sortedLists.map(() => 0);
+  const output: ListNodeItem[] = [];
+  const lanesFor = () => [
+    ...sourceNodes.map((nodes, index) => ({
+      label: `List ${index + 1} · sorted input`,
+      nodes: nodes.map((node, nodeIndex) => ({
+        ...node,
+        status: nodeIndex < positions[index] ? 'success' as const : nodeIndex === positions[index] ? 'active' as const : 'default' as const,
+        pointerLabels: [
+          ...(nodeIndex === 0 ? ['HEAD'] : []),
+          ...(nodeIndex === positions[index] ? ['CURRENT'] : []),
+        ],
+      })),
+    })),
+    { label: `Merged output · ${output.length} node${output.length === 1 ? '' : 's'}`, nodes: output },
+  ];
+  const steps: LinkedListStep[] = [makeLaneStep(
+    lanesFor(),
+    'Compare current list heads',
+    'At each step, select the smallest unconsumed head among the k sorted lists. Advance only the source list that supplied it.',
+    1,
+    {},
+    [],
+    true,
+    {
+      prompt: 'Which input list advances after one node is appended to the merged output?',
+      options: ['The list that supplied the smallest current head', 'Every list advances once', 'The longest list always advances'],
+      correctIndex: 0,
+      explanation: 'A k-way merge consumes exactly one node: the smallest available head.',
+    },
+  )];
+  let outputIndex = 0;
+  while (positions.some((position, index) => position < sourceNodes[index].length)) {
+    let selected = -1;
+    for (let index = 0; index < sourceNodes.length; index += 1) {
+      if (positions[index] >= sourceNodes[index].length) continue;
+      if (selected < 0 || Number(sourceNodes[index][positions[index]].value) < Number(sourceNodes[selected][positions[selected]].value)) selected = index;
+    }
+    const picked = sourceNodes[selected][positions[selected]];
+    positions[selected] += 1;
+    const outNode = { ...picked, id: `merge-output-${outputIndex++}`, nextId: null, prevId: null, status: 'success' as const, pointerLabels: output.length === 0 ? ['HEAD'] : [] };
+    if (output.length) output[output.length - 1].nextId = outNode.id;
+    output.push(outNode);
+    steps.push(makeLaneStep(
+      lanesFor(),
+      `Take ${picked.value} from List ${selected + 1}`,
+      `Among the remaining heads, ${picked.value} is smallest. Append it to the output and advance List ${selected + 1} by one node.`,
+      5,
+      { selected_head: picked.id, output_tail: outNode.id },
+      [picked.id, outNode.id],
+    ));
+  }
+  const final = steps[steps.length - 1];
+  final.phase = 'K-way merge complete';
+  final.explanation = `All ${sortedLists.length} sorted input lists have been merged in ascending order: ${output.map((node) => node.value).join(' → ')}.`;
+  return steps;
+}
+
+export type LRUOperation =
+  | { type: 'get'; key: string }
+  | { type: 'put'; key: string; value: string };
+
+export function generateLRUCacheSteps(operations: LRUOperation[], capacity: number): LinkedListStep[] {
+  if (!operations.length || !Number.isInteger(capacity) || capacity < 1 || capacity > 20) return [];
+  if (operations.some((operation) => !operation.key.trim() || (operation.type === 'put' && !operation.value.trim()))) return [];
+
+  let recency: ListNodeItem[] = [];
+  const keyToNode = new Map<string, ListNodeItem>();
+  const nodeValues = new Map<string, string>();
+  const keyForNode = (nodeId: string) => [...keyToNode.entries()].find(([, node]) => node.id === nodeId)?.[0];
+  let nextNodeId = 0;
+  const steps: LinkedListStep[] = [];
+  const lanesFor = (highlightKey?: string, status: ListNodeItem['status'] = 'active'): LinkedListLane[] => {
+    const cacheNodes = recency.map((node, index) => ({
+      ...node,
+      nextId: recency[index + 1]?.id ?? null,
+      prevId: recency[index - 1]?.id ?? null,
+      status: node.id === keyToNode.get(highlightKey ?? '')?.id ? status : index === 0 ? 'active' as const : index === recency.length - 1 ? 'warning' as const : 'default' as const,
+      pointerLabels: [
+        ...(index === 0 ? ['MRU'] : []),
+        ...(index === recency.length - 1 ? ['LRU'] : []),
+        ...(highlightKey !== undefined && node.id === keyToNode.get(highlightKey)?.id ? ['ACCESSED'] : []),
+      ],
+    }));
+    const mapNodes = Array.from(keyToNode.entries()).map(([key, node], index) => ({
+      id: `lru-map-entry-${index}`,
+      value: `${key} → ${node.id}`,
+      nextId: null,
+      status: key === highlightKey ? status : 'default' as const,
+      pointerLabels: key === highlightKey ? ['LOOKUP'] : [],
+    }));
+    return [
+      { label: `Hash map · key → node (${mapNodes.length} entries)`, nodes: mapNodes, kind: 'map' },
+      { label: `Doubly linked list · MRU → LRU · capacity ${capacity}`, nodes: cacheNodes, kind: 'doublyList' },
+    ];
+  };
+  const addStep = (
+    phase: string,
+    explanation: string,
+    key?: string,
+    highlightIds: string[] = [],
+    status: ListNodeItem['status'] = 'active',
+    quizData?: LinkedListQuizData,
+  ) => {
+    const step = makeLaneStep(
+      lanesFor(key, status),
+      phase,
+      explanation,
+      phase.includes('Evict') ? 7 : phase.includes('Move') ? 9 : phase.includes('Hit') || phase.includes('Miss') ? 4 : 5,
+      { lookup: keyToNode.get(key ?? '')?.id ?? null, mru: recency[0]?.id ?? null, lru: recency[recency.length - 1]?.id ?? null },
+      highlightIds,
+      Boolean(quizData),
+      quizData,
+      status,
+    );
+    step.listType = 'doubly';
+    steps.push(step);
+  };
+
+  addStep('Initialize LRU cache', `Start with an empty key-to-node map and an empty doubly linked list. Capacity is ${capacity}.`);
+  operations.forEach((operation, operationIndex) => {
+    const prefix = `Operation ${operationIndex + 1}: ${operation.type.toUpperCase()}(${operation.key}${operation.type === 'put' ? `, ${operation.value}` : ''})`;
+    if (operation.type === 'get') {
+      const node = keyToNode.get(operation.key);
+      if (!node) {
+        addStep(`${prefix} · Cache Miss`, `Key ${operation.key} is absent from the hash map. Return -1; recency order does not change.`, operation.key, [], 'danger', {
+          prompt: `What happens to the recency list after GET(${operation.key}) misses?`,
+          options: ['It stays unchanged', 'The LRU node moves to the head', 'A new node is inserted'],
+          correctIndex: 0,
+          explanation: 'A miss does not access a cached node, so it does not change recency.',
+        });
+        return;
+      }
+      addStep(`${prefix} · Cache Hit`, `Key ${operation.key} resolves to node ${node.id}; return value ${nodeValues.get(operation.key) ?? ''}. A hit marks the node as most recently used.`, operation.key, [node.id], 'success', {
+        prompt: `On a cache hit, where does the accessed node move?`,
+        options: ['To the MRU head', 'To the LRU tail', 'It stays where it is'],
+        correctIndex: 0,
+        explanation: 'Successful access makes the node most recently used, so it moves to the list head.',
+      });
+      const index = recency.findIndex((candidate) => candidate.id === node.id);
+      if (index > 0) {
+        recency.splice(index, 1);
+        recency.unshift(node);
+        addStep(`${prefix} · Move to MRU`, `Detach ${node.id} from its current position and reconnect its neighbors; then link it before the current MRU node.`, operation.key, [node.id], 'success');
+      }
+      return;
+    }
+
+    const existing = keyToNode.get(operation.key);
+    if (existing) {
+      existing.value = `${operation.key}: ${operation.value}`;
+      nodeValues.set(operation.key, operation.value);
+      const index = recency.findIndex((candidate) => candidate.id === existing.id);
+      if (index > 0) {
+        recency.splice(index, 1);
+        recency.unshift(existing);
+      }
+      addStep(`${prefix} · Update existing key`, `Key ${operation.key} already exists. Update its value and make its node the MRU head.`, operation.key, [existing.id], 'success');
+      return;
+    }
+
+    if (recency.length === capacity) {
+      const victim = recency[recency.length - 1];
+      const victimKey = keyForNode(victim.id) ?? '';
+      addStep(`${prefix} · Evict LRU`, `The cache is full. Remove least-recently-used key ${victimKey} at the tail before inserting the new key.`, victimKey, [victim.id], 'danger');
+      recency.pop();
+      keyToNode.delete(victimKey);
+      nodeValues.delete(victimKey);
+      addStep(`${prefix} · LRU removed`, `Delete key ${victimKey} from the hash map and unlink its node from the doubly linked-list tail.`, victimKey, [victim.id], 'danger');
+    }
+    const node: ListNodeItem = {
+      id: `lru-node-${nextNodeId++}`,
+      value: `${operation.key}: ${operation.value}`,
+      nextId: null,
+      prevId: null,
+      status: 'new',
+      pointerLabels: ['NEW'],
+    };
+    recency.unshift(node);
+    keyToNode.set(operation.key, node);
+    nodeValues.set(operation.key, operation.value);
+    addStep(`${prefix} · Insert at MRU`, `Create node ${node.id}, add key ${operation.key} to the map, and link the new node at the MRU head.`, operation.key, [node.id], 'success');
+  });
+  addStep('LRU sequence complete', `All operations finished. Recency is ${recency.length ? recency.map((node) => keyForNode(node.id) ?? node.id).join(' → ') : 'empty'} from MRU to LRU.`, undefined, recency.map((node) => node.id), 'success');
   return steps;
 }
