@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ApiError, useAuth } from '../../contexts/AuthContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './SettingsModal.css';
@@ -27,7 +29,9 @@ const DEFAULT_CONFIG: UserLLMConfig = {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { theme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'ai' | 'appearance'>('ai');
+  const { isAuthenticated, deleteAccount } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'ai' | 'appearance' | 'account'>('ai');
 
   const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
     try {
@@ -45,6 +49,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [showKey, setShowKey] = useState<boolean>(false);
   const [testing, setTesting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated && activeTab === 'account') {
+      setActiveTab('ai');
+      setDeleteConfirmation('');
+      setDeleteError('');
+    }
+  }, [activeTab, isAuthenticated]);
 
   if (!isOpen) return null;
 
@@ -102,6 +117,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     } catch {}
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'DELETE' || deletingAccount) return;
+    setDeletingAccount(true);
+    setDeleteError('');
+    try {
+      await deleteAccount();
+      onClose();
+      navigate('/');
+    } catch (error) {
+      setDeleteError(
+        error instanceof ApiError
+          ? error.message
+          : 'The account could not be deleted. Please try again.'
+      );
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   return (
     <div className="settings-modal-backdrop" onClick={onClose}>
       <div className="settings-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -130,6 +164,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           >
             Appearance
           </button>
+          {isAuthenticated && (
+            <button
+              className={`settings-tab-btn ${activeTab === 'account' ? 'active' : ''}`}
+              onClick={() => setActiveTab('account')}
+            >
+              Account
+            </button>
+          )}
         </div>
 
         {/* Body */}
@@ -216,28 +258,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </select>
             </div>
           )}
+
+          {activeTab === 'account' && isAuthenticated && (
+            <section className="settings-danger-zone" aria-labelledby="delete-account-title">
+              <div>
+                <p className="settings-danger-eyebrow">Permanent action</p>
+                <h4 id="delete-account-title">Delete your account</h4>
+                <p>
+                  This permanently removes your account, learning progress, saved sessions,
+                  and active sign-in sessions. This cannot be undone.
+                </p>
+              </div>
+              <label className="settings-label" htmlFor="delete-account-confirmation">
+                Type <strong>DELETE</strong> to confirm
+              </label>
+              <input
+                id="delete-account-confirmation"
+                className="settings-input"
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={deletingAccount}
+              />
+              {deleteError && (
+                <div className="settings-status-banner error" role="alert">
+                  <AlertCircle size={14} />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                className="settings-danger-btn"
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmation !== 'DELETE' || deletingAccount}
+              >
+                {deletingAccount ? 'Deleting account…' : 'Delete account permanently'}
+              </button>
+              <p className="settings-danger-note">
+                For your security, sign in again if this session is more than 10 minutes old.
+              </p>
+            </section>
+          )}
         </div>
 
         {/* Footer */}
         <div className="settings-footer">
-          <button type="button" className="btn-secondary" onClick={handleReset}>
-            Reset Defaults
-          </button>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {activeTab === 'ai' && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={handleTestConnection}
-                disabled={testing}
-              >
-                {testing ? 'Testing...' : 'Test Connection'}
-              </button>
-            )}
-            <button type="button" className="btn-primary" onClick={handleSave}>
-              Save Changes
+          {activeTab === 'account' ? (
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Close
             </button>
-          </div>
+          ) : (
+            <>
+              <button type="button" className="btn-secondary" onClick={handleReset}>
+                Reset Defaults
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {activeTab === 'ai' && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleTestConnection}
+                    disabled={testing}
+                  >
+                    {testing ? 'Testing...' : 'Test Connection'}
+                  </button>
+                )}
+                <button type="button" className="btn-primary" onClick={handleSave}>
+                  Save Changes
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

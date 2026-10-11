@@ -17,17 +17,8 @@ def send_password_reset_email(to_email: str, reset_url: str) -> bool:
 
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.error(
-            "Password reset email NOT sent to %s: SMTP_USER/SMTP_PASSWORD are not "
-            "configured in backend/.env (or the deployment environment). The reset "
-            "link is printed below for local development only. Reset link: %s",
-            to_email,
-            reset_url,
+            "Password reset email was not sent because SMTP credentials are not configured."
         )
-        print("\n" + "═" * 65)
-        print(f"📧 PASSWORD RESET LINK FOR [{to_email}]:")
-        print(f"👉 {reset_url}")
-        print("💡 Configure SMTP_USER and SMTP_PASSWORD in backend/.env to send real Gmail emails!")
-        print("═" * 65 + "\n")
         return False
 
     sender_email = settings.SMTP_USER
@@ -171,10 +162,8 @@ def send_verification_email(to_email: str, verify_url: str) -> bool:
 
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning(
-            "Verification email NOT sent to %s. Link printed for local dev: %s",
-            to_email, verify_url
+            "Verification email was not sent because SMTP credentials are not configured."
         )
-        print(f"\n📧 VERIFICATION LINK FOR [{to_email}]:\n👉 {verify_url}\n")
         return False
 
     sender_email = settings.SMTP_USER

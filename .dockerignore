@@ -1,0 +1,11 @@
+.git
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/*.py[cod]
+artifacts/
