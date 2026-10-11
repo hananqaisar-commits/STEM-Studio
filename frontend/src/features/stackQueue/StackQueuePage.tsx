@@ -316,6 +316,25 @@ export const StackQueuePage: React.FC = () => {
     play();
   };
 
+  const handleClearStack = () => {
+    if (stackData.length === 0) return;
+    let current = [...stackData];
+    const allSteps: StackQueueStep[] = [];
+    while (current.length > 0) {
+      allSteps.push(...generateStackPopSteps(current));
+      current = current.slice(0, -1);
+    }
+    setStackData([]);
+    setActiveSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    play();
+
+    const newHistory = [...stackHistory, ...stackData.map(() => ({ method: 'pop', args: [] }))];
+    setStackHistory(newHistory);
+    if (customState.active) void submitReplay('stackQueue.stack', newHistory, stackData[0]);
+  };
+
   const handleEnqueue = () => {
     const parseRes = parseNumberList(inputValue);
     const rawValues: (number | string)[] = parseRes.isValid && parseRes.values.length > 0
@@ -1073,6 +1092,10 @@ export const StackQueuePage: React.FC = () => {
           </button>
           <button className="bst-btn btn-mode" onClick={handlePeek} title="Peek top element of stack">
             <span>Peek</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleClearStack} title="Pop every item and animate the stack becoming empty" disabled={stackData.length === 0}>
+            <Trash2 size={14} />
+            <span>Pop All</span>
           </button>
         </>
       )}

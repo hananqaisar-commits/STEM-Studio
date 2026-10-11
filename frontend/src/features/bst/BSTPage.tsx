@@ -23,6 +23,7 @@ import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateBSTInsertSteps,
   generateBSTSearchSteps,
+  generateBSTDeleteSteps,
   generateBSTInorderSteps,
   generateBSTPreorderSteps,
   generateBSTPostorderSteps,
@@ -261,6 +262,31 @@ export const BSTPage: React.FC = () => {
     setRevisionKey('search');
     const steps = generateBSTSearchSteps(bstTree, num);
     setActiveOperationSteps(steps);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  const handleBSTDelete = () => {
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
+    setRevisionKey('delete');
+
+    let currentTree = bstTree;
+    const allSteps: BSTStep[] = [];
+    for (const num of nums) {
+      const { steps, newTree } = generateBSTDeleteSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+
+    setBstTree(currentTree);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
     if (!quizEnabled) play();
@@ -735,6 +761,10 @@ export const BSTPage: React.FC = () => {
           <button className="bst-btn btn-search" onClick={handleBSTSearch}>
             <Search size={16} />
             <span>Search</span>
+          </button>
+          <button className="bst-btn btn-search" onClick={handleBSTDelete} title="Delete value(s) and show the replacement case">
+            <Trash2 size={14} />
+            <span>Delete</span>
           </button>
           <div className="traversal-btn-group">
             <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('inorder'); setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>

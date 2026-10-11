@@ -1,6 +1,9 @@
 import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from './tokenStorage';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Use the Vite proxy during local development so the browser never has to make
+// a cross-origin request to the loopback API. Production can target a separate
+// API host through VITE_API_BASE_URL.
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '');
 
 interface ApiOptions {
   method?: string;

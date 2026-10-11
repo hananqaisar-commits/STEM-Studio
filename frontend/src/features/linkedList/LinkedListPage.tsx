@@ -25,7 +25,9 @@ import {
   createInitialNodes,
   generateInsertHeadSteps,
   generateInsertTailSteps,
+  generateInsertAtIndexSteps,
   generateDeleteHeadSteps,
+  generateDeleteAtIndexSteps,
   generateReverseSteps,
   generateCycleDetectionSteps,
   generateMiddleNodeSteps,
@@ -81,6 +83,10 @@ export const LinkedListPage: React.FC = () => {
 
   const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40');
   const [inputError, setInputError] = useState<string | null>(null);
+  const [positionOperation, setPositionOperation] = useState<'insertAt' | 'insertMiddle' | 'insertBefore' | 'insertAfter' | 'deleteAt' | 'deleteMiddle' | 'deleteBefore' | 'deleteAfter'>('insertAt');
+  const [operationValue, setOperationValue] = useState('25');
+  const [operationIndex, setOperationIndex] = useState('1');
+  const [operationTarget, setOperationTarget] = useState('30');
 
   // Interactive & Quiz Modes
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -357,11 +363,71 @@ export const LinkedListPage: React.FC = () => {
   const handleDeleteHead = () => {
     const steps = generateDeleteHeadSteps(baseNodes, structureType);
     setActiveSteps(steps);
+    if (steps.length > 0) setBaseNodes(steps[steps.length - 1].nodes);
+    reset();
+    quizSession.resetSession();
+    play();
   };
 
   const handleReverse = () => {
     const steps = generateReverseSteps(baseNodes, structureType);
     setActiveSteps(steps);
+    if (steps.length > 0) setBaseNodes(steps[steps.length - 1].nodes);
+    reset();
+    quizSession.resetSession();
+    play();
+  };
+
+  const handlePositionOperation = () => {
+    const inserts = positionOperation.startsWith('insert');
+    const middle = positionOperation.endsWith('Middle');
+    let index: number;
+
+    if (middle) {
+      index = inserts ? Math.floor(baseNodes.length / 2) : Math.floor((baseNodes.length - 1) / 2);
+    } else if (positionOperation.endsWith('Before') || positionOperation.endsWith('After')) {
+      const targetIndex = baseNodes.findIndex((node) => String(node.value) === operationTarget.trim());
+      if (targetIndex < 0) {
+        setInputError(`Value ${operationTarget || '(empty)'} is not in the list`);
+        return;
+      }
+      index = targetIndex + (positionOperation.endsWith('After') ? 1 : 0);
+      if (!inserts && positionOperation.endsWith('Before')) index = targetIndex - 1;
+      if (!inserts && positionOperation.endsWith('After')) index = targetIndex + 1;
+    } else {
+      index = Number(operationIndex);
+      if (!Number.isInteger(index)) {
+        setInputError('Enter a whole-number, zero-based index');
+        return;
+      }
+    }
+
+    if (inserts && !operationValue.trim()) {
+      setInputError('Enter a value to insert');
+      return;
+    }
+    if (inserts && (index < 0 || index > baseNodes.length)) {
+      setInputError(`Insert index must be between 0 and ${baseNodes.length}`);
+      return;
+    }
+    if (!inserts && (index < 0 || index >= baseNodes.length)) {
+      setInputError('There is no node at that position to delete');
+      return;
+    }
+
+    const steps = inserts
+      ? generateInsertAtIndexSteps(baseNodes, operationValue.trim(), index, structureType)
+      : generateDeleteAtIndexSteps(baseNodes, index, structureType);
+    if (steps.length === 0) {
+      setInputError('The list is empty');
+      return;
+    }
+    setInputError(null);
+    setBaseNodes(steps[steps.length - 1].nodes);
+    setActiveSteps(steps);
+    reset();
+    quizSession.resetSession();
+    play();
   };
 
   const handleCycleDetect = () => {
@@ -443,8 +509,11 @@ export const LinkedListPage: React.FC = () => {
     }
   };
 
-  const snippetKey =
-    category === 'reverse'
+  const snippetKey = positionOperation.startsWith('insert')
+      ? 'position_insert'
+      : positionOperation.startsWith('delete')
+      ? 'position_delete'
+      : category === 'reverse'
       ? 'reverse'
       : category === 'detectCycle'
       ? 'detect_cycle'
@@ -532,6 +601,47 @@ export const LinkedListPage: React.FC = () => {
         <span>Delete Head</span>
       </button>
 
+      <details className="ll-position-controls">
+        <summary>Insert / delete at a position</summary>
+        <div className="ll-position-controls-body">
+          <label>
+            Operation
+            <select value={positionOperation} onChange={(e) => setPositionOperation(e.target.value as typeof positionOperation)}>
+              <option value="insertAt">Insert at index</option>
+              <option value="insertMiddle">Insert in middle</option>
+              <option value="insertBefore">Insert before value</option>
+              <option value="insertAfter">Insert after value</option>
+              <option value="deleteAt">Delete at index</option>
+              <option value="deleteMiddle">Delete middle</option>
+              <option value="deleteBefore">Delete node before value</option>
+              <option value="deleteAfter">Delete node after value</option>
+            </select>
+          </label>
+          {positionOperation.startsWith('insert') && (
+            <label>
+              New value
+              <input value={operationValue} onChange={(e) => setOperationValue(e.target.value)} aria-label="Value to insert" />
+            </label>
+          )}
+          {(positionOperation === 'insertAt' || positionOperation === 'deleteAt') && (
+            <label>
+              Index (0-based)
+              <input type="number" min={0} value={operationIndex} onChange={(e) => setOperationIndex(e.target.value)} />
+            </label>
+          )}
+          {(positionOperation.endsWith('Before') || positionOperation.endsWith('After')) && (
+            <label>
+              Target value
+              <input value={operationTarget} onChange={(e) => setOperationTarget(e.target.value)} />
+            </label>
+          )}
+          <button className="ll-btn ll-btn-primary" onClick={handlePositionOperation}>
+            Apply operation
+          </button>
+          <span className="ll-position-help">Indices start at 0. For even-sized lists, “middle” selects the left middle node. Before / after uses the first matching value.</span>
+        </div>
+      </details>
+
       <button className="ll-btn ll-btn-secondary" onClick={handleReverse}>
         <RotateCcw size={14} />
         <span>Reverse</span>
@@ -613,6 +723,7 @@ export const LinkedListPage: React.FC = () => {
         <div className="ll-toolbar-actions">
           {renderToolbarControls()}
         </div>
+        {inputError && <span className="ll-input-error" role="alert">{inputError}</span>}
       </div>
 
       {/* ─── MAIN WORKSPACE ──────────────────────────────────────────────────── */}

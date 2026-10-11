@@ -106,7 +106,7 @@ export function generateStackPopSteps(currentStack: (number | string)[]): StackQ
     steps.push({
       stepIndex: 0,
       description: `Underflow Warning: Cannot pop from an empty Stack!`,
-      codeLine: 1,
+      codeLine: 4,
       elements: [],
     });
     return steps;
@@ -125,7 +125,7 @@ export function generateStackPopSteps(currentStack: (number | string)[]): StackQ
   steps.push({
     stepIndex: 0,
     description: `Popping top element '${poppedVal}' (TOP index = ${currentStack.length - 1}).`,
-    codeLine: 1,
+    codeLine: 4,
     elements: JSON.parse(JSON.stringify(initialElements)),
   });
 
@@ -135,7 +135,7 @@ export function generateStackPopSteps(currentStack: (number | string)[]): StackQ
   steps.push({
     stepIndex: 1,
     description: `Element '${poppedVal}' popped. Stack size is now ${remainingElements.length}.`,
-    codeLine: 2,
+    codeLine: 5,
     elements: remainingElements,
   });
 
@@ -148,7 +148,7 @@ export function generateStackPeekSteps(currentStack: (number | string)[]): Stack
     steps.push({
       stepIndex: 0,
       description: `Peek operation: Stack is empty.`,
-      codeLine: 1,
+      codeLine: 6,
       elements: [],
     });
     return steps;
@@ -162,7 +162,7 @@ export function generateStackPeekSteps(currentStack: (number | string)[]): Stack
   steps.push({
     stepIndex: 0,
     description: `Peek() inspected top element '${topVal}' (index ${currentStack.length - 1}) without removing it.`,
-    codeLine: 1,
+    codeLine: 6,
     elements,
   });
   return steps;
