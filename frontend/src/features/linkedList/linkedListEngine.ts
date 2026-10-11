@@ -419,6 +419,192 @@ export function generateDeleteHeadSteps(
   return steps;
 }
 
+/** Insert at a zero-based index while keeping every pointer invariant intact. */
+export function generateInsertAtIndexSteps(
+  currentNodes: ListNodeItem[],
+  newValue: number | string,
+  index: number,
+  type: LinkedListStructureType = 'singly'
+): LinkedListStep[] {
+  const safeIndex = Math.max(0, Math.min(currentNodes.length, Math.trunc(index)));
+  if (safeIndex === 0) return generateInsertHeadSteps(currentNodes, newValue, type);
+  if (safeIndex === currentNodes.length) return generateInsertTailSteps(currentNodes, newValue, type);
+
+  const nodes = cloneNodes(currentNodes);
+  const previous = nodes[safeIndex - 1];
+  const successor = nodes[safeIndex];
+  const headId = nodes[0].id;
+  const tailId = nodes[nodes.length - 1].id;
+  const newId = `node-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+
+  assignPointerLabels(nodes, { head: headId, tail: tailId, curr: previous.id, next: successor.id });
+  previous.status = 'active';
+  successor.status = 'active';
+  const locateStep: LinkedListStep = {
+    nodes: cloneNodes(nodes),
+    headId,
+    tailId,
+    pointers: { head: headId, tail: tailId, previous: previous.id, current: successor.id },
+    phase: 'Locate Insertion Point',
+    explanation: `Walked to index ${safeIndex}. The new node must go between ${previous.value} and ${successor.value}.`,
+    codeLine: 1,
+    highlightedNodeIds: [previous.id, successor.id],
+    listType: type,
+  };
+
+  const allocated = cloneNodes(nodes);
+  const newNode: ListNodeItem = {
+    id: newId,
+    value: newValue,
+    nextId: null,
+    prevId: null,
+    status: 'new',
+    pointerLabels: ['NEW_NODE'],
+  };
+  allocated.splice(safeIndex, 0, newNode);
+  assignPointerLabels(allocated, { head: headId, tail: tailId, curr: previous.id, new: newId });
+  const allocateStep: LinkedListStep = {
+    nodes: allocated,
+    headId,
+    tailId,
+    pointers: { head: headId, tail: tailId, previous: previous.id, new_node: newId },
+    phase: 'Allocate Node',
+    explanation: `Created node ${newValue} at index ${safeIndex}. Its links are not connected yet.`,
+    codeLine: 2,
+    highlightedNodeIds: [newId],
+    listType: type,
+  };
+
+  const linked = cloneNodes(allocated);
+  const linkedNew = linked[safeIndex];
+  const linkedPrevious = linked[safeIndex - 1];
+  const linkedSuccessor = linked[safeIndex + 1];
+  linkedPrevious.nextId = newId;
+  linkedNew.nextId = linkedSuccessor.id;
+  if (hasPreviousPointers(type)) {
+    linkedNew.prevId = linkedPrevious.id;
+    linkedSuccessor.prevId = newId;
+  }
+  linkedNew.status = 'success';
+  assignPointerLabels(linked, { head: headId, tail: tailId });
+
+  return [locateStep, allocateStep, {
+    nodes: linked,
+    headId,
+    tailId,
+    pointers: { head: headId, tail: tailId, previous: linkedPrevious.id, new_node: newId, next: linkedSuccessor.id },
+    phase: 'Reconnect Pointers',
+    explanation: hasPreviousPointers(type)
+      ? `Set ${previous.value}.next → ${newValue} and repaired both backward links: ${newValue}.prev → ${previous.value}, ${successor.value}.prev → ${newValue}.`
+      : `Set ${previous.value}.next → ${newValue} and ${newValue}.next → ${successor.value}.`,
+    codeLine: 3,
+    highlightedNodeIds: [linkedPrevious.id, newId, linkedSuccessor.id],
+    brokenConnections: [
+      { fromId: previous.id, toId: successor.id, type: 'next' },
+      ...(hasPreviousPointers(type) ? [{ fromId: successor.id, toId: previous.id, type: 'prev' as const }] : []),
+    ],
+    newConnections: [
+      { fromId: linkedPrevious.id, toId: newId, type: 'next' },
+      { fromId: newId, toId: linkedSuccessor.id, type: 'next' },
+      ...(hasPreviousPointers(type) ? [
+        { fromId: newId, toId: linkedPrevious.id, type: 'prev' as const },
+        { fromId: linkedSuccessor.id, toId: newId, type: 'prev' as const },
+      ] : []),
+    ],
+    listType: type,
+  }];
+}
+
+/** Delete a node at a zero-based index and show the bypass before freeing it. */
+export function generateDeleteAtIndexSteps(
+  currentNodes: ListNodeItem[],
+  index: number,
+  type: LinkedListStructureType = 'singly'
+): LinkedListStep[] {
+  if (currentNodes.length === 0) return [];
+  const safeIndex = Math.max(0, Math.min(currentNodes.length - 1, Math.trunc(index)));
+  if (safeIndex === 0) return generateDeleteHeadSteps(currentNodes, type);
+
+  const nodes = cloneNodes(currentNodes);
+  const target = nodes[safeIndex];
+  const previous = nodes[safeIndex - 1];
+  const isTail = safeIndex === nodes.length - 1;
+  const next = isTail ? (isCircularList(type) ? nodes[0] : undefined) : nodes[safeIndex + 1];
+  const headId = nodes[0].id;
+  const tailId = nodes[nodes.length - 1].id;
+  assignPointerLabels(nodes, { head: headId, tail: tailId, previous: previous.id, target: target.id });
+  target.status = 'danger';
+  previous.status = 'active';
+
+  const steps: LinkedListStep[] = [{
+    nodes: cloneNodes(nodes),
+    headId,
+    tailId,
+    pointers: { head: headId, tail: tailId, previous: previous.id, target: target.id },
+    phase: 'Locate Target',
+    explanation: `Found ${target.value} at index ${safeIndex}; keep its neighbors so the list can bypass it safely.`,
+    codeLine: 1,
+    highlightedNodeIds: [previous.id, target.id, ...(next ? [next.id] : [])],
+    listType: type,
+  }];
+
+  const bypassed = cloneNodes(nodes);
+  bypassed[safeIndex - 1].nextId = next?.id ?? null;
+  if (hasPreviousPointers(type) && next) next && (bypassed[safeIndex === nodes.length - 1 ? 0 : safeIndex + 1].prevId = previous.id);
+  if (type === 'doublyCircular' && isTail) bypassed[0].prevId = previous.id;
+  bypassed[safeIndex].status = 'danger';
+  assignPointerLabels(bypassed, { head: headId, tail: isTail ? previous.id : tailId, previous: previous.id, target: target.id });
+  steps.push({
+    nodes: bypassed,
+    headId,
+    tailId: isTail ? previous.id : tailId,
+    pointers: { head: headId, tail: isTail ? previous.id : tailId, previous: previous.id, target: target.id },
+    phase: 'Bypass Target',
+    explanation: next
+      ? `Changed ${previous.value}.next to ${next.value}${hasPreviousPointers(type) ? ` and repaired ${next.value}.prev to ${previous.value}` : ''}.`
+      : `Changed ${previous.value}.next to NULL and moved TAIL to ${previous.value}.`,
+    codeLine: 2,
+    highlightedNodeIds: [previous.id, ...(next ? [next.id] : [])],
+    brokenConnections: [
+      { fromId: previous.id, toId: target.id, type: 'next' },
+      ...(next ? [{ fromId: target.id, toId: next.id, type: 'next' as const }] : []),
+      ...(hasPreviousPointers(type) ? [
+        { fromId: target.id, toId: previous.id, type: 'prev' as const },
+        ...(next ? [{ fromId: next.id, toId: target.id, type: 'prev' as const }] : []),
+      ] : []),
+    ],
+    newConnections: [
+      ...(next ? [{ fromId: previous.id, toId: next.id, type: 'next' as const }] : []),
+      ...(!next && isCircularList(type) ? [{ fromId: previous.id, toId: headId, type: 'next' as const }] : []),
+      ...(hasPreviousPointers(type) && next ? [{ fromId: next.id, toId: previous.id, type: 'prev' as const }] : []),
+      ...(type === 'doublyCircular' && isTail ? [{ fromId: headId, toId: previous.id, type: 'prev' as const }] : []),
+    ],
+    listType: type,
+  });
+
+  const remaining = bypassed.filter((node) => node.id !== target.id);
+  if (remaining.length > 0) {
+    const newTail = remaining[remaining.length - 1];
+    if (isCircularList(type)) newTail.nextId = remaining[0].id;
+    if (hasPreviousPointers(type)) {
+      remaining[0].prevId = type === 'doublyCircular' ? newTail.id : null;
+      if (type === 'doublyCircular') newTail.nextId = remaining[0].id;
+    }
+    assignPointerLabels(remaining, { head: remaining[0].id, tail: newTail.id });
+  }
+  steps.push({
+    nodes: remaining,
+    headId: remaining[0]?.id ?? null,
+    tailId: remaining[remaining.length - 1]?.id ?? null,
+    pointers: remaining.length ? { head: remaining[0].id, tail: remaining[remaining.length - 1].id } : {},
+    phase: 'Free Node',
+    explanation: `Removed ${target.value} from index ${safeIndex}; the remaining list stays ${type === 'doublyCircular' ? 'doubly circular' : type === 'circular' ? 'circular' : type === 'doubly' ? 'bidirectionally linked' : 'connected'}.`,
+    codeLine: 3,
+    listType: type,
+  });
+  return steps;
+}
+
 // ─── 4. REVERSE LINKED LIST (3-POINTER TECHNIQUE) ──────────────────────────────────
 
 export function generateReverseSteps(
