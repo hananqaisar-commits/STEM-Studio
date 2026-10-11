@@ -1,4 +1,7 @@
+import logging
+
 from fastapi import APIRouter, Depends, Request, status
+from redis.exceptions import RedisError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -7,27 +10,62 @@ from backend.app.api.schemas import (
     ReviewCreateRequest,
     ReviewResponse,
 )
-from backend.app.core.rate_limit import strict
+from backend.app.core.config import get_settings
+from backend.app.core.rate_limit import get_redis_client, log_redis_failure, strict
 from backend.infrastructure.database.database import get_db
 from backend.infrastructure.database.models import Review, User
 
 router = APIRouter(prefix="/api/stats", tags=["Platform Stats"])
+logger = logging.getLogger(__name__)
+settings = get_settings()
+_PLATFORM_STATS_CACHE_KEY = f"{settings.REDIS_KEY_PREFIX}:platform-stats:v1"
+
+
+def invalidate_platform_stats_cache() -> None:
+    """Drop cached totals after account mutations so the count stays current."""
+    if not settings.REDIS_URL:
+        return
+    try:
+        get_redis_client().delete(_PLATFORM_STATS_CACHE_KEY)
+    except RedisError:
+        log_redis_failure("platform-stats cache invalidation")
 
 
 @router.get("/platform", response_model=PlatformStatsResponse)
 def get_platform_stats(db: Session = Depends(get_db)):
-    """Return public platform statistics."""
-    active_learners = db.query(User).count()
+    """Return public platform statistics; active learners counts stored accounts."""
+    cache_key = _PLATFORM_STATS_CACHE_KEY
+    if settings.REDIS_URL:
+        try:
+            cached = get_redis_client().get(cache_key)
+            if cached:
+                return PlatformStatsResponse.model_validate_json(cached)
+        except RedisError:
+            log_redis_failure("platform-stats cache read")
+        except ValueError:
+            logger.warning("Platform stats cache payload was invalid; querying the database")
+
+    active_learners = db.query(func.count(User.user_id)).scalar() or 0
     review_stats = db.query(
         func.count(Review.review_id).label("total"),
         func.coalesce(func.avg(Review.rating), 0).label("average"),
     ).filter(Review.approved.is_(True)).first()
 
-    return PlatformStatsResponse(
+    response = PlatformStatsResponse(
         active_learners=active_learners,
         total_reviews=review_stats.total or 0,
         average_rating=round(float(review_stats.average or 0), 2),
     )
+    if settings.REDIS_URL:
+        try:
+            get_redis_client().set(
+                cache_key,
+                response.model_dump_json(),
+                ex=settings.PLATFORM_STATS_CACHE_SECONDS,
+            )
+        except RedisError:
+            log_redis_failure("platform-stats cache write")
+    return response
 
 
 @router.get("/reviews", response_model=list[ReviewResponse])

@@ -17,6 +17,7 @@ import { MarketingFooter } from './MarketingFooter';
 import { DSA_CATEGORIES } from '../../data/categories';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiClient } from '../../api/apiClient';
 import './MarketingHome.css';
 
 const featureCards: { icon: LucideIcon; title: string; description: string }[] = [
@@ -75,6 +76,7 @@ export function MarketingHome() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeLearners, setActiveLearners] = useState<number | null>(null);
   const categoryCount = DSA_CATEGORIES.filter((category) => category.available).length;
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -90,6 +92,27 @@ export function MarketingHome() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [location.pathname, location.hash]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadLearnerCount = async () => {
+      try {
+        const stats = await apiClient<{ active_learners: number }>('/api/stats/platform');
+        if (isMounted && Number.isFinite(stats.active_learners)) {
+          setActiveLearners(stats.active_learners);
+        }
+      } catch {
+        // Keep the count hidden if the API is unavailable; never show a guess.
+      }
+    };
+
+    void loadLearnerCount();
+    const refreshId = window.setInterval(loadLearnerCount, 60_000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshId);
+    };
+  }, []);
 
   return (
     <div className="marketing-home">
@@ -160,6 +183,14 @@ export function MarketingHome() {
             <div className="marketing-proof-row">
               <span><strong>{categoryCount}</strong> DSA categories</span>
               <i aria-hidden="true" />
+              {activeLearners !== null && (
+                <>
+                  <span aria-label={`${activeLearners.toLocaleString()} active learners`}>
+                    <strong>{activeLearners.toLocaleString()}</strong> active learners
+                  </span>
+                  <i aria-hidden="true" />
+                </>
+              )}
               <span>Python, C++, Java, Go &amp; pseudocode</span>
             </div>
           </div>

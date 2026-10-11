@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
@@ -46,6 +46,10 @@ class ResetPasswordRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class DeleteAccountRequest(BaseModel):
+    confirmation: Literal["DELETE"]
 
 
 # ─── Auth Response Schemas ───────────────────────────────────────────

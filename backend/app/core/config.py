@@ -11,6 +11,20 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost/stem_studio"
+    DB_POOL_SIZE: int = Field(default=3, ge=1, le=100)
+    DB_MAX_OVERFLOW: int = Field(default=2, ge=0, le=100)
+    DB_POOL_TIMEOUT_SECONDS: int = Field(default=10, ge=1, le=120)
+    DB_POOL_RECYCLE_SECONDS: int = Field(default=300, ge=30, le=3600)
+
+    # Shared rate limits are required when the API runs in multiple processes.
+    # Leave REDIS_URL empty for local development; the limiter uses bounded
+    # in-process memory in that case.
+    REDIS_URL: str = ""
+    REDIS_KEY_PREFIX: str = "stemstudio:ratelimit"
+    REDIS_MAX_CONNECTIONS: int = Field(default=100, ge=1, le=10000)
+    REDIS_SOCKET_TIMEOUT_SECONDS: float = Field(default=0.5, gt=0, le=10)
+    REDIS_RATE_LIMIT_FAIL_OPEN: bool = True
+    PLATFORM_STATS_CACHE_SECONDS: int = Field(default=30, ge=1, le=600)
 
     # Supabase (Postgres & API)
     SUPABASE_URL: str = ""
@@ -42,13 +56,17 @@ class Settings(BaseSettings):
     # with a well-known secret, but tokens will not survive a server restart.
     JWT_SECRET_KEY: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     # Extended refresh-token lifetime when the user checks "Remember me".
     JWT_REMEMBER_ME_EXPIRE_DAYS: int = 30
+    AUTH_REAUTH_MAX_AGE_MINUTES: int = Field(default=10, ge=1, le=60)
+    EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = Field(default=24, ge=1, le=168)
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = Field(default=20, ge=5, le=120)
 
     # CORS & Frontend
     FRONTEND_URL: str = "http://localhost:5173"
+    TRUST_X_FORWARDED_FOR: bool = False
     # By default only the configured frontend origin is allowed. Override with
     # a comma-separated list or JSON array in production.
     CORS_ORIGINS: Union[List[str], str] = [FRONTEND_URL]

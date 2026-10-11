@@ -60,6 +60,7 @@ cover/
 
 # Django stuff:
 *.log
+artifacts/loadtest/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -224,4 +225,3 @@ __marimo__/
 .claude
 .codex
 .agent
-

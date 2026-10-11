@@ -26,6 +26,7 @@ interface AuthContextType {
     lastName: string
   ) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
 }
@@ -37,19 +38,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) {
+    if (!getAccessToken()) {
+      setUser(null);
       setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
+    let attempt = 0;
     try {
-      const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
-      setUser(userData);
-    } catch {
-      // Token invalid, clear stored tokens
-      clearTokens();
-      setUser(null);
+      while (true) {
+        try {
+          const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+          setUser(userData);
+          return;
+        } catch (error) {
+          const credentialsRejected = error instanceof ApiError &&
+            (error.status === 401 || error.status === 403);
+          if (credentialsRejected) {
+            clearTokens();
+            setUser(null);
+            return;
+          }
+
+          // A network error or server outage is not proof that the account or
+          // its session is gone. Keep the refresh credential and make one
+          // short retry before showing the signed-out routes.
+          if (attempt === 0 && getAccessToken()) {
+            attempt += 1;
+            await new Promise((resolve) => window.setTimeout(resolve, 800));
+            continue;
+          }
+
+          setUser(null);
+          return;
+        }
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +82,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  useEffect(() => {
+    const restoreSessionOnFocus = () => {
+      if (!user && getAccessToken()) void fetchUser();
+    };
+    window.addEventListener('focus', restoreSessionOnFocus);
+    return () => window.removeEventListener('focus', restoreSessionOnFocus);
+  }, [fetchUser, user]);
 
   const login = async (identifier: string, password: string, rememberMe = false) => {
     const cleanId = identifier ? identifier.trim() : '';
@@ -121,6 +153,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const deleteAccount = async () => {
+    await apiClient('/api/auth/me', {
+      method: 'DELETE',
+      body: { confirmation: 'DELETE' },
+      requiresAuth: true,
+    });
+    clearTokens();
+    setUser(null);
+  };
+
   const forgotPassword = async (email: string): Promise<string> => {
     const data = await apiClient<{ message: string }>('/api/auth/forgot-password', {
       method: 'POST',
@@ -160,6 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         signup,
         logout,
+        deleteAccount,
         forgotPassword,
         resetPassword,
       }}

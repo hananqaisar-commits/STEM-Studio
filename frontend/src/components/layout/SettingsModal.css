@@ -228,6 +228,82 @@
   border: 1px solid #fecaca;
 }
 
+.settings-danger-zone {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fffafa;
+}
+
+.settings-danger-eyebrow {
+  margin: 0 0 4px;
+  color: #b42318;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-danger-zone h4 {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 0.95rem;
+}
+
+.settings-danger-zone p:not(.settings-danger-eyebrow):not(.settings-danger-note) {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.settings-danger-btn {
+  justify-self: start;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid #b42318;
+  border-radius: 8px;
+  background: #b42318;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, opacity 150ms ease;
+}
+
+.settings-danger-btn:hover:not(:disabled) {
+  background: #912018;
+}
+
+.settings-danger-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.settings-danger-note {
+  margin: -4px 0 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+[data-theme="dark"] .settings-danger-zone {
+  border-color: rgba(248, 113, 113, 0.32);
+  background: rgba(127, 29, 29, 0.14);
+}
+
+[data-theme="dark"] .settings-danger-eyebrow,
+[data-theme="dark"] .settings-danger-zone h4 {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .settings-danger-zone p:not(.settings-danger-eyebrow):not(.settings-danger-note),
+[data-theme="dark"] .settings-danger-note {
+  color: #cbd5e1;
+}
+
 [data-theme="dark"] .settings-status-banner.success {
   background: rgba(22, 101, 52, 0.2);
   color: #4ade80;

@@ -40,7 +40,7 @@ def generate_secure_token() -> str:
 
 # ─── JWT Token Creation ──────────────────────────────────────────────
 
-def create_access_token(user_id: int, email: str) -> str:
+def create_access_token(user_id: int, email: str, auth_time: int | None = None) -> str:
     """Create a short-lived JWT access token."""
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
@@ -49,12 +49,19 @@ def create_access_token(user_id: int, email: str) -> str:
         "sub": str(user_id),
         "email": email,
         "type": "access",
+        "jti": secrets.token_urlsafe(16),
         "exp": expire,
     }
+    if auth_time is not None:
+        payload["auth_time"] = auth_time
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_refresh_token(user_id: int, remember_me: bool = False) -> str:
+def create_refresh_token(
+    user_id: int,
+    remember_me: bool = False,
+    auth_time: int | None = None,
+) -> str:
     """Create a long-lived JWT refresh token.
 
     When ``remember_me`` is set the token uses the extended lifetime
@@ -71,8 +78,11 @@ def create_refresh_token(user_id: int, remember_me: bool = False) -> str:
         "sub": str(user_id),
         "type": "refresh",
         "remember": remember_me,
+        "jti": secrets.token_urlsafe(16),
         "exp": expire,
     }
+    if auth_time is not None:
+        payload["auth_time"] = auth_time
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 

@@ -141,7 +141,29 @@ app.include_router(octa_tutor_router)
 # ─── Health & DB Check ───────────────────────────────────────────────
 @app.get("/api/health", tags=["Health"])
 def health_check():
+    """Liveness probe: confirms the API process is responding."""
     return {"status": "healthy", "service": settings.APP_NAME}
+
+
+@app.get("/api/ready", tags=["Health"])
+def readiness_check():
+    """Readiness probe: only route traffic when the database is reachable."""
+    try:
+        try:
+            from backend.infrastructure.database.database import engine
+        except ModuleNotFoundError:
+            from infrastructure.database.database import engine
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ready", "service": settings.APP_NAME}
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "service": settings.APP_NAME},
+            headers={"Retry-After": "2"},
+        )
 
 
 @app.get("/api/db-check", tags=["Health"])
@@ -192,4 +214,3 @@ def db_check():
             "success": False,
             "error": "Unable to connect to database",
         }, 500
-
