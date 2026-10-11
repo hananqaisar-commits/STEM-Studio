@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Terminal as TerminalIcon, Trash2, Command, CheckCircle2 } from 'lucide-react';
 import { type VFSSnapshot, getAbsolutePath } from './vfs';
-import { scrollWithinContainer } from '../../../utils/scrollWithinContainer';
 
 interface HistoryItem {
   prompt: string;
@@ -33,8 +32,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   const [lineText, setLineText] = useState<string>('');
   const [historyIdx, setHistoryIdx] = useState<number>(-1);
 
-  const terminalEndRef = useRef<HTMLDivElement>(null);
-  const terminalOutputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentPath = getAbsolutePath(snapshot.nodes, snapshot.currentDirId);
@@ -45,13 +42,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   const focusInput = useCallback(() => {
     inputRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    if (terminalEndRef.current && history.length > 0) {
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      scrollWithinContainer(terminalOutputRef.current, terminalEndRef.current, reducedMotion ? 'auto' : 'smooth');
-    }
-  }, [history.length]);
 
   const clearTerminal = () => {
     setLineText('');
@@ -222,7 +212,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
       </div>
 
       {/* Terminal Output Log Area */}
-      <div ref={terminalOutputRef} className="linux-terminal__output space-y-2.5 text-xs">
+      <div className="linux-terminal__output space-y-2.5 text-xs">
         {/* Welcome Banner */}
         <div className="linux-terminal__welcome">
           <div className="linux-terminal__welcome-main">
@@ -280,7 +270,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
           />
         </div>
 
-        <div ref={terminalEndRef} />
       </div>
 
       {/* Quick Execution Shortcuts Strip */}

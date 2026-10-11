@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Play, Layers, RotateCcw,
   AlertTriangle, ChevronDown, Check, Copy, CopyCheck, Bug, FileCode2,
@@ -15,7 +15,6 @@ import {
   type CustomStubLanguage,
 } from '../../data/customCode';
 import { DEBUGGER_LANGUAGE_IDS, type DebuggerLanguage } from '../../data/languages';
-import { scrollWithinContainer } from '../../utils/scrollWithinContainer';
 import { LanguageDropdown } from './LanguageDropdown';
 import './Debugger.css';
 
@@ -160,9 +159,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [stackOpen, setStackOpen] = useState(true);
 
   const canRunCustom = true; // Always enable Reference Code vs Paste Code feature globally across all 144 algorithms
-  const activeLineRef = useRef<HTMLDivElement | null>(null);
-  const codeEditorRef = useRef<HTMLDivElement | null>(null);
-
   // Keep the selected language valid as the available set changes per algorithm.
   useEffect(() => {
     if (availableReferenceLangs.length === 0) return;
@@ -181,14 +177,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     setExecutionError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [algorithmKey, customLang, stubLang, stubEntry?.key]);
-
-  // Follow the executing line inside the code pane only. scrollIntoView would
-  // also move the document viewport when the pane sits below the fold.
-  useEffect(() => {
-    if (codeMode === 'default' && activeLine != null) {
-      scrollWithinContainer(codeEditorRef.current, activeLineRef.current);
-    }
-  }, [activeLine, codeMode, selectedLang]);
 
   const currentCodeLines = resolvedSnippets?.[selectedLang] ?? [];
   const hasCode = currentCodeLines.length > 0;
@@ -342,7 +330,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
       {/* ── Default mode: read-only viewer with gutter + highlight ─ */}
       {codeMode === 'default' && (
-        <div ref={codeEditorRef} className="code-editor-container">
+        <div className="code-editor-container">
           {hasCode ? (
             currentCodeLines.map((line, idx) => {
               const lineNumber = idx + 1;
@@ -351,7 +339,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               return (
                 <div
                   key={idx}
-                  ref={isCurrentLine ? activeLineRef : null}
                   className={`code-editor-line ${isCurrentLine ? 'active-execution-line' : ''}`}
                 >
                   <div

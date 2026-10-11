@@ -1,7 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { Code, Info, Clock, HardDrive, List, AlertTriangle, FileCode2 } from 'lucide-react';
 import { Octa } from '../mascot';
-import { scrollWithinContainer } from '../../utils/scrollWithinContainer';
 import '../mascot/Mascot.css';
 import './Layout.css';
 
@@ -49,9 +48,6 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
   currentStepIndex,
   isCustomCodeRunning = false,
 }) => {
-  const historyListRef = useRef<HTMLUListElement>(null);
-  const activeItemRef = useRef<HTMLLIElement>(null);
-
   const hasHistory = Array.isArray(steps) && steps.length > 0;
   const currentIdx = currentStepIndex ?? 0;
 
@@ -65,14 +61,6 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
         : hasHistory
           ? `EXECUTION TRACE • ${Math.min(currentIdx + 1, steps.length)} OF ${steps.length}`
           : 'CURRENT STEP EXPLANATION';
-
-  // Keep the active trace bullet visible inside its own list. Do not let
-  // playback scroll the document while the learner is exploring the page.
-  useEffect(() => {
-    if (hasHistory && historyListRef.current?.closest('details')?.open) {
-      scrollWithinContainer(historyListRef.current, activeItemRef.current);
-    }
-  }, [currentIdx, hasHistory]);
 
   const getStepText = (step: StepLike, idx: number) => {
     const text = step.description?.trim() || step.explanation?.trim();
@@ -129,11 +117,10 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
               <List size={13} />
               <span>Execution trace</span>
             </summary>
-            <ul ref={historyListRef} className="explanation-history-list">
+            <ul className="explanation-history-list">
               {historyBullets.map((bullet) => (
                 <li
                   key={bullet.idx}
-                  ref={bullet.isActive ? activeItemRef : null}
                   className={`history-bullet ${bullet.isActive ? 'is-active' : 'is-past'}`}
                 >
                   <span className="history-bullet-dot" aria-hidden="true" />
