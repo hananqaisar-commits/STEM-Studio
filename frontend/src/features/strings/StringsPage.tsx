@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
 import {
-  Type, Repeat, ArrowLeftRight, BarChart3, Maximize2, Sparkles, Trash2, Layers
+  Type, Repeat, ArrowLeftRight, BarChart3, Maximize2, Sparkles, Trash2, Layers, Plus, Delete
 } from 'lucide-react';
 import { StringRenderer } from './StringRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -67,6 +67,7 @@ export const StringsPage: React.FC = () => {
 
   const [inputStr, setInputStr] = useState<string>('racecar');
   const [secondStr, setSecondStr] = useState<string>('silent');
+  const [characterInput, setCharacterInput] = useState('');
 
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -74,7 +75,8 @@ export const StringsPage: React.FC = () => {
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
-    const str = inputStr || 'a';
+    if (!inputStr) return generateStringReverseSteps('');
+    const str = inputStr;
     switch (selectedAlg) {
       case 'palindrome':
         return generatePalindromeSteps(str);
@@ -181,6 +183,18 @@ export const StringsPage: React.FC = () => {
     setSecondStr('');
   };
 
+  const appendCharacter = (target: 'first' | 'second') => {
+    const character = [...characterInput][0];
+    if (!character) return;
+    if (target === 'first') setInputStr((value) => value + character);
+    else setSecondStr((value) => value + character);
+  };
+
+  const removeLastCharacter = (target: 'first' | 'second') => {
+    if (target === 'first') setInputStr((value) => [...value].slice(0, -1).join(''));
+    else setSecondStr((value) => [...value].slice(0, -1).join(''));
+  };
+
   const handleSample = () => {
     reset();
     quizSession.resetSession();
@@ -252,7 +266,9 @@ export const StringsPage: React.FC = () => {
           value={inputStr}
           onChange={(e) => setInputStr(e.target.value)}
           placeholder="Enter string..."
+          aria-label="Primary string input; edits update the visualization immediately"
         />
+        <span className="string-char-count">{[...inputStr].length} chars · live</span>
       </div>
 
       {selectedAlg === 'anagram' && (
@@ -260,12 +276,43 @@ export const StringsPage: React.FC = () => {
           <span>Second:</span>
           <input
             type="text"
-            value={secondStr}
-            onChange={(e) => setSecondStr(e.target.value)}
-            placeholder="Second string..."
-          />
-        </div>
+          value={secondStr}
+          onChange={(e) => setSecondStr(e.target.value)}
+          placeholder="Second string..."
+          aria-label="Second string input; edits update the visualization immediately"
+        />
+        <span className="string-char-count">{[...secondStr].length} chars</span>
+      </div>
       )}
+
+      <div className="string-quick-controls" role="group" aria-label="Quick character edits">
+        <label>
+          <span>Character</span>
+          <input
+            type="text"
+            value={characterInput}
+            onChange={(event) => setCharacterInput(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && appendCharacter('first')}
+            maxLength={2}
+            placeholder="e.g. x"
+            aria-label="Character to append"
+          />
+        </label>
+        <button type="button" className="bst-btn btn-mode" onClick={() => appendCharacter('first')} disabled={!characterInput}>
+          <Plus size={14} /><span>Append to first</span>
+        </button>
+        <button type="button" className="bst-btn btn-mode" onClick={() => removeLastCharacter('first')} disabled={!inputStr}>
+          <Delete size={14} /><span>Remove last</span>
+        </button>
+        {selectedAlg === 'anagram' && <>
+          <button type="button" className="bst-btn btn-mode" onClick={() => appendCharacter('second')} disabled={!characterInput}>
+            <Plus size={14} /><span>Append to second</span>
+          </button>
+          <button type="button" className="bst-btn btn-mode" onClick={() => removeLastCharacter('second')} disabled={!secondStr}>
+            <Delete size={14} /><span>Remove second last</span>
+          </button>
+        </>}
+      </div>
 
       <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear Input">

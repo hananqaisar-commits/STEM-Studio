@@ -509,6 +509,8 @@ export const SortingPage: React.FC = () => {
         <div className="renderer-section">
           <SortingRenderer
             currentStep={currentStep}
+            currentStepIndex={currentStepIndex}
+            totalSteps={totalSteps}
             onElementClick={handleBarElementClick}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
@@ -609,6 +611,8 @@ export const SortingPage: React.FC = () => {
       >
         <SortingRenderer
           currentStep={currentStep}
+          currentStepIndex={currentStepIndex}
+          totalSteps={totalSteps}
           onElementClick={handleBarElementClick}
         />
       </FullScreenCanvasModal>

@@ -10,6 +10,7 @@ export type LinkedListCategory =
   | 'removeNthFromEnd'
   | 'reverseSublist'
   | 'reverseHalf'
+  | 'reverseFromMiddle'
   | 'reverseKGroup'
   | 'swapPairs'
   | 'mergeSort'
@@ -78,6 +79,9 @@ export interface LinkedListStep {
   isQuizPoint?: boolean;
   quizData?: LinkedListQuizData;
   lanes?: LinkedListLane[];
+  stagingNode?: ListNodeItem;
+  stagingConnections?: NewConnection[];
+  promotedNodeId?: string;
 }
 
 export interface LinkedListLane {
@@ -123,6 +127,36 @@ export function createInitialNodes(
 
 function cloneNodes(nodes: ListNodeItem[]): ListNodeItem[] {
   return nodes.map((n) => ({ ...n, pointerLabels: [...(n.pointerLabels || [])] }));
+}
+
+function stageInsertedNodeSteps(steps: LinkedListStep[], originalNodes: ListNodeItem[]): LinkedListStep[] {
+  if (!steps.length) return steps;
+  const originalIds = new Set(originalNodes.map((node) => node.id));
+  const insertedNode = steps[steps.length - 1].nodes.find((node) => !originalIds.has(node.id));
+  if (!insertedNode) return steps;
+
+  return steps.map((step, index) => {
+    const newNode = step.nodes.find((node) => node.id === insertedNode.id);
+    if (!newNode) return step;
+    if (index === steps.length - 1) return { ...step, promotedNodeId: insertedNode.id };
+
+    const currentById = new Map(step.nodes.filter((node) => node.id !== insertedNode.id).map((node) => [node.id, node]));
+    const stableNodes = cloneNodes(originalNodes).map((original) => ({
+      ...original,
+      status: currentById.get(original.id)?.status ?? original.status,
+    }));
+    const stablePointers = Object.fromEntries(
+      Object.entries(step.pointers).filter(([, id]) => id !== insertedNode.id)
+    );
+    assignPointerLabels(stableNodes, stablePointers);
+
+    return {
+      ...step,
+      nodes: stableNodes,
+      stagingNode: { ...newNode, pointerLabels: ['NEW_NODE'] },
+      stagingConnections: step.newConnections,
+    };
+  });
 }
 
 function assignPointerLabels(nodes: ListNodeItem[], pointers: Record<string, string | null>) {
@@ -236,7 +270,7 @@ export function generateInsertHeadSteps(
     listType: type,
   });
 
-  return steps;
+  return stageInsertedNodeSteps(steps, currentNodes);
 }
 
 // ─── 2. SINGLY LINKED LIST: INSERT AT TAIL ────────────────────────────────────────
@@ -342,7 +376,7 @@ export function generateInsertTailSteps(
     listType: type,
   });
 
-  return steps;
+  return stageInsertedNodeSteps(steps, currentNodes);
 }
 
 // ─── 3. SINGLY LINKED LIST: DELETE AT HEAD ────────────────────────────────────────
@@ -505,7 +539,7 @@ export function generateInsertAtIndexSteps(
   linkedNew.status = 'success';
   assignPointerLabels(linked, { head: headId, tail: tailId });
 
-  return [locateStep, allocateStep, {
+  return stageInsertedNodeSteps([locateStep, allocateStep, {
     nodes: linked,
     headId,
     tailId,
@@ -529,7 +563,7 @@ export function generateInsertAtIndexSteps(
       ] : []),
     ],
     listType: type,
-  }];
+  }], currentNodes);
 }
 
 /** Delete a node at a zero-based index and show the bypass before freeing it. */
@@ -632,47 +666,117 @@ export function generateReverseSteps(
 
   if (type !== 'singly') {
     const steps: LinkedListStep[] = [];
-    const originalNodes = cloneNodes(currentNodes);
-    const firstNodeId = originalNodes[0].id;
-    const lastNodeId = originalNodes[originalNodes.length - 1].id;
-    assignPointerLabels(originalNodes, { head: firstNodeId, tail: lastNodeId });
+    const workingNodes = cloneNodes(currentNodes);
+    const firstNodeId = workingNodes[0].id;
+    const lastNodeId = workingNodes[workingNodes.length - 1].id;
+    let currentId: string | null = firstNodeId;
+    let previousId: string | null = isCircularList(type) ? lastNodeId : null;
+    let nextId: string | null = null;
+    let visits = 0;
+    const labelPointers = () => ({ head: firstNodeId, tail: lastNodeId, prev: previousId, curr: currentId, next: nextId });
+    assignPointerLabels(workingNodes, labelPointers());
     steps.push({
-      nodes: cloneNodes(originalNodes),
+      nodes: cloneNodes(workingNodes),
       headId: firstNodeId,
       tailId: lastNodeId,
-      pointers: { head: firstNodeId, tail: lastNodeId },
+      pointers: labelPointers(),
       phase: 'Inspect List Boundaries',
       explanation: hasPreviousPointers(type)
-        ? 'Reverse the traversal direction by swapping each node’s next and previous neighbors.'
-        : 'Reverse the forward links while keeping the circular list connected.',
+        ? 'Keep each node in place. For every node, save its old next pointer, then swap that node’s next and previous links.'
+        : isCircularList(type)
+          ? 'Start prev at the old tail so reversing each next pointer preserves a circular chain.'
+          : 'Keep each node in place. Save curr.next, redirect curr.next to prev, then advance prev and curr.',
       codeLine: 2,
       highlightedNodeIds: [firstNodeId, lastNodeId],
       listType: type,
     });
 
-    const reversedNodes = cloneNodes([...currentNodes].reverse());
-    reversedNodes.forEach((node, index) => {
-      node.nextId = index < reversedNodes.length - 1
-        ? reversedNodes[index + 1].id
-        : isCircularList(type) ? reversedNodes[0].id : null;
-      node.prevId = hasPreviousPointers(type)
-        ? index > 0
-          ? reversedNodes[index - 1].id
-          : isCircularList(type) ? reversedNodes[reversedNodes.length - 1].id : null
-        : null;
-      node.status = 'success';
-    });
-    const reversedHeadId = reversedNodes[0].id;
-    const reversedTailId = reversedNodes[reversedNodes.length - 1].id;
+    while (currentId && visits < workingNodes.length) {
+      const current = workingNodes.find((node) => node.id === currentId);
+      if (!current) break;
+      const oldNextId = current.nextId;
+      const oldPrevId = current.prevId ?? null;
+      nextId = oldNextId;
+      current.status = 'active';
+      assignPointerLabels(workingNodes, labelPointers());
+      steps.push({
+        nodes: cloneNodes(workingNodes),
+        headId: firstNodeId,
+        tailId: lastNodeId,
+        pointers: labelPointers(),
+        phase: 'Save Original Next',
+        explanation: `Save ${current.value}.next (${oldNextId ? `N${workingNodes.findIndex((node) => node.id === oldNextId) + 1}` : 'NULL'}) before changing this node’s links.`,
+        codeLine: 4,
+        highlightedNodeIds: [current.id],
+        listType: type,
+      });
+
+      const brokenConnections = [
+        ...(oldNextId ? [{ fromId: current.id, toId: oldNextId, type: 'next' as const }] : []),
+        ...(hasPreviousPointers(type) && oldPrevId ? [{ fromId: current.id, toId: oldPrevId, type: 'prev' as const }] : []),
+      ];
+      if (hasPreviousPointers(type)) {
+        current.nextId = oldPrevId;
+        current.prevId = oldNextId;
+      } else {
+        current.nextId = previousId;
+      }
+      current.status = 'comparing';
+      assignPointerLabels(workingNodes, labelPointers());
+      const newConnections = [
+        ...(current.nextId ? [{ fromId: current.id, toId: current.nextId, type: 'next' as const }] : []),
+        ...(hasPreviousPointers(type) && current.prevId ? [{ fromId: current.id, toId: current.prevId, type: 'prev' as const }] : []),
+      ];
+      steps.push({
+        nodes: cloneNodes(workingNodes),
+        headId: firstNodeId,
+        tailId: lastNodeId,
+        pointers: labelPointers(),
+        phase: hasPreviousPointers(type) ? 'Swap This Node’s Links' : 'Reverse Current Link',
+        explanation: hasPreviousPointers(type)
+          ? `${current.value}.next now points to ${current.nextId ? `N${workingNodes.findIndex((node) => node.id === current.nextId) + 1}` : 'NULL'}, and .prev points to ${current.prevId ? `N${workingNodes.findIndex((node) => node.id === current.prevId) + 1}` : 'NULL'}.`
+          : `${current.value}.next now points to ${current.nextId ? `N${workingNodes.findIndex((node) => node.id === current.nextId) + 1}` : 'NULL'} (${current.nextId ? 'the previous node' : 'NULL'}).`,
+        codeLine: 5,
+        highlightedNodeIds: [current.id],
+        brokenConnections,
+        newConnections,
+        listType: type,
+      });
+
+      previousId = current.id;
+      currentId = oldNextId;
+      nextId = null;
+      visits += 1;
+      assignPointerLabels(workingNodes, labelPointers());
+      steps.push({
+        nodes: cloneNodes(workingNodes),
+        headId: firstNodeId,
+        tailId: lastNodeId,
+        pointers: labelPointers(),
+        phase: 'Advance Pointers',
+        explanation: visits >= workingNodes.length && isCircularList(type)
+          ? 'The saved link returned to the starting node after every node was visited once. Stop here so the circular list is not processed twice.'
+          : currentId
+          ? `Advance along the saved link: prev = N${workingNodes.findIndex((node) => node.id === previousId) + 1}, curr = N${workingNodes.findIndex((node) => node.id === currentId) + 1}.`
+          : 'The saved next pointer was NULL or returned to the starting node; every node has now been processed once.',
+        codeLine: 6,
+        highlightedNodeIds: [previousId, ...(currentId ? [currentId] : [])],
+        listType: type,
+      });
+    }
+
+    const reversedNodes = cloneNodes(workingNodes).map((node) => ({ ...node, status: 'success' as const }));
+    const reversedHeadId = lastNodeId;
+    const reversedTailId = firstNodeId;
     assignPointerLabels(reversedNodes, { head: reversedHeadId, tail: reversedTailId });
     steps.push({
       nodes: reversedNodes,
       headId: reversedHeadId,
       tailId: reversedTailId,
       pointers: { head: reversedHeadId, tail: reversedTailId },
-      phase: 'Reverse Links',
-      explanation: `Reversed the list. The new head is ${reversedNodes[0].value}; all ${hasPreviousPointers(type) ? 'next and previous links' : 'next links'} now follow the opposite direction.`,
-      codeLine: 5,
+      phase: 'Update Head and Tail',
+      explanation: `All node links have been rewired one at a time. Set head to the old tail (${reversedNodes.find((node) => node.id === reversedHeadId)?.value}) and tail to the old head (${reversedNodes.find((node) => node.id === reversedTailId)?.value}).`,
+      codeLine: 8,
       highlightedNodeIds: [reversedHeadId, reversedTailId],
       listType: type,
     });
@@ -687,12 +791,12 @@ export function generateReverseSteps(
   let prevId: string | null = null;
   let currIndex = 0;
 
-  assignPointerLabels(nodes, { head: nodes[0].id, curr: nodes[0].id, prev: null });
+  assignPointerLabels(nodes, { head: nodes[0].id, tail: nodes[nodes.length - 1].id, curr: nodes[0].id, prev: null, next: null });
   steps.push({
     nodes: cloneNodes(nodes),
     headId: nodes[0].id,
     tailId: nodes[nodes.length - 1].id,
-    pointers: { head: nodes[0].id, curr: nodes[0].id, prev: null },
+    pointers: { head: nodes[0].id, tail: nodes[nodes.length - 1].id, curr: nodes[0].id, prev: null, next: null },
     phase: 'Initialize Pointers',
     explanation: 'Initialize three pointers: prev = NULL, curr = head, next = NULL.',
     codeLine: 2,
@@ -709,7 +813,7 @@ export function generateReverseSteps(
     const nextId = nextIndex < workingNodes.length ? workingNodes[nextIndex].id : null;
 
     // Step A: Save next pointer: next = curr.next
-    assignPointerLabels(workingNodes, { prev: prevId, curr: currId, next: nextId });
+    assignPointerLabels(workingNodes, { head: nodes[0].id, tail: nodes[nodes.length - 1].id, prev: prevId, curr: currId, next: nextId });
     workingNodes[currIndex].status = 'active';
 
     steps.push({
@@ -759,7 +863,7 @@ export function generateReverseSteps(
     prevId = currId;
     currIndex++;
 
-    assignPointerLabels(workingNodes, { prev: prevId, curr: nextId, next: null });
+    assignPointerLabels(workingNodes, { head: nodes[0].id, tail: nodes[nodes.length - 1].id, prev: prevId, curr: nextId, next: null });
     steps.push({
       nodes: cloneNodes(workingNodes),
       headId: nodes[0].id,
@@ -1267,7 +1371,7 @@ export function generateDoublyInsertHeadSteps(
     listType: 'doubly',
   });
 
-  return steps;
+  return stageInsertedNodeSteps(steps, currentNodes);
 }
 
 // ─── INTERVIEW PROBLEMS: RANGE / GROUP REVERSALS ────────────────────────────────
@@ -1390,6 +1494,100 @@ export function generateReverseHalfSteps(
   const right = half === 'first' ? firstHalfLength - 1 : currentNodes.length - 1;
   if (right < left) return [];
   return generateReverseRangeSteps(currentNodes, left, right, `Reverse the ${half} half`, '0-based');
+}
+
+/** Reverse the suffix starting at the middle; even-length lists use the upper middle node. */
+export function generateReverseFromMiddleSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+  if (currentNodes.length < 2) return [];
+  const middleIndex = Math.floor(currentNodes.length / 2);
+  return generateReverseRangeSteps(
+    currentNodes,
+    middleIndex,
+    currentNodes.length - 1,
+    'Reverse the suffix starting at the middle node',
+    '0-based',
+  );
+}
+
+/** Check a singly linked list by reversing the second half, comparing, then restoring it. */
+export function generatePalindromeListSteps(currentNodes: ListNodeItem[]): LinkedListStep[] {
+  if (currentNodes.length === 0) return [];
+  const original = cloneNodes(currentNodes);
+  const count = original.length;
+  if (count === 1) {
+    return [problemSnapshot(original, 'Single node is a palindrome', 'A list with one node reads the same from both directions. No links need to change.', 1, { head: 0 }, [0], 'success')];
+  }
+
+  const secondHalfStart = Math.ceil(count / 2);
+  const steps: LinkedListStep[] = [problemSnapshot(
+    original,
+    'Find the midpoint',
+    `Use slow and fast pointers to find the midpoint. The second half starts at index ${secondHalfStart}; an odd-length list keeps its center node in the first half.`,
+    1,
+    { slow: Math.floor((count - 1) / 2), fast: count - 1 },
+    [Math.floor((count - 1) / 2), count - 1],
+  )];
+
+  const reversedSteps = generateReverseRangeSteps(
+    original,
+    secondHalfStart,
+    count - 1,
+    'Reverse the second half for comparison',
+    '0-based',
+  );
+  steps.push(...reversedSteps.slice(1));
+  const reversed = reversedSteps[reversedSteps.length - 1]?.nodes ?? original;
+  let isPalindrome = true;
+
+  for (let index = 0; index < Math.floor(count / 2); index += 1) {
+    const leftValue = original[index].value;
+    const rightValue = original[count - 1 - index].value;
+    const matches = leftValue === rightValue;
+    steps.push(problemSnapshot(
+      reversed,
+      `Compare ${leftValue} with ${rightValue}`,
+      matches
+        ? `The outer pair matches (${leftValue} = ${rightValue}). Continue inward.`
+        : `The pair differs (${leftValue} ≠ ${rightValue}), so this list is not a palindrome.`,
+      7,
+      { left: index, right: secondHalfStart + index },
+      [index, secondHalfStart + index],
+      matches ? 'comparing' : 'danger',
+      index === 0,
+      index === 0 ? {
+        prompt: `Do the outer values ${leftValue} and ${rightValue} match?`,
+        options: ['Yes, they match', 'No, they differ'],
+        correctIndex: matches ? 0 : 1,
+        explanation: 'A linked-list palindrome must match each symmetric pair from the ends toward the center.',
+      } : undefined,
+    ));
+    if (!matches) {
+      isPalindrome = false;
+      break;
+    }
+  }
+
+  const restoreSteps = generateReverseRangeSteps(
+    reversed,
+    secondHalfStart,
+    count - 1,
+    'Restore the original second half',
+    '0-based',
+  );
+  steps.push(...restoreSteps.slice(1));
+
+  steps.push(problemSnapshot(
+    original,
+    isPalindrome ? 'Palindrome confirmed; input restored' : 'Not a palindrome; input restored',
+    isPalindrome
+      ? 'Every symmetric pair matched, and the original links are back in place.'
+      : 'A mismatch proves the list is not a palindrome. The original links are back in place.',
+    10,
+    { head: 0, tail: count - 1 },
+    [0, count - 1],
+    isPalindrome ? 'success' : 'danger',
+  ));
+  return steps;
 }
 
 export function generateReverseKGroupSteps(currentNodes: ListNodeItem[], groupSize: number): LinkedListStep[] {

@@ -8,6 +8,7 @@ import {
 import { ArrayRenderer } from './ArrayRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { FloatingController } from '../../components/controls/FloatingController';
+import { LiveNumberSequenceControls } from '../../components/controls/LiveNumberSequenceControls';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
@@ -230,6 +231,14 @@ export const ArraysPage: React.FC = () => {
     syncTargetsForArray(newArr);
   };
 
+  const handleLiveArrayChange = (newArr: number[]) => {
+    reset();
+    setInitialArray(newArr);
+    setArraySize(newArr.length);
+    setRawArrayInput(newArr.join(', '));
+    if (newArr.length > 0) setWindowSize((size) => Math.min(size, newArr.length));
+  };
+
   /* ── Transfer challenge ("Prove You Understand") ─────────────────
      Fresh array + fresh targets, predicted cold. startChallenge() must
      fire in the same handler as the input change so the armed challenge
@@ -306,12 +315,11 @@ export const ArraysPage: React.FC = () => {
           value={rawArrayInput}
           onChange={(e) => {
             setRawArrayInput(e.target.value);
-            const res = parseNumberList(e.target.value);
+            const res = parseNumberList(e.target.value, { maxCount: 30 });
             if (res.isValid && res.values.length > 0) {
               const newArr = res.values;
               setArraySize(newArr.length);
               setInitialArray(newArr);
-              syncTargetsForArray(newArr);
               reset();
             }
           }}
@@ -319,7 +327,12 @@ export const ArraysPage: React.FC = () => {
           placeholder="e.g. 50, 20, 70, 10"
           style={{ minWidth: '150px' }}
         />
+        {rawArrayInput.trim() && !parseNumberList(rawArrayInput, { maxCount: 30 }).isValid && (
+          <span className="live-sequence-input-error" role="status">{parseNumberList(rawArrayInput, { maxCount: 30 }).error}</span>
+        )}
       </div>
+
+      <LiveNumberSequenceControls values={initialArray} onChange={handleLiveArrayChange} label="Array operations" />
 
       <div className="bst-input-group">
         <span>Pattern:</span>
@@ -410,9 +423,10 @@ export const ArraysPage: React.FC = () => {
             <span>Window Size:</span>
             <input
               type="range"
-              min={2}
-              max={Math.min(arraySize, 10)}
-              value={windowSize}
+              min={initialArray.length > 0 ? 1 : 0}
+              max={Math.max(1, Math.min(initialArray.length, 10))}
+              value={Math.max(1, Math.min(windowSize, initialArray.length || 1))}
+              disabled={initialArray.length === 0}
               onChange={(e) => {
                 const val = parseInt(e.target.value);
                 setWindowSize(val);
