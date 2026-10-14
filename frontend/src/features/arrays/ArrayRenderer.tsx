@@ -34,7 +34,21 @@ export const ArrayRenderer: React.FC<ArrayRendererProps> = ({
     );
   }
 
-  const { array, comparingIndices = [], swappingIndices = [], sortedIndices = [], pivotIndex } = currentStep;
+  const {
+    array,
+    comparingIndices = [],
+    swappingIndices = [],
+    sortedIndices = [],
+    pivotIndex,
+    windowStart,
+    windowEnd,
+    windowSum,
+    enteringIndex,
+    leavingIndex,
+    operation,
+  } = currentStep;
+  const hasWindow = typeof windowStart === 'number' && typeof windowEnd === 'number';
+  const windowCount = hasWindow ? Math.max(0, windowEnd - windowStart + 1) : 0;
   const max = Math.max(...array, 1);
 
   const getElementState = (index: number): ElementState => {
@@ -59,6 +73,18 @@ export const ArrayRenderer: React.FC<ArrayRendererProps> = ({
           </button>
         )}
       </div>
+      {hasWindow && (
+        <div className="array-window-readout" aria-live="polite">
+          <span className="array-window-readout-title">SLIDING WINDOW</span>
+          <span className="array-window-range">
+            {windowCount > 0 ? `[${windowStart}, ${windowEnd}]` : 'empty window'}
+          </span>
+          <span className="array-window-sum">sum = {windowSum}</span>
+          {typeof leavingIndex === 'number' && <span className="array-window-event array-window-out">OUT arr[{leavingIndex}]</span>}
+          {typeof enteringIndex === 'number' && <span className="array-window-event array-window-in">IN arr[{enteringIndex}]</span>}
+          {operation && <span className="array-window-operation">{operation}</span>}
+        </div>
+      )}
       <div ref={canvasRef} className="bars-canvas">
         {array.map((value, index) => {
           const heightPercent = (value / max) * 100;
@@ -66,11 +92,20 @@ export const ArrayRenderer: React.FC<ArrayRendererProps> = ({
           return (
             <div
               key={barIds[index]}
-              className="interactive-bar-wrapper"
+              className={[
+                'interactive-bar-wrapper',
+                hasWindow && index >= windowStart! && index <= windowEnd! ? 'array-window-cell' : '',
+                hasWindow && index === windowStart ? 'array-window-start' : '',
+                hasWindow && index === windowEnd ? 'array-window-end' : '',
+                index === enteringIndex ? 'array-window-entering' : '',
+                index === leavingIndex ? 'array-window-leaving' : '',
+              ].filter(Boolean).join(' ')}
               data-bar-id={barIds[index]}
               onClick={() => onElementClick?.(index, value)}
             >
               <Bar value={value} heightPercent={heightPercent} state={state} showValue={array.length <= 25} />
+              {index === enteringIndex && <span className="array-window-marker array-window-marker-in">IN</span>}
+              {index === leavingIndex && <span className="array-window-marker array-window-marker-out">OUT</span>}
               {array.length <= 30 && <span className="bar-index-label">[{index}]</span>}
             </div>
           );

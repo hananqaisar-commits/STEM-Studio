@@ -40,6 +40,7 @@ import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
+import { LiveNumberSequenceControls } from '../../components/controls/LiveNumberSequenceControls';
 import { useTutorContext } from '../../contexts/TutorContext';
 import './BinarySearch.css';
 
@@ -61,6 +62,24 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
   { id: 'findPeakElement', name: 'Find Peak Element', group: 'Extremum', description: 'Slope binary search to find a local maximum' },
 ];
 
+function buildSearchSteps(category: BinarySearchCategory, values: number[], target: number): BinarySearchStep[] {
+  if (!values.length) return [];
+  if (category === 'lowerBound') return generateLowerBoundSteps(values, target);
+  if (category === 'upperBound') return generateUpperBoundSteps(values, target);
+  if (category === 'searchRotatedArray') return generateRotatedSearchSteps(values, target);
+  if (category === 'findPeakElement') return generatePeakElementSteps(values);
+  return generateBinarySearchSteps(values, target);
+}
+
+function isValidRotatedSortedArray(values: number[]): boolean {
+  let descents = 0;
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index - 1] > values[index]) descents += 1;
+    if (descents > 1) return false;
+  }
+  return true;
+}
+
 export const BinarySearchPage: React.FC = () => {
   const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<BinarySearchCategory>('binarySearch');
@@ -76,6 +95,7 @@ export const BinarySearchPage: React.FC = () => {
   const [array, setArray] = useState<number[]>([4, 8, 15, 23, 42, 56, 77, 89, 94]);
   const [targetInput, setTargetInput] = useState<string>('42');
   const [customArrayInput, setCustomArrayInput] = useState<string>('4, 8, 15, 23, 42, 56, 77, 89, 94');
+  const [arrayInputError, setArrayInputError] = useState<string | null>(null);
 
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -195,29 +215,32 @@ export const BinarySearchPage: React.FC = () => {
   // ─── ACTION HANDLERS ────────────────────────────────────────────────────────
 
   const handleRunSearch = () => {
-    const target = Number(targetInput) || 0;
-    let steps: BinarySearchStep[] = [];
-
-    if (category === 'lowerBound') {
-      steps = generateLowerBoundSteps(array, target);
-    } else if (category === 'upperBound') {
-      steps = generateUpperBoundSteps(array, target);
-    } else if (category === 'searchRotatedArray') {
-      steps = generateRotatedSearchSteps(array, target);
-    } else if (category === 'findPeakElement') {
-      steps = generatePeakElementSteps(array);
-    } else {
-      steps = generateBinarySearchSteps(array, target);
+    const target = targetInput.trim() ? Number(targetInput) : NaN;
+    if (category !== 'findPeakElement' && !Number.isFinite(target)) {
+      setArrayInputError('Enter a numeric target to run this search.');
+      return;
     }
-
-    setActiveSteps(steps);
+    setArrayInputError(null);
+    setActiveSteps(buildSearchSteps(category, array, Number.isFinite(target) ? target : 0));
     quizSession.resetSession();
   };
 
   const handleApplyCustomArray = () => {
-    const parsed = parseNumberList(customArrayInput).values;
+    const result = parseNumberList(customArrayInput, { maxCount: 30 });
+    if (!result.isValid) {
+      setArrayInputError(result.error ?? 'Enter a comma-separated list of numbers.');
+      return;
+    }
+    const parsed = result.values;
+    if (parsed.length === 0) {
+      setArrayInputError('Enter at least one value, or use Empty to clear the array.');
+      return;
+    }
 
-    if (parsed.length === 0) return;
+    if (category === 'searchRotatedArray' && !isValidRotatedSortedArray(parsed)) {
+      setArrayInputError('Rotated search needs a sorted array rotated at one pivot. Correct the order or choose another search mode.');
+      return;
+    }
 
     if (category !== 'searchRotatedArray' && category !== 'findPeakElement') {
       parsed.sort((a, b) => a - b);
@@ -225,22 +248,32 @@ export const BinarySearchPage: React.FC = () => {
 
     setArray(parsed);
     setCustomArrayInput(parsed.join(', '));
-    const target = Number(targetInput) || parsed[Math.floor(parsed.length / 2)];
+    const parsedTarget = targetInput.trim() ? Number(targetInput) : NaN;
+    const target = Number.isFinite(parsedTarget) ? parsedTarget : parsed[Math.floor(parsed.length / 2)];
     setTargetInput(String(target));
-
-    const steps =
-      category === 'lowerBound'
-        ? generateLowerBoundSteps(parsed, target)
-        : category === 'upperBound'
-        ? generateUpperBoundSteps(parsed, target)
-        : category === 'searchRotatedArray'
-        ? generateRotatedSearchSteps(parsed, target)
-        : category === 'findPeakElement'
-        ? generatePeakElementSteps(parsed)
-        : generateBinarySearchSteps(parsed, target);
-
-    setActiveSteps(steps);
+    setActiveSteps(buildSearchSteps(category, parsed, target));
+    setArrayInputError(null);
     quizSession.resetSession();
+  };
+
+  const handleLiveArrayChange = (values: number[]): boolean => {
+    if (category === 'searchRotatedArray' && !isValidRotatedSortedArray(values)) {
+      setArrayInputError('This edit breaks the single-pivot sorted order required by rotated-array search.');
+      return false;
+    }
+    const nextValues = category !== 'searchRotatedArray' && category !== 'findPeakElement'
+      ? [...values].sort((a, b) => a - b)
+      : values;
+    setArray(nextValues);
+    setCustomArrayInput(nextValues.join(', '));
+    setArrayInputError(null);
+    const target = targetInput.trim() ? Number(targetInput) : NaN;
+    setActiveSteps(category === 'findPeakElement' || Number.isFinite(target)
+      ? buildSearchSteps(category, nextValues, Number.isFinite(target) ? target : 0)
+      : []);
+    reset();
+    quizSession.resetSession();
+    return true;
   };
 
   const handleRandomize = () => {
@@ -318,6 +351,8 @@ export const BinarySearchPage: React.FC = () => {
   const snippetKey =
     category === 'lowerBound'
       ? 'lowerBound'
+      : category === 'upperBound'
+      ? 'upperBound'
       : category === 'searchRotatedArray'
       ? 'searchRotatedArray'
       : 'binarySearch';
@@ -365,12 +400,21 @@ export const BinarySearchPage: React.FC = () => {
         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
           Target:
         </span>
-        <input
-          type="text"
-          className="bs-input"
-          value={targetInput}
-          onChange={(e) => setTargetInput(e.target.value)}
-        />
+          <input
+            type="text"
+            className="bs-input"
+            value={targetInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              setTargetInput(value);
+              const target = value.trim() ? Number(value) : NaN;
+              setActiveSteps(category === 'findPeakElement'
+                ? buildSearchSteps(category, array, 0)
+                : Number.isFinite(target) ? buildSearchSteps(category, array, target) : []);
+              reset();
+              quizSession.resetSession();
+            }}
+          />
       </div>
 
       {/* Array Input */}
@@ -390,11 +434,48 @@ export const BinarySearchPage: React.FC = () => {
             fontFamily: 'monospace',
           }}
           value={customArrayInput}
-          onChange={(e) => setCustomArrayInput(e.target.value)}
+          onChange={(e) => {
+            const raw = e.target.value;
+            setCustomArrayInput(raw);
+            const parsed = parseNumberList(raw, { maxCount: 30 });
+            if (parsed.isValid && parsed.values.length > 0) {
+              if (category === 'searchRotatedArray' && !isValidRotatedSortedArray(parsed.values)) {
+                setArrayInputError('Rotated search needs a sorted array rotated at one pivot. Correct the order or choose another search mode.');
+                return;
+              }
+              const nextValues = category !== 'searchRotatedArray' && category !== 'findPeakElement'
+                ? [...parsed.values].sort((a, b) => a - b)
+                : parsed.values;
+              setArray(nextValues);
+              const target = targetInput.trim() ? Number(targetInput) : NaN;
+              setActiveSteps(category === 'findPeakElement' || Number.isFinite(target)
+                ? buildSearchSteps(category, nextValues, Number.isFinite(target) ? target : 0)
+                : []);
+              setArrayInputError(null);
+              reset();
+              quizSession.resetSession();
+            } else if (raw.trim()) {
+              setArrayInputError(parsed.error ?? 'Enter a comma-separated list of numbers.');
+            } else {
+              setArrayInputError(null);
+            }
+          }}
           onBlur={handleApplyCustomArray}
           onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomArray()}
         />
       </div>
+
+      <LiveNumberSequenceControls
+        values={array}
+        onChange={handleLiveArrayChange}
+        label="Search array operations"
+        hint={category === 'searchRotatedArray'
+          ? 'Indexes start at 0. The array must remain sorted around one rotation pivot.'
+          : category === 'findPeakElement'
+          ? 'Indexes start at 0. Peak search accepts any numeric sequence.'
+          : 'Indexes start at 0. Standard binary search modes automatically keep values sorted.'}
+      />
+      {arrayInputError && <span className="live-sequence-input-error" role="status">{arrayInputError}</span>}
 
       <button
         className="ll-btn ll-btn-primary"

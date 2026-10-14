@@ -34,7 +34,9 @@ import {
   generateJosephusSteps,
   generateReverseSublistSteps,
   generateReverseHalfSteps,
+  generateReverseFromMiddleSteps,
   generateReverseKGroupSteps,
+  generatePalindromeListSteps,
   generateSwapPairsSteps,
   generateMergeSortSteps,
   generateAddTwoNumbersSteps,
@@ -66,6 +68,8 @@ import { parseNumberList } from '../../utils/batchInputParser';
 import { useTutorContext } from '../../contexts/TutorContext';
 import { StateSummaryBar, type StateSummaryItem } from '../../components/common/StateSummaryBar';
 import { DefinitionCardPanel, type DefinitionItem } from '../../components/common/DefinitionCardPanel';
+import { traceRemoveNthFromEndSource } from './linkedListCodeTrace';
+import type { CustomLanguage } from '../../engine/customCodeTemplates';
 
 interface AlgorithmMeta {
   id: LinkedListCategory;
@@ -82,7 +86,9 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
   { id: 'josephus', name: 'Josephus Problem', group: 'Circular', description: 'Count around a circular list, remove every kth node, and find the survivor' },
   { id: 'reverseSublist', name: 'Reverse Sublist (L–R)', group: 'Classic Problems', description: 'Reverse only an inclusive 1-based range while preserving the prefix and suffix' },
   { id: 'reverseHalf', name: 'Reverse a Half', group: 'Classic Problems', description: 'Choose and reverse the first or second half; the middle belongs to the first half' },
+  { id: 'reverseFromMiddle', name: 'Reverse from Middle', group: 'Classic Problems', description: 'Reverse from the midpoint through the tail; even lengths use the upper middle node' },
   { id: 'reverseKGroup', name: 'Reverse in K Groups', group: 'Classic Problems', description: 'Reverse complete groups of k nodes and leave a short final group unchanged' },
+  { id: 'palindrome', name: 'Palindrome Check', group: 'Classic Problems', description: 'Reverse the second half, compare symmetric nodes, then restore the original list' },
   { id: 'swapPairs', name: 'Swap Nodes in Pairs', group: 'Classic Problems', description: 'Swap adjacent node links in place without swapping their values' },
   { id: 'mergeSort', name: 'Merge Sort a List', group: 'Classic Problems', description: 'Stable bottom-up merge sort with O(n log n) time' },
   { id: 'addTwoNumbers', name: 'Add Two Numbers', group: 'Classic Problems', description: 'Add reverse-order digit lists with a carry at each position' },
@@ -97,7 +103,7 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
 ];
 
 const isClassicProblem = (category: LinkedListCategory) =>
-  ['reverseSublist', 'reverseHalf', 'reverseKGroup', 'swapPairs', 'mergeSort', 'addTwoNumbers', 'removeNthFromEnd', 'splitHalves', 'splitKParts', 'mergeKSorted', 'lruCache'].includes(category);
+  ['reverseSublist', 'reverseHalf', 'reverseFromMiddle', 'reverseKGroup', 'palindrome', 'swapPairs', 'mergeSort', 'addTwoNumbers', 'removeNthFromEnd', 'splitHalves', 'splitKParts', 'mergeKSorted', 'lruCache'].includes(category);
 
 const parseListValues = (input: string): (number | string)[] => input
   .split(/[\s,;]+/)
@@ -189,6 +195,8 @@ export const LinkedListPage: React.FC = () => {
       ? [4, 2, 1, 3, 5]
       : topic === 'lruCache'
       ? [1, 2]
+      : topic === 'palindrome'
+      ? [1, 2, 3, 2, 1]
       : [10, 20, 30, 40];
     const nodes = createInitialNodes(values, kind, topic === 'detectCycle' ? 2 : -1);
     setCategory(topic);
@@ -260,7 +268,9 @@ export const LinkedListPage: React.FC = () => {
       josephus: 'Circular Elimination',
       reverseSublist: 'Inclusive Range Reverse',
       reverseHalf: 'Selected Half Reverse',
+      reverseFromMiddle: 'Reverse from Middle to Tail',
       reverseKGroup: 'Complete K-Group Reverse',
+      palindrome: 'Symmetric Node Comparison',
       swapPairs: 'Link Pair Swap',
       mergeSort: 'Stable Merge Sort',
       addTwoNumbers: 'Digit Carry Addition',
@@ -339,6 +349,20 @@ export const LinkedListPage: React.FC = () => {
     revisionData: buildRevisionData(category),
   });
 
+  const runPastedRemoveNthFromEnd = (code: string, language: CustomLanguage) => {
+    const runNodes = createInitialNodes(parseListValues(inputValue), 'singly');
+    const trace = traceRemoveNthFromEndSource(code, language, runNodes, Number(nthFromEnd));
+    if (!trace.error) {
+      setInputError(null);
+      setBaseNodes(runNodes);
+      setActiveSteps(trace.steps);
+      reset();
+      quizSession.resetSession();
+      play();
+    }
+    return trace;
+  };
+
   // Handle Category Switching
   const handleSelectCategory = (cat: LinkedListCategory) => {
     setCategory(cat);
@@ -383,6 +407,8 @@ export const LinkedListPage: React.FC = () => {
     } else if (isClassicProblem(cat)) {
       const sampleValues = cat === 'addTwoNumbers'
         ? [2, 4, 3]
+        : cat === 'palindrome'
+        ? [1, 2, 3, 2, 1]
         : cat === 'mergeKSorted'
         ? [1, 4, 7]
         : cat === 'mergeSort'
@@ -655,6 +681,8 @@ export const LinkedListPage: React.FC = () => {
       steps = generateReverseSublistSteps(nextBaseNodes, left, right);
     } else if (category === 'reverseHalf') {
       steps = generateReverseHalfSteps(nextBaseNodes, selectedHalf);
+    } else if (category === 'reverseFromMiddle') {
+      steps = generateReverseFromMiddleSteps(nextBaseNodes);
     } else if (category === 'reverseKGroup') {
       const k = Number(groupSize);
       if (!Number.isInteger(k) || k < 1 || k > values.length) {
@@ -662,6 +690,8 @@ export const LinkedListPage: React.FC = () => {
         return;
       }
       steps = generateReverseKGroupSteps(nextBaseNodes, k);
+    } else if (category === 'palindrome') {
+      steps = generatePalindromeListSteps(nextBaseNodes);
     } else if (category === 'swapPairs') {
       steps = generateSwapPairsSteps(nextBaseNodes);
     } else if (category === 'mergeSort') {
@@ -724,6 +754,8 @@ export const LinkedListPage: React.FC = () => {
   const handleResetClassicInputs = () => {
     const values = category === 'addTwoNumbers'
       ? [2, 4, 3]
+      : category === 'palindrome'
+      ? [1, 2, 3, 2, 1]
       : category === 'mergeKSorted'
       ? [1, 4, 7]
       : category === 'mergeSort'
@@ -810,6 +842,20 @@ export const LinkedListPage: React.FC = () => {
       const nodes = createInitialNodes(randomVals, 'singly');
       setBaseNodes(nodes);
       setActiveSteps(generateMiddleNodeSteps(nodes));
+    } else if (category === 'reverseFromMiddle') {
+      const nodes = createInitialNodes(randomVals, 'singly');
+      setBaseNodes(nodes);
+      setActiveSteps(generateReverseFromMiddleSteps(nodes));
+    } else if (category === 'reverseKGroup') {
+      const nodes = createInitialNodes(randomVals, 'singly');
+      setBaseNodes(nodes);
+      setActiveSteps(generateReverseKGroupSteps(nodes, Number(groupSize)));
+    } else if (category === 'palindrome') {
+      const values = [randomVals[0], randomVals[1], randomVals[1], randomVals[0]];
+      const nodes = createInitialNodes(values, 'singly');
+      setBaseNodes(nodes);
+      setInputValue(values.join(', '));
+      setActiveSteps(generatePalindromeListSteps(nodes));
     } else if (category === 'detectCycle') {
       const nodes = createInitialNodes(randomVals, 'singly', 2);
       setBaseNodes(nodes);
@@ -831,10 +877,14 @@ export const LinkedListPage: React.FC = () => {
 
   const snippetKey = category === 'reverseSublist'
       ? 'reverse_sublist'
-      : category === 'reverseHalf'
+    : category === 'reverseHalf'
       ? 'reverse_half'
+      : category === 'reverseFromMiddle'
+      ? 'reverse_from_middle'
       : category === 'reverseKGroup'
       ? 'reverse_k_group'
+      : category === 'palindrome'
+      ? 'palindrome'
       : category === 'swapPairs'
       ? 'swap_pairs'
       : category === 'mergeSort'
@@ -916,7 +966,9 @@ export const LinkedListPage: React.FC = () => {
       const helpText: Partial<Record<LinkedListCategory, string>> = {
         reverseSublist: 'L and R are 1-based and inclusive. Example: L=2, R=4 reverses only positions 2 through 4.',
         reverseHalf: 'For an odd-sized list, the first half receives the middle node.',
+        reverseFromMiddle: 'The midpoint is included. For even lengths, the upper of the two middle nodes starts the reversal.',
         reverseKGroup: 'Only complete groups are reversed. A shorter final group stays in order.',
+        palindrome: 'Find the midpoint, reverse and compare the second half, then restore the original links.',
         swapPairs: 'Swaps node links; values stay attached to their original nodes.',
         mergeSort: 'Enter numeric values. The sort is stable and orders ascending.',
         addTwoNumbers: 'Digits are entered least-significant first. Example: 2,4,3 represents 342.',
@@ -1268,6 +1320,7 @@ export const LinkedListPage: React.FC = () => {
               categoryId="linkedList"
               topicId={category}
               snippets={LINKED_LIST_SNIPPETS[snippetKey]}
+              onLinkedListCodeRun={category === 'removeNthFromEnd' ? runPastedRemoveNthFromEnd : undefined}
               activeLine={currentStep?.codeLine}
               variables={{
                 nodes_count: currentStep ? currentStep.nodes.length : baseNodes.length,

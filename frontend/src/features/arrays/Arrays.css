@@ -60,6 +60,67 @@
   text-align: center;
 }
 
+.array-window-readout {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 38px;
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: 600 var(--text-xs)/1.35 'JetBrains Mono', monospace;
+}
+
+.array-window-readout-title {
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+}
+
+.array-window-range,
+.array-window-sum {
+  color: var(--color-text);
+}
+
+.array-window-event {
+  padding: 0.12rem 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.65rem;
+}
+
+.array-window-out { color: var(--color-danger, #dc2626); }
+.array-window-in { color: var(--color-success, #059669); }
+.array-window-operation { margin-left: auto; color: var(--color-text-muted); }
+
+.array-window-cell {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border-top: 2px solid color-mix(in srgb, var(--color-primary) 72%, transparent);
+}
+
+.array-window-start { border-left: 2px solid color-mix(in srgb, var(--color-primary) 72%, transparent); }
+.array-window-end { border-right: 2px solid color-mix(in srgb, var(--color-primary) 72%, transparent); }
+.array-window-entering { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-success, #059669) 75%, transparent); }
+.array-window-leaving { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-danger, #dc2626) 75%, transparent); }
+
+.array-window-marker {
+  position: absolute;
+  top: 0.2rem;
+  z-index: 2;
+  padding: 0.08rem 0.28rem;
+  border-radius: 5px;
+  color: #fff;
+  font: 700 0.58rem/1.2 'JetBrains Mono', monospace;
+}
+
+.array-window-marker-in { background: var(--color-success, #059669); }
+.array-window-marker-out { background: var(--color-danger, #dc2626); }
+
 /* Reuse common toolbar/pattern styles from Sorting */
 /* These classes are defined in Sorting.css or BST.css and inherited */
 

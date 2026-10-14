@@ -244,6 +244,27 @@
   user-select: none;
 }
 
+.code-local-trace-note {
+  margin: 0.75rem 0.85rem 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.code-local-trace-note code {
+  color: var(--color-text);
+  font-family: var(--font-mono, monospace);
+}
+
+.custom-editor-gutter .gutter-line-number.active {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
 .gutter-line-number {
   text-align: right;
   padding: 0 0.6rem;

@@ -93,17 +93,17 @@ const REVISION_DATA: Record<BinarySearchCategory, QuizRevisionData> = {
   lowerBound: {
     description: 'Find first position where value is >= target',
     complexity: 'O(log n) time, O(1) space',
-    keyIdea: 'Maintain invariant: answer is in [left, right+1]—narrow until left > right',
+    keyIdea: 'Search a half-open candidate interval [left, right). Values before left are too small; the boundary at right is exclusive.',
     watchFor: ['Comparison operator (>=)', 'Return value (left index)', 'Out-of-bounds case'],
-    quickTip: 'If arr[mid] < target, move left = mid + 1; otherwise right = mid - 1; return left',
+    quickTip: 'If arr[mid] < target, set left = mid + 1; otherwise keep mid as a candidate with right = mid. Stop when left === right.',
     example: 'Array [1,2,4,4,6], target=4: lower bound returns index 2 (first 4).',
   },
   upperBound: {
     description: 'Find first position where value is > target',
     complexity: 'O(log n) time, O(1) space',
-    keyIdea: 'Like lower bound but with strict inequality—finds insertion point after all equals',
+    keyIdea: 'Search a half-open candidate interval [left, right). Values before left are <= target; the boundary at right is exclusive.',
     watchFor: ['Comparison operator (>)', 'Difference from lower bound', 'Equal element handling'],
-    quickTip: 'If arr[mid] <= target, move left = mid + 1; otherwise right = mid - 1; return left',
+    quickTip: 'If arr[mid] <= target, set left = mid + 1; otherwise keep mid as a candidate with right = mid. Stop when left === right.',
     example: 'Array [1,2,4,4,6], target=4: upper bound returns index 4 (value 6, first >4).',
   },
   searchRotatedArray: {

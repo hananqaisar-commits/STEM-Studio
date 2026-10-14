@@ -5,119 +5,174 @@ export function generateSlidingWindowSteps(initialArray: number[], windowSize: n
   const steps: ArrayStep[] = [];
   const arr = [...initialArray];
   const n = arr.length;
-  const k = Math.min(windowSize, n);
+  const k = n === 0 ? 0 : Math.max(1, Math.min(n, Math.floor(windowSize) || 1));
 
-  let windowSum = 0;
-  let maxSum = 0;
-  let maxStart = 0;
-  let left = 0;
-
-  steps.push({
-    array: [...arr],
-    description: `Starting Sliding Window (size k = ${k}) on array of ${n} elements to find maximum sum subarray.`,
-    codeLine: 1,
-    variables: { left: 0, right: 0, windowSum: 0, maxSum: 0, maxStart: 0 },
-    callStack: ['main() -> slidingWindow(arr, k)'],
-  });
-
-  // Phase 1: build initial window [0, k-1]
-  for (let right = 0; right < k; right++) {
-    windowSum += arr[right];
-
-    steps.push({
-      array: [...arr],
-      comparingIndices: [right],
-      sortedIndices: Array.from({ length: right + 1 }, (_, i) => i),
-      description: `Building initial window: adding arr[${right}] = ${arr[right]}. windowSum = ${windowSum}.`,
-      codeLine: 2,
-      variables: { left: 0, right, windowSum, maxSum, maxStart },
-      callStack: ['main() -> slidingWindow(arr, k)'],
-    });
+  if (n === 0) {
+    return {
+      steps: [{ array: [], operation: 'empty input', description: 'Add at least one number to build a window.', codeLine: 1 }],
+      title: 'Sliding Window Max Sum',
+      category: 'Array Algorithms',
+      timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
+      spaceComplexity: 'O(1)',
+      pseudocode: ['Build the first window of size k', 'Slide it: subtract the leaving value, then add the entering value', 'Keep the largest sum and its start index'],
+    };
   }
 
-  maxSum = windowSum;
-  maxStart = 0;
-
-  steps.push({
+  const snapshot = (
+    operation: string,
+    description: string,
+    windowStart: number,
+    windowEnd: number,
+    windowSum: number,
+    extra: Partial<ArrayStep> = {},
+  ): ArrayStep => ({
     array: [...arr],
-    sortedIndices: Array.from({ length: k }, (_, i) => i),
-    description: `Initial window [0..${k - 1}] built. windowSum = ${windowSum}. Setting maxSum = ${maxSum}.`,
-    codeLine: 3,
-    variables: { left: 0, right: k - 1, windowSum, maxSum, maxStart },
-    callStack: ['main() -> slidingWindow(arr, k)'],
+    operation,
+    description,
+    windowStart,
+    windowEnd,
+    windowSum,
+    ...extra,
   });
 
-  // Phase 2: slide the window
-  for (let right = k; right < n; right++) {
-    left = right - k;
+  steps.push(snapshot(
+    'initialize window',
+    `Build the first contiguous window of ${k} values. The window sum starts at 0.`,
+    0,
+    -1,
+    0,
+    { codeLine: 1, variables: { left: 0, right: null, windowSize: k, windowSum: 0, maxSum: null } },
+  ));
 
-    steps.push({
-      array: [...arr],
-      comparingIndices: [right],
-      swappingIndices: [left],
-      sortedIndices: Array.from({ length: k }, (_, i) => maxStart + i),
-      description: `Sliding window: removing arr[${left}] = ${arr[left]} from left, adding arr[${right}] = ${arr[right]} on right.`,
-      codeLine: 5,
-      variables: { left, right, windowSum, maxSum, maxStart },
-      callStack: ['main() -> slidingWindow(arr, k)'],
-    });
+  let windowSum = 0;
+  for (let right = 0; right < k; right += 1) {
+    const before = windowSum;
+    windowSum += arr[right];
+    steps.push(snapshot(
+      'add to first window',
+      `Add arr[${right}] = ${arr[right]}: ${before} + ${arr[right]} = ${windowSum}. The first window is still being built.`,
+      0,
+      right,
+      windowSum,
+      {
+        comparingIndices: [right],
+        enteringIndex: right,
+        codeLine: 2,
+        variables: { left: 0, right, addedValue: arr[right], windowSum, valuesInWindow: right + 1, targetWindowSize: k },
+      },
+    ));
+  }
 
-    windowSum = windowSum - arr[left] + arr[right];
+  let maxSum = windowSum;
+  let maxStart = 0;
+  steps.push(snapshot(
+    'record first complete window',
+    `Window [0, ${k - 1}] is full. Initialize maxSum = windowSum = ${windowSum}.`,
+    0,
+    k - 1,
+    windowSum,
+    { codeLine: 3, variables: { left: 0, right: k - 1, windowSize: k, windowSum, maxSum, maxStart } },
+  ));
 
-    steps.push({
-      array: [...arr],
-      comparingIndices: [right],
-      sortedIndices: Array.from({ length: k }, (_, i) => left + 1 + i),
-      description: `Window slid to [${left + 1}..${right}]. New windowSum = ${windowSum}.`,
-      codeLine: 6,
-      variables: { left: left + 1, right, windowSum, maxSum, maxStart },
-      callStack: ['main() -> slidingWindow(arr, k)'],
-    });
+  for (let start = 0; start + k < n; start += 1) {
+    const leavingIndex = start;
+    const enteringIndex = start + k;
+    const nextStart = start + 1;
+    const beforeRemove = windowSum;
+
+    steps.push(snapshot(
+      'identify leaving value',
+      `The window moves right by one. arr[${leavingIndex}] = ${arr[leavingIndex]} leaves; arr[${enteringIndex}] = ${arr[enteringIndex]} will enter.`,
+      start,
+      enteringIndex - 1,
+      windowSum,
+      {
+        comparingIndices: [leavingIndex, enteringIndex],
+        leavingIndex,
+        enteringIndex,
+        codeLine: 5,
+        variables: { left: leavingIndex, right: enteringIndex, windowSum, leavingValue: arr[leavingIndex], enteringValue: arr[enteringIndex] },
+      },
+    ));
+
+    windowSum -= arr[leavingIndex];
+    steps.push(snapshot(
+      'subtract leaving value',
+      `Remove the old left value from the running sum: ${beforeRemove} − ${arr[leavingIndex]} = ${windowSum}. The window temporarily has ${k - 1} values.`,
+      nextStart,
+      enteringIndex - 1,
+      windowSum,
+      {
+        leavingIndex,
+        codeLine: 6,
+        variables: { left: nextStart, right: enteringIndex - 1, leavingIndex, leavingValue: arr[leavingIndex], windowSum, valuesInWindow: k - 1 },
+      },
+    ));
+
+    const beforeAdd = windowSum;
+    windowSum += arr[enteringIndex];
+    steps.push(snapshot(
+      'add entering value',
+      `Add the new right value: ${beforeAdd} + ${arr[enteringIndex]} = ${windowSum}. The full window is now [${nextStart}, ${enteringIndex}].`,
+      nextStart,
+      enteringIndex,
+      windowSum,
+      {
+        comparingIndices: [enteringIndex],
+        enteringIndex,
+        codeLine: 6,
+        variables: { left: nextStart, right: enteringIndex, enteringIndex, enteringValue: arr[enteringIndex], windowSum, maxSum },
+      },
+    ));
 
     if (windowSum > maxSum) {
+      const previousMax = maxSum;
       maxSum = windowSum;
-      maxStart = left + 1;
-
-      steps.push({
-        array: [...arr],
-        sortedIndices: Array.from({ length: k }, (_, i) => maxStart + i),
-        description: `New max sum found! maxSum updated to ${maxSum} at window starting index ${maxStart}.`,
-        codeLine: 7,
-        variables: { left: maxStart, right, windowSum, maxSum, maxStart },
-        callStack: ['main() -> slidingWindow(arr, k)'],
-      });
+      maxStart = nextStart;
+      steps.push(snapshot(
+        'update best window',
+        `The new sum ${windowSum} is greater than the previous best ${previousMax}; save this window as the best so far.`,
+        nextStart,
+        enteringIndex,
+        windowSum,
+        { codeLine: 7, variables: { left: nextStart, right: enteringIndex, windowSum, maxSum, maxStart } },
+      ));
+    } else {
+      steps.push(snapshot(
+        'keep previous best',
+        `The current sum ${windowSum} does not exceed the best sum ${maxSum}; keep the earlier best window.`,
+        nextStart,
+        enteringIndex,
+        windowSum,
+        { codeLine: 7, variables: { left: nextStart, right: enteringIndex, windowSum, maxSum, maxStart } },
+      ));
     }
   }
 
-  steps.push({
-    array: [...arr],
-    sortedIndices: Array.from({ length: k }, (_, i) => maxStart + i),
-    description: `Sliding Window complete. Maximum subarray sum is ${maxSum} starting at index ${maxStart} (window [${maxStart}..${maxStart + k - 1}]).`,
-    codeLine: 9,
-    variables: { left: maxStart, right: n - 1, windowSum, maxSum, maxStart, status: 'COMPLETE' },
-    callStack: ['main() -> slidingWindow(arr, k) [RETURN]'],
-  });
+  steps.push(snapshot(
+    'return maximum window',
+    `Maximum sum is ${maxSum}, from window [${maxStart}, ${maxStart + k - 1}]. Only one value left and one value right changed on each slide, so the scan is O(n).`,
+    maxStart,
+    maxStart + k - 1,
+    maxSum,
+    { sortedIndices: Array.from({ length: k }, (_, index) => maxStart + index), codeLine: 9, variables: { left: maxStart, right: maxStart + k - 1, windowSum: maxSum, maxSum, maxStart, status: 'COMPLETE' } },
+  ));
 
   return {
     steps,
     title: 'Sliding Window Max Sum',
     category: 'Array Algorithms',
-    timeComplexity: {
-      best: 'O(n)',
-      average: 'O(n)',
-      worst: 'O(n)',
-    },
+    timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
     spaceComplexity: 'O(1)',
     pseudocode: [
-      'k = windowSize, windowSum = 0, maxSum = 0',
-      'for right = 0 to k - 1 do  // build initial window',
-      '  windowSum = windowSum + arr[right]',
-      'maxSum = windowSum, maxStart = 0',
-      'for right = k to n - 1 do  // slide window',
-      '  windowSum = windowSum - arr[right - k] + arr[right]',
-      '  if windowSum > maxSum then',
-      '    maxSum = windowSum, maxStart = right - k + 1',
-      'end for',
+      'windowSum = sum(arr[0 .. k - 1])',
+      'maxSum = windowSum; maxStart = 0',
+      'for right = k to n - 1:',
+      '  left = right - k',
+      '  windowSum -= arr[left]       // remove leaving value',
+      '  windowSum += arr[right]      // add entering value',
+      '  if windowSum > maxSum:',
+      '    maxSum = windowSum; maxStart = left + 1',
       'return maxSum, maxStart',
     ],
   };
