@@ -31,6 +31,8 @@ export const BinarySearchRenderer: React.FC<BinarySearchRendererProps> = ({
     }));
 
   const activeComparison = step?.comparison;
+  const boundInterval = step?.halfOpenRange;
+  const boundResultAtEnd = step?.boundResultIndex === displayArray.length;
 
   return (
     <div className="bs-canvas-body">
@@ -75,13 +77,36 @@ export const BinarySearchRenderer: React.FC<BinarySearchRendererProps> = ({
         </div>
       </div>
 
+      {boundInterval && (
+        <div className="bs-bound-interval" aria-live="polite">
+          <span className="bs-bound-interval-label">ACTIVE CANDIDATES</span>
+          <code>[{boundInterval.left}, {boundInterval.rightExclusive})</code>
+          <span className="bs-bound-interval-note">
+            R is exclusive{boundInterval.left === boundInterval.rightExclusive ? ' · no candidates remain' : ` · inspect indices ${boundInterval.left} through ${boundInterval.rightExclusive - 1}`}
+          </span>
+        </div>
+      )}
+
+      {step?.boundResultIndex !== undefined && step.boundResultLabel && (
+        <div className="bs-bound-result" aria-live="polite">
+          <span>{step.boundResultLabel}</span>
+          <strong>index {step.boundResultIndex}</strong>
+          <span>{boundResultAtEnd ? 'end sentinel (after the last value)' : `arr[${step.boundResultIndex}] = ${displayArray[step.boundResultIndex]?.value}`}</span>
+        </div>
+      )}
+
       {/* Array Elements Visual Track */}
       <div className="bs-array-track">
         {displayArray.map((elem) => {
           const stateClass = `state-${elem.state}`;
+          const inBoundRange = boundInterval != null && elem.index >= boundInterval.left && elem.index < boundInterval.rightExclusive;
+          const rightBoundaryHere = boundInterval != null && (
+            (boundInterval.rightExclusive > 0 && elem.index === boundInterval.rightExclusive - 1)
+            || (boundInterval.rightExclusive === 0 && elem.index === 0)
+          );
 
           return (
-            <div key={elem.index} className="bs-elem-cell">
+            <div key={elem.index} className={`bs-elem-cell${inBoundRange ? ' in-bound-range' : ''}${rightBoundaryHere ? ' has-exclusive-end' : ''}${boundInterval?.rightExclusive === 0 && rightBoundaryHere ? ' exclusive-at-start' : ''}`}>
               {/* Pointer Badges */}
               {elem.pointerLabels && elem.pointerLabels.length > 0 && (
                 <div className="bs-elem-pointer-tags">
