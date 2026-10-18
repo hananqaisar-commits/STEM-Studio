@@ -5,34 +5,113 @@ import math
 import re
 from typing import List, Dict, Any, Tuple, Optional
 import httpx
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
 
 try:
+    from backend.app.api.dependencies import get_current_user
     from backend.app.api.schemas import (
         OctaTutorRequest,
         OctaTutorResponse,
         OctaTutorFunctionCall,
         OctaTutorTestRequest,
         OctaTutorTestResponse,
+        OctaTutorFeedbackRequest,
+        OctaTutorPreferenceRequest,
     )
     from backend.app.core.config import get_settings
     from backend.app.core.rate_limit import RateLimiter
+    from backend.infrastructure.database.database import get_db
+    from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User
 except ModuleNotFoundError:
+    from app.api.dependencies import get_current_user
     from app.api.schemas import (
         OctaTutorRequest,
         OctaTutorResponse,
         OctaTutorFunctionCall,
         OctaTutorTestRequest,
         OctaTutorTestResponse,
+        OctaTutorFeedbackRequest,
+        OctaTutorPreferenceRequest,
     )
     from app.core.config import get_settings
     from app.core.rate_limit import RateLimiter
+    from infrastructure.database.database import get_db
+    from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User
 
 router = APIRouter(prefix="/api/octa-tutor", tags=["Octa AI Tutor"])
 logger = logging.getLogger("octa_tutor")
 tutor_rate_limiter = RateLimiter(max_requests=20, window_seconds=60)
 
 DEFAULT_DASHSCOPE_ENDPOINT = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+
+RESPONSE_STYLE_LABELS = {
+    "balanced": "balanced explanations with intuition, reasoning, and a short example when useful",
+    "simpler": "plain language first, define technical terms, and use a small example",
+    "stepwise": "numbered, explicit steps with state changes and reasons",
+    "examples": "teach through concrete worked examples before generalizing",
+}
+
+
+def _learning_snapshot(db: Session, user_id: int, profile: Optional[TutorLearningProfile] = None) -> dict:
+    """Build evidence-based topic trends plus explicit response feedback."""
+    attempts = (
+        db.query(QuizAttempt.module_name, QuizAttempt.algorithm_id, QuizAttempt.is_correct)
+        .filter(QuizAttempt.user_id == user_id)
+        .order_by(QuizAttempt.created_at.desc())
+        .limit(300)
+        .all()
+    )
+    grouped: Dict[Tuple[str, str], List[bool]] = {}
+    for module_name, algorithm_id, is_correct in attempts:
+        grouped.setdefault((module_name, algorithm_id), []).append(bool(is_correct))
+
+    strengths = []
+    practice = []
+    for (module_name, algorithm_id), results in grouped.items():
+        if len(results) < 3:
+            continue
+        accuracy = round(sum(results) / len(results) * 100)
+        item = {
+            "category": module_name,
+            "algorithm_id": algorithm_id,
+            "accuracy_percent": accuracy,
+            "attempts": len(results),
+        }
+        if accuracy >= 80:
+            strengths.append(item)
+        elif accuracy <= 60:
+            practice.append(item)
+
+    strengths.sort(key=lambda item: (-item["accuracy_percent"], -item["attempts"]))
+    practice.sort(key=lambda item: (item["accuracy_percent"], -item["attempts"]))
+    style = profile.response_style if profile and profile.response_style in RESPONSE_STYLE_LABELS else "balanced"
+    return {
+        "response_style": style,
+        "helpful_count": profile.helpful_count if profile else 0,
+        "needs_detail_count": profile.needs_detail_count if profile else 0,
+        "strengths": strengths[:5],
+        "practice_areas": practice[:5],
+        "quiz_signals_used": sum(len(values) for values in grouped.values()),
+    }
+
+
+def _learning_context(snapshot: dict) -> str:
+    style = RESPONSE_STYLE_LABELS.get(snapshot.get("response_style", "balanced"), RESPONSE_STYLE_LABELS["balanced"])
+    strengths = snapshot.get("strengths", [])
+    practice = snapshot.get("practice_areas", [])
+    lines = [
+        f"Explicit response preference: {style}.",
+        "Use this preference naturally; do not mention or label the learner unless they ask.",
+        "Quiz trends are weak learning signals, not proof of ability. Never shame the learner or assume their mood, personality, or attitude.",
+    ]
+    if strengths:
+        lines.append("Recent quiz strengths (at least 3 attempts and 80% accuracy): " + ", ".join(f"{item['category']}/{item['algorithm_id']} ({item['accuracy_percent']}%)" for item in strengths))
+    if practice:
+        lines.append("Topics to explain with extra scaffolding (at least 3 attempts and 60% accuracy or lower): " + ", ".join(f"{item['category']}/{item['algorithm_id']} ({item['accuracy_percent']}%)" for item in practice))
+    if not strengths and not practice:
+        lines.append("There is not enough quiz evidence to infer topic strengths or practice areas yet; teach from the question itself.")
+    return "\n".join(lines)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ALGORITHM ALIAS MAP — Fuzzy name resolution for natural conversation
@@ -327,7 +406,7 @@ DIRECT_CONTROL_SIGNALS = {
     "theme": ("switch theme", "change theme", "set theme", "switch to dark", "switch to light", "use dark mode", "use light mode", "dark mode", "light mode", "make it dark", "make it light", "dark karo", "light karo", "andhera karo", "roshni karo"),
     "debugger": ("show code", "hide code", "show debugger", "hide debugger", "open code panel", "close code panel", "show terminal", "hide terminal", "open terminal", "close terminal", "code dikhao", "code hatao"),
     "fullscreen": ("enter fullscreen", "go fullscreen", "make it fullscreen", "exit fullscreen", "leave fullscreen", "bada karo", "chota karo", "poori screen"),
-    "quiz": ("open quiz", "start quiz", "quiz me", "give me a quiz", "test me", "challenge me", "quiz do", "imtihaan lo"),
+    "quiz": ("open quiz", "start quiz", "quiz me", "give me a quiz", "test me", "challenge me", "quiz do", "quiz lo", "quiz lo mera", "mera quiz", "imtihaan lo"),
     "vfs_command": ("run command", "execute command", "run in terminal", "execute in terminal", "type into terminal", "run in the simulator", "execute in the simulator", "run in the virtual file system", "create folder", "create directory", "make folder", "make directory", "create file", "make file", "remove file", "delete file", "move file", "copy file", "run `", "execute `", "try `"),
 }
 
@@ -1169,11 +1248,16 @@ TEACHING RULES
 - Conversation history is for continuity only. If it conflicts with the live context or verified theory below, trust the live context and theory and recompute the answer.
 - Use supplied theory as a source for STEM Studio lesson facts when relevant; do not let it override an unrelated question. For explanations, give intuition first, then reasoning, a worked example, and time/space complexity when useful. Include code only when requested or clearly helpful.
 - For questions about nodes, edges, values, positions, or the current frame, derive each claim from the supplied step data. Count the records; do not rely on memory or a previous message. Say when coordinates or relationships are missing.
+- For a website issue, first restate the symptom in plain language, then give the most likely cause only when the supplied context supports it, followed by a short ordered set of checks. Ask for the exact error, page, and action only when those details are needed to distinguish causes. Never claim you inspected logs, accounts, network requests, or the user's device.
+- For technical explanations, define a new term before using it, trace concrete values through each operation, and distinguish verified facts from likely explanations. Avoid repeating the question, excessive headings, and generic advice.
 - Use readable Markdown without filler greetings, repeated disclaimers, or unrelated feature suggestions.
+
+LEARNER GUIDANCE SIGNALS
+{learning_context}
 
 ACTIVE MODE: {tutor_mode}
 - In natural mode (AI Concept Mode), answer open-ended questions conversationally using the connected model. Explain concepts deeply when requested, provide examples or code when asked, and keep app controls out of the answer unless the student explicitly asks to navigate. Only discuss the live canvas when the student asks about it directly.
-- In interactive mode (Interactive Step Mode), anchor the answer to the requested/current step data. Explain the step's goal, the values or links it reads/changes, why the operation is valid, and the resulting state. Use exact values from the data, distinguish the requested step from the current one, and never guess missing details. For a control request, propose only the requested supported action and wait for approval.
+- In interactive mode (Interactive Step Mode), anchor the answer to the requested/current step data. Use a compact sequence: goal, exact values or links read, operation, why it is valid, and resulting state. Name each pointer/link/value that changes and its before/after value when supplied. Distinguish the requested step from the current one; if the trace omits a value, say so instead of guessing. For a control request, propose only the requested supported action and wait for approval.
 - Tool calls only propose an in-app action. The interface will ask the student to approve it. Never say that a proposed action has already happened. Only propose an action when the student directly asks for that action; a request to explain or teach a topic is not permission to navigate or start playback.
 
 LIVE APP CONTEXT
@@ -1495,10 +1579,20 @@ def resolve_llm_config(
 
 
 @router.post("/test", response_model=OctaTutorTestResponse)
-async def test_octa_tutor_connection(req_data: OctaTutorTestRequest, request: Request):
+async def test_octa_tutor_connection(
+    req_data: OctaTutorTestRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
     """
     Test connection to user's configured LLM provider & API key.
     """
+    if not tutor_rate_limiter.is_allowed(f"tutor-test:{current_user.user_id}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many provider connection checks. Please wait and try again.",
+        )
+
     endpoint_url, api_key, model_name, provider_type = resolve_llm_config(
         req_data.provider,
         req_data.api_key,
@@ -1560,8 +1654,76 @@ async def test_octa_tutor_connection(req_data: OctaTutorTestRequest, request: Re
         )
 
 
+@router.get("/profile")
+def get_tutor_learning_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.get(TutorLearningProfile, current_user.user_id)
+    return _learning_snapshot(db, current_user.user_id, profile)
+
+
+@router.patch("/profile")
+def update_tutor_learning_profile(
+    payload: OctaTutorPreferenceRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.get(TutorLearningProfile, current_user.user_id)
+    if profile is None:
+        profile = TutorLearningProfile(user_id=current_user.user_id)
+        db.add(profile)
+    profile.response_style = payload.response_style
+    db.commit()
+    return _learning_snapshot(db, current_user.user_id, profile)
+
+
+@router.post("/feedback")
+def submit_tutor_feedback(
+    payload: OctaTutorFeedbackRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Store only a rating and optional explicit response style, never user content."""
+    if not tutor_rate_limiter.is_allowed(f"tutor-feedback:{current_user.user_id}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many Octa feedback updates. Please try again shortly.",
+        )
+    profile = db.get(TutorLearningProfile, current_user.user_id)
+    if profile is None:
+        profile = TutorLearningProfile(user_id=current_user.user_id)
+        db.add(profile)
+    if payload.helpful:
+        profile.helpful_count = (profile.helpful_count or 0) + 1
+    else:
+        profile.needs_detail_count = (profile.needs_detail_count or 0) + 1
+        if payload.response_style:
+            profile.response_style = payload.response_style
+    db.commit()
+    return _learning_snapshot(db, current_user.user_id, profile)
+
+
+@router.delete("/profile")
+def clear_tutor_feedback_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Clear explicit tutor feedback and response preferences; quiz history remains intact."""
+    profile = db.get(TutorLearningProfile, current_user.user_id)
+    if profile is not None:
+        db.delete(profile)
+        db.commit()
+    return _learning_snapshot(db, current_user.user_id)
+
+
 @router.post("", response_model=OctaTutorResponse)
-async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
+async def handle_octa_tutor(
+    req_data: OctaTutorRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Context-aware AI Tutor. Supports Bring-Your-Own-Key (BYOK) for OpenAI, Qwen, OpenRouter, Anthropic, or Custom LLMs.
     """
@@ -1569,7 +1731,7 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
 
     # Rate limiting: 20 requests per minute per IP
     client_ip = request.client.host if request.client else "unknown"
-    if not tutor_rate_limiter.is_allowed(f"tutor:{client_ip}"):
+    if not tutor_rate_limiter.is_allowed(f"tutor:{current_user.user_id}:{client_ip}"):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests to Octa AI Tutor. Please wait a minute before asking again."
@@ -1599,9 +1761,14 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
     # One grounded prompt serves both modes; the mode instructions keep their
     # behavior distinct while sharing the same accurate app and topic catalog.
     t_mode = req_data.mode if req_data.mode in {"natural", "interactive"} else "natural"
-    temperature = 0.55 if t_mode == "natural" else 0.2
+    temperature = 0.3 if t_mode == "natural" else 0.15
     max_tokens = 2200 if t_mode == "natural" else 1800
     step_num = req_data.current_step_index + 1 if req_data.total_steps > 0 else 0
+    learner_snapshot = _learning_snapshot(
+        db,
+        current_user.user_id,
+        db.get(TutorLearningProfile, current_user.user_id),
+    )
     site_catalog = req_data.site_catalog.strip()[:12000] or (
         "STEM Studio provides a dashboard, DSA learning modules with algorithm visualizers, "
         "and an Operating Systems module with Linux command lessons and a simulated file system."
@@ -1618,13 +1785,16 @@ async def handle_octa_tutor(req_data: OctaTutorRequest, request: Request):
         step_data=(req_data.step_data or "No step data")[0:6000],
         site_catalog=site_catalog,
         topic_knowledge=(req_data.topic_knowledge or "No matching theory excerpt is available.")[:12000],
+        learning_context=_learning_context(learner_snapshot),
     )
 
     # Build message list
     messages: List[Dict[str, Any]] = [{"role": "system", "content": system_content}]
 
     for msg in req_data.conversation_history[-10:]:
-        messages.append({"role": msg.role, "content": msg.content})
+        # Client history is context only; never allow it to add a system message.
+        if msg.role in {"user", "assistant"}:
+            messages.append({"role": msg.role, "content": msg.content[:4000]})
 
     messages.append({"role": "user", "content": req_data.message})
 

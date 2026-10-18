@@ -53,6 +53,17 @@ export interface OctaTutorResponse {
   answer_source?: 'model' | 'offline' | 'grounded';
 }
 
+export type OctaResponseStyle = 'balanced' | 'simpler' | 'stepwise' | 'examples';
+
+export interface OctaTutorLearningProfile {
+  response_style: OctaResponseStyle;
+  helpful_count: number;
+  needs_detail_count: number;
+  quiz_signals_used: number;
+  strengths: Array<{ category: string; algorithm_id: string; accuracy_percent: number; attempts: number }>;
+  practice_areas: Array<{ category: string; algorithm_id: string; accuracy_percent: number; attempts: number }>;
+}
+
 /**
  * Send a message to the Octa AI Tutor backend API.
  */
@@ -60,6 +71,37 @@ export async function sendTutorMessage(req: OctaTutorRequest): Promise<OctaTutor
   return apiClient<OctaTutorResponse>('/api/octa-tutor', {
     method: 'POST',
     body: req,
+    requiresAuth: true,
+  });
+}
+
+export async function getTutorLearningProfile(): Promise<OctaTutorLearningProfile> {
+  return apiClient<OctaTutorLearningProfile>('/api/octa-tutor/profile', { requiresAuth: true });
+}
+
+export async function updateTutorResponseStyle(response_style: OctaResponseStyle): Promise<OctaTutorLearningProfile> {
+  return apiClient<OctaTutorLearningProfile>('/api/octa-tutor/profile', {
+    method: 'PATCH',
+    body: { response_style },
+    requiresAuth: true,
+  });
+}
+
+export async function submitTutorFeedback(input: {
+  helpful: boolean;
+  response_style?: Exclude<OctaResponseStyle, 'balanced'>;
+}): Promise<OctaTutorLearningProfile> {
+  return apiClient<OctaTutorLearningProfile>('/api/octa-tutor/feedback', {
+    method: 'POST',
+    body: input,
+    requiresAuth: true,
+  });
+}
+
+export async function clearTutorFeedbackProfile(): Promise<OctaTutorLearningProfile> {
+  return apiClient<OctaTutorLearningProfile>('/api/octa-tutor/profile', {
+    method: 'DELETE',
+    requiresAuth: true,
   });
 }
 
@@ -69,6 +111,7 @@ export async function sendTutorMessage(req: OctaTutorRequest): Promise<OctaTutor
 export async function testTutorConnection(config: UserLLMConfig): Promise<OctaTutorTestResponse> {
   return apiClient<OctaTutorTestResponse>('/api/octa-tutor/test', {
     method: 'POST',
+    requiresAuth: true,
     body: {
       provider: config.provider,
       api_key: config.apiKey,

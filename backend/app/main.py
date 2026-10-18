@@ -60,7 +60,7 @@ def init_db_tables():
         expected = {"users", "user_sessions", "email_verifications", "password_resets",
                     "roles", "permissions", "user_roles", "role_permissions",
                     "login_attempts", "quiz_attempts", "module_progress",
-                    "user_streaks", "saved_sessions", "reviews"}
+                    "user_streaks", "saved_sessions", "tutor_learning_profiles", "reviews"}
         missing = expected - set(table_names)
         if missing:
             print(f"⚠️  Missing tables after create_all: {missing}")

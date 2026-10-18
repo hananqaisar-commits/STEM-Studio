@@ -334,7 +334,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     {
       id: 'welcome-1',
       role: 'assistant',
-      content: `Hi, I'm Octa, your AI learning tutor.\n\n• **AI Concept Mode** answers open-ended questions, explains ideas, and can help with examples or code using your connected AI model.\n• **Interactive Step Mode** explains the live visualizer step and can propose supported controls for your approval.\n\nWhat would you like to learn?`,
+      content: `Hi, I'm Octa. Ask me about a concept, code, or a problem you're facing in STEM Studio. On a visualizer page, switch to Step mode to walk through the active frame.`,
       mode: 'natural',
       expression: 'happy',
       timestamp: new Date(),

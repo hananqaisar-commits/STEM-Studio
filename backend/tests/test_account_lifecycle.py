@@ -22,6 +22,7 @@ from backend.infrastructure.database.models import (
     EmailVerification,
     ModuleProgress,
     PasswordReset,
+    TutorLearningProfile,
     User,
     UserSession,
 )
@@ -307,6 +308,7 @@ def test_account_deletion_requires_recent_auth_and_cascades_owned_data(tmp_path,
                     completed_algorithms="[]",
                     completion_percentage=0,
                 ),
+                TutorLearningProfile(user_id=user_id, response_style="stepwise"),
             ])
             db.commit()
 
@@ -338,5 +340,6 @@ def test_account_deletion_requires_recent_auth_and_cascades_owned_data(tmp_path,
             assert db.query(EmailVerification).filter(EmailVerification.user_id == user_id).count() == 0
             assert db.query(PasswordReset).filter(PasswordReset.user_id == user_id).count() == 0
             assert db.query(ModuleProgress).filter(ModuleProgress.user_id == user_id).count() == 0
+            assert db.query(TutorLearningProfile).filter(TutorLearningProfile.user_id == user_id).count() == 0
     finally:
         engine.dispose()

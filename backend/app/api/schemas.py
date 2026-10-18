@@ -218,6 +218,15 @@ class OctaTutorRequest(BaseModel):
     model_name: str = Field(default="")
 
 
+class OctaTutorFeedbackRequest(BaseModel):
+    helpful: bool
+    response_style: Optional[Literal["simpler", "stepwise", "examples"]] = None
+
+
+class OctaTutorPreferenceRequest(BaseModel):
+    response_style: Literal["balanced", "simpler", "stepwise", "examples"]
+
+
 class OctaTutorTestRequest(BaseModel):
     provider: str = Field(default="dashscope")
     api_key: str = Field(default="")

@@ -54,6 +54,9 @@ class User(Base):
     module_progress: Mapped[List["ModuleProgress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     streak: Mapped[Optional["UserStreak"]] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
     saved_sessions: Mapped[List["SavedSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    tutor_learning_profile: Mapped[Optional["TutorLearningProfile"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
 
 
 class UserSession(Base):
@@ -184,6 +187,24 @@ class SavedSession(Base):
     user: Mapped["User"] = relationship(back_populates="saved_sessions")
 
 
+class TutorLearningProfile(Base):
+    """Small, user-controlled tutor adaptation signals; never stores chat transcripts."""
+
+    __tablename__ = "tutor_learning_profiles"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    response_style: Mapped[str] = mapped_column(String(24), default="balanced")
+    helpful_count: Mapped[int] = mapped_column(Integer, default=0)
+    needs_detail_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="tutor_learning_profile")
+
+
 class Review(Base):
     __tablename__ = "reviews"
 
@@ -194,4 +215,3 @@ class Review(Base):
     text: Mapped[str] = mapped_column(String(2000))
     approved: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
