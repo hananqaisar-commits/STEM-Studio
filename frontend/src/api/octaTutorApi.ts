@@ -51,6 +51,12 @@ export interface OctaTutorResponse {
   function_calls: OctaTutorFunctionCall[];
   mascot_expression: string;
   answer_source?: 'model' | 'offline' | 'grounded';
+  provider_status?: 'connected' | 'missing' | 'limit' | 'unavailable' | null;
+}
+
+export interface OctaTutorProviderStatus {
+  configured: boolean;
+  provider: 'dashscope';
 }
 
 export type OctaResponseStyle = 'balanced' | 'simpler' | 'stepwise' | 'examples';
@@ -73,6 +79,11 @@ export async function sendTutorMessage(req: OctaTutorRequest): Promise<OctaTutor
     body: req,
     requiresAuth: true,
   });
+}
+
+/** Returns a safe configuration flag only; never returns a provider secret. */
+export async function getTutorProviderStatus(): Promise<OctaTutorProviderStatus> {
+  return apiClient<OctaTutorProviderStatus>('/api/octa-tutor/status');
 }
 
 export async function getTutorLearningProfile(): Promise<OctaTutorLearningProfile> {

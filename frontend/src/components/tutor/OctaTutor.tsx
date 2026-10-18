@@ -172,6 +172,7 @@ export const OctaTutor: React.FC = () => {
     stopListening,
     clearHistory,
     llmConfig,
+    providerStatus,
     isSettingsOpen,
     setIsSettingsOpen,
     saveLLMConfig,
@@ -192,6 +193,13 @@ export const OctaTutor: React.FC = () => {
   const [feedbackOpenFor, setFeedbackOpenFor] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<Record<string, string>>({});
   const messageListRef = React.useRef<HTMLDivElement>(null);
+  const providerStatusCopy = {
+    checking: 'Checking AI configuration',
+    connected: 'AI API configured',
+    limit: 'AI provider limit reached',
+    missing: 'AI API key not configured',
+    unavailable: 'AI provider unavailable',
+  }[providerStatus];
 
   // Keep the conversation scrolled inside its own panel, without moving the page.
   useEffect(() => {
@@ -245,7 +253,13 @@ export const OctaTutor: React.FC = () => {
             </div>
             <div className="tutor-header-title">
               <span className="tutor-header-name">Octa</span>
-              <span className="tutor-header-subtitle">AI learning tutor</span>
+              <span className="tutor-header-subtitle">
+                AI learning tutor
+                <span className={`tutor-status tutor-status-${providerStatus}`} title={providerStatusCopy} aria-label={providerStatusCopy}>
+                  <i className="tutor-status-dot" aria-hidden="true" />
+                  <span>{providerStatus === 'connected' ? 'API ready' : providerStatus === 'checking' ? 'Checking' : providerStatus === 'limit' ? 'Limit reached' : providerStatus === 'missing' ? 'API missing' : 'Unavailable'}</span>
+                </span>
+              </span>
             </div>
           </div>
 
@@ -430,7 +444,7 @@ export const OctaTutor: React.FC = () => {
           <Octa expression="happy" size={26} interactive={false} />
         </div>
         <span className="fab-text">Octa AI</span>
-        <span className="octa-tutor-fab-dot" />
+        <span className={`octa-tutor-fab-dot tutor-status-${providerStatus}`} title={providerStatusCopy} aria-label={providerStatusCopy} />
       </m.button>}
       </AnimatePresence>
       {learningProfileOpen && <OctaLearningProfile onClose={() => setLearningProfileOpen(false)} />}

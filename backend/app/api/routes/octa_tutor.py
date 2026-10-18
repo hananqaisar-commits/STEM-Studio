@@ -1654,6 +1654,14 @@ async def test_octa_tutor_connection(
         )
 
 
+@router.get("/status")
+def get_octa_tutor_provider_status():
+    """Expose only whether the server-side default provider has a key configured."""
+    settings = get_settings()
+    api_key = getattr(settings, "DASHSCOPE_API_KEY", "") or os.getenv("DASHSCOPE_API_KEY", "")
+    return {"configured": bool(api_key.strip()), "provider": "dashscope"}
+
+
 @router.get("/profile")
 def get_tutor_learning_profile(
     current_user: User = Depends(get_current_user),
@@ -1756,7 +1764,9 @@ async def handle_octa_tutor(
 
     if not api_key and provider_type != "custom":
         logger.info(f"API key not configured for '{provider_type}'. Returning smart fallback response.")
-        return generate_fallback_response(req_data)
+        fallback = generate_fallback_response(req_data)
+        fallback.provider_status = "missing"
+        return fallback
 
     # One grounded prompt serves both modes; the mode instructions keep their
     # behavior distinct while sharing the same accurate app and topic catalog.
@@ -1852,7 +1862,13 @@ async def handle_octa_tutor(
 
         if resp.status_code != 200:
             logger.warning(f"LLM Provider ({provider_type}) returned HTTP {resp.status_code}. Returning smart tutor engine fallback response.")
-            return generate_fallback_response(req_data)
+            fallback = generate_fallback_response(req_data)
+            provider_error = resp.text[:200].lower()
+            if resp.status_code == 429 or any(term in provider_error for term in ("quota", "insufficient_quota", "billing", "rate_limit")):
+                fallback.provider_status = "limit"
+            else:
+                fallback.provider_status = "unavailable"
+            return fallback
 
         data = resp.json()
         if provider_type == "anthropic":
@@ -1971,13 +1987,18 @@ async def handle_octa_tutor(
             function_calls=function_calls,
             mascot_expression=mascot_expr,
             answer_source="model",
+            provider_status="connected",
         )
 
     except httpx.TimeoutException:
         logger.warning(f"LLM Provider API call to {provider_type} timed out. Falling back to smart tutor engine.")
-        return generate_fallback_response(req_data)
+        fallback = generate_fallback_response(req_data)
+        fallback.provider_status = "unavailable"
+        return fallback
     except HTTPException:
         raise
     except Exception as e:
         logger.warning(f"Error in LLM call ({str(e)}). Falling back to smart tutor engine.")
-        return generate_fallback_response(req_data)
+        fallback = generate_fallback_response(req_data)
+        fallback.provider_status = "unavailable"
+        return fallback

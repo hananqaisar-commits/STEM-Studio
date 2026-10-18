@@ -250,3 +250,7 @@ class OctaTutorResponse(BaseModel):
     function_calls: List[OctaTutorFunctionCall] = Field(default_factory=list)
     mascot_expression: str = Field(default="helping")
     answer_source: str = Field(default="model", description="model | offline")
+    provider_status: Literal["connected", "missing", "limit", "unavailable"] | None = Field(
+        default=None,
+        description="Safe provider health state; never includes credentials.",
+    )

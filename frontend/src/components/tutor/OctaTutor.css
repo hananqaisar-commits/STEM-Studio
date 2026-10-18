@@ -30,7 +30,22 @@
   outline-offset: 2px;
 }
 .fab-octa-glow { display: grid; width: 30px; height: 30px; place-items: center; overflow: visible; }
-.octa-tutor-fab-dot { width: 7px; height: 7px; border-radius: 50%; background: #22a06b; }
+.octa-tutor-fab-dot,
+.tutor-status-dot { display: inline-block; width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #94a3b8; }
+.tutor-status-connected { --tutor-status-color: #16a34a; }
+.tutor-status-limit { --tutor-status-color: #f59e0b; }
+.tutor-status-missing { --tutor-status-color: #dc2626; }
+.tutor-status-unavailable,
+.tutor-status-checking { --tutor-status-color: #94a3b8; }
+.octa-tutor-fab-dot.tutor-status-connected,
+.octa-tutor-fab-dot.tutor-status-limit,
+.octa-tutor-fab-dot.tutor-status-missing,
+.octa-tutor-fab-dot.tutor-status-unavailable,
+.octa-tutor-fab-dot.tutor-status-checking,
+.tutor-status-dot { background: var(--tutor-status-color, #94a3b8); }
+.tutor-header-subtitle { display: flex; align-items: center; gap: 8px; }
+.tutor-status { display: inline-flex; align-items: center; gap: 5px; color: var(--color-text-muted); font-size: 0.68rem; white-space: nowrap; }
+.tutor-status-dot { box-shadow: 0 0 0 2px var(--color-surface); }
 
 .octa-tutor-window {
   position: fixed;

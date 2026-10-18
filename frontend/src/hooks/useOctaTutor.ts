@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type OctaTutorFunctionCall, type UserLLMConfig } from '../api/octaTutorApi';
+import { getTutorProviderStatus, sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type OctaTutorFunctionCall, type UserLLMConfig } from '../api/octaTutorApi';
 import { useTutorContext, type TutorAlgorithmContext } from '../contexts/TutorContext';
 import { useTheme } from '../contexts/ThemeContext';
 import type { MascotExpression } from '../components/mascot/MascotState';
@@ -32,6 +32,8 @@ export interface TutorSuggestion {
   icon: 'book' | 'terminal' | 'shield' | 'route' | 'brain' | 'clock' | 'step' | 'compare' | 'network' | 'code' | 'workflow';
 }
 
+export type OctaProviderStatus = 'checking' | 'connected' | 'limit' | 'missing' | 'unavailable';
+
 export interface UseOctaTutorReturn {
   messages: ChatMessage[];
   inputText: string;
@@ -52,6 +54,7 @@ export interface UseOctaTutorReturn {
   setIsGuidedMode: React.Dispatch<React.SetStateAction<boolean>>;
   // BYOK LLM config state & controls
   llmConfig: UserLLMConfig;
+  providerStatus: OctaProviderStatus;
   saveLLMConfig: (config: UserLLMConfig) => void;
   resetLLMConfig: () => void;
   isSettingsOpen: boolean;
@@ -313,6 +316,32 @@ export function useOctaTutor(): UseOctaTutorReturn {
       return DEFAULT_LLM_CONFIG;
     }
   });
+
+  const [providerStatus, setProviderStatus] = useState<OctaProviderStatus>(() =>
+    llmConfig.apiKey.trim() || llmConfig.provider === 'custom' ? 'connected' : 'checking',
+  );
+
+  useEffect(() => {
+    if (llmConfig.apiKey.trim() || llmConfig.provider === 'custom') {
+      setProviderStatus('connected');
+      return;
+    }
+    if (llmConfig.provider !== 'dashscope') {
+      setProviderStatus('missing');
+      return;
+    }
+
+    let active = true;
+    setProviderStatus('checking');
+    getTutorProviderStatus()
+      .then(({ configured }) => {
+        if (active) setProviderStatus(configured ? 'connected' : 'missing');
+      })
+      .catch(() => {
+        if (active) setProviderStatus('unavailable');
+      });
+    return () => { active = false; };
+  }, [llmConfig.apiKey, llmConfig.provider]);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
@@ -696,6 +725,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
           model_name: llmConfig.modelName,
         });
 
+        if (response.provider_status) setProviderStatus(response.provider_status);
+
         // Update mascot mood
         const expr = (response.mascot_expression as MascotExpression) || 'helping';
         setMascotExpression(expr);
@@ -724,6 +755,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
           },
         ]);
       } catch (err: any) {
+        if (err?.status === 429) setProviderStatus('limit');
+        else if (err?.status !== 401 && err?.status !== 403) setProviderStatus('unavailable');
         const errorDetail = err?.message || 'Unable to connect to Octa Tutor server.';
         setMascotExpression('confused');
         setMessages((prev) => [
@@ -763,6 +796,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     isGuidedMode,
     setIsGuidedMode,
     llmConfig,
+    providerStatus,
     saveLLMConfig,
     resetLLMConfig,
     isSettingsOpen,
