@@ -50,7 +50,9 @@ interface MultiLanguageCodePanelProps {
   categoryId?: string;
   topicId?: string;
   /** Sandbox execution handler (see api/customCode.ts on the parent). */
-  onCustomExecute?: (code: string, lang: CustomStubLanguage, entry: AlgorithmStubEntry) => void;
+  onCustomExecute?: (code: string, lang: CustomStubLanguage, entry: AlgorithmStubEntry, state: Record<string, unknown>) => void;
+  /** Current visualizer input for the selected stub. */
+  customState?: Record<string, unknown>;
   customBusy?: boolean;
   customMessage?: string | null;
   /** Local source-aware linked-list trace; the callback must state its supported source pattern honestly. */
@@ -126,7 +128,7 @@ function sampleValue(type: string, name: string, entry: AlgorithmStubEntry, curr
     if (name === 'jobs') return [[1, 2, 50], [2, 1, 25], [3, 2, 30]];
     return [[2, 3, 1], [3, 4, 2], [4, 5, 3]];
   }
-  if (type === 'node') return { values: [1, 2, 3, 4], cycleIndex: -1 };
+  if (type === 'node') return { values: [1, 2, 3, 4], cycleIndex: entry.key === 'linkedList.detectCycle' ? 2 : -1 };
   if (type === 'string') {
     if (entry.topicId === 'anagram' && (name === 's' || name === 't')) return name === 's' ? 'listen' : 'silent';
     const values: Record<string, string> = {
@@ -172,6 +174,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   categoryId,
   topicId,
   onCustomExecute,
+  customState,
   customBusy = false,
   customMessage = null,
   onLinkedListCodeRun,
@@ -277,7 +280,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       setRunSuccess(null);
       setExecutionResult(null);
       if (onCustomExecute) {
-        onCustomExecute(customCode, stubLang, stubEntry);
+        onCustomExecute(customCode, stubLang, stubEntry, customState ?? buildSampleState(stubEntry, currentArray));
       } else {
         setIsRunning(true);
         try {
@@ -285,7 +288,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             algorithm_key: stubEntry.key,
             language: stubLang,
             code: customCode,
-            state: buildSampleState(stubEntry, currentArray),
+            state: customState ?? buildSampleState(stubEntry, currentArray),
           });
           if (response.status !== 'ok') {
             setExecutionError(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
@@ -293,7 +296,9 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           }
           const result = response.result?.result ?? response.result?.returned ?? response.result ?? null;
           setExecutionResult(JSON.stringify(result, null, 2));
-          setRunSuccess(`Your pasted ${stubLang.toUpperCase()} code ran in the sandbox with demo inputs. ${response.trace_steps.length} trace steps were recorded.`);
+          setRunSuccess(response.trace_steps.length
+            ? `Your pasted ${stubLang.toUpperCase()} code ran in the sandbox. ${response.trace_steps.length} trace events were emitted; the final result is shown below.`
+            : `Your pasted ${stubLang.toUpperCase()} code ran in the sandbox with the selected input. The final result is shown below; this function did not emit visualization events.`);
         } catch (error: unknown) {
           setExecutionError(`Sandbox unavailable: ${error instanceof Error ? error.message : 'execution service unavailable'}`);
         } finally {
@@ -494,7 +499,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               spellCheck={false}
               placeholder={
                 stubEntry
-                  ? `Fill in ${stubEntry.entry}(...). Run sends your pasted ${stubLang.toUpperCase()} code to the sandbox with ${onCustomExecute ? 'the current studio inputs' : 'representative demo inputs'}.`
+                  ? `Paste only the ${stubEntry.entry} method or class. The studio supplies the built-in data types and ${onCustomExecute || customState ? 'current visualizer inputs' : 'sample inputs'}.`
                   : `Paste your ${customLang.toUpperCase()} function here. Only one function is allowed — no top-level variables or statements.`
               }
 
@@ -509,8 +514,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           )}
 
           {customMessage && (
-            <div className={/ran successfully|correct|produced the expected/i.test(customMessage) ? 'code-success-banner' : 'code-error-banner'} role="status">
-              {/ran successfully|correct|produced the expected/i.test(customMessage) ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+            <div className={/ran successfully|correct|produced the expected|executed/i.test(customMessage) ? 'code-success-banner' : 'code-error-banner'} role="status">
+              {/ran successfully|correct|produced the expected|executed/i.test(customMessage) ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
               <span>{customMessage}</span>
             </div>
           )}

@@ -90,6 +90,8 @@ CORS_ORIGINS=["http://localhost:5173"]
 FRONTEND_URL=http://localhost:5173
 ```
 
+The paste-code runner needs a reachable Judge0 service configured on the FastAPI backend. For production setup, use the [hosted execution deployment guide](deploy/judge0/README.md); no Judge0 service is installed on the learner's laptop. Keep Judge0 credentials only in the backend host's secret environment variables.
+
 Start the API from the `backend` directory:
 
 ```bash
@@ -97,6 +99,8 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 The API is at `http://localhost:8000`; interactive API documentation is at [`http://localhost:8000/docs`](http://localhost:8000/docs).
+
+The paste editor accepts the selected algorithm's method or class; the harness supplies its input objects and invokes it. The registered runner covers 92 problems across 14 algorithm categories and C, C++, Java, Python, Go, and C#. A submitted method executes and returns its result. Step-by-step visual playback is source-adapted for selected linked-list methods; general source-to-renderer tracing is not yet automatic for every problem. The runner can also capture explicit `visualizeStep`/`visualize_step` events.
 
 ### 2. Start the frontend
 
@@ -124,6 +128,10 @@ npm run build
 ```
 
 The frontend build is written to `frontend/dist`.
+
+### Hosted code execution
+
+The Vercel site sends authenticated requests to the FastAPI API, and the API sends code to a separately hosted Judge0 service. Configure `JUDGE0_URL`, `JUDGE0_API_KEY`, and `JUDGE0_AUTH_HEADER` on the backend deployment. The Judge0 key must never be placed in a `VITE_*` variable. See [`deploy/judge0/README.md`](deploy/judge0/README.md) for the recommended network and sandbox setup.
 
 ## Technology
 

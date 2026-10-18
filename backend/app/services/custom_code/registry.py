@@ -62,9 +62,9 @@ def validate_submission(algo: Dict[str, Any], language: str, code: str, state: D
                 return f"Unsupported operation for {algo['name']}: {method!s}"
         return None
 
-    entry = algo["entry"]
-    if not _has_callable(language, code, entry):
-        return f"Required method not found: {entry}({_parameter_hint(algo)})"
+    entry = resolve_submission_entry(algo, language, code)
+    if entry is None:
+        return f"Required method not found: {algo['entry']}({_parameter_hint(algo)})"
 
     args = state.get("args", {})
     if not isinstance(args, dict):
@@ -73,6 +73,28 @@ def validate_submission(algo: Dict[str, Any], language: str, code: str, state: D
     if missing_args:
         return f"Missing test input for: {', '.join(missing_args)}"
     return None
+
+
+def resolve_submission_entry(algo: Dict[str, Any], language: str, code: str) -> Optional[str]:
+    """Resolve the required function, including common interview-platform aliases."""
+    entries = [algo["entry"]]
+    # Floyd cycle detection has several common names. Accepting these names
+    # lets learners paste a LeetCode-style solution without renaming it to the
+    # studio's internal registry name.
+    if algo.get("key") == "linkedList.detectCycle":
+        entries.extend(("hasCycle", "cycleDetection", "containsCycle", "has_cycle"))
+    return next((name for name in entries if _has_callable(language, code, name)), None)
+
+
+def submission_is_zero_argument(algo: Dict[str, Any], language: str, code: str, entry: str) -> bool:
+    """Whether a supported linked-list cycle method reads the harness `head`."""
+    # The class-member style in the requested C++ snippet resolves `head` from
+    # the generated harness scope. Other languages should use the regular
+    # LeetCode parameter form so the contract stays explicit and portable.
+    if algo.get("key") != "linkedList.detectCycle" or language != "cpp":
+        return False
+    escaped = re.escape(entry)
+    return bool(re.search(rf"\b{escaped}\s*\(\s*\)\s*\{{", code))
 
 
 def _has_program_entrypoint(language: str, code: str) -> bool:

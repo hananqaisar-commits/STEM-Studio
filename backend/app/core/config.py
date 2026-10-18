@@ -104,12 +104,13 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str = "noreply@stemstudio.com"
     EMAILS_FROM_NAME: str = "STEM Studio Support"
 
-    # Judge0 (sandboxed code execution for the Custom Code feature)
-    # Point at any Judge0 CE instance, e.g. https://ce.judge0.com or a
-    # self-hosted docker deployment. Leave empty to disable execution.
+    # Judge0 (server-to-server sandbox integration for custom code)
+    # Keep these values only on the backend host; never expose them to Vite.
     JUDGE0_URL: str = ""
     JUDGE0_API_KEY: str = ""
-    JUDGE0_TIMEOUT_SECONDS: int = 20
+    JUDGE0_AUTH_HEADER: str = "X-Auth-Token"
+    JUDGE0_TIMEOUT_SECONDS: int = Field(default=20, ge=1, le=120)
+    JUDGE0_RATE_LIMIT_PER_MINUTE: int = Field(default=20, ge=1, le=300)
 
     # Alibaba Cloud Model Studio (Qwen API Key for Octa AI Tutor)
     DASHSCOPE_API_KEY: str = ""

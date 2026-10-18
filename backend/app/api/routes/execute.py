@@ -10,23 +10,49 @@ trace steps / final result out of stdout.
 import json
 from typing import Any, Dict, List, Tuple
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 try:
+    from backend.app.api.dependencies import get_current_user
     from backend.app.api.schemas import CustomCodeExecutionRequest, CustomCodeExecutionResponse
     from backend.app.core.config import get_settings
+    from backend.app.core.rate_limit import RateLimiter
     from backend.app.services.custom_code import harness, judge0, registry
+    from backend.infrastructure.database.models import User
 except ModuleNotFoundError:
+    from app.api.dependencies import get_current_user
     from app.api.schemas import CustomCodeExecutionRequest, CustomCodeExecutionResponse
     from app.core.config import get_settings
+    from app.core.rate_limit import RateLimiter
     from app.services.custom_code import harness, judge0, registry
+    from infrastructure.database.models import User
 
 router = APIRouter(prefix="/api/execute", tags=["Custom Code"])
+_rate_settings = get_settings()
+_user_submission_limiter = RateLimiter(_rate_settings.JUDGE0_RATE_LIMIT_PER_MINUTE, 60)
+_ip_submission_limiter = RateLimiter(120, 60)
 
 _STEP_PREFIX = "__VSTEP__ "
 _RESULT_PREFIX = "__VRESULT__ "
 _EMIT_ROW_PREFIX = "__VEMIT_ROW__ "
 _EMIT_PAIR_PREFIX = "__VEMIT_PAIR__ "
+
+
+def _enforce_submission_limits(
+    request: Request,
+    user: User = Depends(get_current_user),
+) -> User:
+    """Require a signed-in learner and cap both account and source-IP usage."""
+    _user_submission_limiter.raise_if_limited(f"judge0:user:{user.user_id}")
+    if _rate_settings.TRUST_X_FORWARDED_FOR:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        client_ip = forwarded.split(",", 1)[0].strip() if forwarded else ""
+    else:
+        client_ip = ""
+    if not client_ip:
+        client_ip = request.client.host if request.client else "unknown"
+    _ip_submission_limiter.raise_if_limited(f"judge0:ip:{client_ip}")
+    return user
 
 
 def parse_execution_output(stdout: str) -> Tuple[List[dict], List[List[int]], List[List[int]], Any]:
@@ -70,12 +96,20 @@ def parse_execution_output(stdout: str) -> Tuple[List[dict], List[List[int]], Li
 
 
 @router.post("/custom-code", response_model=CustomCodeExecutionResponse)
-async def execute_custom_code(req: CustomCodeExecutionRequest) -> CustomCodeExecutionResponse:
+async def execute_custom_code(
+    req: CustomCodeExecutionRequest,
+    _user: User = Depends(_enforce_submission_limits),
+) -> CustomCodeExecutionResponse:
     settings = get_settings()
     if not settings.JUDGE0_URL:
         raise HTTPException(
             status_code=503,
-            detail="Execution service is not configured (JUDGE0_URL missing on the backend).",
+            detail="Code execution is not configured on the API host. Set JUDGE0_URL and the Judge0 authentication secret in the backend deployment settings.",
+        )
+    if not settings.JUDGE0_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Code execution is not securely configured. Set the Judge0 authentication token as the backend secret JUDGE0_API_KEY.",
         )
 
     algo = registry.get_algorithm(req.algorithm_key)
@@ -85,6 +119,21 @@ async def execute_custom_code(req: CustomCodeExecutionRequest) -> CustomCodeExec
     contract_error = registry.validate_submission(algo, req.language, req.code, req.state)
     if contract_error:
         raise HTTPException(status_code=422, detail=contract_error)
+
+    # Keep the registered name as the default, while allowing a small set of
+    # common LeetCode-style names (for example hasCycle / cycleDetection).
+    resolved_entry = (
+        algo["entry"]
+        if algo["kind"] == "class"
+        else registry.resolve_submission_entry(algo, req.language, req.code)
+    )
+    if resolved_entry is None:
+        raise HTTPException(status_code=422, detail="The required method could not be resolved.")
+    algo = {
+        **algo,
+        "_entryOverride": resolved_entry,
+        "_entryNoArgs": registry.submission_is_zero_argument(algo, req.language, req.code, resolved_entry),
+    }
 
     try:
         source = harness.build_harness(req.language, algo, req.code, req.state)
@@ -97,7 +146,8 @@ async def execute_custom_code(req: CustomCodeExecutionRequest) -> CustomCodeExec
             req.language,
             settings.JUDGE0_URL,
             settings.JUDGE0_API_KEY,
-            settings.JUDGE0_TIMEOUT_SECONDS,
+            auth_header=getattr(settings, "JUDGE0_AUTH_HEADER", "X-Auth-Token"),
+            timeout_seconds=settings.JUDGE0_TIMEOUT_SECONDS,
         )
     except judge0.Judge0Error as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

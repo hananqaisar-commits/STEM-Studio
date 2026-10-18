@@ -297,7 +297,16 @@ def test_parse_execution_output_folds_emitted_into_result():
 
 
 # ── Endpoint behavior ───────────────────────────────────────────────────────
+def _authenticate_custom_code_test_client():
+    from types import SimpleNamespace
+    from backend.app.api.dependencies import get_current_user
+    from backend.app.main import app
+
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(user_id=991)
+
+
 def test_endpoint_returns_503_when_judge0_not_configured(client):
+    _authenticate_custom_code_test_client()
     resp = client.post(
         "/api/execute/custom-code",
         json={"algorithm_key": "sorting.bubble", "language": "python", "code": "def bubbleSort(arr):\n    return arr", "state": {}},
@@ -308,9 +317,10 @@ def test_endpoint_returns_503_when_judge0_not_configured(client):
 def test_endpoint_returns_404_for_unknown_algorithm(client, monkeypatch):
     import backend.app.api.routes.execute as execute_route
 
+    _authenticate_custom_code_test_client()
     class _StubSettings:
         JUDGE0_URL = "http://judge0.invalid"
-        JUDGE0_API_KEY = ""
+        JUDGE0_API_KEY = "test-token"
         JUDGE0_TIMEOUT_SECONDS = 5
 
     monkeypatch.setattr(execute_route, "get_settings", lambda: _StubSettings())
@@ -324,12 +334,19 @@ def test_endpoint_returns_404_for_unknown_algorithm(client, monkeypatch):
 def test_endpoint_returns_502_when_judge0_unreachable(client, monkeypatch):
     import backend.app.api.routes.execute as execute_route
 
+    _authenticate_custom_code_test_client()
+
     class _StubSettings:
         JUDGE0_URL = "http://judge0.invalid"
-        JUDGE0_API_KEY = ""
+        JUDGE0_API_KEY = "test-token"
         JUDGE0_TIMEOUT_SECONDS = 5
 
     monkeypatch.setattr(execute_route, "get_settings", lambda: _StubSettings())
+
+    async def _unreachable(*_args, **_kwargs):
+        raise execute_route.judge0.Judge0Error("Execution service is unreachable right now.")
+
+    monkeypatch.setattr(execute_route.judge0, "submit", _unreachable)
     resp = client.post(
         "/api/execute/custom-code",
         json={
