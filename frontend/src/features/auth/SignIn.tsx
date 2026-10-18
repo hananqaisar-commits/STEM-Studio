@@ -3,6 +3,7 @@ import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRememberedUsername } from '../../api/authPreferences';
 import { Octa, useMascot } from '../../components/mascot';
 import '../../components/mascot/Mascot.css';
 import './Auth.css';
@@ -14,9 +15,9 @@ declare global {
 }
 
 export const SignIn: React.FC = () => {
-  const [identifier, setIdentifier] = useState('');
+  const [identifier, setIdentifier] = useState(getRememberedUsername);
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,7 +110,7 @@ export const SignIn: React.FC = () => {
 
         {GOOGLE_CLIENT_ID && (
           <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
-            <span>or continue with email</span>
+            <span>or sign in with username</span>
           </div>
         )}
 
@@ -128,11 +129,15 @@ export const SignIn: React.FC = () => {
               <input
                 type="text"
                 id="username"
+                name="username"
                 className="auth-input"
                 placeholder="Enter your username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 required
                 disabled={isSubmitting}
               />
@@ -146,11 +151,13 @@ export const SignIn: React.FC = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
+                name="password"
                 className="auth-input"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
+                autoComplete="current-password"
                 required
                 disabled={isSubmitting}
               />
@@ -171,7 +178,7 @@ export const SignIn: React.FC = () => {
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                 />
-                <span>Remember me</span>
+                <span>Keep me signed in (up to 30 days)</span>
               </label>
               <Link to="/forgot-password" className="auth-link">Forgot password?</Link>
             </div>

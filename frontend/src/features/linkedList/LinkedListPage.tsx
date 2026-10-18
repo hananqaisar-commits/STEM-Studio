@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, useRef} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
@@ -139,6 +139,7 @@ const getStructureType = (category: LinkedListCategory): LinkedListStructureType
 
 export const LinkedListPage: React.FC = () => {
   const { setTutorContext } = useTutorContext();
+  const positionControlsRef = useRef<HTMLDetailsElement>(null);
   const [category, setCategory] = useState<LinkedListCategory>('singly');
   const structureType = getStructureType(category);
   const [searchParams] = useSearchParams();
@@ -175,6 +176,27 @@ export const LinkedListPage: React.FC = () => {
   const [baseNodes, setBaseNodes] = useState<ListNodeItem[]>(() =>
     createInitialNodes([10, 20, 30, 40], 'singly')
   );
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const panel = positionControlsRef.current;
+      if (panel?.open && event.target instanceof Node && !panel.contains(event.target)) {
+        panel.open = false;
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && positionControlsRef.current?.open) {
+        positionControlsRef.current.open = false;
+      }
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
 
   useEffect(() => {
     const topic = searchParams.get('topic') as LinkedListCategory | null;
@@ -684,6 +706,7 @@ export const LinkedListPage: React.FC = () => {
     setActiveSteps(steps);
     reset();
     quizSession.resetSession();
+    if (positionControlsRef.current) positionControlsRef.current.open = false;
     play();
   };
 
@@ -1218,7 +1241,7 @@ export const LinkedListPage: React.FC = () => {
         <span>Delete Head</span>
       </button>
 
-      <details className="ll-position-controls">
+      <details className="ll-position-controls" ref={positionControlsRef}>
         <summary>Insert / delete at a position</summary>
         <div className="ll-position-controls-body">
           <label>

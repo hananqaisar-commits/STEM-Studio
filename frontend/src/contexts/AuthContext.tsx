@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '../api/apiClient';
 import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
+import { rememberUsername } from '../api/authPreferences';
 
 interface UserData {
   user_id: number;
@@ -98,9 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {
         method: 'POST',
         body: {
-          identifier: cleanId,
           username: cleanId,
-          email: cleanId,
           password,
           remember_me: rememberMe,
         },
@@ -110,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Remember me → localStorage (survives browser restarts); otherwise
     // sessionStorage (cleared when the browser closes).
     storeTokens(data.access_token, data.refresh_token, rememberMe);
+    rememberUsername(cleanId);
 
     // Fetch user profile after login
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
@@ -189,6 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     storeTokens(data.access_token, data.refresh_token, rememberMe);
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    rememberUsername(userData.username);
     setUser(userData);
   };
 

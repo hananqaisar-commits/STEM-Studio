@@ -72,7 +72,10 @@ def signup(
 
     # Normalize inputs
     clean_email = payload.email.strip().lower()
-    clean_username = payload.username.strip()
+    # Canonicalize usernames before storing them. The database's existing
+    # unique constraint then also protects case variants during concurrent
+    # signups (for example, "Learner" and "learner").
+    clean_username = payload.username.strip().lower()
 
     if "@" in clean_username:
         raise HTTPException(
@@ -85,7 +88,7 @@ def signup(
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists",
+            detail="An account with this email already exists. Sign in with its username instead of creating another account.",
         )
 
     # Check if username already exists (case-insensitive)
@@ -93,7 +96,7 @@ def signup(
     if existing_username:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="This username is already taken",
+            detail="This username is already taken. Sign in to the existing account or choose a different username.",
         )
 
     # If SMTP is not configured, auto-verify account so local/demo users are not trapped
@@ -127,7 +130,7 @@ def signup(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email or username already exists",
+            detail="This email or username already belongs to an account. Sign in to continue.",
         ) from exc
 
     invalidate_platform_stats_cache()
