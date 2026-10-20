@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # ─── Auth Request Schemas ────────────────────────────────────────────
@@ -15,21 +15,13 @@ class SignUpRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    identifier: Optional[str] = None
-    username: Optional[str] = None
-    email: Optional[str] = None
+    email: EmailStr
     password: str
     remember_me: bool = False
     owner_mode: bool = False
     mfa_code: Optional[str] = Field(default=None, min_length=6, max_length=6, pattern=r"^\d{6}$")
 
-    @model_validator(mode="after")
-    def resolve_identifier(self) -> "LoginRequest":
-        id_val = self.identifier or self.username or self.email
-        if not id_val or not str(id_val).strip():
-            raise ValueError("Username is required")
-        self.identifier = str(id_val).strip()
-        return self
+    model_config = ConfigDict(extra="forbid")
 
 class GoogleSignInRequest(BaseModel):
     credential: str

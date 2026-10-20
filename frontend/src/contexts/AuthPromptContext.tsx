@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Lock, LogIn, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
-import { getRememberedUsername } from '../api/authPreferences';
+import { getRememberedEmail } from '../api/authPreferences';
 import './AuthPrompt.css';
 
 type ProtectedAction = () => void;
@@ -19,7 +19,7 @@ export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children
   const pendingActionRef = useRef<ProtectedAction | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('Sign in to continue and save your learning progress.');
-  const [identifier, setIdentifier] = useState(getRememberedUsername);
+  const [email, setEmail] = useState(getRememberedEmail);
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
@@ -50,7 +50,7 @@ export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children
     setIsSubmitting(true);
 
     try {
-      await login(identifier, password, rememberMe);
+      await login(email, password, rememberMe);
       const action = pendingActionRef.current;
       setIsOpen(false);
       pendingActionRef.current = null;
@@ -74,7 +74,7 @@ export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children
             <p>{message}</p>
             {error && <div className="auth-prompt-error"><AlertCircle size={16} />{error}</div>}
             <form onSubmit={handleSubmit} className="auth-prompt-form">
-              <label>Username<input name="username" value={identifier} onChange={(event) => setIdentifier(event.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} required disabled={isSubmitting} /></label>
+              <label>Email address<input type="email" name="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" required disabled={isSubmitting} /></label>
               <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required disabled={isSubmitting} /></label>
               <label className="auth-prompt-remember"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Keep me signed in (up to 30 days)</label>
               <button type="submit" disabled={isSubmitting}><LogIn size={17} />{isSubmitting ? 'Signing in…' : 'Sign in and continue'}</button>

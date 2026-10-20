@@ -37,7 +37,7 @@ This closes the application level privilege escalation paths that were present i
    ```
 
    It prompts for username, email, a hidden password, and confirmation. It refuses a second owner, checks uniqueness, writes the owner record and encrypted TOTP credential transactionally, and prints the one-time authenticator setup URI to that terminal. Add it to an authenticator app immediately; treat the terminal output as a secret and do not paste it into chat or application logs.
-6. Open `/login`, choose **Sign in as Owner**, and enter username, password, and the current authenticator code. Owner sessions expire after at most eight hours; sensitive actions require another password + TOTP verification every ten minutes.
+6. Open `/login`, choose **Sign in as Owner**, and enter the provisioned email address, password, and current authenticator code. Owner sessions expire after at most eight hours; sensitive actions require another password + TOTP verification every ten minutes.
 
 The one-time provisioning and MFA recovery commands are intentionally not HTTP endpoints. To recover a lost authenticator while retaining the password, run `backend/.venv/bin/python -m backend.app.cli reset-owner-mfa` on the trusted host; it verifies the owner password, rotates the encrypted TOTP secret, and revokes every owner session. If the owner password is also lost or the recovery record is damaged, use a separately reviewed break-glass procedure with direct deployment/database operator access. There is no public owner signup or public role recovery endpoint.
 
