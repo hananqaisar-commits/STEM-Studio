@@ -8,10 +8,11 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
 
   steps.push({
     array: [...arr],
-    sortedIndices: [0],
+    sortedIndices: n > 0 ? [0] : [],
     description: 'Initial state. First element is considered sorted by default.',
     codeLine: 1,
-    variables: { n, i: 1, key: arr[1] },
+    operation: 'begin',
+    variables: { n, i: Math.min(1, n), key: arr[1] ?? null },
     callStack: ['main() -> insertionSort(arr)'],
   });
 
@@ -25,30 +26,59 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
       sortedIndices: Array.from({ length: i }, (_, k) => k),
       description: `Selected key element ${key} at index ${i} to insert into sorted sub-array.`,
       codeLine: 2,
+      operation: 'hold key',
+      heldValue: key,
+      heldIndex: i,
       variables: { i, j, key, 'arr[i]': key },
       callStack: ['main() -> insertionSort(arr)'],
     });
 
-    while (j >= 0 && arr[j] > key) {
+    while (j >= 0) {
+      const shouldShift = arr[j] > key;
       steps.push({
         array: [...arr],
-        comparingIndices: [j, j + 1],
-        pivotIndex: i,
-        description: `Comparing key (${key}) with arr[${j}] (${arr[j]}). ${arr[j]} > ${key}, shifting ${arr[j]} right.`,
+        comparingIndices: [j],
+        description: shouldShift
+          ? `Compare held key ${key} with arr[${j}] = ${arr[j]}. Since ${arr[j]} > ${key}, copy arr[${j}] one slot right.`
+          : `Compare held key ${key} with arr[${j}] = ${arr[j]}. Since ${arr[j]} <= ${key}, stop shifting; the key belongs at index ${j + 1}.`,
         codeLine: 4,
-        variables: { i, j, key, 'arr[j]': arr[j], condition: `${arr[j]} > ${key}` },
+        operation: 'compare',
+        heldValue: key,
+        heldIndex: i,
+        variables: { i, j, key, 'arr[j]': arr[j], condition: `${arr[j]} > ${key}`, shouldShift },
         callStack: ['main() -> insertionSort(arr)'],
       });
 
+      if (!shouldShift) break;
+
+      const sourceIndex = j;
       arr[j + 1] = arr[j];
       j = j - 1;
 
       steps.push({
         array: [...arr],
-        swappingIndices: [j + 1, j + 2],
-        description: `Shifted element right to make space for key.`,
+        comparingIndices: [sourceIndex],
+        writeIndex: sourceIndex + 1,
+        writeValue: arr[sourceIndex + 1],
+        description: `Copy ${arr[sourceIndex]} from arr[${sourceIndex}] into arr[${sourceIndex + 1}]. The empty insertion slot moves left to index ${j + 1}.`,
         codeLine: 5,
-        variables: { i, j, key, 'shiftedTo': j + 2 },
+        operation: 'shift right',
+        heldValue: key,
+        heldIndex: i,
+        variables: { i, j, key, shiftedFrom: sourceIndex, shiftedTo: sourceIndex + 1, holeIndex: j + 1 },
+        callStack: ['main() -> insertionSort(arr)'],
+      });
+    }
+
+    if (j < 0) {
+      steps.push({
+        array: [...arr],
+        heldValue: key,
+        heldIndex: i,
+        operation: 'insertion point is the beginning',
+        description: `The scan reached index -1; every value in the sorted prefix was greater than ${key}, so insert the held key at index 0.`,
+        codeLine: 4,
+        variables: { i, j, key, insertionIndex: 0 },
         callStack: ['main() -> insertionSort(arr)'],
       });
     }
@@ -57,8 +87,12 @@ export function generateInsertionSortSteps(initialArray: number[]): AlgorithmExe
     steps.push({
       array: [...arr],
       sortedIndices: Array.from({ length: i + 1 }, (_, k) => k),
+      writeIndex: j + 1,
+      writeValue: key,
       description: `Inserted key ${key} at index ${j + 1}.`,
       codeLine: 7,
+      operation: 'write held key',
+      heldValue: null,
       variables: { i, insertedAt: j + 1, key },
       callStack: ['main() -> insertionSort(arr)'],
     });

@@ -11,6 +11,7 @@ export function generateBubbleSortSteps(initialArray: number[]): AlgorithmExecut
     array: [...arr],
     description: 'Initial array state before Bubble Sort starts.',
     codeLine: 1,
+    operation: 'initialize',
     variables: { n, i: 0, j: 0, swapped: false },
     callStack: ['main() -> bubbleSort(arr)'],
   });
@@ -23,7 +24,10 @@ export function generateBubbleSortSteps(initialArray: number[]): AlgorithmExecut
         array: [...arr],
         comparingIndices: [j, j + 1],
         sortedIndices: [...sortedIndices],
-        description: `Comparing index ${j} (arr[${j}] = ${arr[j]}) with index ${j + 1} (arr[${j + 1}] = ${arr[j + 1]}).`,
+        operation: arr[j] > arr[j + 1] ? 'out of order — swap next' : 'in order — keep as is',
+        description: arr[j] > arr[j + 1]
+          ? `Compare arr[${j}] = ${arr[j]} with arr[${j + 1}] = ${arr[j + 1]}. The left value is larger, so the next step swaps these neighbors.`
+          : `Compare arr[${j}] = ${arr[j]} with arr[${j + 1}] = ${arr[j + 1]}. They are already ordered, so keep their positions.`,
         codeLine: 3,
         variables: {
           i,
@@ -46,6 +50,7 @@ export function generateBubbleSortSteps(initialArray: number[]): AlgorithmExecut
           array: [...arr],
           swappingIndices: [j, j + 1],
           sortedIndices: [...sortedIndices],
+          operation: 'swap out-of-order neighbors',
           description: `Swapping arr[${j}] (${arr[j + 1]}) with arr[${j + 1}] (${arr[j]}).`,
           codeLine: 4,
           variables: {
@@ -65,6 +70,7 @@ export function generateBubbleSortSteps(initialArray: number[]): AlgorithmExecut
     steps.push({
       array: [...arr],
       sortedIndices: [...sortedIndices],
+      operation: 'fix largest remaining value',
       description: `Element ${arr[n - i - 1]} at index ${n - i - 1} is now in its correct sorted position.`,
       codeLine: 6,
       variables: { i, sortedIndex: n - i - 1, sortedValue: arr[n - i - 1], swapped },
@@ -78,6 +84,7 @@ export function generateBubbleSortSteps(initialArray: number[]): AlgorithmExecut
   steps.push({
     array: [...arr],
     sortedIndices: allIndices,
+    operation: 'complete',
     description: 'Bubble Sort complete! Entire array is fully sorted.',
     codeLine: 7,
     variables: { status: 'SORTED', totalElements: n },

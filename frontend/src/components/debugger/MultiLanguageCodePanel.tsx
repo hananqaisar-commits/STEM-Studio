@@ -17,6 +17,7 @@ import {
 import { DEBUGGER_LANGUAGE_IDS, type DebuggerLanguage } from '../../data/languages';
 import { LanguageDropdown } from './LanguageDropdown';
 import { executeCustomCode } from '../../api/customCode';
+import type { LinkedListStep } from '../../features/linkedList/linkedListEngine';
 import './Debugger.css';
 
 type CodeMode = 'default' | 'custom';
@@ -52,6 +53,8 @@ interface MultiLanguageCodePanelProps {
   onCustomExecute?: (code: string, lang: CustomStubLanguage, entry: AlgorithmStubEntry) => void;
   customBusy?: boolean;
   customMessage?: string | null;
+  /** Local source-aware linked-list trace; the callback must state its supported source pattern honestly. */
+  onLinkedListCodeRun?: (code: string, language: CustomLanguage) => { steps: LinkedListStep[]; error?: string; result?: string };
 }
 
 /** Only allow a single function body; reject top-level variables or statements. */
@@ -171,6 +174,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   onCustomExecute,
   customBusy = false,
   customMessage = null,
+  onLinkedListCodeRun,
 }) => {
   // Resolve which snippet set to show: explicit prop → sorting table → fallback map.
   const resolvedSnippets: SnippetSet | undefined = useMemo(
@@ -193,7 +197,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [codeMode, setCodeMode] = useState<CodeMode>('default');
   const [customLang, setCustomLang] = useState<DebuggerLanguage>('python');
   const [stubLang, setStubLang] = useState<CustomStubLanguage>('python');
-  const [customCode, setCustomCode] = useState<string>(() => getStarterTemplate(algorithmKey, 'python'));
+  const [customCode, setCustomCode] = useState<string>(() => onLinkedListCodeRun ? '' : getStarterTemplate(algorithmKey, 'python'));
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runSuccess, setRunSuccess] = useState<string | null>(null);
@@ -201,7 +205,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [copied, setCopied] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
 
-  const canRunCustom = Boolean(stubEntry || (onCustomCodeRun && currentArray?.length));
+  const canRunCustom = Boolean(stubEntry || onLinkedListCodeRun || (onCustomCodeRun && currentArray?.length));
   // Keep the selected language valid as the available set changes per algorithm.
   useEffect(() => {
     if (availableReferenceLangs.length === 0) return;
@@ -214,6 +218,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   useEffect(() => {
     if (stubEntry) {
       setCustomCode(stubEntry.stubs[stubLang]);
+    } else if (onLinkedListCodeRun) {
+      setCustomCode('');
     } else {
       setCustomCode(getStarterTemplate(algorithmKey, customLang as CustomLanguage));
     }
@@ -236,6 +242,29 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   };
 
   const handleRunCustomCode = async () => {
+    if (onLinkedListCodeRun) {
+      if (!customCode.trim()) {
+        setExecutionError('Paste the complete function before starting the local trace.');
+        setRunSuccess(null);
+        return;
+      }
+      setExecutionError(null);
+      setRunSuccess(null);
+      setExecutionResult(null);
+      setIsRunning(true);
+      window.setTimeout(() => {
+        const trace = onLinkedListCodeRun(customCode, customLang as CustomLanguage);
+        setIsRunning(false);
+        if (trace.error) {
+          setExecutionError(trace.error);
+          return;
+        }
+        setExecutionResult(trace.result ?? null);
+        setRunSuccess(`A local pointer trace was generated for the recognized C++ function. The pasted source was not compiled or executed; ${trace.steps.length} steps are ready to play.`);
+      }, 0);
+      return;
+    }
+
     // Stub-backed algorithms use the fill-in-the-body contract: the signature
     // is pre-filled, so skip the legacy single-function paste validation
     // (classes legitimately contain several methods).
@@ -385,7 +414,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             value={stubEntry ? stubLang : customLang}
             ariaLabel="Custom code language"
             onChange={(language) => {
-              const nextTemplate = stubEntry ? stubEntry.stubs[language] : getStarterTemplate(algorithmKey, language as CustomLanguage);
+              const nextTemplate = stubEntry ? stubEntry.stubs[language] : onLinkedListCodeRun ? '' : getStarterTemplate(algorithmKey, language as CustomLanguage);
               if (customCode !== nextTemplate && !window.confirm('Switching languages will clear your current code. Continue?')) return;
               if (stubEntry) setStubLang(language); else setCustomLang(language);
               setExecutionError(null);
@@ -393,6 +422,11 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               setExecutionResult(null);
             }}
           />
+          {onLinkedListCodeRun && activeLine != null && (
+            <span className="active-line-chip" title="Current source line in the generated trace">
+              <Play size={10} /> trace line {activeLine}
+            </span>
+          )}
         </div>
       )}
 
@@ -442,10 +476,15 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       {/* ── Custom mode: editable editor + run/reset ────────────── */}
       {codeMode === 'custom' && canRunCustom && (
         <>
+          {onLinkedListCodeRun && (
+            <div className="code-local-trace-note" role="note">
+              Paste a complete C++ <code>removeNthFromEnd</code> function. The local tracer uses the current linked-list values and “n from end” input to build pointer snapshots for the recognized size/count implementation. It does not compile or execute C++.
+            </div>
+          )}
           <div className="custom-code-editor">
             <div className="custom-editor-gutter">
               {customCode.split('\n').map((_, idx) => (
-                <div key={idx} className="gutter-line-number">{idx + 1}</div>
+                <div key={idx} className={`gutter-line-number${onLinkedListCodeRun && activeLine === idx + 1 ? ' active' : ''}`}>{idx + 1}</div>
               ))}
             </div>
             <textarea
@@ -484,7 +523,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           )}
           {executionResult !== null && (
             <div className="code-execution-result" aria-label="Sandbox output">
-              <strong>Sandbox output</strong>
+              <strong>{onLinkedListCodeRun ? 'Visualized result' : 'Sandbox output'}</strong>
               <pre>{executionResult}</pre>
             </div>
           )}

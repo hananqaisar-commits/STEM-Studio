@@ -38,6 +38,10 @@ export interface BinarySearchStep {
   explanation: string;
   codeLine: number;
   comparison?: ComparisonInfo;
+  /** Half-open search space used by lower/upper bound: [left, rightExclusive). */
+  halfOpenRange?: { left: number; rightExclusive: number };
+  boundResultIndex?: number;
+  boundResultLabel?: 'LOWER BOUND' | 'UPPER BOUND';
   isQuizPoint?: boolean;
   quizData?: BinarySearchQuizData;
 }
@@ -47,7 +51,9 @@ function buildElementItems(
   left: number | null,
   mid: number | null,
   right: number | null,
-  foundIndex: number | null = null
+  foundIndex: number | null = null,
+  includeRightPointer = true,
+  foundLabel = 'TARGET'
 ): ArrayElementItem[] {
   return arr.map((val, idx) => {
     let state: ArrayElementItem['state'] = 'default';
@@ -55,14 +61,14 @@ function buildElementItems(
 
     if (foundIndex !== null && idx === foundIndex) {
       state = 'found';
-      pointerLabels.push('TARGET');
+      pointerLabels.push(foundLabel);
     } else if (mid !== null && idx === mid) {
       state = 'mid';
       pointerLabels.push('MID');
     } else if (left !== null && idx === left) {
       state = 'left';
       pointerLabels.push('LEFT');
-    } else if (right !== null && idx === right) {
+    } else if (includeRightPointer && right !== null && idx === right) {
       state = 'right';
       pointerLabels.push('RIGHT');
     } else if (left !== null && right !== null) {
@@ -77,7 +83,7 @@ function buildElementItems(
     if (left !== null && idx === left && !pointerLabels.includes('LEFT')) {
       pointerLabels.push('LEFT');
     }
-    if (right !== null && idx === right && !pointerLabels.includes('RIGHT')) {
+    if (includeRightPointer && right !== null && idx === right && !pointerLabels.includes('RIGHT')) {
       pointerLabels.push('RIGHT');
     }
 
@@ -229,15 +235,16 @@ export function generateLowerBoundSteps(
   let iteration = 0;
 
   steps.push({
-    array: buildElementItems(arr, left, null, arr.length - 1),
+    array: buildElementItems(arr, left, null, right - 1, null, false),
     target,
     left,
     mid: null,
-    right: arr.length - 1,
+    right,
     foundIndex: null,
     phase: 'Initialize Lower Bound',
-    explanation: `Find first index where arr[i] >= target (${target}). Search range [0, ${arr.length}].`,
+    explanation: `Find the first index whose value is at least ${target}. The candidate interval is [0, ${right}); the right endpoint is exclusive, so it may be the end sentinel at index ${right}.`,
     codeLine: 2,
+    halfOpenRange: { left, rightExclusive: right },
   });
 
   while (left < right) {
@@ -246,54 +253,57 @@ export function generateLowerBoundSteps(
     const midVal = arr[mid];
 
     steps.push({
-      array: buildElementItems(arr, left, mid, right - 1),
+      array: buildElementItems(arr, left, mid, right - 1, null, false),
       target,
       left,
       mid,
-      right: right - 1,
+      right,
       foundIndex: null,
       phase: `Iteration ${iteration}: Evaluate arr[mid] >= target`,
-      explanation: `arr[mid=${mid}] = ${midVal}. Comparing ${midVal} >= ${target}.`,
-      codeLine: 4,
+      explanation: `Inspect arr[${mid}] = ${midVal}. Ask whether ${midVal} >= ${target}; the active candidate interval is [${left}, ${right}).`,
+      codeLine: 5,
+      halfOpenRange: { left, rightExclusive: right },
       comparison: {
         midVal,
         targetVal: target,
         condition: `${midVal} >= ${target}`,
-        result: midVal >= target ? 'greater' : 'less',
+        result: midVal < target ? 'less' : midVal > target ? 'greater' : 'equal',
       },
     });
 
     if (midVal >= target) {
       right = mid;
       steps.push({
-        array: buildElementItems(arr, left, null, right - 1),
+        array: buildElementItems(arr, left, null, right - 1, null, false),
         target,
         left,
         mid,
-        right: right - 1,
+        right,
         foundIndex: null,
-        phase: 'Shrink Right (Candidate Found)',
-        explanation: `Condition met (${midVal} >= ${target}). arr[${mid}] is a candidate lower bound. Set right = ${mid}.`,
-        codeLine: 5,
+        phase: 'Keep candidate; move R left',
+        explanation: `Condition is true: ${midVal} >= ${target}. Index ${mid} can be the answer, so keep it in the range and set the exclusive right boundary to ${mid}: [${left}, ${right}).`,
+        codeLine: 6,
+        halfOpenRange: { left, rightExclusive: right },
       });
     } else {
       left = mid + 1;
       steps.push({
-        array: buildElementItems(arr, left, null, right - 1),
+        array: buildElementItems(arr, left, null, right - 1, null, false),
         target,
         left,
         mid,
-        right: right - 1,
+        right,
         foundIndex: null,
-        phase: 'Advance Left',
-        explanation: `Condition not met (${midVal} < ${target}). Set left = mid + 1 = ${left}.`,
+        phase: 'Discard mid and move L right',
+        explanation: `Condition is false: ${midVal} < ${target}. This value and everything before it are too small, so set left = mid + 1 = ${left}. New interval: [${left}, ${right}).`,
         codeLine: 7,
+        halfOpenRange: { left, rightExclusive: right },
       });
     }
   }
 
   steps.push({
-    array: buildElementItems(arr, null, null, null, left < arr.length ? left : null),
+    array: buildElementItems(arr, null, null, null, left < arr.length ? left : null, false, 'LOWER BOUND'),
     target,
     left,
     mid: null,
@@ -301,9 +311,12 @@ export function generateLowerBoundSteps(
     foundIndex: left < arr.length ? left : null,
     phase: 'Lower Bound Found',
     explanation: left < arr.length
-      ? `Lower bound for target ${target} is index ${left} (value: ${arr[left]}).`
-      : `All elements are smaller than target ${target}. Lower bound is index ${left} (end of array).`,
+      ? `The interval is empty at [${left}, ${left}). The lower bound is index ${left}, where ${arr[left]} >= ${target}; return ${left}.`
+      : `The interval is empty at [${left}, ${left}). Every value is smaller than ${target}, so the lower bound is the end sentinel at index ${left}; return ${left}.`,
     codeLine: 9,
+    halfOpenRange: { left, rightExclusive: right },
+    boundResultIndex: left,
+    boundResultLabel: 'LOWER BOUND',
   });
 
   return steps;
@@ -321,15 +334,16 @@ export function generateUpperBoundSteps(
   let iteration = 0;
 
   steps.push({
-    array: buildElementItems(arr, left, null, arr.length - 1),
+    array: buildElementItems(arr, left, null, right - 1, null, false),
     target,
     left,
     mid: null,
-    right: arr.length - 1,
+    right,
     foundIndex: null,
     phase: 'Initialize Upper Bound',
-    explanation: `Find first index where arr[i] > target (${target}). Search range [0, ${arr.length}].`,
+    explanation: `Find the first index whose value is greater than ${target}. The candidate interval is [0, ${right}); the right endpoint is exclusive and may be the end sentinel at index ${right}.`,
     codeLine: 2,
+    halfOpenRange: { left, rightExclusive: right },
   });
 
   while (left < right) {
@@ -338,48 +352,57 @@ export function generateUpperBoundSteps(
     const midVal = arr[mid];
 
     steps.push({
-      array: buildElementItems(arr, left, mid, right - 1),
+      array: buildElementItems(arr, left, mid, right - 1, null, false),
       target,
       left,
       mid,
-      right: right - 1,
+      right,
       foundIndex: null,
       phase: `Iteration ${iteration}: Evaluate arr[mid] > target`,
-      explanation: `arr[mid=${mid}] = ${midVal}. Comparing ${midVal} > ${target}.`,
-      codeLine: 4,
+      explanation: `Inspect arr[${mid}] = ${midVal}. Ask whether ${midVal} > ${target}; the active candidate interval is [${left}, ${right}).`,
+      codeLine: 5,
+      halfOpenRange: { left, rightExclusive: right },
+      comparison: {
+        midVal,
+        targetVal: target,
+        condition: `${midVal} > ${target}`,
+        result: midVal < target ? 'less' : midVal > target ? 'greater' : 'equal',
+      },
     });
 
     if (midVal > target) {
       right = mid;
       steps.push({
-        array: buildElementItems(arr, left, null, right - 1),
+        array: buildElementItems(arr, left, null, right - 1, null, false),
         target,
         left,
         mid,
-        right: right - 1,
+        right,
         foundIndex: null,
-        phase: 'Shrink Right (Candidate Found)',
-        explanation: `Condition met (${midVal} > ${target}). Set right = ${mid}.`,
-        codeLine: 5,
+        phase: 'Keep candidate; move R left',
+        explanation: `Condition is true: ${midVal} > ${target}. Index ${mid} can be the answer, so keep it and set the exclusive right boundary to ${mid}: [${left}, ${right}).`,
+        codeLine: 6,
+        halfOpenRange: { left, rightExclusive: right },
       });
     } else {
       left = mid + 1;
       steps.push({
-        array: buildElementItems(arr, left, null, right - 1),
+        array: buildElementItems(arr, left, null, right - 1, null, false),
         target,
         left,
         mid,
-        right: right - 1,
+        right,
         foundIndex: null,
-        phase: 'Advance Left',
-        explanation: `Condition not met (${midVal} <= ${target}). Set left = mid + 1 = ${left}.`,
+        phase: 'Discard mid and move L right',
+        explanation: `Condition is false: ${midVal} <= ${target}. This value and everything before it cannot be the upper bound, so set left = mid + 1 = ${left}. New interval: [${left}, ${right}).`,
         codeLine: 7,
+        halfOpenRange: { left, rightExclusive: right },
       });
     }
   }
 
   steps.push({
-    array: buildElementItems(arr, null, null, null, left < arr.length ? left : null),
+    array: buildElementItems(arr, null, null, null, left < arr.length ? left : null, false, 'UPPER BOUND'),
     target,
     left,
     mid: null,
@@ -387,9 +410,12 @@ export function generateUpperBoundSteps(
     foundIndex: left < arr.length ? left : null,
     phase: 'Upper Bound Found',
     explanation: left < arr.length
-      ? `Upper bound strictly greater than ${target} is index ${left} (value: ${arr[left]}).`
-      : `No element is greater than target ${target}. Returning index ${left}.`,
+      ? `The interval is empty at [${left}, ${left}). The upper bound is index ${left}, where ${arr[left]} > ${target}; return ${left}.`
+      : `The interval is empty at [${left}, ${left}). No value is greater than ${target}, so the upper bound is the end sentinel at index ${left}; return ${left}.`,
     codeLine: 9,
+    halfOpenRange: { left, rightExclusive: right },
+    boundResultIndex: left,
+    boundResultLabel: 'UPPER BOUND',
   });
 
   return steps;
