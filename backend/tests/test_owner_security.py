@@ -77,7 +77,7 @@ def _sign_in_as_owner(db_session, monkeypatch):
     response = Response()
     result = auth.login(
         LoginRequest(
-            identifier=account.username,
+            email=account.email,
             password="SecureOwnerPassword123!",
             owner_mode=True,
             mfa_code=_totp(secret),
@@ -185,7 +185,7 @@ def test_regular_password_login_keeps_bearer_flow_without_owner_privileges(db_se
     db_session.add(learner)
     db_session.commit()
     result = auth.login(
-        LoginRequest(identifier=learner.username, password="LearnerPassword123!"),
+        LoginRequest(email=learner.email, password="LearnerPassword123!"),
         _request("POST"),
         Response(),
         db_session,
@@ -210,7 +210,7 @@ def test_revoking_regular_session_invalidates_its_access_token_immediately(db_se
     db_session.add(learner)
     db_session.commit()
     result = auth.login(
-        LoginRequest(identifier=learner.username, password="LearnerPassword123!"),
+        LoginRequest(email=learner.email, password="LearnerPassword123!"),
         _request("POST"),
         Response(),
         db_session,
@@ -324,7 +324,7 @@ def test_owner_login_rejects_wrong_mfa_code(db_session, monkeypatch):
     with pytest.raises(HTTPException) as denied:
         auth.login(
             LoginRequest(
-                identifier=account.username,
+                email=account.email,
                 password="SecureOwnerPassword123!",
                 owner_mode=True,
                 mfa_code=wrong_code,
@@ -361,7 +361,7 @@ def test_role_and_mfa_without_provisioned_owner_anchor_are_not_enough(db_session
     db_session.commit()
     with pytest.raises(HTTPException) as denied:
         auth.login(
-            LoginRequest(identifier=account.username, password="SecureOwnerPassword123!", owner_mode=True, mfa_code=_totp(secret)),
+            LoginRequest(email=account.email, password="SecureOwnerPassword123!", owner_mode=True, mfa_code=_totp(secret)),
             _request("POST"),
             Response(),
             db_session,

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getRememberedUsername } from '../../api/authPreferences';
+import { getRememberedEmail } from '../../api/authPreferences';
 import { Octa, useMascot } from '../../components/mascot';
 import '../../components/mascot/Mascot.css';
 import './Auth.css';
@@ -15,7 +15,7 @@ declare global {
 }
 
 export const SignIn: React.FC = () => {
-  const [identifier, setIdentifier] = useState(getRememberedUsername);
+  const [email, setEmail] = useState(getRememberedEmail);
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [ownerMode, setOwnerMode] = useState(false);
@@ -76,8 +76,8 @@ export const SignIn: React.FC = () => {
     setExpression('focused');
 
     try {
-      if (ownerMode) await loginAsOwner(identifier, password, mfaCode);
-      else await login(identifier, password, rememberMe);
+      if (ownerMode) await loginAsOwner(email, password, mfaCode);
+      else await login(email, password, rememberMe);
       setExpression('happy', { temporary: true, durationMs: 900 });
       setTimeout(() => navigate(ownerMode ? '/dashboard/owner' : '/dashboard'), 300);
     } catch (err: any) {
@@ -113,7 +113,7 @@ export const SignIn: React.FC = () => {
 
         {GOOGLE_CLIENT_ID && !ownerMode && (
           <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
-            <span>or sign in with username</span>
+            <span>or sign in with email</span>
           </div>
         )}
 
@@ -147,21 +147,22 @@ export const SignIn: React.FC = () => {
             </button>
           </fieldset>
           <div className="input-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="email">Email address</label>
             <div className="input-wrapper">
-              <User className="input-icon" size={18} />
+              <Mail className="input-icon" size={18} />
               <input
-                type="text"
-                id="username"
-                name="username"
+                type="email"
+                id="email"
+                name="email"
                 className="auth-input"
-                placeholder="Enter your username"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
-                autoComplete="username"
+                autoComplete="email"
                 autoCapitalize="none"
                 spellCheck={false}
+                inputMode="email"
                 required
                 disabled={isSubmitting}
               />
