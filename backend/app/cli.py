@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import logging
 import re
 import sys
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ from sqlalchemy import func
 
 from backend.app.core.owner_security import encrypt_totp_secret, generate_totp_secret, record_admin_event, totp_uri
 from backend.app.core.security import hash_password, verify_password
-from backend.infrastructure.database.database import SessionLocal
+from backend.infrastructure.database.database import SessionLocal, engine
 from backend.infrastructure.database import models  # noqa: F401 - register model metadata
 from backend.infrastructure.database.models import OwnerAccount, OwnerMFACredential, Role, User, UserSession
 
@@ -153,6 +154,12 @@ def reset_owner_mfa() -> int:
 
 
 def main() -> int:
+    # DEBUG=true enables SQLAlchemy's echo mode elsewhere in the app. Admin
+    # commands handle password hashes and MFA credentials, so never emit SQL
+    # statements or bound parameter values to this terminal.
+    engine.echo = False
+    logging.disable(logging.INFO)
+
     parser = argparse.ArgumentParser(prog="stem-studio-admin")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("create-owner", help="Provision the first owner interactively")
