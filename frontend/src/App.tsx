@@ -15,6 +15,7 @@ import { OctaTutor } from './components/tutor/OctaTutor';
 import { NotFoundPage } from './features/NotFoundPage';
 import { MarketingHome } from './features/marketing/MarketingHome';
 import { MarketingFooter } from './features/marketing/MarketingFooter';
+import { OwnerControlCenter } from './features/owner/OwnerControlCenter';
 
 // Lazy-loaded page components for code-splitting
 const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
@@ -54,6 +55,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
+};
+
+const OwnerRoute: React.FC = () => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <LoadingScreen message="Verifying owner session..." />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!user?.is_owner_session) return <Navigate to="/dashboard" replace />;
+  return <OwnerControlCenter />;
 };
 
 /**
@@ -140,6 +149,7 @@ const DashboardLayout = () => {
           <Suspense fallback={<LoadingScreen message="Loading module..." />}>
             <Routes>
               <Route index element={<><DashboardHome /><MarketingFooter /></>} />
+              <Route path="owner" element={<OwnerRoute />} />
               <Route path="dsa" element={<ModuleHub moduleId="dsa" />} />
               <Route path="complexity" element={<GatedRoute><ComplexityPage /></GatedRoute>} />
               <Route path="sorting" element={<GatedRoute><SortingPage /></GatedRoute>} />
@@ -209,8 +219,8 @@ const AppContent = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <MascotProvider>
           <TutorProvider>
             <Router>
@@ -218,8 +228,8 @@ function App() {
             </Router>
           </TutorProvider>
         </MascotProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

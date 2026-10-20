@@ -7,6 +7,8 @@
 .queue-container,
 .circular-queue-container,
 .problem-container {
+  box-sizing: border-box;
+  min-width: 0;
   height: 480px;
   background-color: var(--color-app-bg);
   border: 1px solid var(--color-border);
@@ -14,9 +16,169 @@
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-md), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: var(--shadow-md);
   position: relative;
   overflow: hidden;
+}
+
+.problem-container {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.infix-token-ribbon {
+  flex-shrink: 0;
+}
+
+.infix-conversion-workspace {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(0, 1.6fr);
+  gap: 0.75rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.infix-lane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.infix-lane-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.infix-lane-heading small {
+  color: var(--color-text-muted);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.infix-lane-content {
+  display: flex;
+  align-content: flex-start;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  overflow: auto;
+}
+
+.infix-stack-lane {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.infix-token {
+  display: inline-flex;
+  min-width: 2rem;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.55rem;
+  background: var(--color-app-bg);
+  color: var(--color-text);
+  font: 700 0.9rem/1.2 'JetBrains Mono', monospace;
+  animation: infix-token-arrive 180ms ease-out both;
+}
+
+.infix-token-active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-primary);
+}
+
+.infix-token-error {
+  border-color: #ef4444;
+  background: color-mix(in srgb, #ef4444 12%, var(--color-surface));
+  color: #dc2626;
+}
+
+.infix-empty {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.infix-rule-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.6rem;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.infix-rule-note strong {
+  color: var(--color-text-secondary);
+}
+
+.infix-rule-note code {
+  color: var(--color-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stackqueue-input-help {
+  flex-basis: 100%;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.stackqueue-input-group {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+
+.stackqueue-input-group .bst-input {
+  flex: 1 1 180px;
+  max-width: min(560px, 62vw);
+}
+
+.stackqueue-param-control {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.stackqueue-param-control input {
+  width: 4.25rem;
+  min-height: 32px;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.45rem;
+  background: var(--color-app-bg);
+  color: var(--color-text);
+  font: 600 0.8rem 'JetBrains Mono', monospace;
+}
+
+@keyframes infix-token-arrive {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .chamber-header {
@@ -46,29 +208,35 @@
 /* 3D Vertical Stack Chamber Workspace */
 .stack-chamber-workspace {
   flex: 1;
+  min-height: 0;
+  min-width: 0;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
-  padding-bottom: 1rem;
+  align-items: flex-start;
+  padding: 0.5rem 2rem 0.75rem;
   background-color: transparent;
   border-radius: 12px;
   border: 1px solid var(--color-border);
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .stack-glass-tube {
-  width: 220px;
-  height: 330px;
+  width: min(220px, 100%);
+  height: auto;
+  min-height: 300px;
+  flex: 0 0 auto;
   border: 1px dashed var(--color-border);
   border-top: none;
   border-radius: 0 0 16px 16px;
-  background: transparent;
+  background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   align-items: center;
   padding: 0.5rem;
   position: relative;
   box-shadow: none;
+  overflow: visible;
 }
 
 .tube-base-plate {
@@ -76,7 +244,7 @@
   bottom: -12px;
   font-size: var(--text-xs);
   font-weight: 800;
-  color: #64748b;
+  color: var(--color-text-muted);
   letter-spacing: 1px;
 }
 
@@ -98,17 +266,24 @@
   flex-direction: column-reverse;
   gap: 0.4rem;
   width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
+  margin-top: auto;
 }
 
 /* Flat Stack Plate Elements (Premium Theme) */
 .stack-3d-plate {
   width: 100%;
-  height: 42px;
+  min-width: 0;
+  min-height: 42px;
+  height: auto;
+  flex: 0 0 auto;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  padding: 0.4rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   box-shadow: none;
@@ -135,17 +310,27 @@
 .plate-inner-content {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .plate-value {
+  min-width: 0;
+  max-width: 100%;
   font-size: var(--text-base);
   font-weight: 700;
   color: var(--color-text);
   font-family: 'Fira Code', monospace;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .plate-index {
+  flex: 0 0 auto;
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
@@ -154,20 +339,22 @@
 .top-pointer-badge {
   position: absolute;
   right: -34px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  background-color: #061e14;
-  border: 1.5px solid #10b981;
-  color: #34d399;
+  background-color: var(--color-surface-elevated);
+  border: 1.5px solid var(--color-primary);
+  color: var(--color-primary);
   font-size: var(--text-xs);
   font-weight: 800;
   width: 24px;
   height: 24px;
   padding: 0;
   border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Queue Workspace */
@@ -200,15 +387,15 @@
 }
 
 .exit-badge {
-  background-color: rgba(244, 63, 94, 0.15);
-  border: 1px solid #f43f5e;
-  color: #fb7185;
+  background-color: color-mix(in srgb, var(--error-color) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--error-color) 55%, var(--color-border));
+  color: var(--error-color);
 }
 
 .enter-badge {
-  background-color: rgba(16, 185, 129, 0.15);
-  border: 1px solid #10b981;
-  color: #34d399;
+  background-color: color-mix(in srgb, var(--success-color) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--success-color) 55%, var(--color-border));
+  color: var(--success-color);
 }
 
 .queue-glass-tube {
@@ -259,16 +446,16 @@
 
 .front-badge {
   left: 2px;
-  background-color: #032030;
-  border: 1px solid #38bdf8;
-  color: #38bdf8;
+  background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
 }
 
 .rear-badge {
   right: 2px;
-  background-color: #1e1404;
-  border: 1px solid #f59e0b;
-  color: #fbbf24;
+  background-color: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
 }
 
 /* Circular Workspace & Problems */
@@ -287,7 +474,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
   border: 1px solid var(--color-border);
   padding: 0.5rem 0.85rem;
   border-radius: 8px;
@@ -311,14 +498,14 @@
   font-weight: 800;
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
 }
 
 .char-active {
   background-color: var(--color-primary) !important;
-  color: #ffffff !important;
+  color: var(--color-text-on-primary) !important;
   border-color: var(--color-primary) !important;
 }
 
@@ -338,6 +525,10 @@
   flex-direction: column;
   gap: 0.4rem;
   align-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .column-title {
@@ -348,35 +539,49 @@
 
 .min-tube {
   width: 100% !important;
-  height: 300px !important;
+  height: auto !important;
+  min-height: 240px;
+  max-height: 100%;
+  flex: 0 0 auto;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 /* Light Mode Overrides */
 .theme-light .stack-container,
 .theme-light .queue-container,
 .theme-light .circular-queue-container,
-.theme-light .problem-container {
-  background-color: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+.theme-light .problem-container,
+[data-theme="light"] .stack-container,
+[data-theme="light"] .queue-container,
+[data-theme="light"] .circular-queue-container,
+[data-theme="light"] .problem-container {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 .theme-light .stack-chamber-workspace,
-.theme-light .queue-channel-workspace {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+.theme-light .queue-channel-workspace,
+[data-theme="light"] .stack-chamber-workspace,
+[data-theme="light"] .queue-channel-workspace {
+  background-color: var(--color-surface-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .theme-light .stack-3d-plate,
-.theme-light .queue-3d-block {
-  background: #ffffff !important;
-  border-color: #cbd5e1 !important;
+.theme-light .queue-3d-block,
+[data-theme="light"] .stack-3d-plate,
+[data-theme="light"] .queue-3d-block {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
 }
 
-.theme-light .top-pointer-badge {
-  background-color: #ffffff !important;
-  border: 1.5px solid #10b981 !important;
-  color: #047857 !important;
+.theme-light .top-pointer-badge,
+[data-theme="light"] .top-pointer-badge {
+  background-color: var(--color-surface) !important;
+  border: 1.5px solid var(--color-primary) !important;
+  color: var(--color-primary-text) !important;
 }
 
 /* ── Histogram Problems (Trapping Rain Water / Largest Rectangle) ──── */
@@ -441,9 +646,67 @@
 /* ── Shared Problem Renderer Extras ───────────────────────────────── */
 
 .char-window {
-  color: #c7d2fe;
-  border-color: rgba(129, 140, 248, 0.55);
-  background: rgba(99, 102, 241, 0.18);
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+/* First Non-Repeating Stream uses semantic theme colors so its labels and
+   character values remain legible in both light and dark themes. */
+.first-non-repeating-renderer .stream-panel-title {
+  color: var(--color-text-secondary);
+  line-height: 1.35;
+}
+
+.first-non-repeating-renderer .stream-candidate-block,
+.first-non-repeating-renderer .stream-timeline-block {
+  flex: 0 0 54px;
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  background: var(--color-surface);
+}
+
+.first-non-repeating-renderer .stream-result-current {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.first-non-repeating-renderer .stream-visualizer-value {
+  color: var(--color-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-sm);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.first-non-repeating-renderer .stream-no-candidate {
+  color: var(--color-text-muted);
+}
+
+/* Moving Average keeps all window values and emitted results readable across
+   the app's light and dark palettes. */
+.moving-average-renderer .moving-average-panel-title {
+  color: var(--color-text-secondary);
+  line-height: 1.35;
+}
+
+.moving-average-renderer .moving-average-window-block,
+.moving-average-renderer .moving-average-output-block {
+  flex: 0 0 54px;
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  background: var(--color-surface);
+}
+
+.moving-average-renderer .moving-average-current {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.moving-average-renderer .moving-average-value {
+  color: var(--color-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-sm);
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .queue-3d-block-wide {
@@ -468,7 +731,7 @@
   padding: 1rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.35);
+  background: var(--color-surface-elevated);
 }
 
 .orange-cell {
@@ -502,33 +765,145 @@
   color: #fb7185;
 }
 
+@media (max-width: 640px) {
+  .stack-container,
+  .queue-container,
+  .circular-queue-container,
+  .problem-container {
+    height: min(480px, 68vh);
+    min-height: 340px;
+    padding: 0.85rem;
+  }
+
+  .stack-chamber-workspace {
+    padding: 0.45rem 1.8rem 0.7rem;
+  }
+
+  .stack-glass-tube {
+    min-height: 250px;
+  }
+
+  .min-tube {
+    min-height: 180px;
+  }
+
+  .dual-chamber-workspace {
+    gap: 0.5rem;
+  }
+
+  .column-title {
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .infix-conversion-workspace {
+    grid-template-columns: minmax(105px, 0.7fr) minmax(0, 1.3fr);
+    gap: 0.45rem;
+  }
+
+  .infix-lane-heading {
+    padding: 0.55rem;
+    font-size: 0.68rem;
+  }
+
+  .infix-lane-heading small {
+    display: none;
+  }
+
+  .infix-lane-content {
+    gap: 0.35rem;
+    padding: 0.55rem;
+  }
+
+  .stackqueue-input-group {
+    width: 100%;
+  }
+
+  .stackqueue-input-group .bst-input {
+    min-width: 0 !important;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .infix-token {
+    animation: none;
+  }
+}
+
 /* ── Light Mode Overrides (New Problem Renderers) ─────────────────── */
 
-.theme-light .problem-histogram {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+.theme-light .problem-histogram,
+[data-theme="light"] .problem-histogram {
+  background-color: var(--color-surface-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
-.theme-light .orange-grid {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+.theme-light .orange-grid,
+[data-theme="light"] .orange-grid {
+  background-color: var(--color-surface-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
-.theme-light .orange-empty {
-  background: #e2e8f0;
-  color: #94a3b8;
+.theme-light .orange-empty,
+[data-theme="light"] .orange-empty {
+  background: var(--color-control-bg);
+  color: var(--color-text-muted);
 }
 
-.theme-light .orange-fresh {
-  background: #fef3c7;
+.theme-light .orange-fresh,
+[data-theme="light"] .orange-fresh {
+  background: color-mix(in srgb, #f59e0b 15%, var(--color-surface));
 }
 
-.theme-light .orange-rotten {
-  background: #ffe4e6;
+.theme-light .orange-rotten,
+[data-theme="light"] .orange-rotten {
+  background: color-mix(in srgb, var(--error-color) 14%, var(--color-surface));
 }
 
-.theme-light .char-window {
-  color: #4338ca;
-  background: #e0e7ff;
-  border-color: #a5b4fc;
+.theme-light .char-window,
+[data-theme="light"] .char-window {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+}
+
+/* Keep every Stack & Queue problem renderer readable in either app theme.
+   The topic accents remain on borders and state backgrounds; content text
+   follows the shared contrast tokens. */
+.problem-container .column-title {
+  color: var(--color-text-secondary);
+}
+
+.problem-container .plate-value,
+.problem-container .queue-3d-block > span:not(.queue-pointer-badge):not(.stream-no-candidate) {
+  color: var(--color-text);
+}
+
+.problem-container .stream-char:not(.char-active) {
+  color: var(--color-text-secondary);
+}
+
+.problem-container .stream-char.char-processed {
+  opacity: 0.72;
+}
+
+.problem-container .input-string-ribbon > .font-mono {
+  color: var(--color-text);
+}
+
+.problem-container .hist-label {
+  color: var(--color-text-secondary);
+}
+
+.problem-container .orange-cell {
+  color: var(--color-text);
+}
+
+.problem-container .stream-char.senate-r:not(.char-active) {
+  color: color-mix(in srgb, var(--success-color) 45%, var(--color-text));
+}
+
+.problem-container .stream-char.senate-d:not(.char-active) {
+  color: color-mix(in srgb, var(--error-color) 45%, var(--color-text));
 }

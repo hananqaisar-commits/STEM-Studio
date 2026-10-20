@@ -181,6 +181,7 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
               </div>
             </div>
           )}
+          <p className="tutor-key-note">Your key stays in this browser tab only and is cleared when its session ends. It is sent to the STEM Studio backend when Octa uses it; avoid configuring a key on a shared device.</p>
 
           {/* Model Name */}
           <div className="tutor-field-group">

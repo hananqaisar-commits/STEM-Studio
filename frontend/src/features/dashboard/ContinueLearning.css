@@ -1,0 +1,12 @@
+.continue-learning { margin: 24px 0 32px; }
+.continue-learning-header { display: flex; align-items: end; justify-content: space-between; margin-bottom: 12px; }
+.continue-learning-header h2 { margin: 2px 0 0; font-size: 21px; color: var(--color-text); }
+.continue-learning-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 12px; }
+.continue-learning-card { display: flex; min-width: 0; align-items: center; gap: 12px; padding: 15px; border: 1px solid var(--color-border); border-radius: 14px; color: var(--color-text); background: var(--color-surface); text-decoration: none; }
+.continue-learning-card:hover { border-color: var(--color-primary); transform: translateY(-1px); }
+.continue-learning-card-icon { display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center; border-radius: 11px; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 11%, transparent); }
+.continue-learning-card-copy { display: grid; min-width: 0; flex: 1; gap: 3px; }
+.continue-learning-card-copy small { color: var(--color-text-muted); font-size: 11px; }
+.continue-learning-card-copy strong { overflow-wrap: anywhere; font-size: 14px; }
+.continue-learning-card-copy span { color: var(--color-text-secondary); font-size: 12px; line-height: 1.45; }
+.continue-learning-primary { border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border)); }

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap } from 'lucide-react';
 import type { QuizQuestion, QuizCadence } from '../../engine/types/Quiz';
+import { sendTutorMessage } from '../../api/octaTutorApi';
+import { readOctaConfig } from '../../api/octaConfigStorage';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
 
@@ -42,6 +44,7 @@ export interface QuizPanelProps {
   cadence?: QuizCadence;
   /** Seconds remaining on timer (Challenge mode only); null otherwise. */
   timeRemaining?: number | null;
+  timeLimitSeconds?: number | null;
   /** Streak multiplier: x1, x2 (3+ streak), x3 (5+ streak). */
   streakMultiplier?: number;
   /** True while the transfer challenge (fresh input) is in play. */
@@ -66,6 +69,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   streak,
   cadence = 'normal',
   timeRemaining = null,
+  timeLimitSeconds = 45,
   streakMultiplier = 1,
   challengeMode = false,
   onAnswer,
@@ -73,12 +77,45 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   continueLabel = 'Continue',
 }) => {
   const [pending, setPending] = useState<number | null>(null);
+  const [reasoning, setReasoning] = useState('');
+  const [reasoningFeedback, setReasoningFeedback] = useState('');
+  const [gradingReasoning, setGradingReasoning] = useState(false);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const continueRef = useRef<HTMLButtonElement | null>(null);
 
   const locked = phase === 'revealed';
   const optionCount = question.options.length;
   const isConcept = cadence === 'light';
+
+  useEffect(() => {
+    setReasoning('');
+    setReasoningFeedback('');
+  }, [question.id]);
+
+  const gradeReasoning = async () => {
+    if (!reasoning.trim() || gradingReasoning) return;
+    setGradingReasoning(true);
+    setReasoningFeedback('');
+    try {
+      const config = readOctaConfig();
+      const result = await sendTutorMessage({
+        message: `Grade the learner's short explanation for this checkpoint. Give a score from 0 to 2, name one correct idea, and one concrete correction or next thought. Do not penalize grammar. Keep the feedback under 80 words.\n\nCheckpoint: ${question.prompt}\nExpected reasoning: ${question.explanation}\nLearner explanation: ${reasoning.trim()}`,
+        mode: 'natural',
+        algorithm_name: question.concept,
+        category: 'quiz reasoning',
+        topic_knowledge: `The checkpoint's accepted reasoning is: ${question.explanation}`,
+        provider: config.provider,
+        api_key: config.apiKey,
+        base_url: config.baseUrl,
+        model_name: config.modelName,
+      });
+      setReasoningFeedback(result.answer_source === 'model' && result.reply
+        ? result.reply
+        : 'Octa’s live AI provider is unavailable, so this explanation was not graded. Your answer is still here; try again when Octa is connected.');
+    } catch {
+      setReasoningFeedback('Octa is unavailable right now. Your explanation is still here; try again later.');
+    } finally { setGradingReasoning(false); }
+  };
 
   /* Move focus to the card when it opens. */
   useEffect(() => {
@@ -147,7 +184,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   const effectiveContinueLabel = continueLabel;
 
   /* Timer bar width percentage (the shared Challenge limit is 10 seconds). */
-  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / 15) * 100) : 100;
+  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / Math.max(1, timeLimitSeconds ?? 45)) * 100) : 100;
   const timerUrgent = timeRemaining !== null && timeRemaining <= 5;
 
   /* Progress percentage for Guided mode. */
@@ -254,6 +291,13 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
           );
         })}
         </div>
+        <details className="quiz-reasoning">
+          <summary>Explain why in your own words <span>Optional · Octa gives feedback</span></summary>
+          <label className="quiz-reasoning-label" htmlFor={`reasoning-${question.id}`}>Write the idea or rule that supports your prediction.</label>
+          <textarea id={`reasoning-${question.id}`} value={reasoning} onChange={(event) => setReasoning(event.target.value)} maxLength={1500} rows={3} placeholder="For example: the larger value moves right because…" />
+          <div className="quiz-reasoning-footer"><span>{reasoning.length}/1500</span><button type="button" onClick={() => void gradeReasoning()} disabled={gradingReasoning || reasoning.trim().length < 8}><Lightbulb size={14} />{gradingReasoning ? 'Octa is reviewing…' : 'Get Octa feedback'}</button></div>
+          {reasoningFeedback && <p className="quiz-reasoning-feedback" role="status">{reasoningFeedback}</p>}
+        </details>
       </div>
 
       <div className="quiz-feedback-region" aria-live="polite">

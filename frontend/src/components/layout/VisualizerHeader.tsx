@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileCode2 } from 'lucide-react';
 import type { CategoryTopics } from '../../data/categoryTopics';
+import { hasCustomStub } from '../../data/customCode';
 
 export interface VisualizerSearchItem { id: string; name: string; description?: string; group?: string; }
 interface VisualizerHeaderProps {
@@ -12,7 +13,25 @@ interface VisualizerHeaderProps {
 
 /** Shared compact page header. The topic strip remains in the page controls;
  * this row only provides identity, search, and the universal mode actions. */
-export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title, subtitle, actions, isCustomCodeRunning }) => {
+export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title, subtitle, actions, isCustomCodeRunning, activeId }) => {
+  const categoryByTitle: Record<string, string> = {
+    'Sorting Algorithms Studio': 'sorting',
+    'Linked List Visualizer': 'linkedList',
+    'Stack & Queue Studio': 'stackQueue',
+    'Tree Structures Studio': 'bst',
+    'Graph Algorithms Studio': 'graph',
+    'Binary Search Studio': 'binarySearch',
+    'Hash Map Algorithms Studio': 'hashMaps',
+    'Array Algorithms Studio': 'arrays',
+    'String Algorithms Studio': 'strings',
+    'Recursion Studio': 'recursion',
+    'Backtracking Algorithms Studio': 'backtracking',
+    'Greedy Algorithms Studio': 'greedy',
+    'Dynamic Programming Studio': 'dp',
+    'Trie (Prefix Tree) Studio': 'trie',
+  };
+  const topicCategoryId = categoryByTitle[title];
+  const codeSupported = topicCategoryId && activeId ? hasCustomStub(topicCategoryId, activeId) : null;
   return (
     <header className="viz-header animate-fade-in">
       <div className="viz-title-group">
@@ -28,6 +47,11 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title,
             )}
           </div>
           <p>{subtitle}</p>
+          {codeSupported !== null && (
+            <span className={`custom-code-coverage ${codeSupported ? 'is-supported' : 'is-coming'}`}>
+              Custom code: {codeSupported ? 'supported' : 'coming soon'}
+            </span>
+          )}
         </div>
       </div>
       {actions}

@@ -11,6 +11,7 @@ export interface TutorAlgorithmContext {
   steps: any[];
   // Control callbacks for function calling & guided walkthroughs
   onSetInput?: (values: number[]) => void;
+  onRunVisualization?: () => void;
   play?: () => void;
   pause?: () => void;
   stepForward?: () => void;

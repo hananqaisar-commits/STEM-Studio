@@ -562,6 +562,28 @@ export const THEORY_CONTENT: Record<string, CategoryTheory> = {
         applications: ['Sliding window minimums', 'Real-time statistics'],
       },
       {
+        id: 'infixToPostfix',
+        name: 'Infix to Postfix Conversion (Shunting Yard)',
+        complexity: 'O(n) time · O(n) space',
+        description:
+          'Convert an infix expression into postfix form with an operator stack. Operands go straight to output; operators wait until precedence and parentheses say they can be emitted.',
+        keyPoints: [
+          'Multiplication and division have higher precedence than addition and subtraction.',
+          'When equal-precedence operators meet, pop first for left-associative operators; exponentiation (^) is right-associative.',
+          'Parentheses form a boundary: pop operators to output at a closing parenthesis, then discard the matching opening parenthesis.',
+          'This lesson accepts well-formed binary expressions; unary + and − are not supported.',
+        ],
+        steps: [
+          'Scan tokens from left to right.',
+          'Append each operand directly to the postfix output.',
+          'Push an opening parenthesis. At a closing parenthesis, pop operators until the matching opening parenthesis, then discard it.',
+          'Before pushing an operator, pop higher-precedence operators and equal-precedence left-associative operators.',
+          'After the last token, pop the remaining operators to output.',
+        ],
+        example: 'Infix: A + B * C\nRead A → output A\nRead + → stack +\nRead B → output A B\nRead * → keep + below it because * has higher precedence\nRead C → output A B C\nEnd → pop * then +\nPostfix: A B C * +',
+        applications: ['Expression parsers', 'Calculator engines', 'Compiler intermediate representations'],
+      },
+      {
         id: 'postfixEval',
         name: 'Evaluate RPN / Postfix',
         complexity: 'O(n)',

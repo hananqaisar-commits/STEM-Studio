@@ -1,3 +1,5 @@
+import topicCatalog from './topicCatalog.json';
+
 /**
  * Central registry for all DSA module categories.
  * Single source of truth for the hub card grid, sidebar, and navbar.
@@ -22,7 +24,7 @@ export interface CategoryDef {
   iconName: string;
 }
 
-export const DSA_CATEGORIES: CategoryDef[] = [
+const DSA_CATEGORY_DEFS: CategoryDef[] = [
   // ── Foundations ─────────────────────────────────────────────
   {
     id: 'complexity',
@@ -66,7 +68,7 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     id: 'linkedList',
     name: 'Linked List',
     description: 'Singly, Doubly, Circular, Doubly Circular — Insert/Delete, Reverse, Floyd\'s Cycle Detection, Middle Node, Josephus Problem',
-    topicCount: 8,
+    topicCount: 21,
     difficulty: 'Intermediate',
     available: true,
     iconName: 'GitCommit',
@@ -74,8 +76,8 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   {
     id: 'stackQueue',
     name: 'Stack & Queue',
-    description: 'Valid Parentheses, Min Stack, RPN Calculator, Monotonic Stacks, Circular Queue & Deque, Sliding Window Max, Task Scheduler, Rotting Oranges',
-    topicCount: 22,
+    description: 'Stack and queue primitives, expression conversion, monotonic structures, circular buffers, stream processing, and BFS problems',
+    topicCount: 23,
     difficulty: 'Intermediate',
     available: true,
     iconName: 'Layers',
@@ -106,7 +108,7 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     id: 'bst',
     name: 'Trees',
     description: 'BST, AVL, Heap, Trie — insert, search, depth-first traversals, balancing rotations, heapify',
-    topicCount: 4,
+    topicCount: 6,
     difficulty: 'Advanced',
     available: true,
     iconName: 'GitPullRequest',
@@ -115,7 +117,7 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     id: 'graph',
     name: 'Graphs',
     description: 'BFS, DFS, Dijkstra, Prim\'s, Topological Sort',
-    topicCount: 5,
+    topicCount: 8,
     difficulty: 'Advanced',
     available: true,
     iconName: 'Share2',
@@ -168,6 +170,12 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     iconName: 'Binary',
   },
 ];
+
+/** The shared JSON is also read by the backend progress percentage API. */
+export const DSA_CATEGORIES: CategoryDef[] = DSA_CATEGORY_DEFS.map((category) => ({
+  ...category,
+  topicCount: topicCatalog[category.id as keyof typeof topicCatalog]?.length ?? category.topicCount,
+}));
 
 /**
  * Module definitions — top-level subjects shown in the sidebar.

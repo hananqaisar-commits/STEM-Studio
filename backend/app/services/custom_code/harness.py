@@ -118,6 +118,7 @@ _PY_LIST_NODE = """
 class ListNode:
     def __init__(self, val=0, next=None):
         self.val = val
+        self.data = val
         self.next = next
 
 def __build_list(values, cycle_index=-1):
@@ -179,7 +180,19 @@ def _build_python(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -
             )
         else:
             call_args.append(f"__args[{json.dumps(name)}]")
-    parts.append(f"__result = {algo['entry']}({', '.join(call_args)})")
+    entry = algo.get("_entryOverride", algo["entry"])
+    if algo.get("_entryNoArgs"):
+        node_param = next(((n, v) for n, t, v in _args_for(algo, state) if t == "node"), None)
+        if node_param is None:
+            raise ValueError("Cycle detection needs a linked-list input.")
+        node_name, _ = node_param
+        parts.append(
+            f"head = __build_list(__args[{json.dumps(node_name)}]['values'], "
+            f"__args[{json.dumps(node_name)}].get('cycleIndex', -1))"
+        )
+        parts.append(f"__result = {entry}()")
+    else:
+        parts.append(f"__result = {entry}({', '.join(call_args)})")
     if algo.get("returns") == "node":
         parts.append("__result = __ser_list(__result)")
     parts.append('print("__VRESULT__ " + json.dumps({"result": __result}, default=str))')
@@ -249,8 +262,9 @@ static string __jr(const unordered_map<int, int>& m) {
 
 _CPP_LIST_NODE = """struct ListNode {
     int val;
+    int data;
     ListNode* next;
-    ListNode(int v) : val(v), next(nullptr) {}
+    ListNode(int v) : val(v), data(v), next(nullptr) {}
 };
 static ListNode* __buildList(const vector<int>& values, int cycleIndex) {
     ListNode* head = nullptr;
@@ -325,6 +339,11 @@ def _build_cpp(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -> s
     if algo["kind"] == "function" and algo.get("returns") == "node":
         if _CPP_LIST_NODE not in parts:
             parts.append(_CPP_LIST_NODE)
+    if algo.get("key") == "linkedList.detectCycle":
+        compatibility = "using object = int;\ntemplate <typename T> using singlyNode = ListNode;"
+        if algo.get("_entryNoArgs"):
+            compatibility += "\nstatic ListNode* head = nullptr;"
+        parts.append(compatibility)
     parts.append(user_code)
     parts.append("")
     parts.append("int main() {")
@@ -355,10 +374,21 @@ def _build_cpp(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -> s
         parts.append("}")
         return "\n".join(parts)
 
-    for name, ptype, value in _args_for(algo, state):
-        parts.append(_cpp_decl(name, ptype, value))
-    names = ", ".join(n for n, _, _ in _args_for(algo, state))
-    parts.append(f"    auto __result = {algo['entry']}({names});")
+    if algo.get("_entryNoArgs"):
+        node_param = next(((n, v) for n, t, v in _args_for(algo, state) if t == "node"), None)
+        if node_param is None:
+            raise ValueError("Cycle detection needs a linked-list input.")
+        _, node_value = node_param
+        vals = "{" + ", ".join(str(int(v)) for v in node_value.get("values", [])) + "}"
+        cycle = int(node_value.get("cycleIndex", -1))
+        parts.append(f"    head = __buildList(vector<int>{vals}, {cycle});")
+        names = ""
+    else:
+        for name, ptype, value in _args_for(algo, state):
+            parts.append(_cpp_decl(name, ptype, value))
+        names = ", ".join(n for n, _, _ in _args_for(algo, state))
+    entry = algo.get("_entryOverride", algo["entry"])
+    parts.append(f"    auto __result = {entry}({names});")
     parts.append(f'    cout << "__VRESULT__ {{\\"result\\":" << {_cpp_result_expr(algo.get("returns", ""))} << "}}" << endl;')
     parts.append("    return 0;")
     parts.append("}")
@@ -535,12 +565,13 @@ def _build_c(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -> str
         return "\n".join(parts)
 
     params = _args_for(algo, state)
+    entry = algo.get("_entryOverride", algo["entry"])
     parts.extend(_c_param_decls(params))
     names = ", ".join(_c_call_arg(n, t) for n, t, _ in params)
     ret = algo.get("returns", "void")
     # Collection returns are streamed through emitIntList/emitPair in C.
     if ret in ("void", "intArray", "intMatrix", "map", "stringArray"):
-        parts.append(f"    {algo['entry']}({names});")
+        parts.append(f"    {entry}({names});")
         parts.append(_c_result_print("void", ""))
     else:
         decl = {
@@ -550,7 +581,7 @@ def _build_c(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -> str
             "string": "const char*",
             "node": "struct ListNode*",
         }[ret]
-        parts.append(f"    {decl} __result = {algo['entry']}({names});")
+        parts.append(f"    {decl} __result = {entry}({names});")
         parts.append(_c_result_print(ret, "__result"))
     parts.append("    return 0;")
     parts.append("}")
@@ -724,7 +755,8 @@ def _build_java(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -> 
     for name, ptype, value in _args_for(algo, state):
         parts.append(_java_decl(name, ptype, value))
     names = ", ".join(n for n, _, _ in _args_for(algo, state))
-    parts.append(f"        Object __result = {algo['entry']}({names});")
+    entry = algo.get("_entryOverride", algo["entry"])
+    parts.append(f"        Object __result = {entry}({names});")
     parts.append(
         "        System.out.println(\"__VRESULT__ {\\\"result\\\":\" + __json(__result) + \"}\");"
     )
@@ -868,10 +900,11 @@ def _build_go(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -> st
     for name, ptype, value in _args_for(algo, state):
         parts.append(_go_decl(name, ptype, value))
     names = ", ".join(n for n, _, _ in _args_for(algo, state))
+    entry = algo.get("_entryOverride", algo["entry"])
     if algo.get("returns") == "node":
-        parts.append(f"\t__result := __serList({algo['entry']}({names}))")
+        parts.append(f"\t__result := __serList({entry}({names}))")
     else:
-        parts.append(f"\t__result := {algo['entry']}({names})")
+        parts.append(f"\t__result := {entry}({names})")
     parts.append('\t__out, _ := json.Marshal(map[string]interface{}{"result": __result})')
     parts.append('\tfmt.Println("__VRESULT__ " + string(__out))')
     parts.append("}")
@@ -1032,7 +1065,8 @@ def _build_csharp(algo: Dict[str, Any], user_code: str, state: Dict[str, Any]) -
     for name, ptype, value in _args_for(algo, state):
         parts.append(_csharp_decl(name, ptype, value))
     names = ", ".join(n for n, _, _ in _args_for(algo, state))
-    parts.append(f"        object __result = {algo['entry']}({names});")
+    entry = algo.get("_entryOverride", algo["entry"])
+    parts.append(f"        object __result = {entry}({names});")
     parts.append(
         "        Console.WriteLine(\"__VRESULT__ {\\\"result\\\":\" + __json(__result) + \"}\");"
     )

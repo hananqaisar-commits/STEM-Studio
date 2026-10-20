@@ -1,6 +1,7 @@
 import pytest
-from backend.app.core.security import hash_password, create_access_token
-from backend.infrastructure.database.models import User
+from datetime import datetime, timedelta, timezone
+from backend.app.core.security import hash_password, create_access_token, create_refresh_token, hash_token
+from backend.infrastructure.database.models import User, UserSession
 
 
 def create_test_user(db_session) -> tuple[User, str]:
@@ -17,7 +18,16 @@ def create_test_user(db_session) -> tuple[User, str]:
     db_session.commit()
     db_session.refresh(user)
 
-    token = create_access_token(user_id=user.user_id, email=user.email)
+    refresh = create_refresh_token(user_id=user.user_id)
+    session = UserSession(
+        user_id=user.user_id,
+        refresh_token_hash=hash_token(refresh),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+    )
+    db_session.add(session)
+    db_session.flush()
+    token = create_access_token(user_id=user.user_id, email=user.email, session_id=session.session_id)
+    db_session.commit()
     return user, token
 
 

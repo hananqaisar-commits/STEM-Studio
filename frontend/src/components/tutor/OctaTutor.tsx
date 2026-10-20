@@ -1,51 +1,42 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
 import {
-  BookOpen,
   BrainCircuit,
   Check,
-  Clock3,
-  Code2,
-  GitCompareArrows,
+  Mic,
+  MoreHorizontal,
   MessageSquare,
-  Network,
-  Route,
+  Send,
   Settings,
-  ShieldCheck,
-  Terminal,
   Trash2,
+  ThumbsDown,
+  ThumbsUp,
   UserRound,
   Workflow,
   X,
-  type LucideIcon,
 } from 'lucide-react';
-import { useOctaTutor, type SupportedSpeechLang, type TutorSuggestion } from '../../hooks/useOctaTutor';
+import { useOctaTutor } from '../../hooks/useOctaTutor';
 import { useTutorContext } from '../../contexts/TutorContext';
 import { useAuthPrompt } from '../../contexts/AuthPromptContext';
 import { Octa } from '../mascot';
-import { LoaderOne } from '../ui/loader';
-import { PlaceholdersAndVanishInput } from '../ui/placeholders-and-vanish-input';
 import { OctaTutorSettingsModal } from './OctaTutorSettingsModal';
+import { OctaLearningProfile } from './OctaLearningProfile';
 import './OctaTutor.css';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
-import type { OctaTutorFunctionCall } from '../../api/octaTutorApi';
-
-const SUGGESTION_ICONS: Record<TutorSuggestion['icon'], LucideIcon> = {
-  book: BookOpen,
-  terminal: Terminal,
-  shield: ShieldCheck,
-  route: Route,
-  brain: BrainCircuit,
-  clock: Clock3,
-  step: Workflow,
-  compare: GitCompareArrows,
-  network: Network,
-  code: Code2,
-  workflow: Workflow,
-};
+import { submitTutorFeedback, type OctaTutorFunctionCall } from '../../api/octaTutorApi';
 
 function describeAction(call: OctaTutorFunctionCall, currentPageLabel: string): string {
   switch (call.name) {
+    case 'navigate_to_page': {
+      const labels: Record<string, string> = {
+        dashboard: 'Open the learning dashboard',
+        dsa: 'Open the DSA hub',
+        os: 'Open the OS hub',
+        commands: 'Open Linux command lessons',
+        filesystem: 'Open the file-system simulator',
+      };
+      return labels[call.args.page_id] || 'Open a STEM Studio page';
+    }
     case 'navigate_to_algorithm': {
       const category = CATEGORY_TOPICS.find((item) => item.categoryId === call.args.category_id);
       const topic = category?.topics.find((item) => item.id === call.args.topic_id);
@@ -53,6 +44,7 @@ function describeAction(call: OctaTutorFunctionCall, currentPageLabel: string): 
     }
     case 'control_playback':
       return ({ play: 'Start the visualization', pause: 'Pause the visualization', step_forward: 'Move forward one step', reset: 'Reset the visualization' } as Record<string, string>)[call.args.action] || 'Control the visualization';
+    case 'run_visualization': return 'Run the active algorithm with its current input';
     case 'set_speed': return `Set playback speed to ${call.args.speed}×`;
     case 'set_input': return `Load input [${(call.args.values || []).join(', ')}]`;
     case 'switch_theme': return `Switch the app to ${call.args.mode} mode`;
@@ -184,12 +176,14 @@ export const OctaTutor: React.FC = () => {
     isListening,
     speechLang,
     setSpeechLang,
+    isSpeechSupported,
     mascotExpression,
     sendMessage,
     startListening,
     stopListening,
     clearHistory,
     llmConfig,
+    providerStatus,
     isSettingsOpen,
     setIsSettingsOpen,
     saveLLMConfig,
@@ -205,32 +199,55 @@ export const OctaTutor: React.FC = () => {
     hasVisualizerContext,
   } = useOctaTutor();
 
-  const [revealedChars, setRevealedChars] = useState<Record<string, number>>({});
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const [learningProfileOpen, setLearningProfileOpen] = useState(false);
+  const [feedbackOpenFor, setFeedbackOpenFor] = useState<string | null>(null);
+  const [feedbackState, setFeedbackState] = useState<Record<string, string>>({});
+  const [revealedMessage, setRevealedMessage] = useState<{ id: string; count: number } | null>(null);
   const messageListRef = React.useRef<HTMLDivElement>(null);
+  const followMessagesRef = React.useRef(true);
+  const providerStatusCopy = {
+    checking: 'Checking AI configuration',
+    connected: 'AI API configured',
+    limit: 'AI provider limit reached',
+    missing: 'AI API key not configured',
+    unavailable: 'AI provider unavailable',
+  }[providerStatus];
 
   // Keep the conversation scrolled inside its own panel, without moving the page.
   useEffect(() => {
     const list = messageListRef.current;
-    if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
+    if (list) {
+      followMessagesRef.current = true;
+      list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
+    }
   }, [isTutorOpen, messages.length, isLoading]);
 
-  // Fast character-by-character streaming typewriter effect
+  const latestRevealingMessage = [...messages].reverse().find((message) => message.role === 'assistant' && message.isRevealing);
   useEffect(() => {
-    const latestMsg = messages[messages.length - 1];
-    if (latestMsg && latestMsg.role === 'assistant' && latestMsg.isRevealing) {
-      const msgId = latestMsg.id;
-      const currentLen = revealedChars[msgId] || 0;
-      if (currentLen < latestMsg.content.length) {
-        const timer = setTimeout(() => {
-          setRevealedChars((prev) => ({
-            ...prev,
-            [msgId]: currentLen + 5,
-          }));
-        }, 12);
-        return () => clearTimeout(timer);
-      }
+    if (!latestRevealingMessage) {
+      setRevealedMessage(null);
+      return;
     }
-  }, [messages, revealedChars]);
+    const characters = Array.from(latestRevealingMessage.content);
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || characters.length === 0) {
+      setRevealedMessage({ id: latestRevealingMessage.id, count: characters.length });
+      return;
+    }
+
+    let count = 0;
+    const chunkSize = Math.max(3, Math.ceil(characters.length / 160));
+    setRevealedMessage({ id: latestRevealingMessage.id, count: 0 });
+    const timer = window.setInterval(() => {
+      count = Math.min(characters.length, count + chunkSize);
+      setRevealedMessage({ id: latestRevealingMessage.id, count });
+      const list = messageListRef.current;
+      if (list && followMessagesRef.current) list.scrollTop = list.scrollHeight;
+      if (count >= characters.length) window.clearInterval(timer);
+    }, 40);
+    return () => window.clearInterval(timer);
+  }, [latestRevealingMessage?.id, latestRevealingMessage?.content]);
 
   const handleInputSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -242,70 +259,83 @@ export const OctaTutor: React.FC = () => {
     [inputText, isLoading, sendMessage]
   );
 
+  const handleFeedback = useCallback(async (messageId: string, helpful: boolean, responseStyle?: 'simpler' | 'stepwise' | 'examples') => {
+    setFeedbackState((current) => ({ ...current, [messageId]: 'saving' }));
+    try {
+      await submitTutorFeedback({
+        helpful,
+        ...(responseStyle ? { response_style: responseStyle } : {}),
+      });
+      setFeedbackState((current) => ({ ...current, [messageId]: helpful ? 'helpful' : responseStyle || 'noted' }));
+      setFeedbackOpenFor(null);
+    } catch {
+      setFeedbackState((current) => ({ ...current, [messageId]: 'failed' }));
+    }
+  }, []);
+
+  const closeMenu = () => setActionsMenuOpen(false);
+
   return (
     <LazyMotion features={domAnimation}>
       <AnimatePresence mode="wait" initial={false}>
       {isTutorOpen ? <m.div
         key="octa-tutor-panel"
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        initial={{ opacity: 0, x: 16 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 30, scale: 0.95 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        exit={{ opacity: 0, x: 16 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
         className="octa-tutor-window"
         role="region"
         aria-label="Octa AI Tutor"
       >
-        {/* Tutor header */}
         <div className="tutor-header">
           <div className="tutor-header-left">
             <div className="tutor-avatar-glow">
               <Octa expression={mascotExpression} size={28} interactive={false} />
             </div>
             <div className="tutor-header-title">
-              <span className="tutor-header-name">
-                Octa AI Tutor
+              <span className="tutor-header-name">Octa</span>
+              <span className="tutor-header-subtitle">
+                AI learning tutor
+                <span className={`tutor-status tutor-status-${providerStatus}`} title={providerStatusCopy} aria-label={providerStatusCopy}>
+                  <i className="tutor-status-dot" aria-hidden="true" />
+                  <span>{providerStatus === 'connected' ? 'API ready' : providerStatus === 'checking' ? 'Checking' : providerStatus === 'limit' ? 'Limit reached' : providerStatus === 'missing' ? 'API missing' : 'Unavailable'}</span>
+                </span>
               </span>
-              <span className="tutor-header-model">{llmConfig.modelName || 'Qwen AI Engine'}</span>
             </div>
           </div>
 
           <div className="tutor-header-actions">
-            <button type="button" className="tutor-icon-btn" onClick={() => setIsSettingsOpen(true)} title="AI model settings" aria-label="AI model settings">
-              <Settings size={17} aria-hidden="true" />
-            </button>
-            <button type="button" className="tutor-icon-btn" onClick={clearHistory} title="Clear chat history" aria-label="Clear chat history">
-              <Trash2 size={17} aria-hidden="true" />
-            </button>
-            <button type="button" className="tutor-icon-btn tutor-close-btn" onClick={toggleTutor} title="Minimize tutor" aria-label="Minimize tutor">
-              <X size={17} aria-hidden="true" />
+            <div className="tutor-menu-anchor">
+              <button type="button" className="tutor-icon-btn" onClick={() => setActionsMenuOpen((open) => !open)} title="More tutor options" aria-label="More tutor options" aria-expanded={actionsMenuOpen}>
+                <MoreHorizontal size={19} aria-hidden="true" />
+              </button>
+              {actionsMenuOpen && <div className="tutor-actions-menu" role="menu">
+                <button type="button" role="menuitem" onClick={() => { closeMenu(); setLearningProfileOpen(true); }}><UserRound size={16} /> Learning profile</button>
+                <button type="button" role="menuitem" onClick={() => { closeMenu(); setIsSettingsOpen(true); }}><Settings size={16} /> AI model settings</button>
+                <button type="button" role="menuitem" onClick={() => { closeMenu(); clearHistory(); }}><Trash2 size={16} /> New conversation</button>
+              </div>}
+            </div>
+            <button type="button" className="tutor-icon-btn" onClick={toggleTutor} title="Minimize tutor" aria-label="Minimize tutor">
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* Context & State Ribbon */}
         <div className="tutor-context-ribbon">
-          <span className="context-chip">
-            <MessageSquare size={14} className="inline mr-1" aria-hidden="true" />
-            {currentPageLabel}
-          </span>
-          {totalSteps ? (
-            <span className="step-chip">
-              Step {currentStepIndex + 1} / {totalSteps}
-            </span>
-          ) : null}
+          <span className="context-chip"><MessageSquare size={14} aria-hidden="true" />{currentPageLabel}</span>
+          {totalSteps > 0 && <span className="step-chip">Step {currentStepIndex + 1} of {totalSteps}</span>}
         </div>
 
-        {/* Mode Switcher Bar */}
         <div className="tutor-mode-bar" role="group" aria-label="Tutor response mode">
           <button
             type="button"
             className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`}
             onClick={() => setTutorMode('natural')}
             aria-pressed={tutorMode === 'natural'}
-            title="ChatGPT-style algorithm teaching & conceptual explanations"
+            title="Ask open questions and learn concepts"
           >
-            <BrainCircuit size={15} aria-hidden="true" />
-            AI Concept Mode
+            <BrainCircuit size={16} aria-hidden="true" /> Concept mode
           </button>
           {hasVisualizerContext && (
             <button
@@ -313,60 +343,55 @@ export const OctaTutor: React.FC = () => {
               className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`}
               onClick={() => setTutorMode('interactive')}
               aria-pressed={tutorMode === 'interactive'}
-              title="Live step visualizer execution & state debugging"
+              title="Explain the active visualizer step"
             >
-              <Workflow size={15} aria-hidden="true" />
-              Interactive Step Mode
+              <Workflow size={16} aria-hidden="true" /> Step mode
             </button>
           )}
         </div>
         <p className="tutor-mode-hint" aria-live="polite">
           {tutorMode === 'natural'
-            ? 'Ask anything—concepts, examples, code, or questions beyond this page.'
+            ? 'Ask about a concept, code, or an issue in STEM Studio.'
             : hasVisualizerContext && totalSteps > 0
-              ? 'Ask for a detailed explanation of the selected step or request a control. Actions wait for your approval.'
-              : 'Open a visualizer or the file-system simulator for live step guidance. Any supported action needs your approval.'}
+              ? `Explaining step ${currentStepIndex + 1} from the live visualizer. Requested controls wait for your approval.`
+              : 'Open a visualizer for step-by-step guidance. Requested controls wait for your approval.'}
         </p>
 
-        {/* Message Output Scroll Box */}
-        <div className="tutor-message-list" ref={messageListRef}>
+        <div
+          className="tutor-message-list"
+          ref={messageListRef}
+          onScroll={(event) => {
+            const list = event.currentTarget;
+            followMessagesRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+          }}
+        >
           {messages.map((msg) => {
             const isAssis = msg.role === 'assistant';
-            const maxChar = revealedChars[msg.id];
-            const rawContent = isAssis && msg.isRevealing && maxChar !== undefined
-              ? msg.content.slice(0, maxChar)
+            const isTyping = isAssis && msg.id === revealedMessage?.id && revealedMessage.count < Array.from(msg.content).length;
+            const visibleContent = isAssis && msg.id === revealedMessage?.id
+              ? Array.from(msg.content).slice(0, revealedMessage.count).join('')
               : msg.content;
 
             return (
               <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
-                <div className="message-icon-avatar">
-                  {isAssis ? (
-                    <Octa expression={msg.expression || 'neutral'} size={26} interactive={false} />
-                  ) : (
-                    <UserRound size={15} aria-hidden="true" />
-                  )}
-                </div>
                 <div className="tutor-message-content">
-                  {renderFormattedMessage(rawContent)}
-                  {isAssis && msg.isRevealing && (revealedChars[msg.id] || 0) < msg.content.length && (
-                    <span className="inline-block w-1.5 h-3.5 bg-purple-500 ml-0.5 animate-pulse rounded-full" />
-                  )}
+                  {renderFormattedMessage(visibleContent)}
+                  {isTyping && <span className="tutor-typing-caret" aria-hidden="true" />}
                 </div>
                 {isAssis && msg.answerSource === 'offline' && (
                   <div className="tutor-offline-note">
-                    <span><ShieldCheck size={13} /> Offline guide</span>
-                    <button type="button" onClick={() => setIsSettingsOpen(true)}>Connect an AI model</button>
+                    <span>Offline guide</span>
+                    <button type="button" onClick={() => setIsSettingsOpen(true)}>Connect AI model</button>
                   </div>
                 )}
                 {isAssis && msg.answerSource === 'grounded' && (
                   <div className="tutor-grounded-note" role="note">
-                    <ShieldCheck size={13} /> Verified from this tree frame
+                    Verified from the supplied visualizer state
                   </div>
                 )}
                 {isAssis && msg.proposedActions?.length ? (
                   <div className="tutor-action-card" role="group" aria-label="Octa action approval">
                     <div className="tutor-action-card__copy">
-                      <Octa expression={msg.actionDecision === 'pending' ? 'thinking' : msg.actionDecision === 'allowed' ? 'happy' : 'neutral'} size={32} interactive={false} />
                       <div>
                         <strong>{msg.actionDecision === 'pending' ? 'Octa is ready to' : msg.actionDecision === 'allowed' ? 'Approved' : 'Cancelled'}</strong>
                         <ul>
@@ -388,58 +413,74 @@ export const OctaTutor: React.FC = () => {
                     )}
                   </div>
                 ) : null}
+                {isAssis && msg.id !== 'welcome-1' && !msg.proposedActions?.length && msg.answerSource !== 'grounded' && (
+                  <div className="tutor-answer-feedback">
+                    {feedbackState[msg.id] && feedbackState[msg.id] !== 'failed' && feedbackState[msg.id] !== 'saving' ? (
+                      <span role="status">{feedbackState[msg.id] === 'helpful' ? 'Thanks, this helps Octa adapt.' : 'Got it — Octa will adjust future explanations.'}</span>
+                    ) : (
+                      <>
+                        <span>Was this useful?</span>
+                        <button type="button" aria-label="This answer was useful" title="Helpful" disabled={feedbackState[msg.id] === 'saving'} onClick={() => void handleFeedback(msg.id, true)}><ThumbsUp size={14} /></button>
+                        <button type="button" aria-label="This answer needs a different explanation" title="Needs a different explanation" disabled={feedbackState[msg.id] === 'saving'} onClick={() => setFeedbackOpenFor((id) => id === msg.id ? null : msg.id)}><ThumbsDown size={14} /></button>
+                        {feedbackState[msg.id] === 'saving' && <span>Saving…</span>}
+                        {feedbackState[msg.id] === 'failed' && <span role="alert">Could not save feedback.</span>}
+                      </>
+                    )}
+                  </div>
+                )}
+                {isAssis && feedbackOpenFor === msg.id && (
+                  <div className="tutor-feedback-options" role="group" aria-label="Choose a clearer response style">
+                    <span>What would help next time?</span>
+                    <button type="button" onClick={() => void handleFeedback(msg.id, false, 'simpler')}>Simpler</button>
+                    <button type="button" onClick={() => void handleFeedback(msg.id, false, 'stepwise')}>More steps</button>
+                    <button type="button" onClick={() => void handleFeedback(msg.id, false, 'examples')}>More examples</button>
+                  </div>
+                )}
               </div>
             );
           })}
 
-          {/* Premium LoaderOne Animation when Thinking */}
           {isLoading && (
-            <div className="tutor-message-bubble assistant loading-bubble">
-              <div className="message-icon-avatar">
-                <Octa expression="thinking" size={20} interactive={false} />
+            <div className="tutor-thinking" role="status" aria-live="polite">
+              <span className="tutor-thinking-dots" aria-hidden="true"><i /><i /><i /></span>
+              <span>Octa is working through your question</span>
               </div>
-              <div className="tutor-loader-stage flex items-center justify-center gap-3 py-2 px-3">
-                <LoaderOne size="md" />
-                <span className="tutor-thinking-label">
-                  Octa is thinking...
-                </span>
-              </div>
-            </div>
           )}
-
         </div>
 
-        {/* Dynamic Context Suggestions */}
-        {suggestions.length > 0 && (
+        {suggestions.length > 0 && messages.length === 1 && (
           <div className="tutor-suggestions">
-            {suggestions.map((s) => {
-              const SuggestionIcon = SUGGESTION_ICONS[s.icon];
-              return <button type="button" key={s.label} className="tutor-suggestion-pill" onClick={() => sendMessage(s.text)}>
-                <SuggestionIcon size={15} aria-hidden="true" />
-                {s.label}
-              </button>;
-            })}
+            {suggestions.slice(0, 2).map((suggestion) => <button type="button" key={suggestion.label} className="tutor-suggestion-pill" onClick={() => sendMessage(suggestion.text)}>{suggestion.label}</button>)}
           </div>
         )}
 
-        {/* Input Field Section with Placeholders & Vanish Input + Voice Microphone */}
         <div className="tutor-input-container">
-          <PlaceholdersAndVanishInput
-            value={inputText}
-            setValue={setInputText}
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleInputSubmit(e);
-            }}
-            disabled={isLoading}
-            isListening={isListening}
-            onToggleListening={isListening ? stopListening : startListening}
-            speechLang={speechLang}
-            onSelectLang={setSpeechLang}
-            placeholders={[
-              "Ask me anything...",
-            ]}
-          />
+          <form className="tutor-input-form" onSubmit={handleInputSubmit}>
+            <label className="sr-only" htmlFor="octa-tutor-message">Message Octa</label>
+            <textarea
+              id="octa-tutor-message"
+              value={inputText}
+              onChange={(event) => setInputText(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); if (inputText.trim() && !isLoading) sendMessage(); } }}
+              placeholder={tutorMode === 'interactive' ? 'Ask about this step…' : 'Ask Octa a question…'}
+              rows={2}
+              maxLength={5000}
+              disabled={isLoading}
+            />
+            <div className="tutor-input-footer">
+              <div className="tutor-input-hint">
+                {isListening ? (
+                  <select aria-label="Voice input language" value={speechLang} onChange={(event) => setSpeechLang(event.target.value as typeof speechLang)}>
+                    <option value="en-US">English</option><option value="ur-PK">Urdu</option><option value="zh-CN">Chinese</option>
+                  </select>
+                ) : <span>Enter to send · Shift + Enter for a new line</span>}
+              </div>
+              <div className="tutor-input-actions">
+                {isSpeechSupported && <button type="button" className={`tutor-input-icon-btn ${isListening ? 'listening' : ''}`} onClick={isListening ? stopListening : startListening} aria-label={isListening ? 'Stop voice input' : 'Start voice input'} title={isListening ? 'Stop voice input' : 'Voice input'}><Mic size={17} /></button>}
+                <button type="submit" className="tutor-send-btn" disabled={!inputText.trim() || isLoading} aria-label="Send message" title="Send message"><Send size={16} /></button>
+              </div>
+            </div>
+          </form>
         </div>
       </m.div> : <m.button
         key="octa-tutor-fab"
@@ -457,9 +498,10 @@ export const OctaTutor: React.FC = () => {
           <Octa expression="happy" size={26} interactive={false} />
         </div>
         <span className="fab-text">Octa AI</span>
-        <span className="octa-tutor-fab-dot" />
+        <span className={`octa-tutor-fab-dot tutor-status-${providerStatus}`} title={providerStatusCopy} aria-label={providerStatusCopy} />
       </m.button>}
       </AnimatePresence>
+      {learningProfileOpen && <OctaLearningProfile onClose={() => setLearningProfileOpen(false)} />}
       <OctaTutorSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

@@ -76,7 +76,7 @@ export function MarketingHome() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeLearners, setActiveLearners] = useState<number | null>(null);
+  const [registeredLearners, setRegisteredLearners] = useState<number | null>(null);
   const categoryCount = DSA_CATEGORIES.filter((category) => category.available).length;
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -97,9 +97,9 @@ export function MarketingHome() {
     let isMounted = true;
     const loadLearnerCount = async () => {
       try {
-        const stats = await apiClient<{ active_learners: number }>('/api/stats/platform');
-        if (isMounted && Number.isFinite(stats.active_learners)) {
-          setActiveLearners(stats.active_learners);
+        const stats = await apiClient<{ registered_learners: number }>('/api/stats/platform');
+        if (isMounted && Number.isFinite(stats.registered_learners)) {
+          setRegisteredLearners(stats.registered_learners);
         }
       } catch {
         // Keep the count hidden if the API is unavailable; never show a guess.
@@ -183,10 +183,10 @@ export function MarketingHome() {
             <div className="marketing-proof-row">
               <span><strong>{categoryCount}</strong> DSA categories</span>
               <i aria-hidden="true" />
-              {activeLearners !== null && (
+              {registeredLearners !== null && (
                 <>
-                  <span aria-label={`${activeLearners.toLocaleString()} active learners`}>
-                    <strong>{activeLearners.toLocaleString()}</strong> active learners
+                  <span aria-label={`${registeredLearners.toLocaleString()} registered learners`}>
+                    <strong>{registeredLearners.toLocaleString()}</strong> registered learners
                   </span>
                   <i aria-hidden="true" />
                 </>

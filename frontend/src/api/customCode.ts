@@ -21,8 +21,8 @@ export interface CustomCodeExecutionResponse {
 
 /**
  * Submit user code to the backend sandbox (Judge0-backed) and await the
- * parsed trace steps / result. Throws ApiError on 4xx/5xx (e.g. 503 when
- * JUDGE0_URL is not configured, 502 when the sandbox is unreachable).
+ * parsed trace steps / result. Requires the learner's access token; throws
+ * ApiError on auth, quota, configuration, or upstream execution failures.
  */
 export function executeCustomCode(
   request: CustomCodeExecutionRequest
@@ -30,5 +30,6 @@ export function executeCustomCode(
   return apiClient<CustomCodeExecutionResponse>('/api/execute/custom-code', {
     method: 'POST',
     body: request,
+    requiresAuth: true,
   });
 }
