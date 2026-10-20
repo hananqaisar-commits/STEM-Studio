@@ -2421,6 +2421,14 @@ const REVISION_DATA: Record<StackQueueCategory, QuizRevisionData> = {
     quickTip: 'Push to min stack only when new value ≤ current min; pop when values match',
     example: 'Push 5,3,4: main=[5,3,4], minStack=[5,3,3]. getMin()=3. Pop 4→minStack=[5,3]. Pop 3→minStack=[5]. getMin()=5.',
   },
+  infixToPostfix: {
+    description: 'Convert infix operators and operands to postfix with the shunting-yard algorithm',
+    complexity: 'O(n) time, O(n) space',
+    keyIdea: 'Emit operands immediately and hold operators until precedence or parentheses allow them to be emitted',
+    watchFor: ['Operator precedence', 'Left vs right associativity', 'Parentheses as stack boundaries'],
+    quickTip: 'For ^, equal precedence does not pop because exponentiation is right-associative; for +, -, *, / it does.',
+    example: 'A + B * C → emit A, hold +, emit B, hold * above +, emit C, then pop * and + → A B C * +.',
+  },
   postfixEval: {
     description: 'Evaluate a postfix (reverse Polish notation) expression',
     complexity: 'O(n) time, O(n) space',

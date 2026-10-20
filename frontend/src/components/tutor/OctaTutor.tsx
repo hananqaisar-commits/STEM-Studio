@@ -27,6 +27,16 @@ import { submitTutorFeedback, type OctaTutorFunctionCall } from '../../api/octaT
 
 function describeAction(call: OctaTutorFunctionCall, currentPageLabel: string): string {
   switch (call.name) {
+    case 'navigate_to_page': {
+      const labels: Record<string, string> = {
+        dashboard: 'Open the learning dashboard',
+        dsa: 'Open the DSA hub',
+        os: 'Open the OS hub',
+        commands: 'Open Linux command lessons',
+        filesystem: 'Open the file-system simulator',
+      };
+      return labels[call.args.page_id] || 'Open a STEM Studio page';
+    }
     case 'navigate_to_algorithm': {
       const category = CATEGORY_TOPICS.find((item) => item.categoryId === call.args.category_id);
       const topic = category?.topics.find((item) => item.id === call.args.topic_id);
@@ -34,6 +44,7 @@ function describeAction(call: OctaTutorFunctionCall, currentPageLabel: string): 
     }
     case 'control_playback':
       return ({ play: 'Start the visualization', pause: 'Pause the visualization', step_forward: 'Move forward one step', reset: 'Reset the visualization' } as Record<string, string>)[call.args.action] || 'Control the visualization';
+    case 'run_visualization': return 'Run the active algorithm with its current input';
     case 'set_speed': return `Set playback speed to ${call.args.speed}×`;
     case 'set_input': return `Load input [${(call.args.values || []).join(', ')}]`;
     case 'switch_theme': return `Switch the app to ${call.args.mode} mode`;
@@ -192,7 +203,9 @@ export const OctaTutor: React.FC = () => {
   const [learningProfileOpen, setLearningProfileOpen] = useState(false);
   const [feedbackOpenFor, setFeedbackOpenFor] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<Record<string, string>>({});
+  const [revealedMessage, setRevealedMessage] = useState<{ id: string; count: number } | null>(null);
   const messageListRef = React.useRef<HTMLDivElement>(null);
+  const followMessagesRef = React.useRef(true);
   const providerStatusCopy = {
     checking: 'Checking AI configuration',
     connected: 'AI API configured',
@@ -204,8 +217,37 @@ export const OctaTutor: React.FC = () => {
   // Keep the conversation scrolled inside its own panel, without moving the page.
   useEffect(() => {
     const list = messageListRef.current;
-    if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
+    if (list) {
+      followMessagesRef.current = true;
+      list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
+    }
   }, [isTutorOpen, messages.length, isLoading]);
+
+  const latestRevealingMessage = [...messages].reverse().find((message) => message.role === 'assistant' && message.isRevealing);
+  useEffect(() => {
+    if (!latestRevealingMessage) {
+      setRevealedMessage(null);
+      return;
+    }
+    const characters = Array.from(latestRevealingMessage.content);
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || characters.length === 0) {
+      setRevealedMessage({ id: latestRevealingMessage.id, count: characters.length });
+      return;
+    }
+
+    let count = 0;
+    const chunkSize = Math.max(3, Math.ceil(characters.length / 160));
+    setRevealedMessage({ id: latestRevealingMessage.id, count: 0 });
+    const timer = window.setInterval(() => {
+      count = Math.min(characters.length, count + chunkSize);
+      setRevealedMessage({ id: latestRevealingMessage.id, count });
+      const list = messageListRef.current;
+      if (list && followMessagesRef.current) list.scrollTop = list.scrollHeight;
+      if (count >= characters.length) window.clearInterval(timer);
+    }, 40);
+    return () => window.clearInterval(timer);
+  }, [latestRevealingMessage?.id, latestRevealingMessage?.content]);
 
   const handleInputSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -315,14 +357,26 @@ export const OctaTutor: React.FC = () => {
               : 'Open a visualizer for step-by-step guidance. Requested controls wait for your approval.'}
         </p>
 
-        <div className="tutor-message-list" ref={messageListRef}>
+        <div
+          className="tutor-message-list"
+          ref={messageListRef}
+          onScroll={(event) => {
+            const list = event.currentTarget;
+            followMessagesRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+          }}
+        >
           {messages.map((msg) => {
             const isAssis = msg.role === 'assistant';
+            const isTyping = isAssis && msg.id === revealedMessage?.id && revealedMessage.count < Array.from(msg.content).length;
+            const visibleContent = isAssis && msg.id === revealedMessage?.id
+              ? Array.from(msg.content).slice(0, revealedMessage.count).join('')
+              : msg.content;
 
             return (
               <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
                 <div className="tutor-message-content">
-                  {renderFormattedMessage(msg.content)}
+                  {renderFormattedMessage(visibleContent)}
+                  {isTyping && <span className="tutor-typing-caret" aria-hidden="true" />}
                 </div>
                 {isAssis && msg.answerSource === 'offline' && (
                   <div className="tutor-offline-note">

@@ -163,6 +163,8 @@ ALGORITHM_ALIASES: Dict[str, Tuple[str, Optional[str]]] = {
     "queue": ("stackQueue", "queue"), "fifo": ("stackQueue", "queue"),
     "valid parentheses": ("stackQueue", "validParentheses"), "parentheses": ("stackQueue", "validParentheses"),
     "min stack": ("stackQueue", "minStack"),
+    "infix to postfix": ("stackQueue", "infixToPostfix"), "infix-to-postfix": ("stackQueue", "infixToPostfix"),
+    "infix to postfix conversion": ("stackQueue", "infixToPostfix"), "shunting yard": ("stackQueue", "infixToPostfix"),
     "postfix": ("stackQueue", "postfixEval"), "rpn": ("stackQueue", "postfixEval"),
     "daily temperatures": ("stackQueue", "dailyTemperatures"),
     "trapping rain water": ("stackQueue", "trappingRainWater"), "rain water": ("stackQueue", "trappingRainWater"),
@@ -299,6 +301,29 @@ PLAYBACK_PATTERNS = [
     "播放", "开始", "暂停", "停止", "下一步", "重置",
 ]
 
+RUN_VISUALIZATION_PATTERNS = (
+    "run the algorithm", "run algorithm", "run this algorithm", "run the visualization",
+    "run visualization", "run this visualization", "visualize it",
+    "run the algo", "run algo", "chalao algorithm",
+)
+
+PAGE_ALIASES = {
+    "dashboard": "dashboard", "home dashboard": "dashboard", "learning dashboard": "dashboard",
+    "dsa hub": "dsa", "dsa home": "dsa", "data structures hub": "dsa",
+    "os hub": "os", "operating systems hub": "os",
+    "linux command lessons": "commands", "linux commands": "commands", "commands of linux": "commands",
+    "file system simulator": "filesystem", "filesystem simulator": "filesystem", "virtual file system": "filesystem",
+}
+
+
+def resolve_page_name(text: str) -> Optional[str]:
+    text_lower = text.lower().strip()
+    return max(
+        ((alias, page_id) for alias, page_id in PAGE_ALIASES.items() if alias in text_lower),
+        key=lambda item: len(item[0]),
+        default=("", None),
+    )[1]
+
 EXPLAIN_PATTERNS = [
     "explain", "what is", "what's", "how does", "how do", "why",
     "tell me", "teach", "describe", "help me understand", "what happens",
@@ -400,6 +425,7 @@ TEACHING_SIGNALS = (
 )
 
 DIRECT_CONTROL_SIGNALS = {
+    "run_visualization": RUN_VISUALIZATION_PATTERNS,
     "playback": ("play it", "play please", "start playback", "play the visualization", "pause it", "pause please", "pause visualization", "pause the visualization", "stop it", "stop please", "resume please", "next step", "step forward", "reset it", "reset please", "restart it", "play now", "pause now", "ruko", "band karo", "chalao"),
     "speed": ("too fast", "too slow", "slow down", "speed up", "faster please", "slower please", "make it faster", "make it slower", "speed kam", "speed zyada", "dheere", "tez karo", "慢一点", "快一点"),
     "input": ("use array", "use these numbers", "set values", "set array", "custom input", "try with", "yeh values", "yeh numbers", "使用"),
@@ -444,6 +470,7 @@ def classify_intent(text: str) -> str:
 
     # Prefer a specific requested control over general words such as "fast" or "code".
     intent_map = [
+        ("run_visualization", RUN_VISUALIZATION_PATTERNS),
         ("recommend", RECOMMEND_PATTERNS),
         ("real_world", REALWORLD_PATTERNS),
         ("compare", COMPARE_PATTERNS),
@@ -663,6 +690,11 @@ def get_topic_knowledge_explanation(raw_knowledge: str) -> str:
         for point in item.get("keyPoints", [])[:5] if isinstance(item.get("keyPoints"), list) else []:
             if isinstance(point, str) and point.strip():
                 lines.append(f"• {point[:300]}")
+        steps = item.get("steps")
+        if isinstance(steps, list) and steps:
+            safe_steps = [step[:500] for step in steps[:8] if isinstance(step, str) and step.strip()]
+            if safe_steps:
+                lines.append("\n**How it works**\n" + "\n".join(f"{index + 1}. {step}" for index, step in enumerate(safe_steps)))
         example = item.get("example")
         if isinstance(example, str) and example.strip():
             lines.append(f"\n**Example**\n{example[:900]}")
@@ -671,6 +703,11 @@ def get_topic_knowledge_explanation(raw_knowledge: str) -> str:
             safe_apps = [app[:120] for app in applications[:4] if isinstance(app, str)]
             if safe_apps:
                 lines.append("• **Applications:** " + ", ".join(safe_apps))
+        code = item.get("codeSnippet")
+        language = item.get("codeLanguage")
+        if isinstance(code, str) and code.strip():
+            lang = language[:24] if isinstance(language, str) and language.strip() else "code"
+            lines.append(f"\n**Reference implementation ({lang})**\n```{lang.lower()}\n{code[:6000]}\n```")
         sections.append("\n".join(lines))
     return "\n\n".join(sections)
 
@@ -1012,14 +1049,26 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
                 name="navigate_to_algorithm",
                 args={"category_id": cat_id, "topic_id": topic_id or ""}
             ))
-            reply = f"I can open {alg_name} for you. Approve the navigation below to continue."
+            asks_to_learn = any(signal in msg_lower for signal in TEACHING_SIGNALS) or any(word in msg_lower for word in ("code", "steps", "implementation"))
+            if asks_to_learn:
+                explanation = get_topic_knowledge_explanation(req_data.topic_knowledge) or get_conceptual_explanation(alg_name, topic_id or "")
+                reply = f"{explanation}\n\nI can also open **{alg_name}**. Approve the navigation below to view its step-by-step visualizer."
+            else:
+                reply = f"I can open {alg_name} for you. Approve the navigation below to continue."
             mascot_expr = "excited"
         else:
-            reply = (
-                "Tell me the topic or page you want to open, for example: 'open AVL tree', "
-                "'open Linux command lessons', or 'show me graphs'."
-            )
-            mascot_expr = "helping"
+            page_id = resolve_page_name(msg)
+            if page_id:
+                function_calls.append(OctaTutorFunctionCall(name="navigate_to_page", args={"page_id": page_id}))
+                page_label = {"dashboard": "the learning dashboard", "dsa": "the DSA hub", "os": "the OS hub", "commands": "Linux command lessons", "filesystem": "the file-system simulator"}[page_id]
+                reply = f"I can open {page_label}. Approve the navigation below to continue."
+                mascot_expr = "excited"
+            else:
+                reply = (
+                    "Tell me the topic or page you want to open, for example: 'open AVL tree', "
+                    "'open Linux command lessons', or 'show me graphs'."
+                )
+                mascot_expr = "helping"
 
     # ── VIRTUAL FILE SYSTEM COMMAND ──
     elif intent == "vfs_command":
@@ -1035,6 +1084,15 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
             mascot_expr = "helping"
 
     # ── PLAYBACK ──
+    elif intent == "run_visualization":
+        if req_data.category and req_data.algorithm_id:
+            function_calls.append(OctaTutorFunctionCall(name="run_visualization", args={}))
+            reply = f"I can run the active **{alg_name}** visualizer with the input currently shown. Approve the action below to start it."
+            mascot_expr = "excited"
+        else:
+            reply = "Open a visualizer first, then ask me to run the active algorithm. I can only start a visualizer that is open in the current page."
+            mascot_expr = "helping"
+
     elif intent == "playback":
         action = "play"
         if any(w in msg_lower for w in ["pause", "stop", "wait", "hold", "ruko", "band", "暂停", "停止"]):
@@ -1216,11 +1274,11 @@ def generate_fallback_response(req_data: OctaTutorRequest) -> OctaTutorResponse:
                 reply = get_conceptual_explanation(alg_name, topic_id)
         mascot_expr = "helping"
 
-    # The concept mode never controls the visualizer. Explicit navigation remains
-    # available as a proposal; all other controls belong to Interactive Step Mode.
+    # Concept mode can propose explicit global actions and an explicit run request.
+    # Playback tuning and visualizer-specific settings remain in Step Mode.
     if req_data.mode != "interactive":
-        function_calls = [call for call in function_calls if call.name == "navigate_to_algorithm"]
-        if intent in {"playback", "speed", "input", "theme", "debugger", "fullscreen", "quiz", "vfs_command"}:
+        function_calls = [call for call in function_calls if call.name in {"navigate_to_algorithm", "navigate_to_page", "switch_theme", "run_visualization"}]
+        if intent in {"playback", "speed", "input", "debugger", "fullscreen", "quiz", "vfs_command"}:
             mode_name = "Interactive Step Mode"
             reply = f"I can do that from **{mode_name}**. Switch to that mode, ask again, then approve the action Octa proposes."
             mascot_expr = "helping"
@@ -1256,7 +1314,7 @@ LEARNER GUIDANCE SIGNALS
 {learning_context}
 
 ACTIVE MODE: {tutor_mode}
-- In natural mode (AI Concept Mode), answer open-ended questions conversationally using the connected model. Explain concepts deeply when requested, provide examples or code when asked, and keep app controls out of the answer unless the student explicitly asks to navigate. Only discuss the live canvas when the student asks about it directly.
+- In natural mode (AI Concept Mode), answer open-ended questions conversationally using the connected model. Explain concepts deeply when requested, provide examples or code in the language the student requested, and use the supplied reference snippet when one exists. Explicit requests to navigate, switch theme, or run the currently open visualization may be proposed for approval; do not imply they happened before approval.
 - In interactive mode (Interactive Step Mode), anchor the answer to the requested/current step data. Use a compact sequence: goal, exact values or links read, operation, why it is valid, and resulting state. Name each pointer/link/value that changes and its before/after value when supplied. Distinguish the requested step from the current one; if the trace omits a value, say so instead of guessing. For a control request, propose only the requested supported action and wait for approval.
 - Tool calls only propose an in-app action. The interface will ask the student to approve it. Never say that a proposed action has already happened. Only propose an action when the student directly asks for that action; a request to explain or teach a topic is not permission to navigate or start playback.
 
@@ -1276,6 +1334,32 @@ VERIFIED THEORY EXCERPT FOR THIS QUESTION
 DSA visualizers expose only the controls available on the current page. The file-system simulator can run one supported command inside its in-memory virtual filesystem; it cannot access the student's computer. Only propose an action when the student directly asks for it, show the exact action in your reply, and wait for the interface's explicit approval. Do not infer sign-in status, account data, backend data, host files, or operating-system state."""
 
 TOOLS_SPEC = [
+    {
+        "type": "function",
+        "function": {
+            "name": "navigate_to_page",
+            "description": "Open a supported STEM Studio destination after the student explicitly asks. The interface will ask for approval.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page_id": {
+                        "type": "string",
+                        "enum": ["dashboard", "dsa", "os", "commands", "filesystem"],
+                        "description": "A supported top-level page destination.",
+                    }
+                },
+                "required": ["page_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_visualization",
+            "description": "Run the algorithm currently open in the visualizer with its visible input. Use only for a direct request to run or visualize it; approval is required.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
     {
         "type": "function",
         "function": {
@@ -1441,7 +1525,7 @@ SUPPORTED_TUTOR_DESTINATIONS: Dict[str, set] = {
     "arrays": {"linearSearch", "kadane", "twoPointer", "slidingWindow", "rotation", "prefixSum"},
     "strings": {"palindrome", "anagram", "reverse", "frequency"},
     "linkedList": {"singly", "reverse", "middleNode", "detectCycle", "doubly", "circular", "doublyCircular"},
-    "stackQueue": {"stack", "queue", "validParentheses", "minStack", "postfixEval", "dailyTemperatures", "simplifyPath", "removeAdjacentDuplicates", "basicCalculator", "decodeString", "trappingRainWater", "largestRectangle", "queueViaStacks", "stackViaQueues", "circularQueue", "circularDeque", "slidingWindow", "firstNonRepeating", "movingAverage", "taskScheduler", "rottingOranges", "dota2Senate"},
+    "stackQueue": {"stack", "queue", "validParentheses", "minStack", "infixToPostfix", "postfixEval", "dailyTemperatures", "simplifyPath", "removeAdjacentDuplicates", "basicCalculator", "decodeString", "trappingRainWater", "largestRectangle", "queueViaStacks", "stackViaQueues", "circularQueue", "circularDeque", "slidingWindow", "firstNonRepeating", "movingAverage", "taskScheduler", "rottingOranges", "dota2Senate"},
     "binarySearch": {"binarySearch", "lowerBound", "upperBound", "searchRotatedArray", "findPeakElement"},
     "hashMaps": {"twoSum", "duplicateDetect", "frequencyMap", "subarraySum"},
     "bst": {"bst", "avl", "rbt", "heap", "segTree", "trie"},
@@ -1455,10 +1539,22 @@ SUPPORTED_TUTOR_DESTINATIONS: Dict[str, set] = {
     "filesystem": {"virtual-file-system"},
 }
 
+SUPPORTED_TUTOR_PAGES = {
+    "dashboard": "/dashboard",
+    "dsa": "/dashboard/dsa",
+    "os": "/dashboard/os",
+    "commands": "/dashboard/os/commands",
+    "filesystem": "/dashboard/os/filesystem",
+}
+
 
 def normalize_tutor_tool_call(name: str, raw_args: Any) -> Optional[Dict[str, Any]]:
     """Allowlist model-proposed actions and validate every argument before UI approval."""
     args = raw_args if isinstance(raw_args, dict) else {}
+    if name == "navigate_to_page" and isinstance(args.get("page_id"), str) and args["page_id"] in SUPPORTED_TUTOR_PAGES:
+        return {"page_id": args["page_id"]}
+    if name == "run_visualization":
+        return {}
     if name == "navigate_to_algorithm":
         category_id = args.get("category_id")
         topic_id = args.get("topic_id", "")
@@ -1497,11 +1593,18 @@ def normalize_tutor_tool_call(name: str, raw_args: Any) -> Optional[Dict[str, An
     return None
 
 
-def tutor_action_matches_request(name: str, message: str, req_data: OctaTutorRequest) -> bool:
+def tutor_action_matches_request(
+    name: str,
+    message: str,
+    req_data: OctaTutorRequest,
+    args: Optional[Dict[str, Any]] = None,
+) -> bool:
     """A valid tool call is still rejected unless the user clearly asked for it."""
     intent = classify_intent(message)
     expected_intent = {
+        "navigate_to_page": "navigate",
         "navigate_to_algorithm": "navigate",
+        "run_visualization": "run_visualization",
         "control_playback": "playback",
         "set_speed": "speed",
         "set_input": "input",
@@ -1514,13 +1617,19 @@ def tutor_action_matches_request(name: str, message: str, req_data: OctaTutorReq
     if intent != expected_intent:
         return False
 
+    args = args or {}
+    if name == "navigate_to_page":
+        return resolve_page_name(message) == args.get("page_id")
+    if name == "navigate_to_algorithm":
+        return resolve_algorithm_name(message) == (args.get("category_id"), args.get("topic_id") or "")
+
     if name == "execute_vfs_command":
         return req_data.category == "filesystem" and (
             req_data.current_page.endswith("/filesystem") or req_data.current_page == "/dashboard/filesystem"
         )
 
     target = resolve_algorithm_name(message)
-    if target and name in {"control_playback", "set_speed", "set_input", "generate_quiz"}:
+    if target and name in {"control_playback", "set_speed", "set_input", "generate_quiz", "run_visualization"}:
         current = (req_data.category, req_data.algorithm_id or "")
         if target != current:
             return False
@@ -1808,16 +1917,10 @@ async def handle_octa_tutor(
 
     messages.append({"role": "user", "content": req_data.message})
 
-    explicit_navigation = (
-        classify_intent(req_data.message) == "navigate"
-        and not any(phrase in req_data.message.lower() for phrase in (
-            "explain", "how does", "how do", "what is", "teach me", "compare",
-        ))
-    )
-    enabled_tools = TOOLS_SPEC if t_mode == "interactive" else (
-        [tool for tool in TOOLS_SPEC if tool["function"]["name"] == "navigate_to_algorithm"]
-        if explicit_navigation else []
-    )
+    concept_mode_tools = {"navigate_to_algorithm", "navigate_to_page", "switch_theme", "run_visualization"}
+    enabled_tools = TOOLS_SPEC if t_mode == "interactive" else [
+        tool for tool in TOOLS_SPEC if tool["function"]["name"] in concept_mode_tools
+    ]
 
     if provider_type == "anthropic":
         anthropic_messages = [message for message in messages if message["role"] != "system"]
@@ -1914,13 +2017,13 @@ async def handle_octa_tutor(
             if (
                 name
                 and normalized_args is not None
-                and (t_mode == "interactive" or name == "navigate_to_algorithm")
-                and tutor_action_matches_request(name, req_data.message, req_data)
+                and (t_mode == "interactive" or name in concept_mode_tools)
+                and tutor_action_matches_request(name, req_data.message, req_data, normalized_args)
             ):
                 function_calls.append(OctaTutorFunctionCall(name=name, args=normalized_args))
                 if name in ["switch_theme", "toggle_debugger", "toggle_fullscreen"]:
                     mascot_expr = "happy"
-                elif name in ["navigate_to_algorithm", "control_playback", "set_input"]:
+                elif name in ["navigate_to_algorithm", "navigate_to_page", "control_playback", "set_input", "run_visualization"]:
                     mascot_expr = "excited"
                 elif name == "generate_quiz":
                     mascot_expr = "review"
@@ -1934,6 +2037,11 @@ async def handle_octa_tutor(
                 cat = function_calls[0].args.get("category_id", "")
                 topic = function_calls[0].args.get("topic_id", "")
                 reply_text = f"I can open **{topic or cat}** for you."
+            elif first_fn == "navigate_to_page":
+                page = function_calls[0].args.get("page_id", "that page")
+                reply_text = f"I can open **{page}** for you."
+            elif first_fn == "run_visualization":
+                reply_text = "I can run the active visualization with its current input."
             elif first_fn == "control_playback":
                 action = function_calls[0].args.get("action", "play")
                 action_msgs = {

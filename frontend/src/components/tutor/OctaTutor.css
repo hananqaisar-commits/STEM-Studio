@@ -358,3 +358,21 @@
   .octa-tutor-fab, .tutor-mode-btn { transition: none; }
   .tutor-thinking-dots i, .tutor-spin { animation: none; }
 }
+.tutor-typing-caret {
+  display: inline-block;
+  height: 1.05em;
+  margin-left: 0.12rem;
+  border-left: 2px solid var(--color-primary, #6366f1);
+  vertical-align: text-bottom;
+  animation: tutor-caret-blink 850ms steps(2, start) infinite;
+}
+
+@keyframes tutor-caret-blink {
+  to { visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutor-typing-caret {
+    animation: none;
+  }
+}

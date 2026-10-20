@@ -34,7 +34,7 @@ MODULE_ALGORITHM_COUNTS = {
     "arrays": 6,
     "strings": 4,
     "linkedList": 6,
-    "stackQueue": 22,
+    "stackQueue": 23,
     "binarySearch": 5,
     "hashMaps": 4,
     "bst": 4,

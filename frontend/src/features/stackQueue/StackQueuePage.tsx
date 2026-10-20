@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
@@ -21,6 +21,7 @@ import {
   generateCircularQueueDequeueSteps,
   generateValidParenthesesSteps,
   generateMinStackPushSteps,
+  generateInfixToPostfixSteps,
   generatePostfixEvalSteps,
   generateQueueViaStacksSteps,
   generateDailyTemperaturesSteps,
@@ -82,6 +83,7 @@ const PROBLEMS_LIST: ProblemMeta[] = [
   // Stack Problems
   { id: 'validParentheses', name: 'Valid Parentheses', group: 'Stack', leetcodeId: '#20', description: 'Matching brackets evaluation using LIFO stack' },
   { id: 'minStack', name: 'Min Stack O(1)', group: 'Stack', leetcodeId: '#155', description: 'Stack with O(1) minimum value tracking' },
+  { id: 'infixToPostfix', name: 'Infix to Postfix Conversion', group: 'Stack', description: 'Shunting-yard conversion with precedence and parentheses' },
   { id: 'postfixEval', name: 'Evaluate RPN / Postfix', group: 'Stack', leetcodeId: '#150', description: 'Evaluate Reverse Polish Notation expressions' },
   { id: 'dailyTemperatures', name: 'Daily Temperatures', group: 'Stack', leetcodeId: '#739', description: 'Monotonic decreasing stack for next warmer day' },
   { id: 'simplifyPath', name: 'Simplify Path', group: 'Stack', leetcodeId: '#71', description: 'Canonical Unix directory path simplification' },
@@ -104,6 +106,32 @@ const PROBLEMS_LIST: ProblemMeta[] = [
   { id: 'dota2Senate', name: 'Dota2 Senate Round-Robin', group: 'Queue', leetcodeId: '#649', description: 'Round-robin voting ban queue strategy' },
 ];
 
+const INPUT_CONFIG: Record<StackQueueCategory, { label: string; placeholder: string; initial: string; helper: string }> = {
+  stack: { label: 'Values', placeholder: '10, 20, 30, 40', initial: '10, 20, 30, 40, 50', helper: 'Comma-separated values build from bottom to top.' },
+  queue: { label: 'Values', placeholder: '10, 20, 30, 40', initial: '10, 20, 30, 40, 50', helper: 'Comma-separated values enter at the rear.' },
+  circularQueue: { label: 'Value', placeholder: 'e.g. 45', initial: '45', helper: 'Enqueue this value into the ring buffer.' },
+  validParentheses: { label: 'Expression', placeholder: 'e.g. ({[]})', initial: '({[]})', helper: 'Enter bracket characters to match.' },
+  minStack: { label: 'Values', placeholder: 'e.g. 3, 1, 5', initial: '3', helper: 'Push one or more numbers and watch the minimum stack update.' },
+  infixToPostfix: { label: 'Infix', placeholder: 'e.g. A + B * C', initial: 'A + B * C', helper: 'Use operands, +, -, *, /, ^, and parentheses. Unary operators are not supported.' },
+  postfixEval: { label: 'Postfix', placeholder: 'e.g. 3 4 + 2 *', initial: '3 4 + 2 *', helper: 'Separate operands and operators with spaces.' },
+  dailyTemperatures: { label: 'Temperatures', placeholder: '73, 74, 75, 71', initial: '73, 74, 75, 71, 69, 72, 76, 73', helper: 'Enter one temperature per comma-separated value.' },
+  simplifyPath: { label: 'Path', placeholder: 'e.g. /a/./b/../c', initial: '/a/./b/../../c/', helper: 'Use /, directory names, . and .. segments.' },
+  removeAdjacentDuplicates: { label: 'String', placeholder: 'e.g. abbaca', initial: 'abbaca', helper: 'Adjacent equal characters cancel in pairs.' },
+  basicCalculator: { label: 'Expression', placeholder: 'e.g. 2-(3+4)', initial: '2-(3+4)', helper: 'Use non-negative integers, +, −, spaces and parentheses.' },
+  decodeString: { label: 'Pattern', placeholder: 'e.g. 3[a2[c]]', initial: '3[a2[c]]', helper: 'Use k[substring] patterns; nested groups are supported.' },
+  trappingRainWater: { label: 'Heights', placeholder: '4, 2, 0, 3, 2, 5', initial: '4, 2, 0, 3, 2, 5', helper: 'Each number is one bar height.' },
+  largestRectangle: { label: 'Heights', placeholder: '2, 1, 5, 6, 2, 3', initial: '2, 1, 5, 6, 2, 3', helper: 'Each number is one histogram bar height.' },
+  queueViaStacks: { label: 'Value', placeholder: 'e.g. 42', initial: '42', helper: 'Enqueue places the value in the input stack.' },
+  stackViaQueues: { label: 'Value', placeholder: 'e.g. 42', initial: '42', helper: 'Push this value and watch the queue rotation.' },
+  circularDeque: { label: 'Value', placeholder: 'e.g. 30', initial: '30', helper: 'Choose an end operation; this value is inserted at that end.' },
+  slidingWindow: { label: 'Array', placeholder: '1, 3, -1, -3, 5, 3, 6, 7', initial: '1, 3, -1, -3, 5, 3, 6, 7', helper: 'The deque stores candidate indices for the current window.' },
+  firstNonRepeating: { label: 'Stream', placeholder: 'e.g. aabc', initial: 'aabc', helper: 'Characters are processed from left to right.' },
+  movingAverage: { label: 'Stream', placeholder: '1, 10, 3, 5', initial: '1, 10, 3, 5', helper: 'The queue keeps only the latest window values.' },
+  taskScheduler: { label: 'Tasks', placeholder: 'A, A, A, B, B, B', initial: 'A, A, A, B, B, B', helper: 'Repeated task letters require a cooldown between executions.' },
+  rottingOranges: { label: 'Grid', placeholder: '2,1,1; 1,1,0; 0,1,1', initial: '2,1,1; 1,1,0; 0,1,1', helper: 'Rows separated by semicolons; cells are 0, 1, or 2.' },
+  dota2Senate: { label: 'Senate', placeholder: 'e.g. RDDR', initial: 'RDDR', helper: 'Enter a sequence of R and D senators.' },
+};
+
 // Circular Deque ring capacity shared by state, handlers and the engine
 const CD_CAPACITY = 5;
 
@@ -118,7 +146,10 @@ export const StackQueuePage: React.FC = () => {
     }
   }, [searchParams]);
 
-  const [inputValue, setInputValue] = useState<string>('10, 20, 30, 40, 50');
+  const [inputValue, setInputValue] = useState<string>(INPUT_CONFIG.stack.initial);
+  const [windowSize, setWindowSize] = useState<number>(3);
+  const [schedulerCooldown, setSchedulerCooldown] = useState<number>(2);
+  const runVisualizationRef = useRef<() => void>(() => {});
 
   // Modes & Modals matching BST
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -238,6 +269,8 @@ export const StackQueuePage: React.FC = () => {
       pause,
       stepForward,
       reset,
+      onSetInput: (values) => setInputValue(values.join(', ')),
+      onRunVisualization: () => runVisualizationRef.current(),
       setShowDebugger,
       onLaunchQuiz: () => setQuizEnabled(true),
     });
@@ -513,6 +546,13 @@ export const StackQueuePage: React.FC = () => {
     play();
   };
 
+  const handleInfixToPostfix = () => {
+    const expression = inputValue.trim() || 'A + B * C';
+    setActiveSteps(generateInfixToPostfixSteps(expression));
+    reset();
+    play();
+  };
+
   const handleQueueViaStacksEnqueue = () => {
     const val = isNaN(Number(inputValue)) ? inputValue.trim() : Number(inputValue) || 99;
     const res = generateQueueViaStacksSteps(qvsIn, qvsOut, 'enqueue', val);
@@ -533,8 +573,9 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleDailyTemperatures = () => {
-    const inputTemps = inputValue.trim()
-      ? parseNumberList(inputValue).values
+    const parsed = parseNumberList(inputValue);
+    const inputTemps = parsed.isValid && parsed.values.length > 0
+      ? parsed.values
       : [73, 74, 75, 71, 69, 72, 76, 73];
     const steps = generateDailyTemperaturesSteps(inputTemps);
     setActiveSteps(steps);
@@ -559,18 +600,20 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleSlidingWindow = () => {
-    const nums = inputValue.trim()
-      ? parseNumberList(inputValue).values
+    const parsed = parseNumberList(inputValue);
+    const nums = parsed.isValid && parsed.values.length > 0
+      ? parsed.values
       : [1, 3, -1, -3, 5, 3, 6, 7];
-    const steps = generateSlidingWindowSteps(nums, 3);
+    const k = Math.max(1, Math.min(windowSize, nums.length));
+    const steps = generateSlidingWindowSteps(nums, k);
     setActiveSteps(steps);
     reset();
     play();
   };
 
   const parseNumArray = (fallback: number[]): number[] => {
-    const nums = parseNumberList(inputValue).values;
-    return nums.length > 0 ? nums : fallback;
+    const parsed = parseNumberList(inputValue);
+    return parsed.isValid && parsed.values.length > 0 ? parsed.values : fallback;
   };
 
   const handleBasicCalculator = () => {
@@ -646,22 +689,18 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleMovingAverage = () => {
-    const parts = inputValue.split('|');
-    const nums = parseNumberList(parts[0]).values;
-    const k = parts[1] ? Math.max(1, Number(parts[1]) || 3) : 3;
-    setActiveSteps(generateMovingAverageSteps(nums.length > 0 ? nums : [1, 10, 3, 5], k));
+    const parsed = parseNumberList(inputValue);
+    const values = parsed.isValid && parsed.values.length > 0 ? parsed.values : [1, 10, 3, 5];
+    const k = Math.max(1, Math.min(windowSize, values.length));
+    setActiveSteps(generateMovingAverageSteps(values, k));
     reset();
     play();
   };
 
   const handleTaskScheduler = () => {
     const tokens = parseStringList(inputValue).values;
-    let cooldown = 2;
-    let taskStr = tokens.join('');
-    if (tokens.length > 1 && !isNaN(Number(tokens[tokens.length - 1]))) {
-      cooldown = Math.max(0, Number(tokens[tokens.length - 1]));
-      taskStr = tokens.slice(0, -1).join('');
-    }
+    const cooldown = Math.max(0, Math.min(20, schedulerCooldown));
+    const taskStr = tokens.join('');
     const tasks = taskStr.toUpperCase().replace(/[^A-Z]/g, '').split('').filter(Boolean);
     setActiveSteps(
       generateTaskSchedulerSteps(
@@ -676,7 +715,7 @@ export const StackQueuePage: React.FC = () => {
   const handleRottingOranges = () => {
     const rows = inputValue.trim().split(';').map((row) => parseNumberList(row).values);
     const valid =
-      rows.length > 0 && rows.every((r) => r.length > 0 && r.every((c) => !isNaN(c) && c >= 0 && c <= 2));
+      rows.length > 0 && rows.every((r) => r.length > 0 && r.length === rows[0].length && r.every((c) => !isNaN(c) && c >= 0 && c <= 2));
     setActiveSteps(
       generateRottingOrangesSteps(valid ? rows : [[2, 1, 1], [1, 1, 0], [0, 1, 1]])
     );
@@ -720,6 +759,8 @@ export const StackQueuePage: React.FC = () => {
         return generateValidParenthesesSteps('({[]})');
       case 'minStack':
         return generateMinStackPushSteps(currMinMain.length ? currMinMain : [5, 2, 8], currMinAux.length ? currMinAux : [5, 2, 2], 3).steps;
+      case 'infixToPostfix':
+        return generateInfixToPostfixSteps('A + B * C');
       case 'postfixEval':
         return generatePostfixEvalSteps('3 4 + 2 *');
       case 'queueViaStacks':
@@ -775,6 +816,7 @@ export const StackQueuePage: React.FC = () => {
   useEffect(() => {
     const steps = getCategoryDefaultSteps(category);
     setActiveSteps(steps);
+    setInputValue(INPUT_CONFIG[category].initial);
     setSandboxMessage(null);
     reset();
   }, [category]);
@@ -804,6 +846,9 @@ export const StackQueuePage: React.FC = () => {
     setCdElements(sampleCd);
     setCdFront(0);
     setCdRear(1);
+    setInputValue(INPUT_CONFIG[category].initial);
+    setWindowSize(3);
+    setSchedulerCooldown(2);
 
     // Rebuild replay histories so sandbox state matches the sampled datasets.
     setStackHistory(sampleStack.map((v) => ({ method: 'push', args: [v] })));
@@ -865,6 +910,13 @@ export const StackQueuePage: React.FC = () => {
         const expr = `${nums[0]} ${nums[1]} ${ops[randInt(0, 2)]} ${nums[2]} ${ops[randInt(0, 2)]}`;
         setInputValue(expr);
         setActiveSteps(generatePostfixEvalSteps(expr));
+        break;
+      }
+      case 'infixToPostfix': {
+        const expressions = ['A + B * C', '(A + B) * C', 'A * B + C / D', 'A ^ B ^ C'];
+        const expression = expressions[randInt(0, expressions.length - 1)];
+        setInputValue(expression);
+        setActiveSteps(generateInfixToPostfixSteps(expression));
         break;
       }
       case 'dailyTemperatures': {
@@ -968,7 +1020,7 @@ export const StackQueuePage: React.FC = () => {
       case 'slidingWindow': {
         const nums = Array.from({ length: 8 }, () => randInt(-5, 10));
         setInputValue(nums.join(' '));
-        setActiveSteps(generateSlidingWindowSteps(nums, 3));
+        setActiveSteps(generateSlidingWindowSteps(nums, Math.min(windowSize, nums.length)));
         break;
       }
       case 'firstNonRepeating': {
@@ -981,12 +1033,13 @@ export const StackQueuePage: React.FC = () => {
       case 'movingAverage': {
         const nums = Array.from({ length: 6 }, () => randInt(1, 20));
         setInputValue(nums.join(' '));
-        setActiveSteps(generateMovingAverageSteps(nums, 3));
+        setActiveSteps(generateMovingAverageSteps(nums, Math.min(windowSize, nums.length)));
         break;
       }
       case 'taskScheduler': {
         const tasks = Array.from({ length: randInt(6, 8) }, () => 'ABC'[randInt(0, 2)]);
-        setInputValue([...tasks, '2'].join(' '));
+        setSchedulerCooldown(2);
+        setInputValue(tasks.join(', '));
         setActiveSteps(generateTaskSchedulerSteps(tasks, 2));
         break;
       }
@@ -1072,6 +1125,70 @@ export const StackQueuePage: React.FC = () => {
     quizSession.resetSession();
   };
 
+  runVisualizationRef.current = () => {
+    const runners: Record<StackQueueCategory, () => void> = {
+      stack: handleBuildBatchStackQueue,
+      queue: handleBuildBatchStackQueue,
+      circularQueue: handleCircularEnqueue,
+      validParentheses: handleValidParentheses,
+      minStack: handleMinStackPush,
+      infixToPostfix: handleInfixToPostfix,
+      postfixEval: handlePostfixEval,
+      dailyTemperatures: handleDailyTemperatures,
+      simplifyPath: handleSimplifyPath,
+      removeAdjacentDuplicates: handleRemoveDuplicates,
+      basicCalculator: handleBasicCalculator,
+      decodeString: handleDecodeString,
+      trappingRainWater: handleTrappingRainWater,
+      largestRectangle: handleLargestRectangle,
+      queueViaStacks: handleQueueViaStacksEnqueue,
+      stackViaQueues: handleStackViaQueuesPush,
+      circularDeque: () => handleCircularDeque('insertLast'),
+      slidingWindow: handleSlidingWindow,
+      firstNonRepeating: handleFirstNonRepeating,
+      movingAverage: handleMovingAverage,
+      taskScheduler: handleTaskScheduler,
+      rottingOranges: handleRottingOranges,
+      dota2Senate: handleDota2Senate,
+    };
+    runners[category]();
+  };
+
+  const renderInputControls = (surface: 'page' | 'fullscreen') => {
+    const config = INPUT_CONFIG[category];
+    const inputId = `stack-queue-${surface}-input`;
+    return (
+      <>
+        <div className="bst-input-group stackqueue-input-group" title={config.helper}>
+          <label htmlFor={inputId} style={{ fontWeight: 600 }}>{config.label}:</label>
+          <input
+            id={inputId}
+            type="text"
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            className="bst-input"
+            placeholder={config.placeholder}
+            aria-describedby={`${inputId}-help`}
+            style={{ minWidth: '180px' }}
+          />
+          <span id={`${inputId}-help`} className="stackqueue-input-help">{config.helper}</span>
+        </div>
+        {(category === 'slidingWindow' || category === 'movingAverage') && (
+          <label className="stackqueue-param-control">
+            Window size k
+            <input type="number" min={1} max={20} value={windowSize} onChange={(event) => setWindowSize(Math.max(1, Math.min(20, Number(event.target.value) || 1)))} />
+          </label>
+        )}
+        {category === 'taskScheduler' && (
+          <label className="stackqueue-param-control">
+            Cooldown n
+            <input type="number" min={0} max={20} value={schedulerCooldown} onChange={(event) => setSchedulerCooldown(Math.max(0, Math.min(20, Number(event.target.value) || 0)))} />
+          </label>
+        )}
+      </>
+    );
+  };
+
   /* Operation buttons for the active category. Shared by the page toolbar and the
      full-screen toolbar so both always expose the exact same actions. */
   const renderCategoryActions = () => (
@@ -1145,6 +1262,13 @@ export const StackQueuePage: React.FC = () => {
         <button className="bst-btn btn-insert" onClick={handlePostfixEval}>
           <CheckCircle2 size={14} />
           <span>Evaluate Postfix</span>
+        </button>
+      )}
+
+      {category === 'infixToPostfix' && (
+        <button className="bst-btn btn-insert" onClick={handleInfixToPostfix}>
+          <CheckCircle2 size={14} />
+          <span>Convert to Postfix</span>
         </button>
       )}
 
@@ -1347,26 +1471,25 @@ export const StackQueuePage: React.FC = () => {
         className="bst-select font-bold text-xs"
         value={category}
         onChange={(e) => {
-          setCategory(e.target.value as StackQueueCategory);
-          setActiveSteps([]);
-          reset();
+          handleSelectProblem(e.target.value as StackQueueCategory);
         }}
       >
         <optgroup label="── Core Primitives ──">
           <option value="stack">Stack Primitive (LIFO)</option>
           <option value="queue">Queue Primitive (FIFO)</option>
         </optgroup>
-        <optgroup label="── Stack Classical Problems (10) ──">
+        <optgroup label="── Stack Classical Problems (11) ──">
           <option value="validParentheses">1. Valid Parentheses (#20)</option>
           <option value="minStack">2. Min Stack O(1) (#155)</option>
-          <option value="postfixEval">3. Evaluate RPN / Postfix (#150)</option>
-          <option value="dailyTemperatures">4. Daily Temperatures / Monotonic (#739)</option>
-          <option value="simplifyPath">5. Simplify Path (#71)</option>
-          <option value="removeAdjacentDuplicates">6. Remove Adjacent Duplicates (#1047)</option>
-          <option value="basicCalculator">7. Basic Calculator Expression (#224)</option>
-          <option value="decodeString">8. Decode String Pattern (#394)</option>
-          <option value="trappingRainWater">9. Trapping Rain Water (#42)</option>
-          <option value="largestRectangle">10. Largest Rectangle in Histogram (#84)</option>
+          <option value="infixToPostfix">3. Infix to Postfix Conversion</option>
+          <option value="postfixEval">4. Evaluate RPN / Postfix (#150)</option>
+          <option value="dailyTemperatures">5. Daily Temperatures / Monotonic (#739)</option>
+          <option value="simplifyPath">6. Simplify Path (#71)</option>
+          <option value="removeAdjacentDuplicates">7. Remove Adjacent Duplicates (#1047)</option>
+          <option value="basicCalculator">8. Basic Calculator Expression (#224)</option>
+          <option value="decodeString">9. Decode String Pattern (#394)</option>
+          <option value="trappingRainWater">10. Trapping Rain Water (#42)</option>
+          <option value="largestRectangle">11. Largest Rectangle in Histogram (#84)</option>
         </optgroup>
         <optgroup label="── Queue Classical Problems (10) ──">
           <option value="queueViaStacks">1. Queue using 2 Stacks (#232)</option>
@@ -1382,18 +1505,7 @@ export const StackQueuePage: React.FC = () => {
         </optgroup>
       </select>
 
-      {/* Input Group Matching BST */}
-      <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
-        <span style={{ fontWeight: 600 }}>Values:</span>
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          className="bst-input"
-          placeholder="e.g. 10, 20, 30, 40"
-          style={{ minWidth: '160px' }}
-        />
-      </div>
+      {renderInputControls('fullscreen')}
 
       {/* Category Action Buttons */}
       {renderCategoryActions()}
@@ -1422,7 +1534,7 @@ export const StackQueuePage: React.FC = () => {
       <VisualizerHeader
         icon={<Layers size={22} />}
         title="Stack & Queue Studio"
-        subtitle="Interactive LIFO / FIFO Primitives & 20 Classical Interview Problems"
+        subtitle="Interactive LIFO / FIFO primitives and 21 step-by-step problems"
         items={PROBLEMS_LIST.map((prob) => ({
           id: prob.id,
           name: prob.leetcodeId ? `${prob.name}  ${prob.leetcodeId}` : prob.name,
@@ -1431,7 +1543,7 @@ export const StackQueuePage: React.FC = () => {
         }))}
         activeId={category}
         onSelect={(id) => handleSelectProblem(id as StackQueueCategory)}
-        placeholder="Search 20 DSA problems (#739, Water, Min)..."
+        placeholder="Search 21 stack & queue problems (infix, RPN, window)..."
         actions={
           <VisualizerActions
             quizEnabled={quizEnabled}
@@ -1458,18 +1570,7 @@ export const StackQueuePage: React.FC = () => {
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
 
-          {/* Input Group Matching BST */}
-            <div className="bst-input-group" title="Enter comma-separated values (e.g. 10, 20, 30, 40)">
-              <span style={{ fontWeight: 600 }}>Values:</span>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                className="bst-input"
-                placeholder="e.g. 10, 20, 30, 40"
-                style={{ minWidth: '160px' }}
-              />
-            </div>
+          {renderInputControls('page')}
 
           {/* Category Action Buttons */}
           {renderCategoryActions()}

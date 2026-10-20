@@ -99,6 +99,7 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
       { id: 'queue', name: 'Queue Primitive (FIFO)', group: 'Core' },
       { id: 'validParentheses', name: 'Valid Parentheses', group: 'Stack' },
       { id: 'minStack', name: 'Min Stack O(1)', group: 'Stack' },
+      { id: 'infixToPostfix', name: 'Infix to Postfix Conversion', group: 'Stack' },
       { id: 'postfixEval', name: 'Evaluate RPN / Postfix', group: 'Stack' },
       { id: 'dailyTemperatures', name: 'Daily Temperatures', group: 'Stack' },
       { id: 'simplifyPath', name: 'Simplify Path', group: 'Stack' },

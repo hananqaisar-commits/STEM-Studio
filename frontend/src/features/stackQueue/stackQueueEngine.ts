@@ -4,6 +4,7 @@ export type StackQueueCategory =
   // Stack 10 Problems
   | 'validParentheses'
   | 'minStack'
+  | 'infixToPostfix'
   | 'postfixEval'
   | 'dailyTemperatures'
   | 'trappingRainWater'
@@ -503,6 +504,140 @@ export function generateMinStackPushSteps(
 }
 
 // ─── EVALUATE POSTFIX (RPN) PROBLEM ENGINE ───────────────────────────
+
+// ─── INFIX TO POSTFIX (SHUNTING-YARD) PROBLEM ENGINE ─────────────────
+
+export function generateInfixToPostfixSteps(expression: string): StackQueueStep[] {
+  const steps: StackQueueStep[] = [];
+  const tokenPattern = /[A-Za-z_][A-Za-z_0-9]*|\d+(?:\.\d+)?|[()+\-*/^]/g;
+  const tokens = expression.match(tokenPattern) ?? [];
+  const remainder = expression.replace(tokenPattern, '').replace(/\s/g, '');
+  const operators: string[] = [];
+  const output: string[] = [];
+  const precedence: Record<string, number> = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+  const isOperator = (token: string) => Object.prototype.hasOwnProperty.call(precedence, token);
+  const snapshot = (description: string, tokenIndex: number, codeLine: number, error = false) => {
+    steps.push({
+      stepIndex: steps.length,
+      description,
+      codeLine,
+      elements: operators.map((value, index) => ({
+        id: `infix-op-${index}`,
+        value,
+        state: error ? 'error' : index === operators.length - 1 ? 'active' : 'default',
+      })),
+      auxElements: output.map((value, index) => ({
+        id: `infix-out-${index}`,
+        value,
+        state: index === output.length - 1 && !error ? 'pushed' : 'default',
+      })),
+      inputString: expression,
+      currentInputIndex: tokenIndex,
+      auxLabel: 'POSTFIX OUTPUT',
+    });
+  };
+
+  snapshot(`Read the infix expression: ${expression}. Operands go directly to output; operators wait on the stack until precedence allows them to leave.`, 0, 1);
+  if (!expression.trim() || remainder) {
+    snapshot(`Invalid expression: ${!expression.trim() ? 'enter an expression first.' : `unsupported character(s): ${remainder}`}`, 0, 0, true);
+    return steps;
+  }
+
+  let expectsOperand = true;
+  let openParens = 0;
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const isOperand = /^[A-Za-z_][A-Za-z_0-9]*$/.test(token) || /^\d+(?:\.\d+)?$/.test(token);
+
+    if (isOperand) {
+      if (!expectsOperand) {
+        snapshot(`Invalid expression near '${token}': two operands need an operator between them.`, index, 0, true);
+        return steps;
+      }
+      output.push(token);
+      expectsOperand = false;
+      snapshot(`'${token}' is an operand, so append it directly to the postfix output.`, index, 2);
+      continue;
+    }
+
+    if (token === '(') {
+      if (!expectsOperand && index > 0) {
+        snapshot(`Invalid expression near '(': implicit multiplication is not supported; add an operator.`, index, 0, true);
+        return steps;
+      }
+      operators.push(token);
+      openParens += 1;
+      expectsOperand = true;
+      snapshot(`Push '(' onto the operator stack. It creates a boundary: operators inside cannot pop operators outside it.`, index, 3);
+      continue;
+    }
+
+    if (token === ')') {
+      if (expectsOperand) {
+        snapshot(`Invalid expression at ')': a closing parenthesis needs a completed operand or subexpression before it.`, index, 0, true);
+        return steps;
+      }
+      while (operators.length && operators[operators.length - 1] !== '(') {
+        const popped = operators.pop()!;
+        output.push(popped);
+        snapshot(`Pop '${popped}' into output because ')' closes this parenthesized expression.`, index, 5);
+      }
+      if (operators[operators.length - 1] !== '(') {
+        snapshot(`Unmatched ')' at token ${index + 1}; there is no opening parenthesis on the stack.`, index, 0, true);
+        return steps;
+      }
+      operators.pop();
+      openParens -= 1;
+      expectsOperand = false;
+      snapshot(`Discard the matching '('; parentheses control ordering but do not appear in postfix output.`, index, 6);
+      continue;
+    }
+
+    if (isOperator(token)) {
+      if (expectsOperand) {
+        snapshot(`Invalid expression near '${token}': this visualizer expects a left operand before a binary operator.`, index, 0, true);
+        return steps;
+      }
+      while (operators.length && isOperator(operators[operators.length - 1])) {
+        const top = operators[operators.length - 1];
+        const shouldPop = precedence[top] > precedence[token]
+          || (precedence[top] === precedence[token] && token !== '^');
+        if (!shouldPop) break;
+        operators.pop();
+        output.push(top);
+        snapshot(`Pop '${top}' before pushing '${token}' because it has higher precedence (or equal precedence with left associativity).`, index, 4);
+      }
+      operators.push(token);
+      expectsOperand = true;
+      snapshot(`Push '${token}'. ${token === '^' ? 'Exponentiation is right-associative, so another ^ stays above it.' : 'Higher-precedence operators are popped first; equal-precedence operators are left-associative.'}`, index, 4);
+      continue;
+    }
+
+    snapshot(`Unsupported token '${token}'.`, index, 0, true);
+    return steps;
+  }
+
+  if (expectsOperand) {
+    snapshot('Invalid expression: it ends with an operator or contains no complete operand.', Math.max(0, tokens.length - 1), 0, true);
+    return steps;
+  }
+  if (openParens > 0) {
+    snapshot(`Invalid expression: ${openParens} opening parenthesis/parentheses were never closed.`, Math.max(0, tokens.length - 1), 0, true);
+    return steps;
+  }
+
+  while (operators.length) {
+    const top = operators.pop()!;
+    if (top === '(') {
+      snapshot('Invalid expression: an opening parenthesis was never closed.', Math.max(0, tokens.length - 1), 0, true);
+      return steps;
+    }
+    output.push(top);
+    snapshot(`Input is finished, so pop remaining operator '${top}' into the postfix output.`, Math.max(0, tokens.length - 1), 7);
+  }
+  snapshot(`Conversion complete: ${output.join(' ')}.`, tokens.length, 8);
+  return steps;
+}
 
 export function generatePostfixEvalSteps(exprStr: string): StackQueueStep[] {
   const steps: StackQueueStep[] = [];

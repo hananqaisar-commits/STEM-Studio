@@ -9,6 +9,7 @@ import { CATEGORY_TOPICS } from '../data/categoryTopics';
 import { THEORY_CONTENT } from '../data/theoryContent';
 import { LINUX_COMMAND_GROUPS } from '../data/linuxCommandsData';
 import { LINUX_CORE_LESSONS } from '../data/linuxCoreLessons';
+import { getStackQueueSnippets } from '../features/stackQueue/stackQueueSnippets';
 
 export interface ChatMessage {
   id: string;
@@ -74,6 +75,9 @@ export interface UseOctaTutorReturn {
 
 function normalizeTutorAction(call: OctaTutorFunctionCall): OctaTutorFunctionCall | null {
   const args = call.args || {};
+  if (call.name === 'navigate_to_page' && typeof args.page_id === 'string' && ['dashboard', 'dsa', 'os', 'commands', 'filesystem'].includes(args.page_id)) {
+    return { name: call.name, args: { page_id: args.page_id } };
+  }
   if (call.name === 'navigate_to_algorithm') {
     const categoryId = args.category_id;
     const topicId = args.topic_id || '';
@@ -84,6 +88,7 @@ function normalizeTutorAction(call: OctaTutorFunctionCall): OctaTutorFunctionCal
   if (call.name === 'control_playback' && ['play', 'pause', 'step_forward', 'reset'].includes(args.action)) {
     return { name: call.name, args: { action: args.action } };
   }
+  if (call.name === 'run_visualization') return { name: call.name, args: {} };
   if (call.name === 'set_speed' && typeof args.speed === 'number' && Number.isFinite(args.speed) && args.speed >= 0.25 && args.speed <= 4) {
     return { name: call.name, args: { speed: args.speed } };
   }
@@ -117,7 +122,9 @@ const SUPPORTED_VFS_COMMANDS = new Set(['pwd', 'cd', 'ls', 'mkdir', 'touch', 'ca
 function isActionAvailable(call: OctaTutorFunctionCall, context: TutorAlgorithmContext): boolean {
   switch (call.name) {
     case 'navigate_to_algorithm':
+    case 'navigate_to_page':
     case 'switch_theme': return true;
+    case 'run_visualization': return Boolean(context.onRunVisualization || context.play);
     case 'control_playback':
       return call.args.action === 'play' ? Boolean(context.play)
         : call.args.action === 'pause' ? Boolean(context.pause)
@@ -292,6 +299,13 @@ export function useOctaTutor(): UseOctaTutorReturn {
 
     return JSON.stringify(selected.map(({ category, topic }) => {
       const theory = THEORY_CONTENT[category.categoryId]?.topics.find((item) => item.id === topic.id);
+      const wantsCode = /\b(code|implementation|implement)\b|c\+\+/i.test(prompt);
+      const requestedStackLanguage = /\bpython\b/i.test(prompt) ? 'python'
+        : /\bjava\b/i.test(prompt) ? 'java'
+          : /\bjavascript\b|\bjs\b/i.test(prompt) ? 'javascript' : 'cpp';
+      const codeSnippet = wantsCode && category.categoryId === 'stackQueue'
+        ? getStackQueueSnippets(topic.id)[requestedStackLanguage].code
+        : wantsCode ? theory?.codeSnippet : undefined;
       return {
         category: category.categoryName,
         id: topic.id,
@@ -302,7 +316,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         steps: theory?.steps || [],
         example: theory?.example || '',
         applications: theory?.applications || [],
-        ...( /\b(code|implementation|implement)\b/i.test(prompt) && theory?.codeSnippet ? { codeSnippet: theory.codeSnippet } : {}),
+        ...(codeSnippet ? { codeSnippet, codeLanguage: category.categoryId === 'stackQueue' ? ({ cpp: 'C++', python: 'Python', java: 'Java', javascript: 'JavaScript' } as const)[requestedStackLanguage] : undefined } : {}),
       };
     }));
   }, [activeDsaCategory, contextState.algorithmId, contextState.category, contextState.currentStep, contextState.currentStepDescription, hasRouteTutorContext, isCommandsPage, isFilesystemPage, pageTutorContext]);
@@ -536,6 +550,25 @@ export function useOctaTutor(): UseOctaTutorReturn {
             const query = topicId ? `?topic=${encodeURIComponent(topicId)}` : '';
             navigate(`/dashboard/${catId}${query}`);
           }
+          break;
+        }
+
+        case 'navigate_to_page': {
+          const pages: Record<string, string> = {
+            dashboard: '/dashboard',
+            dsa: '/dashboard/dsa',
+            os: '/dashboard/os',
+            commands: '/dashboard/os/commands',
+            filesystem: '/dashboard/os/filesystem',
+          };
+          const page = typeof call.args?.page_id === 'string' ? pages[call.args.page_id] : undefined;
+          if (page) navigate(page);
+          break;
+        }
+
+        case 'run_visualization': {
+          if (pageTutorContext.onRunVisualization) pageTutorContext.onRunVisualization();
+          else pageTutorContext.play?.();
           break;
         }
 

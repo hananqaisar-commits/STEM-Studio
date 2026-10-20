@@ -74,8 +74,8 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   {
     id: 'stackQueue',
     name: 'Stack & Queue',
-    description: 'Valid Parentheses, Min Stack, RPN Calculator, Monotonic Stacks, Circular Queue & Deque, Sliding Window Max, Task Scheduler, Rotting Oranges',
-    topicCount: 22,
+    description: 'Stack and queue primitives, expression conversion, monotonic structures, circular buffers, stream processing, and BFS problems',
+    topicCount: 23,
     difficulty: 'Intermediate',
     available: true,
     iconName: 'Layers',
