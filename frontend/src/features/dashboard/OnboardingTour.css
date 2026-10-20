@@ -1,0 +1,16 @@
+.onboarding-backdrop { position: fixed; z-index: 12000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgb(15 23 42 / 42%); }
+.onboarding-card { position: relative; width: min(480px, 100%); padding: 28px; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface); color: var(--color-text); box-shadow: 0 24px 70px rgb(15 23 42 / 24%); animation: onboarding-enter 200ms ease-out; }
+@keyframes onboarding-enter { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.onboarding-close { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--color-border); border-radius: 9px; background: transparent; color: var(--color-text-secondary); cursor: pointer; }
+.onboarding-eyebrow { margin: 0 0 9px; color: var(--color-primary); font-size: 12px; font-weight: 750; text-transform: uppercase; letter-spacing: .07em; }
+.onboarding-card h2 { margin: 0; padding-right: 22px; font-size: 23px; line-height: 1.25; }
+.onboarding-body { min-height: 78px; margin: 12px 0 18px; color: var(--color-text-secondary); font-size: 15px; line-height: 1.6; }
+.onboarding-progress { display: flex; gap: 6px; }
+.onboarding-progress span { height: 4px; flex: 1; border-radius: 9px; background: var(--color-border); }
+.onboarding-progress span.is-active { background: var(--color-primary); }
+.onboarding-card footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; }
+.onboarding-card footer div { display: flex; gap: 8px; }
+.onboarding-card footer button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 9px; color: var(--color-text); background: var(--color-surface); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.onboarding-card footer .onboarding-primary { border-color: var(--color-primary); background: var(--color-primary); color: white; }
+.onboarding-card footer .onboarding-skip { border-color: transparent; color: var(--color-text-secondary); }
+@media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }

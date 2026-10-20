@@ -151,8 +151,14 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Local environment files and secrets. Keep safe templates such as
+# .env.example and .env.production.example in version control.
 .env
+.env.*
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
 .envrc
 .venv
 env/
@@ -225,3 +231,26 @@ __marimo__/
 .claude
 .codex
 .agent
+
+# Local credentials, private keys, and generated secret files
+.secrets/
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.p8
+*.tfstate
+*.tfstate.*
+*.secret
+*.token
+**/credentials.json
+**/credentials.yaml
+**/credentials.yml
+**/service-account*.json
+**/secrets.json
+**/secrets.yaml
+**/secrets.yml
+**/id_rsa
+**/id_ed25519

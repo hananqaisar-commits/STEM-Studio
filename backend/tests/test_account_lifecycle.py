@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
+from fastapi import Response
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from starlette.requests import Request
@@ -22,6 +23,7 @@ from backend.infrastructure.database.models import (
     EmailVerification,
     ModuleProgress,
     PasswordReset,
+    TutorLearningProfile,
     User,
     UserSession,
 )
@@ -124,6 +126,7 @@ def test_account_and_expired_session_survive_database_restart(tmp_path, monkeypa
                 auth.refresh_token(
                     RefreshTokenRequest(refresh_token=expired_refresh_token),
                     _request(),
+                    Response(),
                     db,
                     None,
                 )
@@ -148,7 +151,7 @@ def test_active_learners_is_exactly_the_number_of_stored_accounts(tmp_path, monk
             inactive_user.is_active = False
             db.commit()
             result = stats.get_platform_stats(db)
-            assert result.active_learners == db.query(User).count() == 2
+            assert result.registered_learners == db.query(User).count() == 2
     finally:
         engine.dispose()
 
@@ -209,6 +212,7 @@ def test_refresh_token_replay_revokes_remaining_sessions(tmp_path):
             first_rotation = auth.refresh_token(
                 RefreshTokenRequest(refresh_token=old_refresh),
                 _request(),
+                Response(),
                 db,
                 None,
             )
@@ -222,6 +226,7 @@ def test_refresh_token_replay_revokes_remaining_sessions(tmp_path):
                 auth.refresh_token(
                     RefreshTokenRequest(refresh_token=old_refresh),
                     _request(),
+                    Response(),
                     db,
                     None,
                 )
@@ -307,6 +312,7 @@ def test_account_deletion_requires_recent_auth_and_cascades_owned_data(tmp_path,
                     completed_algorithms="[]",
                     completion_percentage=0,
                 ),
+                TutorLearningProfile(user_id=user_id, response_style="stepwise"),
             ])
             db.commit()
 
@@ -338,5 +344,6 @@ def test_account_deletion_requires_recent_auth_and_cascades_owned_data(tmp_path,
             assert db.query(EmailVerification).filter(EmailVerification.user_id == user_id).count() == 0
             assert db.query(PasswordReset).filter(PasswordReset.user_id == user_id).count() == 0
             assert db.query(ModuleProgress).filter(ModuleProgress.user_id == user_id).count() == 0
+            assert db.query(TutorLearningProfile).filter(TutorLearningProfile.user_id == user_id).count() == 0
     finally:
         engine.dispose()

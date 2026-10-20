@@ -411,3 +411,4 @@
   .tutor-btn-primary,
   .tutor-btn-secondary { animation: none !important; transition: none !important; }
 }
+.tutor-key-note { margin: -4px 0 12px; color: var(--color-text-secondary); font-size: 11px; line-height: 1.5; }

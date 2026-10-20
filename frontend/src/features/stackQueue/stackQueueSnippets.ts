@@ -5,6 +5,219 @@ export interface CodeSnippet {
   lineMapping: Record<number, number>; // maps step codeLine -> code line index
 }
 
+const INFIX_TO_POSTFIX_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
+  javascript: {
+    code: `function infixToPostfix(expression) {
+  const tokens = expression.match(/[A-Za-z_][A-Za-z_0-9]*|\\d+(?:\\.\\d+)?|[()+\\-*/^]/g) || [];
+  const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+  const output = [];
+  const operators = [];
+  const isOperator = (token) => Object.hasOwn(precedence, token);
+
+  for (const token of tokens) {
+    if (/^[A-Za-z_]|^\\d/.test(token)) {
+      output.push(token);
+    } else if (token === '(') {
+      operators.push(token);
+    } else if (token === ')') {
+      while (operators.length && operators.at(-1) !== '(') output.push(operators.pop());
+      if (operators.pop() !== '(') throw new Error('Mismatched parentheses');
+    } else if (isOperator(token)) {
+      while (operators.length && isOperator(operators.at(-1)) &&
+        (precedence[operators.at(-1)] > precedence[token] ||
+          (precedence[operators.at(-1)] === precedence[token] && token !== '^'))) {
+        output.push(operators.pop());
+      }
+      operators.push(token);
+    }
+  }
+  while (operators.length) {
+    const op = operators.pop();
+    if (op === '(') throw new Error('Mismatched parentheses');
+    output.push(op);
+  }
+  return output.join(' ');
+}`,
+    lineMapping: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 7, 7: 11, 8: 20 },
+  },
+  python: {
+    code: `import re
+
+def infix_to_postfix(expression):
+    tokens = re.findall(r'[A-Za-z_][A-Za-z_0-9]*|\\d+(?:\\.\\d+)?|[()+\\-*/^]', expression)
+    precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '^': 3}
+    output, operators = [], []
+
+    for token in tokens:
+        if token[0].isalnum() or token[0] == '_':
+            output.append(token)
+        elif token == '(':
+            operators.append(token)
+        elif token == ')':
+            while operators and operators[-1] != '(':
+                output.append(operators.pop())
+            if not operators:
+                raise ValueError('Mismatched parentheses')
+            operators.pop()
+        else:
+            while operators and operators[-1] in precedence:
+                top = operators[-1]
+                should_pop = precedence[top] > precedence[token] or (precedence[top] == precedence[token] and token != '^')
+                if not should_pop:
+                    break
+                output.append(operators.pop())
+            operators.append(token)
+
+    while operators:
+        top = operators.pop()
+        if top == '(':
+            raise ValueError('Mismatched parentheses')
+        output.append(top)
+    return ' '.join(output)
+
+print(infix_to_postfix('A + B * C'))  # A B C * +`,
+    lineMapping: { 1: 3, 2: 5, 3: 6, 4: 11, 5: 15, 6: 18, 7: 22, 8: 26 },
+  },
+  cpp: {
+    code: `#include <cctype>
+#include <stdexcept>
+#include <string>
+#include <vector>
+using namespace std;
+
+string infixToPostfix(const string& expression) {
+    vector<string> tokens;
+    for (size_t i = 0; i < expression.size();) {
+        unsigned char ch = expression[i];
+        if (isspace(ch)) { ++i; continue; }
+        if (isalpha(ch) || ch == '_') {
+            size_t start = i++;
+            while (i < expression.size() && (isalnum(static_cast<unsigned char>(expression[i])) || expression[i] == '_')) ++i;
+            tokens.push_back(expression.substr(start, i - start));
+        } else if (isdigit(ch)) {
+            size_t start = i++;
+            while (i < expression.size() && isdigit(static_cast<unsigned char>(expression[i]))) ++i;
+            if (i + 1 < expression.size() && expression[i] == '.' && isdigit(static_cast<unsigned char>(expression[i + 1]))) {
+                ++i;
+                while (i < expression.size() && isdigit(static_cast<unsigned char>(expression[i]))) ++i;
+            }
+            tokens.push_back(expression.substr(start, i - start));
+        } else if (string("()+-*/^").find(static_cast<char>(ch)) != string::npos) {
+            tokens.emplace_back(1, static_cast<char>(ch));
+            ++i;
+        } else {
+            throw invalid_argument("Unsupported character in expression");
+        }
+    }
+
+    auto precedence = [](const string& op) {
+        if (op == "+" || op == "-") return 1;
+        if (op == "*" || op == "/") return 2;
+        if (op == "^") return 3;
+        return 0;
+    };
+    vector<string> output;
+    vector<string> operators;
+    bool expectsOperand = true;
+    if (tokens.empty()) throw invalid_argument("Expression must not be empty");
+    for (const string& token : tokens) {
+        const bool isOperand = isalnum(static_cast<unsigned char>(token[0])) || token[0] == '_';
+        if (isOperand) {
+            if (!expectsOperand) throw invalid_argument("Missing operator between operands");
+            output.push_back(token);
+            expectsOperand = false;
+        } else if (token == "(") {
+            if (!expectsOperand) throw invalid_argument("Missing operator before '('");
+            operators.push_back(token);
+            expectsOperand = true;
+        } else if (token == ")") {
+            if (expectsOperand) throw invalid_argument("Expected an operand before ')'");
+            while (!operators.empty() && operators.back() != "(") {
+                output.push_back(operators.back()); operators.pop_back();
+            }
+            if (operators.empty()) throw invalid_argument("Mismatched parentheses");
+            operators.pop_back();
+            expectsOperand = false;
+        } else {
+            if (expectsOperand) throw invalid_argument("Unary operators are not supported");
+            while (!operators.empty() && operators.back() != "(") {
+                const int top = precedence(operators.back());
+                const int current = precedence(token);
+                const bool leftAssociative = token != "^";
+                if (top < current || (top == current && !leftAssociative)) break;
+                output.push_back(operators.back()); operators.pop_back();
+            }
+            operators.push_back(token);
+            expectsOperand = true;
+        }
+    }
+    if (expectsOperand) throw invalid_argument("Expression ends before an operand");
+    while (!operators.empty()) {
+        if (operators.back() == "(") throw invalid_argument("Mismatched parentheses");
+        output.push_back(operators.back()); operators.pop_back();
+    }
+
+    string result;
+    for (const string& token : output) {
+        if (!result.empty()) result += ' ';
+        result += token;
+    }
+    return result;
+}
+
+// infixToPostfix("A + B * C") returns "A B C * +"`,
+    lineMapping: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 6, 6: 7, 7: 10, 8: 15 },
+  },
+  java: {
+    code: `import java.util.*;
+
+class Solution {
+    private int precedence(String op) {
+        if (op.equals("+") || op.equals("-")) return 1;
+        if (op.equals("*") || op.equals("/")) return 2;
+        if (op.equals("^")) return 3;
+        return 0;
+    }
+
+    public String infixToPostfix(String expression) {
+        List<String> tokens = new ArrayList<>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+            .compile("[A-Za-z_][A-Za-z_0-9]*|\\\\d+(?:\\\\.\\\\d+)?|[()+\\\\-*/^]")
+            .matcher(expression);
+        while (matcher.find()) tokens.add(matcher.group());
+        List<String> output = new ArrayList<>();
+        Deque<String> operators = new ArrayDeque<>();
+
+        for (String token : tokens) {
+            if (Character.isLetterOrDigit(token.charAt(0)) || token.charAt(0) == '_') {
+                output.add(token);
+            } else if (token.equals("(")) {
+                operators.push(token);
+            } else if (token.equals(")")) {
+                while (!operators.isEmpty() && !operators.peek().equals("(")) output.add(operators.pop());
+                if (operators.isEmpty()) throw new IllegalArgumentException("Mismatched parentheses");
+                operators.pop();
+            } else {
+                while (!operators.isEmpty() && !operators.peek().equals("(")) {
+                    int top = precedence(operators.peek()), current = precedence(token);
+                    if (top < current || (top == current && token.equals("^"))) break;
+                    output.add(operators.pop());
+                }
+                operators.push(token);
+            }
+        }
+        while (!operators.isEmpty()) {
+            String op = operators.pop();
+            if (op.equals("(")) throw new IllegalArgumentException("Mismatched parentheses");
+            output.add(op);
+        }
+        return String.join(" ", output);
+    }
+}`,
+    lineMapping: { 1: 1, 2: 4, 3: 11, 4: 12, 5: 17, 6: 22, 7: 26, 8: 33 },
+  },
+};
+
 /** Generic linked-node implementation adapted from the user's stack example.
  * Push/pop operate at the top node, so both stay O(1), and clear frees nodes. */
 export const STACK_LINKED_CPP_SNIPPET: CodeSnippet = {
@@ -2044,6 +2257,8 @@ public class Solution {
   category: string
 ): Record<LanguageKey, CodeSnippet> {
   switch (category) {
+    case 'infixToPostfix':
+      return INFIX_TO_POSTFIX_SNIPPETS;
     case 'queue':
       return QUEUE_SNIPPETS;
     case 'validParentheses':

@@ -3,6 +3,7 @@ import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, UserPlus, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { rememberUsername } from '../../api/authPreferences';
 import { Octa, useMascot } from '../../components/mascot';
 import '../../components/mascot/Mascot.css';
 import './Auth.css';
@@ -56,7 +57,7 @@ export const SignUp: React.FC = () => {
     setIsSubmitting(true);
     setExpression('focused');
     try {
-      await loginWithGoogle(response.credential, GOOGLE_CLIENT_ID, false);
+      await loginWithGoogle(response.credential, GOOGLE_CLIENT_ID, true);
       setExpression('happy', { temporary: true, durationMs: 900 });
       setTimeout(() => navigate('/dashboard'), 300);
     } catch (err: any) {
@@ -90,7 +91,8 @@ export const SignUp: React.FC = () => {
     setExpression('focused');
 
     try {
-      await signup(username, email, password, firstName, lastName);
+      await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim());
+      rememberUsername(username.trim().toLowerCase());
       setSuccess('Account created successfully! Redirecting to login...');
       setExpression('happy', { temporary: true, durationMs: 2000 });
       setTimeout(() => navigate('/login'), 2000);
@@ -154,11 +156,13 @@ export const SignUp: React.FC = () => {
                 <input
                   type="text"
                   id="firstName"
+                  name="given-name"
                   className="auth-input"
                   placeholder="John"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                  autoComplete="given-name"
                   required
                   maxLength={50}
                   disabled={isSubmitting}
@@ -173,11 +177,13 @@ export const SignUp: React.FC = () => {
                 <input
                   type="text"
                   id="lastName"
+                  name="family-name"
                   className="auth-input"
                   placeholder="Doe"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                  autoComplete="family-name"
                   required
                   maxLength={50}
                   disabled={isSubmitting}
@@ -193,11 +199,15 @@ export const SignUp: React.FC = () => {
               <input
                 type="text"
                 id="username"
+                name="username"
                 className="auth-input"
                 placeholder="johndoe"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 required
                 minLength={3}
                 maxLength={50}
@@ -213,11 +223,13 @@ export const SignUp: React.FC = () => {
               <input
                 type="email"
                 id="email"
+                name="email"
                 className="auth-input"
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="email"
                 required
                 disabled={isSubmitting}
               />
@@ -231,11 +243,13 @@ export const SignUp: React.FC = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
+                name="new-password"
                 className="auth-input"
                 placeholder="Create a strong password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="new-password"
                 required
                 minLength={8}
                 maxLength={128}
@@ -259,11 +273,13 @@ export const SignUp: React.FC = () => {
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 id="confirmPassword"
+                name="new-password"
                 className="auth-input"
                 placeholder="Re-enter your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="new-password"
                 required
                 minLength={8}
                 maxLength={128}

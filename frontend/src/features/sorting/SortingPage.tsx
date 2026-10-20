@@ -44,6 +44,8 @@ import { parseNumberList } from '../../utils/batchInputParser';
 import { executeCustomCode } from '../../api/customCode';
 import { mapArrayExecutionToSteps, resultsMatch } from '../../engine/customCodeSteps';
 import type { CustomStubLanguage } from '../../data/customCode';
+import { AlgorithmRace } from './AlgorithmRace';
+import { countTraceOperations } from './operationMetrics';
 
 type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell' | 'counting' | 'radix' | 'bucket';
 type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
@@ -112,6 +114,7 @@ export const SortingPage: React.FC = () => {
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
+  const [showAlgorithmRace, setShowAlgorithmRace] = useState(false);
 
   // Custom code execution state
   const [customSteps, setCustomSteps] = useState<import('../../engine/types/Step').ArrayStep[] | null>(null);
@@ -220,6 +223,12 @@ export const SortingPage: React.FC = () => {
     algorithmId: selectedAlg,
     revisionData: buildRevisionData(selectedAlg),
   });
+
+  const activeTrace = customSteps ?? executionData.steps;
+  const operationCounts = useMemo(
+    () => countTraceOperations(activeTrace, currentStepIndex),
+    [activeTrace, currentStepIndex]
+  );
 
   // Clear custom steps when algorithm or array changes
   useEffect(() => {
@@ -500,8 +509,13 @@ export const SortingPage: React.FC = () => {
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
           {renderToolbarControls()}
+          <button type="button" className="bst-btn btn-mode" onClick={() => setShowAlgorithmRace((visible) => !visible)} aria-expanded={showAlgorithmRace}>
+            {showAlgorithmRace ? 'Close comparison' : 'Compare algorithms'}
+          </button>
         </div>
       </div>
+
+      {showAlgorithmRace && <AlgorithmRace input={initialArray} onClose={() => setShowAlgorithmRace(false)} />}
 
       {/* Main Learning Workspace */}
       <div className="sorting-workspace scene-workspace">
@@ -514,6 +528,10 @@ export const SortingPage: React.FC = () => {
             onElementClick={handleBarElementClick}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
+          <section className="sorting-operation-counters" aria-label="Operation counters at current step">
+            <div><strong>Live operation counters</strong><span>Trace events through step {currentStepIndex + 1}; these count the visualized operations, not CPU instructions.</span></div>
+            <dl><div><dt>Comparisons</dt><dd>{operationCounts.comparisons}</dd></div><div><dt>Swaps</dt><dd>{operationCounts.swaps}</dd></div><div><dt>Writes</dt><dd>{operationCounts.writes}</dd></div></dl>
+          </section>
 
           <FloatingController
             isPlaying={isPlaying}

@@ -20,6 +20,8 @@ class LoginRequest(BaseModel):
     email: Optional[str] = None
     password: str
     remember_me: bool = False
+    owner_mode: bool = False
+    mfa_code: Optional[str] = Field(default=None, min_length=6, max_length=6, pattern=r"^\d{6}$")
 
     @model_validator(mode="after")
     def resolve_identifier(self) -> "LoginRequest":
@@ -45,7 +47,16 @@ class ResetPasswordRequest(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
+
+
+class OwnerReauthRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=128)
+    mfa_code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class OwnerUserStatusRequest(BaseModel):
+    is_active: bool
 
 
 class DeleteAccountRequest(BaseModel):
@@ -60,6 +71,11 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class OwnerLoginResponse(BaseModel):
+    owner_session: bool = True
+    csrf_token: str
+
+
 class UserResponse(BaseModel):
     user_id: int
     username: str
@@ -69,6 +85,8 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     is_active: bool
     is_verified: bool
+    is_owner: bool = False
+    is_owner_session: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -144,9 +162,65 @@ class SavedSessionResponse(BaseModel):
 # ─── Public Platform Stats ───────────────────────────────────────────
 
 class PlatformStatsResponse(BaseModel):
-    active_learners: int
+    registered_learners: int
     total_reviews: int
     average_rating: float
+
+
+class SupportTicketCreateRequest(BaseModel):
+    category: str = Field(..., min_length=2, max_length=50)
+    subject: str = Field(..., min_length=4, max_length=120)
+    message: str = Field(..., min_length=10, max_length=5000)
+
+
+class SupportTicketResponse(BaseModel):
+    ticket_id: int
+    category: str
+    subject: str
+    message: str
+    status: str
+    owner_reply: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SupportTicketInboxItem(SupportTicketResponse):
+    user_id: int
+    username: str
+    email: str
+
+
+class SupportTicketUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(open|in_progress|resolved)$")
+    owner_reply: Optional[str] = Field(default=None, max_length=5000)
+
+
+# ─── In-app Announcements ────────────────────────────────────────────
+
+class AnnouncementCreateRequest(BaseModel):
+    title: str = Field(..., min_length=4, max_length=140)
+    message: str = Field(..., min_length=10, max_length=3000)
+    kind: Literal["announcement", "product_update", "promotion", "maintenance"] = "announcement"
+
+
+class AnnouncementResponse(BaseModel):
+    announcement_id: int
+    title: str
+    message: str
+    kind: str
+    published_at: datetime
+    is_read: bool = False
+
+
+class NotificationInboxResponse(BaseModel):
+    unread_count: int
+    items: List[AnnouncementResponse]
+
+
+class AnnouncementAdminResponse(AnnouncementResponse):
+    audience_size: int
 
 
 # ─── Review Schemas ──────────────────────────────────────────────────
@@ -218,6 +292,15 @@ class OctaTutorRequest(BaseModel):
     model_name: str = Field(default="")
 
 
+class OctaTutorFeedbackRequest(BaseModel):
+    helpful: bool
+    response_style: Optional[Literal["simpler", "stepwise", "examples"]] = None
+
+
+class OctaTutorPreferenceRequest(BaseModel):
+    response_style: Literal["balanced", "simpler", "stepwise", "examples"]
+
+
 class OctaTutorTestRequest(BaseModel):
     provider: str = Field(default="dashscope")
     api_key: str = Field(default="")
@@ -241,3 +324,7 @@ class OctaTutorResponse(BaseModel):
     function_calls: List[OctaTutorFunctionCall] = Field(default_factory=list)
     mascot_expression: str = Field(default="helping")
     answer_source: str = Field(default="model", description="model | offline")
+    provider_status: Literal["connected", "missing", "limit", "unavailable"] | None = Field(
+        default=None,
+        description="Safe provider health state; never includes credentials.",
+    )

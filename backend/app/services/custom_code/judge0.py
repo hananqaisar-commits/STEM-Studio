@@ -56,6 +56,7 @@ async def submit(
     language: str,
     judge0_url: str,
     api_key: str = "",
+    auth_header: str = "X-Auth-Token",
     timeout_seconds: int = 20,
 ) -> Dict[str, Any]:
     """
@@ -78,7 +79,7 @@ async def submit(
     }
     headers: Dict[str, str] = {}
     if api_key:
-        headers["X-Auth-User"] = api_key
+        headers[auth_header] = api_key
 
     try:
         async with httpx.AsyncClient(timeout=timeout_seconds) as client:

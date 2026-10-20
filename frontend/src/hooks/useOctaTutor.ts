@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type OctaTutorFunctionCall, type UserLLMConfig } from '../api/octaTutorApi';
+import { getTutorProviderStatus, sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type OctaTutorFunctionCall, type UserLLMConfig } from '../api/octaTutorApi';
+import { clearOctaConfig, DEFAULT_OCTA_CONFIG, readOctaConfig, writeOctaConfig } from '../api/octaConfigStorage';
 import { useTutorContext, type TutorAlgorithmContext } from '../contexts/TutorContext';
 import { useTheme } from '../contexts/ThemeContext';
 import type { MascotExpression } from '../components/mascot/MascotState';
@@ -9,6 +10,7 @@ import { CATEGORY_TOPICS } from '../data/categoryTopics';
 import { THEORY_CONTENT } from '../data/theoryContent';
 import { LINUX_COMMAND_GROUPS } from '../data/linuxCommandsData';
 import { LINUX_CORE_LESSONS } from '../data/linuxCoreLessons';
+import { getStackQueueSnippets } from '../features/stackQueue/stackQueueSnippets';
 
 export interface ChatMessage {
   id: string;
@@ -32,6 +34,8 @@ export interface TutorSuggestion {
   icon: 'book' | 'terminal' | 'shield' | 'route' | 'brain' | 'clock' | 'step' | 'compare' | 'network' | 'code' | 'workflow';
 }
 
+export type OctaProviderStatus = 'checking' | 'connected' | 'limit' | 'missing' | 'unavailable';
+
 export interface UseOctaTutorReturn {
   messages: ChatMessage[];
   inputText: string;
@@ -52,6 +56,7 @@ export interface UseOctaTutorReturn {
   setIsGuidedMode: React.Dispatch<React.SetStateAction<boolean>>;
   // BYOK LLM config state & controls
   llmConfig: UserLLMConfig;
+  providerStatus: OctaProviderStatus;
   saveLLMConfig: (config: UserLLMConfig) => void;
   resetLLMConfig: () => void;
   isSettingsOpen: boolean;
@@ -71,6 +76,9 @@ export interface UseOctaTutorReturn {
 
 function normalizeTutorAction(call: OctaTutorFunctionCall): OctaTutorFunctionCall | null {
   const args = call.args || {};
+  if (call.name === 'navigate_to_page' && typeof args.page_id === 'string' && ['dashboard', 'dsa', 'os', 'commands', 'filesystem'].includes(args.page_id)) {
+    return { name: call.name, args: { page_id: args.page_id } };
+  }
   if (call.name === 'navigate_to_algorithm') {
     const categoryId = args.category_id;
     const topicId = args.topic_id || '';
@@ -81,6 +89,7 @@ function normalizeTutorAction(call: OctaTutorFunctionCall): OctaTutorFunctionCal
   if (call.name === 'control_playback' && ['play', 'pause', 'step_forward', 'reset'].includes(args.action)) {
     return { name: call.name, args: { action: args.action } };
   }
+  if (call.name === 'run_visualization') return { name: call.name, args: {} };
   if (call.name === 'set_speed' && typeof args.speed === 'number' && Number.isFinite(args.speed) && args.speed >= 0.25 && args.speed <= 4) {
     return { name: call.name, args: { speed: args.speed } };
   }
@@ -114,7 +123,9 @@ const SUPPORTED_VFS_COMMANDS = new Set(['pwd', 'cd', 'ls', 'mkdir', 'touch', 'ca
 function isActionAvailable(call: OctaTutorFunctionCall, context: TutorAlgorithmContext): boolean {
   switch (call.name) {
     case 'navigate_to_algorithm':
+    case 'navigate_to_page':
     case 'switch_theme': return true;
+    case 'run_visualization': return Boolean(context.onRunVisualization || context.play);
     case 'control_playback':
       return call.args.action === 'play' ? Boolean(context.play)
         : call.args.action === 'pause' ? Boolean(context.pause)
@@ -130,12 +141,7 @@ function isActionAvailable(call: OctaTutorFunctionCall, context: TutorAlgorithmC
   }
 }
 
-const DEFAULT_LLM_CONFIG: UserLLMConfig = {
-  provider: 'dashscope',
-  apiKey: '',
-  baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
-  modelName: 'qwen-plus',
-};
+const DEFAULT_LLM_CONFIG: UserLLMConfig = DEFAULT_OCTA_CONFIG;
 
 export function useOctaTutor(): UseOctaTutorReturn {
   const { contextState } = useTutorContext();
@@ -289,6 +295,13 @@ export function useOctaTutor(): UseOctaTutorReturn {
 
     return JSON.stringify(selected.map(({ category, topic }) => {
       const theory = THEORY_CONTENT[category.categoryId]?.topics.find((item) => item.id === topic.id);
+      const wantsCode = /\b(code|implementation|implement)\b|c\+\+/i.test(prompt);
+      const requestedStackLanguage = /\bpython\b/i.test(prompt) ? 'python'
+        : /\bjava\b/i.test(prompt) ? 'java'
+          : /\bjavascript\b|\bjs\b/i.test(prompt) ? 'javascript' : 'cpp';
+      const codeSnippet = wantsCode && category.categoryId === 'stackQueue'
+        ? getStackQueueSnippets(topic.id)[requestedStackLanguage].code
+        : wantsCode ? theory?.codeSnippet : undefined;
       return {
         category: category.categoryName,
         id: topic.id,
@@ -299,42 +312,56 @@ export function useOctaTutor(): UseOctaTutorReturn {
         steps: theory?.steps || [],
         example: theory?.example || '',
         applications: theory?.applications || [],
-        ...( /\b(code|implementation|implement)\b/i.test(prompt) && theory?.codeSnippet ? { codeSnippet: theory.codeSnippet } : {}),
+        ...(codeSnippet ? { codeSnippet, codeLanguage: category.categoryId === 'stackQueue' ? ({ cpp: 'C++', python: 'Python', java: 'Java', javascript: 'JavaScript' } as const)[requestedStackLanguage] : undefined } : {}),
       };
     }));
   }, [activeDsaCategory, contextState.algorithmId, contextState.category, contextState.currentStep, contextState.currentStepDescription, hasRouteTutorContext, isCommandsPage, isFilesystemPage, pageTutorContext]);
 
-  // Load custom LLM config from localStorage
-  const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
-    try {
-      const saved = localStorage.getItem('octa_llm_config');
-      return saved ? JSON.parse(saved) : DEFAULT_LLM_CONFIG;
-    } catch {
-      return DEFAULT_LLM_CONFIG;
+  const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(readOctaConfig);
+
+  const [providerStatus, setProviderStatus] = useState<OctaProviderStatus>(() =>
+    llmConfig.apiKey.trim() || llmConfig.provider === 'custom' ? 'connected' : 'checking',
+  );
+
+  useEffect(() => {
+    if (llmConfig.apiKey.trim() || llmConfig.provider === 'custom') {
+      setProviderStatus('connected');
+      return;
     }
-  });
+    if (llmConfig.provider !== 'dashscope') {
+      setProviderStatus('missing');
+      return;
+    }
+
+    let active = true;
+    setProviderStatus('checking');
+    getTutorProviderStatus()
+      .then(({ configured }) => {
+        if (active) setProviderStatus(configured ? 'connected' : 'missing');
+      })
+      .catch(() => {
+        if (active) setProviderStatus('unavailable');
+      });
+    return () => { active = false; };
+  }, [llmConfig.apiKey, llmConfig.provider]);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const saveLLMConfig = useCallback((newConfig: UserLLMConfig) => {
     setLlmConfig(newConfig);
-    try {
-      localStorage.setItem('octa_llm_config', JSON.stringify(newConfig));
-    } catch {}
+    writeOctaConfig(newConfig);
   }, []);
 
   const resetLLMConfig = useCallback(() => {
     setLlmConfig(DEFAULT_LLM_CONFIG);
-    try {
-      localStorage.removeItem('octa_llm_config');
-    } catch {}
+    clearOctaConfig();
   }, []);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: 'welcome-1',
       role: 'assistant',
-      content: `Hi, I'm Octa, your AI learning tutor.\n\n• **AI Concept Mode** answers open-ended questions, explains ideas, and can help with examples or code using your connected AI model.\n• **Interactive Step Mode** explains the live visualizer step and can propose supported controls for your approval.\n\nWhat would you like to learn?`,
+      content: `Hi, I'm Octa. Ask me about a concept, code, or a problem you're facing in STEM Studio. On a visualizer page, switch to Step mode to walk through the active frame.`,
       mode: 'natural',
       expression: 'happy',
       timestamp: new Date(),
@@ -507,6 +534,25 @@ export function useOctaTutor(): UseOctaTutorReturn {
             const query = topicId ? `?topic=${encodeURIComponent(topicId)}` : '';
             navigate(`/dashboard/${catId}${query}`);
           }
+          break;
+        }
+
+        case 'navigate_to_page': {
+          const pages: Record<string, string> = {
+            dashboard: '/dashboard',
+            dsa: '/dashboard/dsa',
+            os: '/dashboard/os',
+            commands: '/dashboard/os/commands',
+            filesystem: '/dashboard/os/filesystem',
+          };
+          const page = typeof call.args?.page_id === 'string' ? pages[call.args.page_id] : undefined;
+          if (page) navigate(page);
+          break;
+        }
+
+        case 'run_visualization': {
+          if (pageTutorContext.onRunVisualization) pageTutorContext.onRunVisualization();
+          else pageTutorContext.play?.();
           break;
         }
 
@@ -696,6 +742,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
           model_name: llmConfig.modelName,
         });
 
+        if (response.provider_status) setProviderStatus(response.provider_status);
+
         // Update mascot mood
         const expr = (response.mascot_expression as MascotExpression) || 'helping';
         setMascotExpression(expr);
@@ -724,6 +772,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
           },
         ]);
       } catch (err: any) {
+        if (err?.status === 429) setProviderStatus('limit');
+        else if (err?.status !== 401 && err?.status !== 403) setProviderStatus('unavailable');
         const errorDetail = err?.message || 'Unable to connect to Octa Tutor server.';
         setMascotExpression('confused');
         setMessages((prev) => [
@@ -763,6 +813,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     isGuidedMode,
     setIsGuidedMode,
     llmConfig,
+    providerStatus,
     saveLLMConfig,
     resetLLMConfig,
     isSettingsOpen,

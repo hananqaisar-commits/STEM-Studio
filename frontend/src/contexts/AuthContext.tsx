@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiClient, ApiError } from '../api/apiClient';
+import { apiClient, ApiError, refreshOwnerCsrfToken, setOwnerCsrfToken } from '../api/apiClient';
 import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
+import { rememberUsername } from '../api/authPreferences';
+import { clearOctaConfig } from '../api/octaConfigStorage';
 
 interface UserData {
   user_id: number;
@@ -10,6 +12,8 @@ interface UserData {
   last_name: string | null;
   is_active: boolean;
   is_verified: boolean;
+  is_owner?: boolean;
+  is_owner_session?: boolean;
 }
 
 interface AuthContextType {
@@ -17,6 +21,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (identifier: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginAsOwner: (identifier: string, password: string, mfaCode: string) => Promise<void>;
   loginWithGoogle: (credential: string, clientId: string, rememberMe?: boolean) => Promise<void>;
   signup: (
     username: string,
@@ -38,15 +43,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    if (!getAccessToken()) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     let attempt = 0;
     try {
+      // Owner authentication uses HttpOnly cookies and deliberately stores no
+      // owner tokens in local/session storage. This request also restores that
+      // session after a page reload.
+      if (!getAccessToken()) {
+        try { await refreshOwnerCsrfToken(); } catch { /* no existing owner cookie or API unavailable */ }
+      }
       while (true) {
         try {
           const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
@@ -64,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // A network error or server outage is not proof that the account or
           // its session is gone. Keep the refresh credential and make one
           // short retry before showing the signed-out routes.
-          if (attempt === 0 && getAccessToken()) {
+          if (attempt === 0) {
             attempt += 1;
             await new Promise((resolve) => window.setTimeout(resolve, 800));
             continue;
@@ -98,9 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {
         method: 'POST',
         body: {
-          identifier: cleanId,
           username: cleanId,
-          email: cleanId,
           password,
           remember_me: rememberMe,
         },
@@ -110,9 +113,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Remember me → localStorage (survives browser restarts); otherwise
     // sessionStorage (cleared when the browser closes).
     storeTokens(data.access_token, data.refresh_token, rememberMe);
+    rememberUsername(cleanId);
 
     // Fetch user profile after login
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    setUser(userData);
+  };
+
+  const loginAsOwner = async (identifier: string, password: string, mfaCode: string) => {
+    // Do not let an existing learner bearer token override the isolated owner cookie.
+    clearTokens();
+    const data = await apiClient<{ owner_session: boolean; csrf_token: string }>(
+      '/api/auth/login',
+      {
+        method: 'POST',
+        body: {
+          username: identifier.trim(),
+          password,
+          owner_mode: true,
+          mfa_code: mfaCode,
+        },
+      }
+    );
+    if (data.owner_session !== true || typeof data.csrf_token !== 'string') {
+      throw new ApiError(403, 'The account did not start an owner session.');
+    }
+    setOwnerCsrfToken(data.csrf_token);
+    rememberUsername(identifier.trim());
+    const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    if (!userData.is_owner_session) throw new ApiError(403, 'Owner session verification failed.');
     setUser(userData);
   };
 
@@ -137,19 +166,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      try {
-        await apiClient('/api/auth/logout', {
-          method: 'POST',
-          body: { refresh_token: refreshToken },
-          requiresAuth: true,
-        });
-      } catch {
-        // Even if server logout fails, clear local state
-      }
+    try {
+      await apiClient('/api/auth/logout', {
+        method: 'POST',
+        body: refreshToken ? { refresh_token: refreshToken } : {},
+        requiresAuth: !!refreshToken,
+      });
+    } catch {
+      // Even if server logout fails, clear local state
     }
 
     clearTokens();
+    setOwnerCsrfToken(null);
+    clearOctaConfig();
     setUser(null);
   };
 
@@ -160,6 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       requiresAuth: true,
     });
     clearTokens();
+    clearOctaConfig();
     setUser(null);
   };
 
@@ -189,6 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     storeTokens(data.access_token, data.refresh_token, rememberMe);
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    rememberUsername(userData.username);
     setUser(userData);
   };
 
@@ -199,6 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginAsOwner,
         loginWithGoogle,
         signup,
         logout,

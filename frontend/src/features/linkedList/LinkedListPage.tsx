@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, useRef} from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
@@ -70,6 +70,8 @@ import { StateSummaryBar, type StateSummaryItem } from '../../components/common/
 import { DefinitionCardPanel, type DefinitionItem } from '../../components/common/DefinitionCardPanel';
 import { traceRemoveNthFromEndSource } from './linkedListCodeTrace';
 import type { CustomLanguage } from '../../engine/customCodeTemplates';
+import { executeCustomCode } from '../../api/customCode';
+import type { CustomStubLanguage, AlgorithmStubEntry } from '../../data/customCode';
 
 interface AlgorithmMeta {
   id: LinkedListCategory;
@@ -137,6 +139,7 @@ const getStructureType = (category: LinkedListCategory): LinkedListStructureType
 
 export const LinkedListPage: React.FC = () => {
   const { setTutorContext } = useTutorContext();
+  const positionControlsRef = useRef<HTMLDetailsElement>(null);
   const [category, setCategory] = useState<LinkedListCategory>('singly');
   const structureType = getStructureType(category);
   const [searchParams] = useSearchParams();
@@ -165,12 +168,35 @@ export const LinkedListPage: React.FC = () => {
   const [showDefinitions, setShowDefinitions] = useState<boolean>(false);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState<boolean>(false);
+  const [customCodeBusy, setCustomCodeBusy] = useState(false);
+  const [customCodeMessage, setCustomCodeMessage] = useState<string | null>(null);
 
   // Active step dataset
   const [activeSteps, setActiveSteps] = useState<LinkedListStep[]>([]);
   const [baseNodes, setBaseNodes] = useState<ListNodeItem[]>(() =>
     createInitialNodes([10, 20, 30, 40], 'singly')
   );
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const panel = positionControlsRef.current;
+      if (panel?.open && event.target instanceof Node && !panel.contains(event.target)) {
+        panel.open = false;
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && positionControlsRef.current?.open) {
+        positionControlsRef.current.open = false;
+      }
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
 
   useEffect(() => {
     const topic = searchParams.get('topic') as LinkedListCategory | null;
@@ -363,9 +389,93 @@ export const LinkedListPage: React.FC = () => {
     return trace;
   };
 
+  const linkedListCustomState = useMemo(() => {
+    const values = baseNodes.map((node) => Number(node.value)).filter(Number.isFinite);
+    const tailTargetId = baseNodes.at(-1)?.nextId;
+    const cycleIndex = category === 'detectCycle'
+      ? baseNodes.findIndex((node) => node.id === tailTargetId)
+      : -1;
+    return { args: { head: { values, cycleIndex } } };
+  }, [baseNodes, category]);
+
+  const handleLinkedListCustomExecute = async (
+    code: string,
+    language: CustomStubLanguage,
+    entry: AlgorithmStubEntry,
+    state: Record<string, unknown>,
+  ) => {
+    setCustomCodeBusy(true);
+    setCustomCodeMessage(null);
+    try {
+      const response = await executeCustomCode({
+        algorithm_key: entry.key,
+        language,
+        code,
+        state,
+      });
+      if (response.status !== 'ok') {
+        setCustomCodeMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
+        return;
+      }
+
+      const result = response.result?.result ?? response.result?.returned ?? response.result ?? null;
+      const sourceMatchesFloyd = entry.key === 'linkedList.detectCycle'
+        && /\bslow\b/i.test(code)
+        && /\bfast\s*=\s*fast\s*->\s*next\s*->\s*next\b/i.test(code);
+      const sourceMatchesReverse = entry.key === 'linkedList.reverse'
+        && /\b(?:curr|current)\s*->\s*next\s*=\s*(?:prev|previous)\b/i.test(code)
+        && /\b(?:prev|previous)\s*=\s*(?:curr|current)\b/i.test(code);
+      const sourceMatchesMiddle = entry.key === 'linkedList.middleNode'
+        && /\bslow\b/i.test(code)
+        && /\bfast\s*=\s*fast\s*->\s*next\s*->\s*next\b/i.test(code);
+      const args = state.args as { head?: { values?: number[]; cycleIndex?: number } } | undefined;
+      const headInput = args?.head;
+      const values = headInput?.values ?? [];
+      const cycleIndex = headInput?.cycleIndex ?? -1;
+      let traceSteps: LinkedListStep[] | null = null;
+      let traceLabel = '';
+
+      if (sourceMatchesFloyd && cycleIndex >= 0) {
+        const nodes = createInitialNodes(values, 'singly', cycleIndex);
+        traceSteps = generateCycleDetectionSteps(nodes, cycleIndex);
+        traceLabel = 'Floyd slow/fast pointer trace';
+      } else if (sourceMatchesReverse) {
+        const nodes = createInitialNodes(values, 'singly');
+        traceSteps = generateReverseSteps(nodes);
+        traceLabel = 'three-pointer link-reversal trace';
+      } else if (sourceMatchesMiddle) {
+        const nodes = createInitialNodes(values, 'singly');
+        traceSteps = generateMiddleNodeSteps(nodes);
+        traceLabel = 'slow/fast midpoint trace';
+      }
+
+      if (traceSteps) {
+        setBaseNodes(createInitialNodes(values, 'singly', sourceMatchesFloyd ? cycleIndex : -1));
+        setActiveSteps(traceSteps);
+        reset();
+        quizSession.resetSession();
+        play();
+        setCustomCodeMessage(
+          `Your pasted ${language.toUpperCase()} function executed and returned ${JSON.stringify(result)}. A ${traceLabel} was generated from this linked-list input.`
+        );
+      } else if (sourceMatchesFloyd && cycleIndex < 0) {
+        setCustomCodeMessage(`Your pasted ${language.toUpperCase()} function executed and returned ${JSON.stringify(result)}. This input has no cycle, so no pointer-meeting trace was generated.`);
+      } else {
+        setCustomCodeMessage(
+          `Your pasted ${language.toUpperCase()} function executed. Result: ${JSON.stringify(result)}.${response.trace_steps.length ? ` It emitted ${response.trace_steps.length} trace event(s).` : ' It emitted no visualization events.'}`
+        );
+      }
+    } catch (error: unknown) {
+      setCustomCodeMessage(`Sandbox unavailable: ${error instanceof Error ? error.message : 'execution service unavailable'}`);
+    } finally {
+      setCustomCodeBusy(false);
+    }
+  };
+
   // Handle Category Switching
   const handleSelectCategory = (cat: LinkedListCategory) => {
     setCategory(cat);
+    setCustomCodeMessage(null);
     reset();
     quizSession.resetSession();
     setInputError(null);
@@ -596,6 +706,7 @@ export const LinkedListPage: React.FC = () => {
     setActiveSteps(steps);
     reset();
     quizSession.resetSession();
+    if (positionControlsRef.current) positionControlsRef.current.open = false;
     play();
   };
 
@@ -1130,7 +1241,7 @@ export const LinkedListPage: React.FC = () => {
         <span>Delete Head</span>
       </button>
 
-      <details className="ll-position-controls">
+      <details className="ll-position-controls" ref={positionControlsRef}>
         <summary>Insert / delete at a position</summary>
         <div className="ll-position-controls-body">
           <label>
@@ -1320,6 +1431,10 @@ export const LinkedListPage: React.FC = () => {
               categoryId="linkedList"
               topicId={category}
               snippets={LINKED_LIST_SNIPPETS[snippetKey]}
+              customState={['reverse', 'middleNode', 'detectCycle'].includes(category) ? linkedListCustomState : undefined}
+              onCustomExecute={handleLinkedListCustomExecute}
+              customBusy={customCodeBusy}
+              customMessage={customCodeMessage}
               onLinkedListCodeRun={category === 'removeNthFromEnd' ? runPastedRemoveNthFromEnd : undefined}
               activeLine={currentStep?.codeLine}
               variables={{

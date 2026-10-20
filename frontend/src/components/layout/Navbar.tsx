@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
 import {
-  Home, Bell, Settings, Moon, Sun, User, LogOut, LogIn, Code2, Layers, Menu, Monitor
+  Home, Settings, Moon, Sun, User, LogOut, LogIn, Code2, Layers, Menu, Monitor, ShieldCheck
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { NavbarGlobalSearch } from './NavbarGlobalSearch';
+import { NotificationCenter } from '../notifications/NotificationCenter';
 import { DSA_CATEGORIES } from '../../data/categories';
 import { SettingsModal } from './SettingsModal';
 import '../mascot/Mascot.css';
@@ -202,28 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
           {/* Tools & Action Group */}
           <div className="navbar-nav-group">
-            {/* Notifications Tab */}
-            <m.button
-              layout
-              onClick={() => handleTabClick('notifications')}
-              className={`expandable-tab-btn ${activeTab === 'notifications' ? 'active' : ''}`}
-              aria-label="Notifications"
-            >
-              <Bell size={18} className="tab-icon" />
-              <AnimatePresence initial={false}>
-                {activeTab === 'notifications' && (
-                  <m.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="tab-label-text"
-                  >
-                    Notifications
-                  </m.span>
-                )}
-              </AnimatePresence>
-            </m.button>
+            <NotificationCenter />
 
             {/* Settings Tab */}
             <m.button
@@ -316,6 +296,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   <span className="dropdown-email">{user?.email}</span>
                 </div>
                 <div className="dropdown-divider" />
+                {user?.is_owner_session && <button
+                  onClick={() => { setShowUserDropdown(false); navigate('/dashboard/owner'); }}
+                  className="dropdown-item"
+                >
+                  <ShieldCheck size={16} />
+                  <span>Owner Control Center</span>
+                </button>}
                 <button
                   onClick={() => {
                     setShowUserDropdown(false);
