@@ -179,6 +179,32 @@ class SupportTicketUpdateRequest(BaseModel):
     owner_reply: Optional[str] = Field(default=None, max_length=5000)
 
 
+# ─── In-app Announcements ────────────────────────────────────────────
+
+class AnnouncementCreateRequest(BaseModel):
+    title: str = Field(..., min_length=4, max_length=140)
+    message: str = Field(..., min_length=10, max_length=3000)
+    kind: Literal["announcement", "product_update", "promotion", "maintenance"] = "announcement"
+
+
+class AnnouncementResponse(BaseModel):
+    announcement_id: int
+    title: str
+    message: str
+    kind: str
+    published_at: datetime
+    is_read: bool = False
+
+
+class NotificationInboxResponse(BaseModel):
+    unread_count: int
+    items: List[AnnouncementResponse]
+
+
+class AnnouncementAdminResponse(AnnouncementResponse):
+    audience_size: int
+
+
 # ─── Review Schemas ──────────────────────────────────────────────────
 
 class ReviewCreateRequest(BaseModel):

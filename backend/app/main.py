@@ -17,6 +17,7 @@ try:
     from backend.app.api.routes.octa_tutor import router as octa_tutor_router
     from backend.app.api.routes.support import router as support_router
     from backend.app.api.routes.preferences import router as preferences_router
+    from backend.app.api.routes.notifications import router as notifications_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
@@ -26,6 +27,7 @@ except ModuleNotFoundError:
     from app.api.routes.octa_tutor import router as octa_tutor_router
     from app.api.routes.support import router as support_router
     from app.api.routes.preferences import router as preferences_router
+    from app.api.routes.notifications import router as notifications_router
     from app.core.config import get_settings
 
 
@@ -65,7 +67,8 @@ def init_db_tables():
                     "roles", "permissions", "user_roles", "role_permissions",
                     "login_attempts", "quiz_attempts", "module_progress",
                     "user_streaks", "saved_sessions", "tutor_learning_profiles", "reviews",
-                    "support_tickets", "user_preferences"}
+                    "support_tickets", "user_preferences", "announcements", "announcement_recipients",
+                    "announcement_reads"}
         missing = expected - set(table_names)
         if missing:
             print(f"⚠️  Missing tables after create_all: {missing}")
@@ -142,6 +145,7 @@ app.include_router(execute_router)
 app.include_router(octa_tutor_router)
 app.include_router(support_router)
 app.include_router(preferences_router)
+app.include_router(notifications_router)
 
 
 

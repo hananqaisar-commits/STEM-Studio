@@ -62,13 +62,19 @@ Live execution requires `JUDGE0_URL` and the Judge0 API key/auth-header settings
 
 The API implements signup, username-or-email/password login, optional Google login, access and rotating refresh tokens, logout, email verification, password reset, current-user lookup, and account deletion. Usernames and emails are normalized and unique. Password policy requires at least 8 characters with uppercase, lowercase, and a digit. Account deletion requires a recent sign-in and removes owned records through configured database relationships.
 
-The backend has database models/routes for quiz attempts, module completion, saved sessions, tutor learning-profile data, accounts, support tickets, account preferences, and sessions. Quiz completion writes per-topic completion; the dashboard calls progress, saved-session, and review-schedule APIs. Saved-session cards reopen the saved topic, but do not restore the exact input dataset or playback step. SQLite is convenient for local development; production persistence requires a durable hosted database configuration. The source repository does not prove which database or secrets are currently configured in Vercel or the API host.
+The backend has database models/routes for quiz attempts, module completion, saved sessions, tutor learning-profile data, accounts, support tickets, account preferences, owner announcements, notification audiences/read receipts, and sessions. Quiz completion writes per-topic completion; the dashboard calls progress, saved-session, and review-schedule APIs. Saved-session cards reopen the saved topic, but do not restore the exact input dataset or playback step. SQLite is convenient for local development; production persistence requires a durable hosted database configuration. The source repository does not prove which database or secrets are currently configured in Vercel or the API host.
 
 Signup requires SMTP in production. The no-SMTP bypass is allowed only when both `DEBUG=true` and `ALLOW_UNVERIFIED_SIGNUP=true`; the repository example keeps the flag false. Password reset and verification email also require working SMTP. Google login requires the frontend OAuth client ID and matching provider configuration.
 
 ### “Active learners” number
 
 The landing page gets this value from `/api/stats/platform`. The API counts all user rows in the database and caches the response in Redis for the configured short TTL (default 30 seconds). It represents **registered accounts**, not currently online or recently active learners. The UI label is “registered learners.”
+
+### Owner announcements and navbar notifications
+
+An owner account can publish an announcement from the dashboard support area. The owner address must be included in the backend's comma-separated `SUPPORT_OWNER_EMAILS` setting. Before publication, the UI previews the title, body, message type, and recipient count. Publishing snapshots all accounts that are active and verified at that moment into `announcement_recipients`; accounts created later or verified later do not receive that old announcement. Broadcasts are stored once with recipient/read-receipt rows, and a learner can mark one or all as read. The navbar bell shows the exact unread count from the API (the badge displays `99+` above 99), refreshes every 30 seconds, and refreshes again when the browser tab regains focus. This is in-app delivery; it does not send email, push notifications, or messages to currently signed-out devices.
+
+Bulk promotional email is intentionally separate. A compliant email campaign needs an opt-in subscriber audience, unsubscribe handling, a verified sender/domain, and a bulk email provider. The current SMTP account flow is for account verification/password reset and is not a bulk campaign system. No email is sent when an owner publishes an in-app announcement.
 
 ## Octa tutor
 
@@ -98,7 +104,7 @@ Redis is optional in simple/local mode. Without a shared Redis service, rate lim
 
 1. **Production/staging verification:** no 45k or 200k virtual-user run was performed, and no capacity or availability target is supported. Run the staged k6 plan with distributed generators and API, proxy, Redis, and database metrics before making a throughput claim.
 2. **Hosted configuration:** verify the production database, SMTP, Google OAuth, Judge0, Redis, TLS, backups, monitoring, and frontend/API CORS in their hosting consoles. This workspace cannot inspect those provider dashboards.
-3. **Owner inbox and review queue:** set `SUPPORT_OWNER_EMAILS` on the backend and restart/redeploy the API. The application includes the authenticated routes and dashboard UI; the allowlist determines which account can operate them.
+3. **Owner inbox, review queue, and broadcast tool:** set `SUPPORT_OWNER_EMAILS` on the backend and restart/redeploy the API. The allowlist determines which account can operate these controls. Broadcasts reach the active, verified account snapshot through the app's navbar inbox; no bulk email provider is connected.
 4. **Production signup email:** configure an SMTP provider, verified sender domain, SPF/DKIM/DMARC, and HTTPS `FRONTEND_URL`; keep `DEBUG=false` and `ALLOW_UNVERIFIED_SIGNUP=false`. No email provider or DNS setup was accessed here.
 5. **Pasted-code coverage:** the badges identify registered custom-code stub contracts, not arbitrary code support. There are 92 runner contracts across 14 categories; some newer lessons still lack matching contracts. Extend coverage per problem and keep signatures explicit.
 6. **Saved-session fidelity:** the dashboard can reopen a saved topic but does not yet restore its exact dataset and playback position.
@@ -112,7 +118,7 @@ Redis is optional in simple/local mode. Without a shared Redis service, rate lim
 - `frontend/src/data/categories.ts`, `categoryTopics.ts`, and `theoryContent.ts` — module/topic catalog and lesson text.
 - `frontend/src/features/*` — module-specific controls, engines, and visual renderers.
 - `frontend/src/components/tutor/`, `frontend/src/hooks/useOctaTutor.ts`, `backend/app/api/routes/octa_tutor.py` — tutor UI, context/actions, provider calls, profile and feedback.
-- `backend/app/api/routes/auth.py`, `progress.py`, `stats.py` — authentication, saved learning data, platform count/reviews.
+- `backend/app/api/routes/auth.py`, `progress.py`, `stats.py`, `notifications.py` — authentication, saved learning data, platform count/reviews, owner broadcasts, and per-user notification inboxes.
 - `backend/app/services/custom_code/` and `frontend/src/data/customCode/stubs.json` — pasted-code contracts, harness, runner integration.
 - `frontend/src/features/os/commands/` and `frontend/src/features/os/filesystem/` — Linux lessons and VFS simulator.
 - `backend/app/core/config.py`, `docker-compose.scale.yml`, `deploy/scalability/`, `docs/performance/scalability-runbook.md` — backend settings, optional Redis/HAProxy topology, load-test guide.

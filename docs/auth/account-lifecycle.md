@@ -21,11 +21,13 @@ For deployment, configure these server-side variables with actual values: `SMTP_
 
 ## Persistence and deployment
 
-Use the same durable PostgreSQL/MySQL service for every API instance. Do not point replicas at separate local SQLite files. For container recreation, retain the external database or its managed persistent volume; Redis is for shared rate limits/cache and is not the account store. This revision adds `support_tickets` and `user_preferences` tables; the app's startup `create_all` creates missing tables, but production deployment still needs a backup and a restart/redeploy before those routes are used. No existing table columns are altered by these additions.
+Use the same durable PostgreSQL/MySQL service for every API instance. Do not point replicas at separate local SQLite files. For container recreation, retain the external database or its managed persistent volume; Redis is for shared rate limits/cache and is not the account store. The app's startup `create_all` creates missing `support_tickets`, `user_preferences`, `announcements`, `announcement_recipients`, and `announcement_reads` tables; production still needs a backup and a restart/redeploy before those routes are used. No existing table columns are altered by these additions.
 
 ## Support and review ownership
 
 Signed-in learners can create support tickets and read their own request history. Accounts whose email is listed in the backend's comma-separated `SUPPORT_OWNER_EMAILS` can list/reply/resolve tickets and moderate pending reviews. Set the allowlist in the API host environment and restart/redeploy the API to activate the owner controls. The production owner address was not configured or validated here.
+
+The same allowlist grants access to the dashboard broadcast panel. Publishing stores a single announcement plus a database snapshot of its active, verified recipients. Later-created or later-verified users are excluded from old broadcasts. Each signed-in recipient has an independent read receipt; the navbar badge gets its unread count from the API and polls every 30 seconds (and on tab focus). This is in-app only. Bulk promotional email is not connected; it requires a consent-based subscriber list, unsubscribe handling, a verified sender domain, and an email campaign provider. No email was sent by this feature.
 
 ## Verification performed
 

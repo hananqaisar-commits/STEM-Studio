@@ -61,6 +61,12 @@ class User(Base):
     preferences: Mapped[Optional["UserPreference"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False
     )
+    notification_reads: Mapped[List["AnnouncementRead"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    announcement_recipients: Mapped[List["AnnouncementRecipient"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSession(Base):
@@ -249,3 +255,55 @@ class UserPreference(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="preferences")
+
+
+class Announcement(Base):
+    """An owner-published in-app message for the active account audience."""
+
+    __tablename__ = "announcements"
+
+    announcement_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(140))
+    message: Mapped[str] = mapped_column(String(3000))
+    kind: Mapped[str] = mapped_column(String(24), default="announcement", index=True)
+    audience_size: Mapped[int] = mapped_column(Integer, default=0)
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True
+    )
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    recipients: Mapped[List["AnnouncementRecipient"]] = relationship(
+        back_populates="announcement", cascade="all, delete-orphan"
+    )
+
+
+class AnnouncementRecipient(Base):
+    """Immutable audience snapshot, one row per account eligible at publish time."""
+
+    __tablename__ = "announcement_recipients"
+
+    announcement_id: Mapped[int] = mapped_column(
+        ForeignKey("announcements.announcement_id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+    announcement: Mapped["Announcement"] = relationship(back_populates="recipients")
+    user: Mapped["User"] = relationship(back_populates="announcement_recipients")
+
+
+class AnnouncementRead(Base):
+    """Per-user read receipt; broadcasts themselves are stored only once."""
+
+    __tablename__ = "announcement_reads"
+
+    announcement_id: Mapped[int] = mapped_column(
+        ForeignKey("announcements.announcement_id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="notification_reads")
