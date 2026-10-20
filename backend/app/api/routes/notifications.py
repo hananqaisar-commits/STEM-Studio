@@ -1,18 +1,18 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import and_, func, insert, literal, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.app.api.dependencies import get_current_user
+from backend.app.api.dependencies import get_current_user, require_owner, require_recent_owner
 from backend.app.api.schemas import (
     AnnouncementAdminResponse,
     AnnouncementCreateRequest,
     AnnouncementResponse,
     NotificationInboxResponse,
 )
-from backend.app.core.config import get_settings
+from backend.app.core.owner_security import record_admin_event
 from backend.app.core.rate_limit import strict
 from backend.infrastructure.database.database import get_db
 from backend.infrastructure.database.models import (
@@ -23,17 +23,6 @@ from backend.infrastructure.database.models import (
 )
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
-settings = get_settings()
-
-
-def _require_owner(user: User) -> None:
-    owner_emails = {
-        email.strip().lower()
-        for email in settings.SUPPORT_OWNER_EMAILS.split(",")
-        if email.strip()
-    }
-    if not owner_emails or user.email.strip().lower() not in owner_emails:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required")
 
 
 def _announcement_response(announcement: Announcement, is_read: bool) -> AnnouncementResponse:
@@ -158,10 +147,9 @@ def mark_all_notifications_read(
 
 @router.get("/owner/audience-size")
 def get_owner_audience_size(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_owner),
     db: Session = Depends(get_db),
 ):
-    _require_owner(current_user)
     eligible = (User.is_active.is_(True), User.is_verified.is_(True))
     count = db.query(func.count(User.user_id)).filter(*eligible).scalar() or 0
     return {"active_verified_accounts": count}
@@ -169,10 +157,9 @@ def get_owner_audience_size(
 
 @router.get("/owner/announcements", response_model=list[AnnouncementAdminResponse])
 def list_owner_announcements(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_owner),
     db: Session = Depends(get_db),
 ):
-    _require_owner(current_user)
     announcements = (
         db.query(Announcement)
         .order_by(Announcement.published_at.desc(), Announcement.announcement_id.desc())
@@ -195,12 +182,12 @@ def list_owner_announcements(
 )
 def publish_announcement(
     payload: AnnouncementCreateRequest,
-    current_user: User = Depends(get_current_user),
+    request: Request,
+    current_user: User = Depends(require_recent_owner),
     db: Session = Depends(get_db),
     _rate: None = Depends(strict),
 ):
     """Publish one in-app announcement to every active, verified account at send time."""
-    _require_owner(current_user)
     announcement = Announcement(
         title=payload.title.strip(),
         message=payload.message.strip(),
@@ -223,6 +210,13 @@ def publish_announcement(
         .filter(AnnouncementRecipient.announcement_id == announcement.announcement_id)
         .scalar()
         or 0
+    )
+    record_admin_event(
+        db,
+        actor_user_id=current_user.user_id,
+        action="announcement.publish",
+        details={"announcement_id": announcement.announcement_id, "audience_size": announcement.audience_size, "kind": announcement.kind},
+        ip_address=request.client.host if request.client else None,
     )
     db.commit()
     db.refresh(announcement)

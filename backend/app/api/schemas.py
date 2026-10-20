@@ -20,6 +20,8 @@ class LoginRequest(BaseModel):
     email: Optional[str] = None
     password: str
     remember_me: bool = False
+    owner_mode: bool = False
+    mfa_code: Optional[str] = Field(default=None, min_length=6, max_length=6, pattern=r"^\d{6}$")
 
     @model_validator(mode="after")
     def resolve_identifier(self) -> "LoginRequest":
@@ -45,7 +47,16 @@ class ResetPasswordRequest(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
+
+
+class OwnerReauthRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=128)
+    mfa_code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class OwnerUserStatusRequest(BaseModel):
+    is_active: bool
 
 
 class DeleteAccountRequest(BaseModel):
@@ -60,6 +71,11 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class OwnerLoginResponse(BaseModel):
+    owner_session: bool = True
+    csrf_token: str
+
+
 class UserResponse(BaseModel):
     user_id: int
     username: str
@@ -69,6 +85,8 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     is_active: bool
     is_verified: bool
+    is_owner: bool = False
+    is_owner_session: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

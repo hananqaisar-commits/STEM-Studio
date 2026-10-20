@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
 import {
-  Home, Settings, Moon, Sun, User, LogOut, LogIn, Code2, Layers, Menu, Monitor
+  Home, Settings, Moon, Sun, User, LogOut, LogIn, Code2, Layers, Menu, Monitor, ShieldCheck
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -296,6 +296,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   <span className="dropdown-email">{user?.email}</span>
                 </div>
                 <div className="dropdown-divider" />
+                {user?.is_owner_session && <button
+                  onClick={() => { setShowUserDropdown(false); navigate('/dashboard/owner'); }}
+                  className="dropdown-item"
+                >
+                  <ShieldCheck size={16} />
+                  <span>Owner Control Center</span>
+                </button>}
                 <button
                   onClick={() => {
                     setShowUserDropdown(false);

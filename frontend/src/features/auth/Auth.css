@@ -209,6 +209,63 @@
   color: var(--color-text-secondary);
 }
 
+.auth-signin-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 2px;
+  padding: 0;
+  border: 0;
+}
+
+.auth-signin-mode legend {
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.auth-signin-mode button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  color: var(--color-text-secondary);
+  background: var(--color-app-bg);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+
+.auth-signin-mode button:hover,
+.auth-signin-mode button.selected {
+  border-color: var(--color-primary);
+  color: var(--color-primary-hover);
+  background: var(--color-surface);
+}
+
+.auth-signin-mode button:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.auth-owner-note {
+  margin: -2px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 420px) {
+  .auth-signin-mode button { gap: 5px; font-size: 11px; }
+}
+
 /* Theme Switcher Button */
 .theme-toggle-btn {
   position: fixed;

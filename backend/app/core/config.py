@@ -1,9 +1,10 @@
 import secrets
 from typing import List, Union
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 import json
+from urllib.parse import urlsplit
 
 
 class Settings(BaseSettings):
@@ -61,6 +62,12 @@ class Settings(BaseSettings):
     # Extended refresh-token lifetime when the user checks "Remember me".
     JWT_REMEMBER_ME_EXPIRE_DAYS: int = 30
     AUTH_REAUTH_MAX_AGE_MINUTES: int = Field(default=10, ge=1, le=60)
+    OWNER_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=10, ge=2, le=30)
+    OWNER_SESSION_MAX_HOURS: int = Field(default=8, ge=1, le=24)
+    OWNER_COOKIE_SECURE: bool | None = None
+    OWNER_COOKIE_SAMESITE: str = "lax"
+    # Required in production to encrypt owner TOTP secrets independently of JWT signing.
+    OWNER_MFA_ENCRYPTION_KEY: str = ""
     EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = Field(default=24, ge=1, le=168)
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = Field(default=20, ge=5, le=120)
 
@@ -94,6 +101,32 @@ class Settings(BaseSettings):
             raise ValueError(f"JWT_ALGORITHM must be one of {allowed}")
         return v
 
+    @field_validator("OWNER_COOKIE_SAMESITE")
+    @classmethod
+    def validate_owner_cookie_samesite(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"lax", "strict", "none"}:
+            raise ValueError("OWNER_COOKIE_SAMESITE must be lax, strict, or none")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_production_owner_boundary(self) -> "Settings":
+        if not self.DEBUG:
+            if "JWT_SECRET_KEY" not in self.model_fields_set:
+                raise ValueError("Set a stable JWT_SECRET_KEY in the production environment")
+            if len(self.JWT_SECRET_KEY) < 32 or "change-this" in self.JWT_SECRET_KEY.lower():
+                raise ValueError("Set a strong, non-placeholder JWT_SECRET_KEY before production startup")
+            if not self.CORS_ORIGINS or "*" in self.CORS_ORIGINS:
+                raise ValueError("Production CORS_ORIGINS must list exact frontend origins")
+            for origin in self.CORS_ORIGINS:
+                parsed = urlsplit(origin)
+                if parsed.scheme != "https" or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:
+                    raise ValueError("Production CORS_ORIGINS must contain HTTPS origins without paths")
+        owner_cookie_secure = self.OWNER_COOKIE_SECURE if self.OWNER_COOKIE_SECURE is not None else not self.DEBUG
+        if self.OWNER_COOKIE_SAMESITE == "none" and not owner_cookie_secure:
+            raise ValueError("OWNER_COOKIE_SECURE must be true when OWNER_COOKIE_SAMESITE is none")
+        return self
+
 
     # SMTP Email Configuration
     SMTP_TLS: bool = True
@@ -105,6 +138,7 @@ class Settings(BaseSettings):
     ALLOW_UNVERIFIED_SIGNUP: bool = False
     EMAILS_FROM_EMAIL: str = "noreply@stemstudio.com"
     EMAILS_FROM_NAME: str = "STEM Studio Support"
+    # Deprecated: owner access is granted only by the provisioned database role.
     SUPPORT_OWNER_EMAILS: str = ""
 
     # Judge0 (server-to-server sandbox integration for custom code)

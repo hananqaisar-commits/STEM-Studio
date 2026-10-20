@@ -10,14 +10,16 @@ from backend.app.api.schemas import (
     ReviewCreateRequest,
     ReviewResponse,
 )
-from backend.app.api.dependencies import get_current_user
-from backend.app.core.config import get_settings
+from backend.app.api.dependencies import get_current_user, require_owner, require_recent_owner
 from backend.app.core.rate_limit import get_redis_client, log_redis_failure, strict
+from backend.app.core.owner_security import record_admin_event
 from backend.infrastructure.database.database import get_db
 from backend.infrastructure.database.models import Review, User
 
 router = APIRouter(prefix="/api/stats", tags=["Platform Stats"])
 logger = logging.getLogger(__name__)
+from backend.app.core.config import get_settings
+
 settings = get_settings()
 _PLATFORM_STATS_CACHE_KEY = f"{settings.REDIS_KEY_PREFIX}:platform-stats:v1"
 
@@ -103,32 +105,32 @@ def submit_review(
     return review
 
 
-def _require_review_owner(user: User) -> None:
-    owner_emails = {email.strip().lower() for email in settings.SUPPORT_OWNER_EMAILS.split(",") if email.strip()}
-    if not owner_emails or user.email.strip().lower() not in owner_emails:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required")
-
-
 @router.get("/reviews/pending", response_model=list[ReviewResponse])
 def get_pending_reviews(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_owner),
     db: Session = Depends(get_db),
 ):
-    _require_review_owner(current_user)
     return db.query(Review).filter(Review.approved.is_(False)).order_by(Review.created_at.asc()).limit(200).all()
 
 
 @router.patch("/reviews/{review_id}/approve", response_model=ReviewResponse)
 def approve_review(
     review_id: int,
-    current_user: User = Depends(get_current_user),
+    request: Request,
+    current_user: User = Depends(require_recent_owner),
     db: Session = Depends(get_db),
 ):
-    _require_review_owner(current_user)
     review = db.query(Review).filter(Review.review_id == review_id).first()
     if review is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
     review.approved = True
+    record_admin_event(
+        db,
+        actor_user_id=current_user.user_id,
+        action="review.approve",
+        details={"review_id": review.review_id},
+        ip_address=request.client.host if request.client else None,
+    )
     db.commit()
     db.refresh(review)
     invalidate_platform_stats_cache()
@@ -138,13 +140,20 @@ def approve_review(
 @router.delete("/reviews/{review_id}")
 def reject_review(
     review_id: int,
-    current_user: User = Depends(get_current_user),
+    request: Request,
+    current_user: User = Depends(require_recent_owner),
     db: Session = Depends(get_db),
 ):
-    _require_review_owner(current_user)
     review = db.query(Review).filter(Review.review_id == review_id, Review.approved.is_(False)).first()
     if review is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pending review not found")
+    record_admin_event(
+        db,
+        actor_user_id=current_user.user_id,
+        action="review.reject",
+        details={"review_id": review.review_id},
+        ip_address=request.client.host if request.client else None,
+    )
     db.delete(review)
     db.commit()
     invalidate_platform_stats_cache()

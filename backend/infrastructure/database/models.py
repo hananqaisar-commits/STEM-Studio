@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, func
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -80,6 +80,55 @@ class UserSession(Base):
     revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     user: Mapped["User"] = relationship(back_populates="sessions")
+
+
+class OwnerAccount(Base):
+    """Singleton database anchor for the one server-provisioned owner identity."""
+
+    __tablename__ = "owner_accounts"
+    __table_args__ = (CheckConstraint("owner_slot = 1", name="ck_owner_accounts_singleton_slot"),)
+
+    owner_slot: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), unique=True)
+
+
+class OwnerMFACredential(Base):
+    """Encrypted owner TOTP credential; provisioning is server-side only."""
+
+    __tablename__ = "owner_mfa_credentials"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    encrypted_secret: Mapped[str] = mapped_column(String(512))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_used_counter: Mapped[int] = mapped_column(Integer, default=-1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OwnerSessionGrant(Base):
+    """Marks a database session that completed owner MFA."""
+
+    __tablename__ = "owner_session_grants"
+
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("user_sessions.session_id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    mfa_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AdminAuditEvent(Base):
+    """Administrative audit trail containing no credential or token material."""
+
+    __tablename__ = "admin_audit_events"
+
+    event_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    actor_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"), index=True)
+    target_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"), index=True)
+    action: Mapped[str] = mapped_column(String(80), index=True)
+    outcome: Mapped[str] = mapped_column(String(16), default="success")
+    details_json: Mapped[str] = mapped_column(String(2000), default="{}")
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
 class EmailVerification(Base):

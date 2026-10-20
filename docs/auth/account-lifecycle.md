@@ -25,10 +25,10 @@ Use the same durable PostgreSQL/MySQL service for every API instance. Do not poi
 
 ## Support and review ownership
 
-Signed-in learners can create support tickets and read their own request history. Accounts whose email is listed in the backend's comma-separated `SUPPORT_OWNER_EMAILS` can list/reply/resolve tickets and moderate pending reviews. Set the allowlist in the API host environment and restart/redeploy the API to activate the owner controls. The production owner address was not configured or validated here.
+Signed-in learners can create support tickets and read their own request history. Listing/responding to tickets, moderating reviews, and broadcasting announcements require an owner account created through the restricted server-side provisioning command plus a valid TOTP-authenticated owner session. `SUPPORT_OWNER_EMAILS` is deprecated and no longer grants access. See [Owner Control Center setup](../owner-control-center.md). Production owner credentials and the MFA encryption key must be provisioned by the deployment operator; no default owner account exists.
 
 The same allowlist grants access to the dashboard broadcast panel. Publishing stores a single announcement plus a database snapshot of its active, verified recipients. Later-created or later-verified users are excluded from old broadcasts. Each signed-in recipient has an independent read receipt; the navbar badge gets its unread count from the API and polls every 30 seconds (and on tab focus). This is in-app only. Bulk promotional email is not connected; it requires a consent-based subscriber list, unsubscribe handling, a verified sender domain, and an email campaign provider. No email was sent by this feature.
 
 ## Verification performed
 
-The actual SMTP provider, sender-domain DNS, deployed database durability, support-owner allowlist, and production multi-instance behavior require owner-provided infrastructure and credentials and were not tested here. `python -m compileall -q backend/app backend/infrastructure/database` passed for the current revision; the automated test suite was not run during this audit implementation.
+The actual SMTP provider, sender-domain DNS, deployed database durability, owner provisioning, MFA secret configuration, and production multi-instance behavior require owner-provided infrastructure and credentials and were not tested here.

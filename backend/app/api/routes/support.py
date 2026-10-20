@@ -1,35 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from backend.app.api.dependencies import get_current_user
+from backend.app.api.dependencies import get_current_user, has_owner_session, require_owner, require_recent_owner
 from backend.app.api.schemas import (
     SupportTicketCreateRequest,
     SupportTicketInboxItem,
     SupportTicketResponse,
     SupportTicketUpdateRequest,
 )
-from backend.app.core.config import get_settings
+from backend.app.core.owner_security import record_admin_event
 from backend.app.core.rate_limit import standard
 from backend.infrastructure.database.database import get_db
 from backend.infrastructure.database.models import SupportTicket, User
 
 router = APIRouter(prefix="/api/support", tags=["Support"])
-settings = get_settings()
-
-
-def _is_owner(user: User) -> bool:
-    allowed = {email.strip().lower() for email in settings.SUPPORT_OWNER_EMAILS.split(",") if email.strip()}
-    return bool(allowed and user.email.strip().lower() in allowed)
-
-
-def _require_owner(user: User) -> None:
-    if not _is_owner(user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required")
-
-
 @router.get("/capabilities")
-def support_capabilities(current_user: User = Depends(get_current_user)):
-    return {"is_owner": _is_owner(current_user)}
+def support_capabilities(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return {"is_owner": has_owner_session(current_user, request, db)}
 
 
 @router.post("/tickets", response_model=SupportTicketResponse, status_code=status.HTTP_201_CREATED)
@@ -63,8 +54,7 @@ def my_tickets(current_user: User = Depends(get_current_user), db: Session = Dep
 
 
 @router.get("/inbox", response_model=list[SupportTicketInboxItem])
-def owner_inbox(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _require_owner(current_user)
+def owner_inbox(current_user: User = Depends(require_owner), db: Session = Depends(get_db)):
     rows = (
         db.query(SupportTicket, User)
         .join(User, User.user_id == SupportTicket.user_id)
@@ -89,16 +79,24 @@ def owner_inbox(current_user: User = Depends(get_current_user), db: Session = De
 def update_ticket(
     ticket_id: int,
     payload: SupportTicketUpdateRequest,
-    current_user: User = Depends(get_current_user),
+    request: Request,
+    current_user: User = Depends(require_recent_owner),
     db: Session = Depends(get_db),
 ):
-    _require_owner(current_user)
     ticket = db.query(SupportTicket).filter(SupportTicket.ticket_id == ticket_id).first()
     if ticket is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support request not found")
     ticket.status = payload.status
     if payload.owner_reply is not None:
         ticket.owner_reply = payload.owner_reply.strip() or None
+    record_admin_event(
+        db,
+        actor_user_id=current_user.user_id,
+        target_user_id=ticket.user_id,
+        action="support.ticket.update",
+        details={"ticket_id": ticket.ticket_id, "status": ticket.status, "reply_changed": payload.owner_reply is not None},
+        ip_address=request.client.host if request.client else None,
+    )
     db.commit()
     db.refresh(ticket)
     user = db.query(User).filter(User.user_id == ticket.user_id).first()

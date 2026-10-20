@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { LifeBuoy, Send, Inbox, CheckCircle2, Clock3, RefreshCw } from 'lucide-react';
 import { apiClient, ApiError } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
-import { OwnerAnnouncementPanel } from '../notifications/OwnerAnnouncementPanel';
 import './SupportDesk.css';
 
 interface Ticket {
@@ -163,7 +162,6 @@ export function SupportDesk() {
           </div>
         </div>
       )}
-      {isAuthenticated && isOwner && <OwnerAnnouncementPanel />}
     </section>
   );
 }

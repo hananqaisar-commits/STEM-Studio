@@ -7,6 +7,24 @@ const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_U
 
 type RefreshResult = 'refreshed' | 'rejected' | 'unavailable';
 let refreshInFlight: Promise<RefreshResult> | null = null;
+let ownerCsrfToken: string | null = null;
+
+export function setOwnerCsrfToken(token: string | null): void {
+  ownerCsrfToken = token;
+}
+
+export async function refreshOwnerCsrfToken(): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/csrf-token`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+  if (!response.ok) throw new ApiError(response.status, 'Unable to initialize the secure owner session.');
+  const data = await response.json();
+  if (typeof data?.csrf_token !== 'string') throw new ApiError(500, 'Invalid CSRF token response.');
+  const token = data.csrf_token as string;
+  ownerCsrfToken = token;
+  return token;
+}
 
 interface ApiOptions {
   method?: string;
@@ -20,11 +38,18 @@ interface ApiOptions {
  */
 export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, requiresAuth = false } = options;
+  const upperMethod = method.toUpperCase();
+  const isWrite = !['GET', 'HEAD', 'OPTIONS'].includes(upperMethod);
+
+  if (isWrite && !ownerCsrfToken && !endpoint.endsWith('/login') && !endpoint.endsWith('/signup') && !endpoint.endsWith('/google')) {
+    try { await refreshOwnerCsrfToken(); } catch { /* ordinary user writes do not require an owner CSRF token */ }
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
+  if (isWrite && ownerCsrfToken) headers['X-CSRF-Token'] = ownerCsrfToken;
 
   // Attach access token if required
   if (requiresAuth) {
@@ -37,6 +62,7 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
   const config: RequestInit = {
     method,
     headers,
+    credentials: 'include',
   };
 
   if (body) {
@@ -104,9 +130,8 @@ async function tryRefreshToken(): Promise<RefreshResult> {
 
 async function requestTokenRefresh(): Promise<RefreshResult> {
   const refreshToken = getRefreshToken();
-  if (!refreshToken) {
-    clearTokens();
-    return 'rejected';
+  if (!ownerCsrfToken) {
+    try { await refreshOwnerCsrfToken(); } catch { /* regular refresh-token flow may still succeed */ }
   }
 
   // Preserve the storage the session was created in: remembered sessions
@@ -117,8 +142,12 @@ async function requestTokenRefresh(): Promise<RefreshResult> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(ownerCsrfToken ? { 'X-CSRF-Token': ownerCsrfToken } : {}),
+      },
+      credentials: 'include',
+      body: JSON.stringify(refreshToken ? { refresh_token: refreshToken } : {}),
     });
 
     if (!response.ok) {
@@ -132,6 +161,10 @@ async function requestTokenRefresh(): Promise<RefreshResult> {
     }
 
     const data = await response.json();
+    if (data?.owner_session === true) {
+      if (typeof data.csrf_token === 'string') ownerCsrfToken = data.csrf_token;
+      return 'refreshed';
+    }
     if (typeof data?.access_token !== 'string' || typeof data?.refresh_token !== 'string') {
       return 'unavailable';
     }
