@@ -3,7 +3,7 @@ import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, UserPlus, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { rememberUsername } from '../../api/authPreferences';
+import { rememberEmail } from '../../api/authPreferences';
 import { Octa, useMascot } from '../../components/mascot';
 import '../../components/mascot/Mascot.css';
 import './Auth.css';
@@ -92,7 +92,7 @@ export const SignUp: React.FC = () => {
 
     try {
       await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim());
-      rememberUsername(username.trim().toLowerCase());
+      rememberEmail(email.trim());
       setSuccess('Account created successfully! Redirecting to login...');
       setExpression('happy', { temporary: true, durationMs: 2000 });
       setTimeout(() => navigate('/login'), 2000);

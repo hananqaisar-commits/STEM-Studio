@@ -93,10 +93,10 @@ def _clear_owner_cookies(response: Response) -> None:
         response.delete_cookie(name, path=path, secure=options["secure"], samesite=options["samesite"])
 
 
-def _owner_login_failure(db: Session, user: User | None, identifier: str, ip_address: str | None) -> None:
+def _owner_login_failure(db: Session, user: User | None, email: str, ip_address: str | None) -> None:
     db.add(LoginAttempt(
         user_id=user.user_id if user else None,
-        email=identifier[:255],
+        email=email[:255],
         ip_address=ip_address,
         successful=False,
         failure_reason="Invalid credentials or owner MFA",
@@ -157,7 +157,7 @@ def signup(
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists. Sign in with its username instead of creating another account.",
+            detail="An account with this email already exists. Sign in with your email instead of creating another account.",
         )
 
     # Check if username already exists (case-insensitive)
@@ -273,28 +273,26 @@ def login(
 
     # Get client IP for login attempt logging
     client_ip = request.client.host if request.client else None
-    clean_identifier = (payload.identifier or '').strip().lower()
+    clean_email = str(payload.email).strip().lower()
 
-    # Find user by case-insensitive email or username
-    user = db.query(User).filter(
-        (func.lower(User.email) == clean_identifier) | (func.lower(User.username) == clean_identifier)
-    ).first()
+    # Email is the sole sign-in identifier for regular and owner accounts.
+    user = db.query(User).filter(func.lower(User.email) == clean_email).first()
 
     if user is None or not verify_password(payload.password, user.password_hash):
         # Log failed attempt
         failed_attempt = LoginAttempt(
             user_id=user.user_id if user else None,
-            email=payload.identifier,
+            email=clean_email,
             ip_address=client_ip,
             successful=False,
-            failure_reason="Invalid username or password",
+            failure_reason="Invalid email or password",
         )
         db.add(failed_attempt)
         db.commit()
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
+            detail="Invalid email or password",
         )
 
     if not user.is_active:
@@ -330,10 +328,10 @@ def login(
             or not payload.mfa_code
             or not consume_owner_totp(db, user.user_id, payload.mfa_code)
         ):
-            _owner_login_failure(db, user, clean_identifier, client_ip)
+            _owner_login_failure(db, user, clean_email, client_ip)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username, password, or owner verification code",
+                detail="Invalid email, password, or owner verification code",
             )
 
         now = datetime.now(timezone.utc)
@@ -806,7 +804,7 @@ def owner_reauthenticate(
         _owner_login_failure(
             db,
             current_user,
-            current_user.username,
+            current_user.email,
             request.client.host if request.client else None,
         )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Owner re-authentication failed")

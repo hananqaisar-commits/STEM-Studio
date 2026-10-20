@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError, refreshOwnerCsrfToken, setOwnerCsrfToken } from '../api/apiClient';
 import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
-import { rememberUsername } from '../api/authPreferences';
+import { rememberEmail } from '../api/authPreferences';
 import { clearOctaConfig } from '../api/octaConfigStorage';
 
 interface UserData {
@@ -20,8 +20,8 @@ interface AuthContextType {
   user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (identifier: string, password: string, rememberMe?: boolean) => Promise<void>;
-  loginAsOwner: (identifier: string, password: string, mfaCode: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginAsOwner: (email: string, password: string, mfaCode: string) => Promise<void>;
   loginWithGoogle: (credential: string, clientId: string, rememberMe?: boolean) => Promise<void>;
   signup: (
     username: string,
@@ -96,14 +96,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('focus', restoreSessionOnFocus);
   }, [fetchUser, user]);
 
-  const login = async (identifier: string, password: string, rememberMe = false) => {
-    const cleanId = identifier ? identifier.trim() : '';
+  const login = async (email: string, password: string, rememberMe = false) => {
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
     const data = await apiClient<{ access_token: string; refresh_token: string }>(
       '/api/auth/login',
       {
         method: 'POST',
         body: {
-          username: cleanId,
+          email: cleanEmail,
           password,
           remember_me: rememberMe,
         },
@@ -113,14 +113,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Remember me → localStorage (survives browser restarts); otherwise
     // sessionStorage (cleared when the browser closes).
     storeTokens(data.access_token, data.refresh_token, rememberMe);
-    rememberUsername(cleanId);
+    rememberEmail(cleanEmail);
 
     // Fetch user profile after login
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
     setUser(userData);
   };
 
-  const loginAsOwner = async (identifier: string, password: string, mfaCode: string) => {
+  const loginAsOwner = async (email: string, password: string, mfaCode: string) => {
     // Do not let an existing learner bearer token override the isolated owner cookie.
     clearTokens();
     const data = await apiClient<{ owner_session: boolean; csrf_token: string }>(
@@ -128,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {
         method: 'POST',
         body: {
-          username: identifier.trim(),
+          email: email.trim().toLowerCase(),
           password,
           owner_mode: true,
           mfa_code: mfaCode,
@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new ApiError(403, 'The account did not start an owner session.');
     }
     setOwnerCsrfToken(data.csrf_token);
-    rememberUsername(identifier.trim());
+    rememberEmail(email);
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
     if (!userData.is_owner_session) throw new ApiError(403, 'Owner session verification failed.');
     setUser(userData);
@@ -219,7 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     storeTokens(data.access_token, data.refresh_token, rememberMe);
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
-    rememberUsername(userData.username);
+    rememberEmail(userData.email);
     setUser(userData);
   };
 
