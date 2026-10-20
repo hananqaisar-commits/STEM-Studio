@@ -1,0 +1,119 @@
+.linux-commands-page { max-width:1540px; margin:0 auto; padding-bottom:2.5rem; }
+
+.linux-commands-toolbar {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(260px,380px);
+  align-items:center;
+  gap:1rem;
+  padding:1rem 1.15rem;
+  border:1px solid var(--color-border);
+  border-radius:16px;
+  background:var(--color-surface);
+  box-shadow:var(--shadow-sm);
+}
+.linux-commands-toolbar__intro, .linux-commands-toolbar__actions { display:flex; align-items:center; gap:.65rem; }
+.linux-commands-toolbar__intro { justify-content:space-between; min-width:0; }
+.linux-commands-toolbar__actions { flex-shrink:0; }
+.linux-commands-search { position:relative; min-width:0; }
+.linux-commands-search input { width:100%; min-height:42px; }
+.linux-commands-copy-status { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+.linux-commands-catalog { display:grid; grid-template-columns:250px minmax(0,1fr); gap:1.25rem; margin-top:1.1rem; align-items:start; }
+.linux-commands-groups {
+  position:sticky; top:1rem; max-height:calc(100vh - 2rem); overflow-y:auto;
+  display:flex; flex-direction:column; gap:.25rem; padding:.65rem;
+  border:1px solid var(--color-border); border-radius:16px;
+  background:var(--color-surface); box-shadow:var(--shadow-sm);
+}
+.linux-commands-groups::-webkit-scrollbar { width:5px; }
+.linux-commands-groups::-webkit-scrollbar-thumb { background:var(--color-border); border-radius:8px; }
+.linux-commands-groups button { min-height:42px; text-align:left; }
+.linux-commands-groups button[aria-pressed="true"] { background:var(--color-primary); border-color:var(--color-primary); color:#fff; box-shadow:0 3px 9px color-mix(in srgb,var(--color-primary) 22%,transparent); }
+.linux-commands-groups button[aria-pressed="true"] :is(svg,span) { color:#fff; }
+
+.linux-commands-results { min-width:0; }
+.linux-commands-results > div { margin-bottom:1.75rem; }
+.linux-commands-results > div > div:first-child { padding:.15rem 0 .75rem; }
+.linux-commands-results h2 { letter-spacing:-.025em; }
+.linux-commands-results .font-mono { letter-spacing:-.015em; }
+.linux-command-card { overflow:hidden; border:1px solid var(--color-border); border-radius:15px; background:var(--color-surface); box-shadow:var(--shadow-sm); transition:border-color 150ms ease,box-shadow 150ms ease; }
+.linux-command-card:hover { border-color:color-mix(in srgb,var(--color-primary) 28%,var(--color-border)); box-shadow:var(--shadow-md); }
+.linux-command-card__trigger { display:flex; align-items:center; justify-content:space-between; gap:.75rem; width:100%; min-height:68px; padding:.9rem 1rem; text-align:left; color:var(--color-text); background:transparent; transition:background-color 140ms ease; }
+.linux-command-card__trigger:hover { background:var(--color-surface-elevated); }
+.linux-command-card__trigger:focus-visible { outline-offset:-3px; }
+.linux-command-card__body { padding:1rem; border-top:1px solid var(--color-border); background:var(--color-surface-elevated); }
+.linux-command-card__theory { padding:.9rem 1rem; border:1px solid color-mix(in srgb,var(--color-primary) 20%,var(--color-border)); border-radius:12px; background:color-mix(in srgb,var(--color-primary) 5%,var(--color-surface)); }
+.linux-command-card__syntax { overflow:auto; padding:.85rem 1rem; border:1px solid var(--color-border); border-radius:10px; background:#141b27; color:#bbf7d0; font-size:12px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+.linux-commands-page :is(.linux-command-card__body,.linux-commands-toolbar) button { min-height:36px; }
+.linux-commands-page .linux-command-card__body > div:nth-child(2) button,
+.linux-commands-page .linux-command-card__body > div:nth-child(3) button { border-radius:8px; }
+
+.linux-core { min-width:0; display:grid; gap:1rem; animation:linux-core-enter 240ms ease-out both; }
+.linux-core__intro { display:flex; align-items:flex-start; gap:.9rem; padding:1.15rem; border:1px solid var(--color-border); border-radius:16px; background:var(--color-surface); box-shadow:var(--shadow-sm); }
+.linux-core__intro-icon { display:grid; place-items:center; width:42px; height:42px; flex:0 0 auto; border:1px solid color-mix(in srgb,var(--color-primary) 24%,var(--color-border)); border-radius:12px; color:var(--color-primary); background:color-mix(in srgb,var(--color-primary) 9%,var(--color-surface)); }
+.linux-core__eyebrow { margin:0 0 .25rem; color:var(--color-primary); font-size:.68rem; font-weight:750; letter-spacing:.105em; text-transform:uppercase; }
+.linux-core__intro h2,.linux-core__lesson-header h3 { margin:0; color:var(--color-text); font-size:1.2rem; font-weight:750; letter-spacing:-.025em; }
+.linux-core__intro p:last-child,.linux-core__lesson-header > div > p:last-child { max-width:760px; margin:.35rem 0 0; color:var(--color-text-secondary); font-size:.84rem; line-height:1.55; }
+.linux-core__lesson-tabs { display:flex; gap:.5rem; overflow-x:auto; padding:.15rem .1rem .4rem; scrollbar-width:thin; }
+.linux-core__lesson-tab { display:inline-flex; align-items:center; gap:.5rem; min-height:40px; flex:0 0 auto; padding:.55rem .8rem; border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface); color:var(--color-text-secondary); font-size:.76rem; font-weight:650; transition:color 150ms ease,border-color 150ms ease,background-color 150ms ease,transform 150ms ease; }
+.linux-core__lesson-tab:hover { transform:translateY(-1px); color:var(--color-text); border-color:color-mix(in srgb,var(--color-primary) 42%,var(--color-border)); }
+.linux-core__lesson-tab[aria-selected="true"] { border-color:var(--color-primary); color:var(--color-primary); background:color-mix(in srgb,var(--color-primary) 8%,var(--color-surface)); box-shadow:0 0 0 2px color-mix(in srgb,var(--color-primary) 9%,transparent); }
+.linux-core__lesson { display:grid; gap:1rem; min-width:0; padding:1.15rem; border:1px solid var(--color-border); border-radius:17px; background:var(--color-surface); box-shadow:var(--shadow-sm); }
+.linux-core__lesson-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
+.linux-core__lesson-count { flex:0 0 auto; padding:.35rem .55rem; border:1px solid var(--color-border); border-radius:999px; color:var(--color-text-muted); background:var(--color-surface-elevated); font-size:.68rem; font-weight:650; }
+.linux-core__flow { display:flex; align-items:center; justify-content:center; gap:.6rem; min-height:76px; padding:.7rem; border:1px solid var(--color-border); border-radius:13px; background:var(--color-surface-elevated); }
+.linux-core__flow-node { display:flex; align-items:center; justify-content:center; min-height:42px; min-width:0; padding:.55rem .75rem; border:1px solid var(--color-border); border-radius:10px; color:var(--color-text-secondary); background:var(--color-surface); font-size:.74rem; font-weight:650; text-align:center; transition:color 180ms ease,border-color 180ms ease,background-color 180ms ease,transform 180ms ease,box-shadow 180ms ease; }
+.linux-core__flow-node.is-active { transform:translateY(-2px); border-color:var(--color-primary); color:var(--color-primary); background:color-mix(in srgb,var(--color-primary) 9%,var(--color-surface)); box-shadow:0 5px 16px -12px var(--color-primary); animation:linux-flow-pulse 1.6s ease-in-out infinite; }
+.linux-core__flow-arrow { flex:0 0 auto; color:var(--color-primary); font-size:1.1rem; }
+.linux-core__step-card { min-width:0; padding:1rem; border:1px solid color-mix(in srgb,var(--color-primary) 20%,var(--color-border)); border-radius:13px; background:color-mix(in srgb,var(--color-primary) 3%,var(--color-surface)); }
+.linux-core__step-heading { display:flex; align-items:center; gap:.7rem; }
+.linux-core__step-number { display:grid; place-items:center; width:38px; height:38px; flex:0 0 auto; border:1px solid color-mix(in srgb,var(--color-primary) 26%,var(--color-border)); border-radius:11px; color:var(--color-primary); background:color-mix(in srgb,var(--color-primary) 9%,var(--color-surface)); font:750 .85rem/1 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.linux-core__step-heading h4 { margin:0; color:var(--color-text); font-size:1rem; font-weight:700; }
+.linux-core__step-copy { margin:.85rem 0 1rem; color:var(--color-text-secondary); font-size:.84rem; line-height:1.65; }
+.linux-core__commands { display:grid; gap:.5rem; }
+.linux-core__command { display:flex; align-items:center; justify-content:space-between; gap:.6rem; min-width:0; padding:.55rem .65rem .55rem .8rem; border:1px solid var(--color-border); border-radius:9px; background:#151c27; }
+.linux-core__command code { min-width:0; overflow-wrap:anywhere; color:#d9f99d; font:500 .74rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.linux-core__command code span { color:#a78bfa; }
+.linux-core__command button { display:inline-flex; align-items:center; gap:.35rem; min-height:32px; flex:0 0 auto; padding:.35rem .55rem; border:1px solid #394457; border-radius:7px; color:#dbe3ee; background:#202a39; font-size:.69rem; font-weight:650; transition:background-color 150ms ease,border-color 150ms ease; }
+.linux-core__command button:hover { border-color:#7c6bb5; background:#293448; }
+.linux-core__copy-status { margin:.55rem 0 0; color:var(--color-text-muted); font-size:.7rem; }
+.linux-core__step-controls { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.linux-core__progress { display:flex; align-items:center; gap:.3rem; min-width:96px; }
+.linux-core__progress span { height:4px; flex:1; border-radius:999px; background:var(--color-border); transition:background-color 180ms ease; }
+.linux-core__progress span.is-complete { background:var(--color-primary); }
+.linux-core__step-buttons { display:flex; align-items:center; gap:.5rem; }
+.linux-core__step-buttons button { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; padding:.45rem .7rem; font-size:.74rem; }
+.linux-core__step-buttons button:disabled { opacity:.5; cursor:not-allowed; }
+.linux-core__caution { display:flex; align-items:flex-start; gap:.6rem; padding:.75rem .85rem; border:1px solid color-mix(in srgb,#d49b27 34%,var(--color-border)); border-radius:10px; color:var(--color-text-secondary); background:color-mix(in srgb,#d49b27 8%,var(--color-surface)); }
+.linux-core__caution svg { flex:0 0 auto; margin-top:.12rem; color:#b67b12; }
+.linux-core__caution p { margin:0; font-size:.73rem; line-height:1.55; }
+@keyframes linux-core-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+@keyframes linux-flow-pulse { 50% { box-shadow:0 0 0 4px color-mix(in srgb,var(--color-primary) 10%,transparent); } }
+
+@media (max-width: 980px) {
+  .linux-commands-catalog { grid-template-columns:1fr; }
+  .linux-commands-groups { position:static; max-height:260px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.35rem; }
+  .linux-commands-groups > div { grid-column:1 / -1; }
+}
+@media (max-width: 680px) {
+  .linux-commands-toolbar { grid-template-columns:1fr; padding:.85rem; }
+  .linux-commands-toolbar__intro { align-items:flex-start; flex-direction:column; }
+  .linux-commands-toolbar__actions { width:100%; }
+  .linux-commands-toolbar__actions > button { flex:1; justify-content:center; }
+  .linux-commands-groups { grid-template-columns:1fr; max-height:220px; }
+  .linux-command-card__trigger { min-height:64px; padding:.8rem; }
+  .linux-command-card__body { padding:.8rem; }
+  .linux-core__intro,.linux-core__lesson { padding:.85rem; }
+  .linux-core__lesson-header { flex-direction:column; }
+  .linux-core__flow { justify-content:flex-start; overflow-x:auto; }
+  .linux-core__flow-node { flex:0 0 auto; }
+  .linux-core__step-controls { align-items:stretch; flex-direction:column; }
+  .linux-core__step-buttons { justify-content:space-between; }
+  .linux-core__step-buttons button { flex:1; }
+  .linux-core__command { align-items:flex-start; }
+  .linux-core__command button span { display:none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linux-core *, .linux-core *::before, .linux-core *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+}

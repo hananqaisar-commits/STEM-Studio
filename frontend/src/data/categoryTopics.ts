@@ -3,12 +3,15 @@
  * Used by the two-level category/topic dropdown in VisualizerHeader.
  * Each entry mirrors the items array passed by individual Page components.
  */
+import topicCatalog from './topicCatalog.json';
 
 export interface TopicEntry {
   id: string;
   name: string;
   description?: string;
   group?: string;
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
+  estimatedMinutes?: number;
 }
 
 export interface CategoryTopics {
@@ -17,7 +20,7 @@ export interface CategoryTopics {
   topics: TopicEntry[];
 }
 
-export const CATEGORY_TOPICS: CategoryTopics[] = [
+const CATEGORY_TOPIC_DEFS: CategoryTopics[] = [
   // ── Foundations ─────────────────────────────────────────────────
   {
     categoryId: 'complexity',
@@ -81,12 +84,27 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
     categoryId: 'linkedList',
     categoryName: 'Linked List',
     topics: [
-      { id: 'singly', name: 'Singly Linked List', group: 'Singly' },
-      { id: 'reverse', name: 'Reverse Linked List', group: 'Singly' },
-      { id: 'middleNode', name: 'Find Middle Node', group: 'Two-Pointers' },
-      { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers' },
-      { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly' },
-      { id: 'circular', name: 'Circular Linked List', group: 'Circular' },
+      { id: 'singly', name: 'Singly Linked List', group: 'Singly', difficulty: 'Beginner', estimatedMinutes: 8 },
+      { id: 'reverse', name: 'Reverse Linked List', group: 'Singly', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'middleNode', name: 'Find Middle Node', group: 'Two-Pointers', difficulty: 'Beginner', estimatedMinutes: 8 },
+      { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'josephus', name: 'Josephus Problem', group: 'Circular', difficulty: 'Intermediate', estimatedMinutes: 14 },
+      { id: 'reverseSublist', name: 'Reverse Sublist (L–R)', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 16 },
+      { id: 'reverseHalf', name: 'Reverse a Half', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'reverseFromMiddle', name: 'Reverse from Middle', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'reverseKGroup', name: 'Reverse in K Groups', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 18 },
+      { id: 'palindrome', name: 'Palindrome Check', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 14 },
+      { id: 'swapPairs', name: 'Swap Nodes in Pairs', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'mergeSort', name: 'Merge Sort a List', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 20 },
+      { id: 'addTwoNumbers', name: 'Add Two Numbers', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 14 },
+      { id: 'removeNthFromEnd', name: 'Remove Nth from End', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'splitHalves', name: 'Split into Two Halves', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 10 },
+      { id: 'splitKParts', name: 'Split into K Parts', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 16 },
+      { id: 'mergeKSorted', name: 'Merge K Sorted Lists', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 20 },
+      { id: 'lruCache', name: 'LRU Cache', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 22 },
+      { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly', difficulty: 'Beginner', estimatedMinutes: 10 },
+      { id: 'circular', name: 'Circular Linked List', group: 'Circular', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular', difficulty: 'Intermediate', estimatedMinutes: 14 },
     ],
   },
   {
@@ -97,6 +115,7 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
       { id: 'queue', name: 'Queue Primitive (FIFO)', group: 'Core' },
       { id: 'validParentheses', name: 'Valid Parentheses', group: 'Stack' },
       { id: 'minStack', name: 'Min Stack O(1)', group: 'Stack' },
+      { id: 'infixToPostfix', name: 'Infix to Postfix Conversion', group: 'Stack' },
       { id: 'postfixEval', name: 'Evaluate RPN / Postfix', group: 'Stack' },
       { id: 'dailyTemperatures', name: 'Daily Temperatures', group: 'Stack' },
       { id: 'simplifyPath', name: 'Simplify Path', group: 'Stack' },
@@ -148,7 +167,9 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
     topics: [
       { id: 'bst', name: 'Binary Search Tree (BST)', group: 'Trees' },
       { id: 'avl', name: 'AVL Tree (Self-Balancing)', group: 'Balanced' },
+      { id: 'rbt', name: 'Red-Black Tree', group: 'Balanced' },
       { id: 'heap', name: 'Binary Heap (Priority Queue)', group: 'Heaps' },
+      { id: 'segTree', name: 'Segment Tree', group: 'Advanced' },
       { id: 'trie', name: 'Trie (Prefix Tree)', group: 'Strings' },
     ],
   },
@@ -159,7 +180,10 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
       { id: 'bfs', name: 'Breadth-First Search (BFS)', group: 'Traversals' },
       { id: 'dfs', name: 'Depth-First Search (DFS)', group: 'Traversals' },
       { id: 'dijkstra', name: "Dijkstra's Shortest Path", group: 'Shortest Path' },
+      { id: 'bellmanFord', name: 'Bellman-Ford Algorithm', group: 'Shortest Path' },
       { id: 'prim', name: "Prim's Minimum Spanning Tree", group: 'MST' },
+      { id: 'kruskal', name: "Kruskal's Minimum Spanning Tree", group: 'MST' },
+      { id: 'aStar', name: 'A* Pathfinding', group: 'Pathfinding' },
       { id: 'topoSort', name: 'Topological Sort (Kahn)', group: 'Ordering' },
     ],
   },
@@ -221,4 +245,42 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
       { id: 'autocomplete', name: 'Autocomplete', group: 'O(p+k)' },
     ],
   },
+  // ── Operating Systems ───────────────────────────────────────────
+  {
+    categoryId: 'commands',
+    categoryName: 'Commands of Linux',
+    topics: [
+      { id: 'path-concepts', name: 'Path Concepts', group: 'Group 1' },
+      { id: 'navigation', name: 'Navigation', group: 'Group 2' },
+      { id: 'file-ops', name: 'File & Directory Ops', group: 'Group 3' },
+      { id: 'search-lookup', name: 'Search & Lookup', group: 'Group 4' },
+      { id: 'editors', name: 'Text Editors (Nano & Vim)', group: 'Group 5' },
+      { id: 'user-management', name: 'User Management', group: 'Group 6' },
+      { id: 'group-management', name: 'Group Management', group: 'Group 7' },
+      { id: 'permissions', name: 'Permissions & Ownership', group: 'Group 8' },
+      { id: 'process-management', name: 'Process Management', group: 'Group 9' },
+      { id: 'package-management', name: 'Package Management', group: 'Group 10' },
+      { id: 'network-commands', name: 'Network Commands', group: 'Group 11' },
+      { id: 'system-commands', name: 'System Commands', group: 'Group 12' },
+      { id: 'scheduling', name: 'Scheduling Jobs', group: 'Group 13' },
+    ],
+  },
+  {
+    categoryId: 'filesystem',
+    categoryName: 'File System Simulator',
+    topics: [
+      { id: 'virtual-file-system', name: 'Virtual File System (VFS)', group: 'Visualizer' },
+    ],
+  },
 ];
+
+/** Shared topic IDs define the dropdown order and the backend progress denominator. */
+export const CATEGORY_TOPICS: CategoryTopics[] = CATEGORY_TOPIC_DEFS.map((category) => {
+  const canonicalIds = topicCatalog[category.categoryId as keyof typeof topicCatalog] as string[] | undefined;
+  if (!canonicalIds) return category;
+  const topicById = new Map(category.topics.map((topic) => [topic.id, topic]));
+  return {
+    ...category,
+    topics: canonicalIds.map((id) => topicById.get(id)).filter((topic): topic is TopicEntry => Boolean(topic)),
+  };
+});

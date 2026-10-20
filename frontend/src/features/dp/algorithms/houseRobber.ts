@@ -17,67 +17,67 @@ export function runHouseRobber(houses: number[]): AlgorithmExecution<ArrayStep> 
   const arr = [...houses];
 
   steps.push({
-    array: [...arr],
+    array: [...dp],
     description: `Starting House Robber DP. houses=[${arr.join(',')}] (n=${n}). Cannot rob adjacent houses.`,
     codeLine: 1,
-    variables: { n, i: 0 },
+    variables: { n, i: 0, sourceValues: arr.join(','), sourceLabel: 'Houses' },
     callStack: ['main() -> houseRobber(houses)'],
   });
 
   dp[0] = arr[0];
   steps.push({
-    array: [...arr],
+    array: [...dp],
     comparingIndices: [0],
     sortedIndices: [0],
     description: `Base case: dp[0] = houses[0] = ${arr[0]}.`,
     codeLine: 2,
-    variables: { i: 0, 'dp[0]': dp[0] },
+    variables: { i: 0, 'dp[0]': dp[0], sourceValues: arr.join(','), sourceLabel: 'Houses' },
     callStack: ['main() -> houseRobber(houses)'],
   });
 
   if (n > 1) {
     dp[1] = Math.max(arr[0], arr[1]);
     steps.push({
-      array: [...arr],
+      array: [...dp],
       comparingIndices: [0, 1],
       sortedIndices: [0, 1],
       description: `Base case: dp[1] = max(houses[0], houses[1]) = max(${arr[0]}, ${arr[1]}) = ${dp[1]}.`,
       codeLine: 2,
-      variables: { i: 1, 'dp[0]': dp[0], 'dp[1]': dp[1] },
+      variables: { i: 1, 'dp[0]': dp[0], 'dp[1]': dp[1], sourceValues: arr.join(','), sourceLabel: 'Houses' },
       callStack: ['main() -> houseRobber(houses)'],
     });
   }
 
   for (let i = 2; i < n; i++) {
     steps.push({
-      array: [...arr],
+      array: [...dp],
       comparingIndices: [i, i - 1, i - 2],
       sortedIndices: Array.from({ length: i }, (_, k) => k),
       description: `dp[${i}] = max(dp[${i - 1}], dp[${i - 2}] + houses[${i}]) = max(${dp[i - 1]}, ${dp[i - 2]} + ${arr[i]})`,
       codeLine: 3,
-      variables: { i, 'dp[i-1]': dp[i - 1], 'dp[i-2]': dp[i - 2], 'houses[i]': arr[i] },
+      variables: { i, 'dp[i-1]': dp[i - 1], 'dp[i-2]': dp[i - 2], 'houses[i]': arr[i], sourceValues: arr.join(','), sourceLabel: 'Houses' },
       callStack: ['main() -> houseRobber(houses)'],
     });
 
     dp[i] = Math.max(dp[i - 1], dp[i - 2] + arr[i]);
 
     steps.push({
-      array: [...arr],
+      array: [...dp],
       comparingIndices: [i],
       sortedIndices: Array.from({ length: i + 1 }, (_, k) => k),
       description: `dp[${i}] = ${dp[i]}. Cell ${i} finalized.`,
       codeLine: 4,
-      variables: { i, 'dp[i]': dp[i] },
+      variables: { i, 'dp[i]': dp[i], sourceValues: arr.join(','), sourceLabel: 'Houses' },
       callStack: ['main() -> houseRobber(houses)'],
     });
   }
 
   steps.push({
-    array: [...arr],
+    array: [...dp],
     sortedIndices: Array.from({ length: n }, (_, k) => k),
     description: `House Robber complete. Maximum loot = dp[${n - 1}] = ${dp[n - 1]}.`,
     codeLine: 5,
-    variables: { result: dp[n - 1], status: 'COMPLETE' },
+    variables: { result: dp[n - 1], status: 'COMPLETE', sourceValues: arr.join(','), sourceLabel: 'Houses' },
     callStack: ['main() -> houseRobber(houses) [RETURN]'],
   });
 

@@ -41,17 +41,18 @@
 }
 
 .ll-title-text h1 {
-  font-size: 1.35rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
   background: linear-gradient(to right, var(--color-text), var(--color-text-secondary));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .ll-title-text p {
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
   margin: 0.15rem 0 0 0;
 }
@@ -84,7 +85,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   color: var(--color-text);
   width: 100%;
 }
@@ -94,7 +95,7 @@
 }
 
 .ll-shortcut-badge {
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   padding: 0.15rem 0.4rem;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
@@ -135,13 +136,13 @@
 }
 
 .ll-item-name {
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--color-text);
 }
 
 .ll-item-desc {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
@@ -161,7 +162,7 @@
   gap: 0.4rem;
   padding: 0.45rem 0.9rem;
   border-radius: 10px;
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   font-weight: 500;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -217,7 +218,7 @@
   border: none;
   outline: none;
   color: var(--color-text);
-  font-size: 0.82rem;
+  font-size: var(--text-base);
   width: 55px;
   text-align: center;
   font-family: monospace;
@@ -229,7 +230,7 @@
   gap: 0.35rem;
   padding: 0.4rem 0.75rem;
   border-radius: 8px;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -265,6 +266,160 @@
   background: rgba(239, 68, 68, 0.25);
 }
 
+.ll-position-controls {
+  position: relative;
+  color: var(--color-text);
+}
+
+.ll-position-controls > summary {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  list-style-position: inside;
+}
+
+.ll-position-controls > summary:focus-visible,
+.ll-position-controls-body :focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+.ll-position-controls-body {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 0.65rem;
+  width: min(520px, calc(100vw - 32px));
+  padding: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+.ll-position-controls-body label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ll-position-controls-body select,
+.ll-position-controls-body input {
+  min-height: 36px;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-app-bg);
+  color: var(--color-text);
+}
+
+.ll-position-help,
+.ll-input-error {
+  grid-column: 1 / -1;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.ll-input-error {
+  color: #f87171;
+}
+
+.ll-toolbar > .ll-input-error {
+  flex-basis: 100%;
+}
+
+@media (max-width: 620px) {
+  .ll-toolbar {
+    padding: 0.75rem;
+  }
+
+  .ll-toolbar-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    gap: 0.5rem !important;
+    width: 100%;
+    min-width: 0;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+  }
+
+  .ll-toolbar-actions > .ll-input-group,
+  .ll-toolbar-actions > .ll-position-controls,
+  .ll-toolbar-actions > .dataset-mode-selector {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ll-input-group {
+    min-height: 44px;
+  }
+
+  .ll-input-group .ll-input {
+    flex: 1;
+    width: 0;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .ll-toolbar-actions > .ll-btn {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding-inline: 0.4rem;
+    white-space: nowrap;
+  }
+
+  .ll-position-controls > summary {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .ll-position-controls-body {
+    right: auto;
+    left: 0;
+    grid-template-columns: 1fr;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ll-toolbar-actions > .dataset-mode-selector {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-left: 0 !important;
+  }
+
+  .ll-toolbar-actions > .dataset-mode-selector .btn-mode {
+    min-width: 0;
+    justify-content: center;
+    padding-inline: 0.3rem;
+  }
+}
+
 /* ─── MAIN WORKSPACE GRID — OVERRIDDEN BY VisualizerShell.css ─────── */
 /* Local grid commented out to prevent conflict with global grid-template-areas layout */
 /*
@@ -288,11 +443,14 @@
 .ll-canvas-card {
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  height: 440px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--color-app-bg);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .ll-canvas-header {
@@ -305,7 +463,7 @@
 }
 
 .ll-canvas-title {
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--color-text);
   display: flex;
@@ -320,13 +478,104 @@
   justify-content: flex-start;
   padding: 2rem 1.5rem;
   width: 100%;
+  height: 100%;
   max-width: 100%;
   min-width: 0;
-  max-height: 440px;
   overflow-x: auto !important;
   overflow-y: auto !important;
   position: relative;
   box-sizing: border-box;
+}
+
+.ll-canvas-body--staged {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 100%;
+}
+
+.ll-staging-area {
+  width: max-content;
+  min-width: min(100%, 520px);
+  max-width: 100%;
+  margin: 0.2rem 1rem 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px dashed color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+  animation: ll-staging-arrive 220ms ease-out both;
+}
+
+.ll-staging-heading,
+.ll-staging-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ll-staging-heading p {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.ll-staging-kicker {
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.ll-staging-phase {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.ll-staging-track {
+  justify-content: flex-start;
+  min-height: 105px;
+  margin-top: 0.7rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.ll-staging-node {
+  margin: 1.5rem 0 0.5rem;
+  flex: 0 0 auto;
+}
+
+.ll-staging-link-note,
+.ll-staging-unlinked {
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  color: var(--color-text-secondary);
+  font: 600 0.7rem/1.35 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+.ll-promoted-node {
+  animation: ll-node-promote 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes ll-staging-arrive {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ll-node-promote {
+  from { opacity: 0.55; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ─── LINKED LIST SVG & HTML RENDERER ─────────────────────────────── */
@@ -335,7 +584,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 2.5rem 1rem 1.5rem 1rem;
+  padding: 3.2rem 1rem 1.5rem 1rem;
   width: max-content;
   min-width: 100%;
   box-sizing: border-box;
@@ -350,7 +599,7 @@
 /* Floating Pointer Tags */
 .ll-pointer-tags-top {
   position: absolute;
-  top: -36px;
+  top: -42px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -362,7 +611,7 @@
 }
 
 .ll-pointer-badge {
-  font-size: 0.65rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 0.15rem 0.45rem;
   border-radius: 9999px;
@@ -386,6 +635,27 @@
   color: #0f172a;
 }
 
+.badge-current {
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+.ll-pointer-badge[class*="badge-count_"] {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.badge-victim {
+  background: var(--error-color);
+  color: #ffffff;
+}
+
+.badge-winner {
+  background: var(--success-color);
+  color: #ffffff;
+}
+
 .badge-prev, .badge-fast {
   background: #fbbf24;
   color: #0f172a;
@@ -406,17 +676,18 @@
   100% { transform: translateY(0); opacity: 1; }
 }
 
-/* Node Box */
+/* Node Box — two-row layout: data on top, next pointer below */
 .ll-node-box {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px var(--color-shadow, rgba(0, 0, 0, 0.08));
   transition: all 0.25s ease;
   user-select: none;
+  min-width: 100px;
 }
 
 .ll-node-box.status-active {
@@ -444,22 +715,41 @@
 }
 
 .ll-val-compartment {
-  padding: 0.6rem 0.9rem;
-  font-size: 0.95rem;
+  padding: 0.5rem 0.9rem;
+  font-size: var(--text-base);
   font-weight: 700;
   color: var(--color-text);
   min-width: 38px;
   text-align: center;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.ll-val-label {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .ll-ptr-compartment {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 0.6rem;
-  background: rgba(0, 0, 0, 0.08);
-  border-left: 1px solid var(--color-border);
+  padding: 0.4rem 0.7rem;
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-app-bg));
+  border-top: 1px solid var(--color-border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  gap: 0.25rem;
+}
+
+[data-theme="dark"] .ll-ptr-compartment {
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
 }
 
 .ll-ptr-dot {
@@ -467,6 +757,7 @@
   height: 8px;
   border-radius: 50%;
   background: #818cf8;
+  display: none; /* Hidden in new layout — replaced by next text */
 }
 
 /* Arrow Connector */
@@ -482,17 +773,216 @@
   overflow: visible;
 }
 
+.ll-connector-nonlocal {
+  width: 58px;
+  flex: 0 0 58px;
+  color: var(--color-primary);
+  font: 700 0.68rem/1.2 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+.ll-link-change-strip {
+  position: absolute;
+  z-index: 12;
+  left: 1rem;
+  bottom: 0.65rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  max-width: calc(100% - 2rem);
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.ll-link-change-title {
+  color: var(--color-text-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.ll-link-change-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-text-secondary);
+  font: 600 0.68rem/1.3 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+.ll-link-change-old { color: var(--color-danger, #dc2626); text-decoration: line-through; }
+.ll-link-change-new { color: var(--color-success, #059669); }
+
 .ll-null-box {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.4rem 0.7rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed var(--color-border);
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  font-family: monospace;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  background: var(--color-app-bg);
+  border: 2px dashed var(--color-border);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
   margin-left: 0.25rem;
+  letter-spacing: 0.05em;
+}
+
+/* ─── EDUCATIONAL NODE LABEL (N1, N2, N3) ────────────────────────── */
+.ll-node-label {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ─── NEXT POINTER TEXT ──────────────────────────────────────────── */
+.ll-next-text {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.ll-next-arrow {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.ll-next-target {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* Separate visual lanes for algorithms with multiple input/output lists. */
+.ll-lane-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: max-content;
+  min-width: 100%;
+  padding: 0.75rem 0.25rem 1.1rem;
+}
+
+.ll-lane {
+  min-width: 0;
+}
+
+.ll-lane-title {
+  margin: 0 0 0.65rem 0.2rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ll-lane-track {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 100px;
+  padding: 1rem 0.45rem 0.35rem;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
+}
+
+.ll-lane-node-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.ll-lane-node-wrap .ll-node-box {
+  min-width: 116px;
+}
+
+.ll-lane-arrow {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  padding: 0 0.3rem;
+}
+
+.ll-map-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  align-items: start;
+  gap: 0.8rem;
+  width: min(100%, 760px);
+  padding-top: 2.2rem;
+}
+
+.ll-map-track .ll-lane-node-wrap .ll-node-box {
+  width: 100%;
+  min-width: 0;
+}
+
+.ll-lru-operation-group {
+  align-items: flex-start;
+}
+
+.ll-lru-operations {
+  width: min(42vw, 440px);
+  min-width: 260px;
+  min-height: 3.3rem;
+  padding: 0.5rem 0.65rem;
+  resize: vertical;
+  font: 500 var(--text-xs)/1.5 'JetBrains Mono', monospace;
+}
+
+.ll-lane-null {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .ll-lane-stack {
+    padding-inline: 0;
+  }
+
+  .ll-lane-track {
+    margin-inline: -0.25rem;
+  }
+
+  .ll-staging-area {
+    width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+    padding: 0.65rem;
+  }
+
+  .ll-staging-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .ll-staging-track {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-inline: 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ll-staging-area,
+  .ll-promoted-node {
+    animation: none;
+  }
 }

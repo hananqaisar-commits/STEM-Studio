@@ -18,59 +18,278 @@ interface Anchor {
   concept: string;
 }
 
-const ANCHORS: Record<GreedyAlgorithmKey, Anchor> = {
-  activitySelection: {
-    prompt: 'Before it starts: why does sorting by finish time produce an optimal set of non-overlapping activities?',
-    correct: 'An activity that finishes earliest leaves the most room for subsequent activities',
-    distractors: [
-      'Sorting by start time guarantees the same optimality',
-      'The greedy choice only works if all activities have equal duration',
-      'Any sorting order produces the same result since all activities must be checked',
-    ],
-    explanation:
-      'The greedy choice property for activity selection states that picking the activity with the earliest finish time always leads to an optimal solution. This is because an earlier finish leaves the maximum remaining time for future non-overlapping activities.',
-    hint: 'Think about which activity leaves the most room for others.',
-    concept: 'Greedy choice property',
-  },
-  fractionalKnapsack: {
-    prompt: 'Before it starts: why does sorting by value-to-weight ratio yield the optimal fractional knapsack solution?',
-    correct: 'Each unit of capacity should be filled with the highest value-per-unit item available',
-    distractors: [
-      'Sorting by total value alone is sufficient since higher values dominate',
-      'The greedy approach only works for the 0/1 knapsack variant',
-      'Weight should be minimized first, then value maximized as a secondary criterion',
-    ],
-    explanation:
-      'The fractional knapsack has optimal substructure: the remaining capacity after taking the best ratio item must itself be filled optimally. Sorting by v/w ratio ensures every unit of capacity is used for the most valuable content possible, and fractions allow full capacity utilization.',
-    hint: 'Think about value per unit of weight, not total value.',
-    concept: 'Optimal substructure',
-  },
-  jobScheduling: {
-    prompt: 'Before it starts: why should we schedule the highest-profit job first in the greedy job scheduling algorithm?',
-    correct: 'High-profit jobs should claim their latest possible slot first, preserving earlier slots for other jobs',
-    distractors: [
-      'Jobs with the earliest deadline should always be scheduled first regardless of profit',
-      'Profit does not influence scheduling order — only deadlines matter',
-      'Jobs should be scheduled in the earliest available slot to leave later slots open',
-    ],
-    explanation:
-      'By sorting jobs by profit (descending) and placing each in the latest available slot before its deadline, we maximize total profit. High-profit jobs get priority, and using the latest valid slot preserves earlier slots for other jobs that might need them.',
-    hint: 'Think about which jobs you would prioritize if you could only schedule a few.',
-    concept: 'Greedy choice property',
-  },
-  huffmanCoding: {
-    prompt: 'Before it starts: why does Huffman coding merge the two lowest-frequency nodes first?',
-    correct: 'Low-frequency characters should be deeper in the tree so high-frequency characters get shorter codes',
-    distractors: [
-      'Merging the highest-frequency nodes first minimizes the total code length',
-      'The merge order does not affect the optimality of the encoding',
-      'Characters should be merged alphabetically to maintain a canonical tree',
-    ],
-    explanation:
-      'Huffman coding uses a greedy bottom-up approach: merging the two least frequent nodes ensures they end up deepest in the tree with the longest codes. More frequent characters stay closer to the root with shorter codes, minimizing the weighted path length (total encoded size).',
-    hint: 'Think about which characters should have the shortest binary codes.',
-    concept: 'Greedy merging',
-  },
+const ANCHORS: Record<GreedyAlgorithmKey, Anchor[]> = {
+  activitySelection: [
+    {
+      prompt: 'Why does choosing the activity that finishes earliest lead to an optimal solution?',
+      correct: 'It leaves the maximum remaining time for future activities',
+      distractors: [
+        'It always has the shortest duration',
+        'It always starts earlier than every other activity',
+        'It guarantees every activity can be selected',
+      ],
+      explanation:
+        'An earliest-finishing activity leaves the largest possible time window for the remaining compatible activities, which is the key greedy-choice property.',
+      hint: 'Think about how much time remains after the chosen activity.',
+      concept: 'Greedy choice property',
+    },
+    {
+      prompt: 'What must be true before an activity can be selected in activity selection?',
+      correct: 'Its start time must be at or after the last selected activity finishes',
+      distractors: [
+        'Its finish time must be before every other activity starts',
+        'Its duration must be the shortest',
+        'Its start time must be earlier than the last selected start time',
+      ],
+      explanation:
+        'The selected activities must not overlap. Therefore the next activity is compatible when its start is at least the finish time of the previously selected activity.',
+      hint: 'Compare the next start time with the last selected finish time.',
+      concept: 'Compatibility check',
+    },
+    {
+      prompt: 'Why is sorting by start time not the standard greedy rule for activity selection?',
+      correct: 'An early start can still leave less room for later compatible activities',
+      distractors: [
+        'Start times cannot be sorted',
+        'Finish times are irrelevant to scheduling',
+        'Sorting is never needed in greedy algorithms',
+      ],
+      explanation:
+        'Choosing the earliest-starting activity can block many later activities. Earliest finish is the property that safely maximizes the remaining room.',
+      hint: 'Ask which choice preserves the most future options.',
+      concept: 'Greedy ordering',
+    },
+    {
+      prompt: 'What is the objective of the classic activity-selection problem?',
+      correct: 'Select the maximum number of non-overlapping activities',
+      distractors: [
+        'Maximize the total duration of selected activities',
+        'Minimize the number of activities',
+        'Maximize the latest finishing time',
+      ],
+      explanation:
+        'The classic problem asks for the largest compatible set of activities, not the largest total duration or latest finish time.',
+      hint: 'Think about how many activities can fit without overlap.',
+      concept: 'Optimization objective',
+    },
+    {
+      prompt: 'What is the typical time complexity of activity selection when activities are sorted by finish time?',
+      correct: 'O(n log n)',
+      distractors: [
+        'O(n² log n)',
+        'O(log n)',
+        'O(2^n)',
+      ],
+      explanation:
+        'Sorting takes O(n log n), followed by a linear scan to select compatible activities, so the total is O(n log n).',
+      hint: 'Separate the sorting cost from the scan.',
+      concept: 'Complexity',
+    },
+  ],
+
+  fractionalKnapsack: [
+    {
+      prompt: 'Why does value-to-weight ratio determine the greedy choice in fractional knapsack?',
+      correct: 'It measures how much value is gained from each unit of capacity',
+      distractors: [
+        'It always identifies the heaviest item',
+        'It guarantees the item has the largest total value',
+        'It ignores the remaining capacity',
+      ],
+      explanation:
+        'Because fractions are allowed, the best strategy is to fill capacity with the highest value per unit of weight first.',
+      hint: 'Think about value gained from one unit of weight.',
+      concept: 'Value density',
+    },
+    {
+      prompt: 'What happens when the next item is heavier than the remaining knapsack capacity?',
+      correct: 'Take the fraction that exactly fills the remaining capacity',
+      distractors: [
+        'Always skip the item',
+        'Take the whole item and exceed capacity',
+        'Restart the algorithm',
+      ],
+      explanation:
+        'Fractional knapsack allows splitting items, so the algorithm takes exactly the fraction that fits the remaining capacity.',
+      hint: 'The problem allows partial items.',
+      concept: 'Fractional choice',
+    },
+    {
+      prompt: 'Why is the greedy ratio strategy optimal for fractional knapsack but not generally for 0/1 knapsack?',
+      correct: 'Fractional items can be split, so every unit of capacity can use the best available ratio',
+      distractors: [
+        '0/1 knapsack has no weights',
+        'Fractional knapsack ignores item values',
+        '0/1 knapsack always has equal item ratios',
+      ],
+      explanation:
+        'Splitting items lets fractional knapsack continuously fill capacity with the best value density. In 0/1 knapsack, an item must be taken whole or rejected, so the local ratio choice can block a better combination.',
+      hint: 'The ability to take part of an item is the key difference.',
+      concept: 'Greedy limitation',
+    },
+    {
+      prompt: 'What is the first major preprocessing step in the fractional knapsack greedy solution?',
+      correct: 'Sort items by decreasing value-to-weight ratio',
+      distractors: [
+        'Sort items by increasing weight only',
+        'Sort items by total value only',
+        'Sort items alphabetically',
+      ],
+      explanation:
+        'The greedy rule depends on value density, so items are ordered from highest to lowest value-to-weight ratio before filling capacity.',
+      hint: 'The algorithm needs the best value per unit of capacity first.',
+      concept: 'Greedy ordering',
+    },
+    {
+      prompt: 'What is the typical time complexity of fractional knapsack using sorting?',
+      correct: 'O(n log n)',
+      distractors: [
+        'O(n²)',
+        'O(2^n)',
+        'O(log n)',
+      ],
+      explanation:
+        'Sorting by ratio costs O(n log n), followed by a linear scan through the items.',
+      hint: 'Sorting is the dominant operation.',
+      concept: 'Complexity',
+    },
+  ],
+
+  jobScheduling: [
+    {
+      prompt: 'What is the main objective of job sequencing with deadlines?',
+      correct: 'Maximize total profit while completing each scheduled job before its deadline',
+      distractors: [
+        'Minimize the number of jobs regardless of profit',
+        'Minimize every job’s deadline',
+        'Schedule jobs alphabetically',
+      ],
+      explanation:
+        'The goal is to choose profitable jobs and assign feasible one-unit time slots so the total profit is maximized.',
+      hint: 'There are two constraints: profit and deadlines.',
+      concept: 'Optimization objective',
+    },
+    {
+      prompt: 'Why are jobs considered in decreasing order of profit?',
+      correct: 'Higher-profit jobs deserve priority when available slots are limited',
+      distractors: [
+        'Higher-profit jobs always have earlier deadlines',
+        'Profit has no effect on the objective',
+        'It guarantees every job will fit',
+      ],
+      explanation:
+        'Since only one job can occupy a slot, prioritizing larger profits helps maximize the total profit collected.',
+      hint: 'Imagine there are fewer slots than jobs.',
+      concept: 'Greedy choice',
+    },
+    {
+      prompt: 'Why does the standard algorithm place a selected job in the latest available slot before its deadline?',
+      correct: 'It preserves earlier slots for jobs with tighter deadlines',
+      distractors: [
+        'Earlier slots are always more profitable',
+        'Latest slots have lower cost',
+        'The job must always start at time zero',
+      ],
+      explanation:
+        'Using the latest feasible slot leaves earlier slots available for jobs that may have smaller deadlines.',
+      hint: 'Think about preserving flexibility for other jobs.',
+      concept: 'Latest-slot placement',
+    },
+    {
+      prompt: 'What happens when no slot is available on or before a job’s deadline?',
+      correct: 'The job is skipped',
+      distractors: [
+        'The deadline is increased',
+        'Another job is automatically deleted',
+        'The job is scheduled after its deadline',
+      ],
+      explanation:
+        'A job that cannot fit within its deadline cannot be scheduled legally, so the algorithm leaves it out.',
+      hint: 'Deadlines are constraints, not suggestions.',
+      concept: 'Deadline handling',
+    },
+    {
+      prompt: 'What is the common time complexity of the simple job-sequencing implementation that scans slots?',
+      correct: 'O(n²)',
+      distractors: [
+        'O(log n)',
+        'O(n)',
+        'O(2^n)',
+      ],
+      explanation:
+        'After sorting jobs by profit, the simple implementation may scan up to O(n) slots for each of O(n) jobs.',
+      hint: 'Consider a nested job scan plus slot scan.',
+      concept: 'Complexity',
+    },
+  ],
+
+  huffmanCoding: [
+    {
+      prompt: 'Why does Huffman coding repeatedly merge the two lowest-frequency nodes?',
+      correct: 'Low-frequency symbols can tolerate longer codes without increasing total cost as much',
+      distractors: [
+        'High-frequency symbols should always be deepest',
+        'The two highest-frequency nodes give the shortest tree',
+        'Frequency has no effect on code length',
+      ],
+      explanation:
+        'The least-frequent symbols are placed deeper in the tree, while frequent symbols stay closer to the root and receive shorter codes.',
+      hint: 'Which symbols should pay the cost of extra code bits?',
+      concept: 'Greedy merging',
+    },
+    {
+      prompt: 'What property of Huffman codes prevents one codeword from being a prefix of another?',
+      correct: 'The codes form a prefix-free binary tree',
+      distractors: [
+        'All codewords have equal length',
+        'Every character receives the same bit sequence',
+        'Codes are sorted alphabetically',
+      ],
+      explanation:
+        'Leaves of the Huffman tree represent codewords, so no leaf-to-root code is a prefix of another leaf code.',
+      hint: 'Think about how leaf paths differ in a binary tree.',
+      concept: 'Prefix-free coding',
+    },
+    {
+      prompt: 'What data structure is typically used to repeatedly find the two minimum-frequency nodes?',
+      correct: 'A min-heap priority queue',
+      distractors: [
+        'A FIFO queue',
+        'A stack',
+        'A hash table only',
+      ],
+      explanation:
+        'A min-heap efficiently returns the two smallest frequencies for each merge and allows the combined node to be inserted again.',
+      hint: 'You repeatedly need the smallest key.',
+      concept: 'Priority queue',
+    },
+    {
+      prompt: 'What happens after Huffman merges two nodes with frequencies f1 and f2?',
+      correct: 'A new parent node with frequency f1 + f2 is inserted back',
+      distractors: [
+        'Both nodes are permanently discarded',
+        'Only the larger node is kept',
+        'Their frequencies are replaced with zero',
+      ],
+      explanation:
+        'The combined node represents the subtree formed by the two children and becomes a candidate for future merges.',
+      hint: 'The tree is built bottom-up.',
+      concept: 'Tree construction',
+    },
+    {
+      prompt: 'What is the typical time complexity of Huffman coding with a min-heap?',
+      correct: 'O(n log n)',
+      distractors: [
+        'O(n² log n)',
+        'O(n)',
+        'O(2^n)',
+      ],
+      explanation:
+        'There are O(n) merge operations, each involving logarithmic heap operations, giving O(n log n).',
+      hint: 'Count repeated heap extract/insert operations.',
+      concept: 'Complexity',
+    },
+  ],
 };
 
 /* ── Mid-execution question generators ──────────────────────────────────
@@ -211,10 +430,12 @@ export function buildGreedyCheckpoints(
   if (steps.length < 2) return [];
 
   const checkpoints: QuizCheckpoint[] = [];
-  const anchor = ANCHORS[algorithm];
+  const anchors = ANCHORS[algorithm];
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
 
-  // Anchor question at step 0
-  const anchorId = `greedy-${algorithm}-anchor`;
+  // Deterministic conceptual anchor at step 0.
+  const anchorId = `greedy-${algorithm}-anchor-${anchorIndex}`;
   const anchorOptions = buildOptions(anchorId, anchor.correct, anchor.distractors);
   checkpoints.push({
     stepIndex: 0,

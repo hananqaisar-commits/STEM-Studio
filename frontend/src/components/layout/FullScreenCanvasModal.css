@@ -6,7 +6,7 @@
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  z-index: 999999 !important;
+  z-index: 10000 !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
@@ -16,7 +16,12 @@
   padding: 0 !important;
   background-color: var(--color-app-bg);
   color: var(--color-text);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), margin-right 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, color 0.3s ease !important;
+}
+
+.fs-modal-overlay.tutor-open {
+  width: calc(100vw - 420px) !important;
+  margin-right: 420px !important;
 }
 
 .fs-modal-overlay .fs-modal-header {
@@ -219,10 +224,6 @@
   border-color: #93c5fd !important;
 }
 
-/* Predict toggle in Light Mode */
-.theme-light .predict-toggle-label {
-  color: #b45309 !important;
-}
 
 .theme-light .quiz-mode-btn {
   color: #b45309 !important;
@@ -246,7 +247,7 @@
   backdrop-filter: blur(16px);
   gap: 1.5rem !important;
   z-index: 100;
-  flex-wrap: nowrap !important;
+  flex-wrap: wrap !important;
 }
 
 .fs-header-branding {
@@ -257,7 +258,7 @@
 
 .fs-modal-title {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 0.9rem !important;
+  font-size: var(--text-base) !important;
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
   text-transform: uppercase;
@@ -265,7 +266,7 @@
 }
 
 .fs-modal-subtitle {
-  font-size: 0.68rem !important;
+  font-size: var(--text-xs) !important;
   opacity: 0.75;
   font-family: 'JetBrains Mono', monospace !important;
   white-space: nowrap;
@@ -279,7 +280,8 @@
   justify-content: center !important;
   gap: 0.75rem !important;
   flex: 1 !important;
-  flex-wrap: nowrap !important;
+  flex-wrap: wrap !important;
+  min-width: 0 !important;
 }
 
 .fs-floating-controls {
@@ -287,7 +289,8 @@
   flex-direction: row !important;
   align-items: center !important;
   gap: 0.65rem !important;
-  flex-wrap: nowrap !important;
+  flex-wrap: wrap !important;
+  min-width: 0 !important;
 }
 
 /* Actions Zone - Light/Dark & Exit Fullscreen Buttons Strictly Side-by-Side */
@@ -301,8 +304,11 @@
   white-space: nowrap !important;
 }
 
+.fs-explanation-toggle {
+  flex: 0 0 auto !important;
+}
+
 /* Fullscreen is deliberately a focused visualization workspace. */
-.fs-modal-toolbar .predict-toggle-label,
 .fs-modal-toolbar .quiz-mode-btn,
 .fs-modal-toolbar .viz-action-quiz {
   display: none !important;
@@ -319,7 +325,7 @@
   padding: 0.45rem 0.9rem !important;
   border-radius: 8px !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 0.75rem !important;
+  font-size: var(--text-xs) !important;
   font-weight: 700 !important;
   cursor: pointer !important;
   border: 1px solid transparent !important;
@@ -376,17 +382,72 @@
   box-sizing: border-box;
 }
 
+/* The explanation is its own document-flow row, never an overlay on the canvas. */
+.fs-explanation-card {
+  width: min(100%, 1100px);
+  margin: 0 auto 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.fs-explanation-card .explanation-panel {
+  max-height: min(42vh, 420px);
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .fs-modal-header {
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  .fs-modal-toolbar {
+    order: 4;
+    flex-basis: 100%;
+    justify-content: flex-start !important;
+  }
+
+  .fs-header-actions {
+    margin-left: 0 !important;
+  }
+}
+
 /* Force canvas container inside modal body to stretch full size */
 .fs-workspace-scrollable .bst-canvas-container,
-.fs-workspace-scrollable .sorting-canvas-container {
+.fs-workspace-scrollable .sorting-canvas-container,
+.fs-workspace-scrollable .shared-canvas-container,
+.fs-workspace-scrollable .graph-canvas-container,
+.fs-workspace-scrollable .recursion-canvas-container,
+.fs-workspace-scrollable .tree-canvas-container,
+.fs-workspace-scrollable .bt-container,
+.fs-workspace-scrollable .bt-renderer,
+.fs-workspace-scrollable .backtracking-container,
+.fs-workspace-scrollable .ll-canvas-card,
+.fs-workspace-scrollable .bs-canvas-card,
+.fs-workspace-scrollable .bst-canvas-card,
+.fs-workspace-scrollable .hashmap-renderer-root {
   min-height: calc(100vh - 160px) !important;
   height: 100% !important;
+  width: 100% !important;
+  max-height: none !important;
   display: flex !important;
   flex-direction: column !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .fs-workspace-scrollable .bst-canvas-workspace,
-.fs-workspace-scrollable .bars-canvas {
+.fs-workspace-scrollable .bars-canvas,
+.fs-workspace-scrollable .decisiontree-workspace,
+.fs-workspace-scrollable .decisiontree-canvas-area,
+.fs-workspace-scrollable .grid2d-workspace,
+.fs-workspace-scrollable .graph-canvas-body,
+.fs-workspace-scrollable .recursion-tree-workspace,
+.fs-workspace-scrollable .string-cells-canvas {
   flex: 1 !important;
   min-height: calc(100vh - 230px) !important;
 }
@@ -416,4 +477,13 @@
   padding: 0.6rem 1.25rem;
   backdrop-filter: blur(12px);
   z-index: 100;
+}
+
+/* Phase 6: Mobile Fullscreen horizontal scroll fix */
+@media (max-width: 1024px) {
+  .fs-modal-body,
+  .fs-workspace-scrollable {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
 }

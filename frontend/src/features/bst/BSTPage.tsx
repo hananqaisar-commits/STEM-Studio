@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Maximize2, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary } from 'lucide-react';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
+import { Plus, Search, Maximize2, ListOrdered, GitCommit, CornerDownRight, Sparkles, Layers, Trash2, ArrowUp, ArrowDown, Network, Scale, Binary, DatabaseZap, TreePine } from 'lucide-react';
 import { BSTRenderer } from './BSTRenderer';
+import { IntervalTreeRenderer } from '../../components/renderers/IntervalTreeRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
@@ -9,6 +12,8 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
@@ -19,6 +24,7 @@ import type { QuizCadence } from '../../engine/types/Quiz';
 import {
   generateBSTInsertSteps,
   generateBSTSearchSteps,
+  generateBSTDeleteSteps,
   generateBSTInorderSteps,
   generateBSTPreorderSteps,
   generateBSTPostorderSteps,
@@ -32,12 +38,48 @@ import { generateHeapInsertSteps, generateHeapExtractSteps } from './heapEngine'
 import type { HeapType } from './heapEngine';
 import { generateTrieInsertSteps, generateTrieSearchSteps, createTrieRoot } from './trieEngine';
 import type { TrieNodeStructure } from './trieEngine';
+import { generateRBInsertSteps, buildSampleRBTree } from './rbTreeEngine';
+import type { RBNodeStructure } from './rbTreeEngine';
+import {
+  generateSegTreeBuildSteps,
+  generateSegTreeQuerySteps,
+  generateSegTreeUpdateSteps,
+} from './segmentTreeEngine';
+import type { SegTreeNode, SegTreeStep } from './segmentTreeEngine';
 
 import './BST.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList, parseStringList } from '../../utils/batchInputParser';
+import { useTutorContext } from '../../contexts/TutorContext';
 
-type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie';
+type TreeCategory = 'bst' | 'avl' | 'heap' | 'trie' | 'rbt' | 'segTree';
+
+const TREE_CATEGORY_LABELS: Record<TreeCategory, string> = {
+  bst: 'Binary Search Tree',
+  avl: 'AVL Tree',
+  heap: 'Binary Heap',
+  trie: 'Trie',
+  rbt: 'Red-Black Tree',
+  segTree: 'Segment Tree',
+};
+
+const TREE_OPERATION_LABELS: Record<BSTAlgorithmKey, string> = {
+  insert: 'Insertion',
+  search: 'Search',
+  delete: 'Deletion',
+  inorder: 'In-order traversal',
+  preorder: 'Pre-order traversal',
+  postorder: 'Post-order traversal',
+  avlInsert: 'Insertion',
+  heapInsert: 'Heap insertion',
+  heapExtract: 'Extract maximum',
+  trieInsert: 'Trie insertion',
+  trieSearch: 'Trie search',
+  rbtInsert: 'Insertion',
+  segBuild: 'Build',
+  segQuery: 'Range query',
+  segUpdate: 'Point update',
+};
 
 const DEFAULT_BST_TREE: BSTTreeStructure = {
   value: 50,
@@ -60,19 +102,24 @@ const SAMPLE_TRIE_WORDS = ['cat', 'car', 'card', 'dog', 'dot'];
 const RANDOM_WORD_POOL = ['apple', 'app', 'code', 'coder', 'tree', 'trie', 'data', 'algo', 'node', 'heap'];
 
 export const BSTPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
   // Tracks the last-run operation so the quiz revision card matches what is visualized.
   const [revisionKey, setRevisionKey] = useState<BSTAlgorithmKey>('insert');
   const [searchParams] = useSearchParams();
   useEffect(() => {
     const topic = searchParams.get('topic');
-    if (topic && ['bst', 'avl', 'heap', 'trie'].includes(topic)) {
+    if (topic && ['bst', 'avl', 'heap', 'trie', 'rbt', 'segTree'].includes(topic)) {
       setTreeCategory(topic as TreeCategory);
     }
   }, [searchParams]);
 
-  const [inputValue, setInputValue] = useState<string>('20, 10, 30, 5, 15');
+  const [inputValue, setInputValue] = useState<string>('45');
   const [wordValue, setWordValue] = useState<string>('cat, car, dog');
+  const [segInputValue, setSegInputValue] = useState<string>('1, 3, 5, 7, 9, 11');
+  const [segQueryRange, setSegQueryRange] = useState<{ start: number; end: number }>({ start: 1, end: 4 });
+  const [segUpdateIndex, setSegUpdateIndex] = useState<number>(2);
+  const [segUpdateValue, setSegUpdateValue] = useState<number>(6);
   const [inputError, setInputError] = useState<string | null>(null);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
@@ -86,20 +133,37 @@ export const BSTPage: React.FC = () => {
   const [heapArray, setHeapArray] = useState<number[]>([90, 75, 60, 40, 55, 20]);
   const [heapType, setHeapType] = useState<HeapType>('max');
   const [trieRoot, setTrieRoot] = useState<TrieNodeStructure>(createTrieRoot());
+  // RBT state
+  const [rbtTree, setRbtTree] = useState<RBNodeStructure | undefined>(() => buildSampleRBTree());
+  // Segment Tree state
+  const [segArray, setSegArray] = useState<number[]>([1, 3, 5, 7, 9, 11]);
+  const [segTree, setSegTree] = useState<SegTreeNode | undefined>(undefined);
+  const [segTreeSteps, setSegTreeSteps] = useState<SegTreeStep[]>([]);
+  const [activeSegStep, setActiveSegStep] = useState<SegTreeStep | null>(null);
+  const isSegTreeMode = treeCategory === 'segTree';
+
 
   // Initialize steps when switching category
   useEffect(() => {
     if (treeCategory === 'bst') {
+      setRevisionKey('insert');
+      setInputValue('45');
       const { steps } = generateBSTInsertSteps(DEFAULT_BST_TREE, 45);
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'avl') {
+      setRevisionKey('avlInsert');
+      setInputValue('30');
       const { steps, newTree } = generateAVLInsertSteps(undefined, 30);
       setAvlTree(newTree);
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'heap') {
+      setRevisionKey('heapInsert');
+      setInputValue('85');
       const { steps } = generateHeapInsertSteps([90, 75, 60, 40, 55, 20], 85, 'max');
       setActiveOperationSteps(steps);
     } else if (treeCategory === 'trie') {
+      setRevisionKey('trieInsert');
+      setWordValue('cat');
       let root = createTrieRoot();
       SAMPLE_TRIE_WORDS.forEach((w) => {
         const res = generateTrieInsertSteps(root, w);
@@ -108,8 +172,34 @@ export const BSTPage: React.FC = () => {
       setTrieRoot(root);
       const { steps } = generateTrieInsertSteps(root, 'cat');
       setActiveOperationSteps(steps);
+    } else if (treeCategory === 'rbt') {
+      setRevisionKey('rbtInsert');
+      setInputValue('25');
+      // Show insertion of 25 into sample tree
+      const sampleTree = buildSampleRBTree();
+      setRbtTree(sampleTree);
+      const { steps, newTree } = generateRBInsertSteps(sampleTree, 25);
+      setRbtTree(newTree);
+      setActiveOperationSteps(steps);
+    } else if (treeCategory === 'segTree') {
+      const arr = [1, 3, 5, 7, 9, 11];
+      setRevisionKey('segBuild');
+      setSegInputValue(arr.join(', '));
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
   }, [treeCategory]);
+
+  // Sync SegTree steps length into the standard player via proxy array
+  const segTreePlayerProxy = React.useMemo(
+    () => segTreeSteps.map(() => ({} as BSTStep)),
+    [segTreeSteps]
+  );
+  const effectiveSteps = isSegTreeMode ? segTreePlayerProxy : activeOperationSteps;
 
   const {
     currentStepIndex,
@@ -121,10 +211,33 @@ export const BSTPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
-    } = useStepPlayer({ steps: activeOperationSteps });
+    seekTo,
+    } = useStepPlayer({ steps: effectiveSteps });
 
-  const bstStep = currentStep as BSTStep | null;
+  const bstStep = isSegTreeMode ? null : (currentStep as BSTStep | null);
+  const currentSegStep = isSegTreeMode ? (segTreeSteps[currentStepIndex] ?? activeSegStep) : null;
+  const tutorCurrentStep = isSegTreeMode ? currentSegStep : bstStep;
+  const tutorSteps = isSegTreeMode ? segTreeSteps : activeOperationSteps;
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    setTutorContext({
+      algorithmName: `${TREE_CATEGORY_LABELS[treeCategory]} — ${TREE_OPERATION_LABELS[revisionKey]}`,
+      algorithmId: treeCategory,
+      category: 'bst',
+      currentStepDescription: tutorCurrentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep: tutorCurrentStep,
+      steps: tutorSteps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [treeCategory, revisionKey, currentStepIndex, totalSteps, tutorCurrentStep, tutorSteps, setTutorContext, play, pause, stepForward, reset]);
 
   usePlaybackShortcuts({
     handlers: {
@@ -190,6 +303,31 @@ export const BSTPage: React.FC = () => {
     setRevisionKey('search');
     const steps = generateBSTSearchSteps(bstTree, num);
     setActiveOperationSteps(steps);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  const handleBSTDelete = () => {
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) {
+      setInputError('Please enter valid numeric values');
+      return;
+    }
+    setInputError(null);
+    setRevisionKey('delete');
+
+    let currentTree = bstTree;
+    const allSteps: BSTStep[] = [];
+    for (const num of nums) {
+      const { steps, newTree } = generateBSTDeleteSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+
+    setBstTree(currentTree);
+    setActiveOperationSteps(allSteps);
     reset();
     quizSession.resetSession();
     if (!quizEnabled) play();
@@ -298,6 +436,70 @@ export const BSTPage: React.FC = () => {
     if (!quizEnabled) play();
   };
 
+  // ─── RBT OPERATIONS ───────────────────────────────────────────────────────
+  const handleRBTInsert = () => {
+    const parseRes = parseNumberList(inputValue);
+    const nums = parseRes.isValid ? parseRes.values : [Number(inputValue)].filter((n) => !isNaN(n));
+    if (nums.length === 0) { setInputError('Please enter valid numeric values'); return; }
+    setInputError(null);
+    setRevisionKey('insert');
+
+    let currentTree = rbtTree;
+    const allSteps: BSTStep[] = [];
+    for (const num of nums) {
+      const { steps, newTree } = generateRBInsertSteps(currentTree, num);
+      allSteps.push(...steps);
+      currentTree = newTree;
+    }
+    setRbtTree(currentTree);
+    setActiveOperationSteps(allSteps);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  // ─── SEGMENT TREE OPERATIONS ──────────────────────────────────────────────
+  const handleSegBuild = () => {
+    const parseRes = parseNumberList(segInputValue);
+    const arr = parseRes.isValid ? parseRes.values : [1, 3, 5, 7, 9, 11];
+    if (arr.length === 0) { setInputError('Enter array values'); return; }
+    setInputError(null);
+    setSegArray(arr);
+    const { steps, tree } = generateSegTreeBuildSteps(arr);
+    setSegTree(tree);
+    setSegTreeSteps(steps);
+    setActiveSegStep(steps[steps.length - 1] ?? null);
+    setActiveOperationSteps([]);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  const handleSegQuery = () => {
+    if (!segTree) { handleSegBuild(); return; }
+    const steps = generateSegTreeQuerySteps(segTree, segArray, segQueryRange.start, segQueryRange.end);
+    setSegTreeSteps(steps);
+    setActiveSegStep(steps[0] ?? null);
+    setActiveOperationSteps([]);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+  const handleSegUpdate = () => {
+    if (!segTree) { handleSegBuild(); return; }
+    const { steps, newTree, newArr } = generateSegTreeUpdateSteps(segTree, segArray, segUpdateIndex, segUpdateValue);
+    setSegTree(newTree);
+    setSegArray(newArr);
+    setSegTreeSteps(steps);
+    setActiveSegStep(steps[0] ?? null);
+    setActiveOperationSteps([]);
+    reset();
+    quizSession.resetSession();
+    if (!quizEnabled) play();
+  };
+
+
   // ─── BATCH BUILD COMPLETE DATASET FROM SCRATCH ────────────────────────────
   const handleBuildTreeFromScratch = () => {
     setInputError(null);
@@ -349,6 +551,27 @@ export const BSTPage: React.FC = () => {
       }
       setTrieRoot(currentRoot);
       setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'rbt') {
+      const parseRes = parseNumberList(inputValue);
+      const nums = parseRes.isValid ? parseRes.values : [10, 20, 30, 15, 5];
+      let currentTree: RBNodeStructure | undefined = undefined;
+      const allSteps: BSTStep[] = [];
+      for (const num of nums) {
+        const { steps, newTree } = generateRBInsertSteps(currentTree, num);
+        allSteps.push(...steps);
+        currentTree = newTree;
+      }
+      setRbtTree(currentTree);
+      setActiveOperationSteps(allSteps);
+    } else if (treeCategory === 'segTree') {
+      const parseRes = parseNumberList(segInputValue);
+      const arr = parseRes.isValid ? parseRes.values : [1, 3, 5, 7, 9, 11];
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
     reset();
     quizSession.resetSession();
@@ -361,6 +584,8 @@ export const BSTPage: React.FC = () => {
     if (treeCategory === 'avl') setAvlTree(undefined);
     if (treeCategory === 'heap') setHeapArray([]);
     if (treeCategory === 'trie') setTrieRoot(createTrieRoot());
+    if (treeCategory === 'rbt') setRbtTree(undefined);
+    if (treeCategory === 'segTree') { setSegTree(undefined); setSegArray([]); setSegTreeSteps([]); setActiveSegStep(null); }
     setActiveOperationSteps([]);
     reset();
     quizSession.resetSession();
@@ -368,9 +593,13 @@ export const BSTPage: React.FC = () => {
 
   const handleSampleTree = () => {
     if (treeCategory === 'bst') {
+      setRevisionKey('insert');
+      setInputValue('45');
       setBstTree(DEFAULT_BST_TREE);
       setActiveOperationSteps(generateBSTInsertSteps(DEFAULT_BST_TREE, 45).steps);
     } else if (treeCategory === 'avl') {
+      setRevisionKey('avlInsert');
+      setInputValue('50');
       let tree: AVLNodeStructure | undefined = undefined;
       let lastSteps: BSTStep[] = [];
       [30, 20, 40, 10, 25, 35, 50].forEach((v) => {
@@ -382,9 +611,13 @@ export const BSTPage: React.FC = () => {
       setActiveOperationSteps(lastSteps);
     } else if (treeCategory === 'heap') {
       const sample = [90, 75, 60, 40, 55, 20];
+      setRevisionKey('heapInsert');
+      setInputValue('85');
       setHeapArray(sample);
       setActiveOperationSteps(generateHeapInsertSteps(sample, 85, heapType).steps);
     } else if (treeCategory === 'trie') {
+      setRevisionKey('trieInsert');
+      setWordValue('cat');
       let root = createTrieRoot();
       SAMPLE_TRIE_WORDS.forEach((w) => {
         const res = generateTrieInsertSteps(root, w);
@@ -392,6 +625,24 @@ export const BSTPage: React.FC = () => {
       });
       setTrieRoot(root);
       setActiveOperationSteps(generateTrieInsertSteps(root, 'cat').steps);
+    } else if (treeCategory === 'rbt') {
+      setRevisionKey('rbtInsert');
+      setInputValue('25');
+      const sample = buildSampleRBTree();
+      setRbtTree(sample);
+      const { steps, newTree } = generateRBInsertSteps(sample, 25);
+      setRbtTree(newTree);
+      setActiveOperationSteps(steps);
+    } else if (treeCategory === 'segTree') {
+      const arr = [1, 3, 5, 7, 9, 11];
+      setRevisionKey('segBuild');
+      setSegInputValue(arr.join(', '));
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
     reset();
     quizSession.resetSession();
@@ -400,33 +651,68 @@ export const BSTPage: React.FC = () => {
   const handleRandomTree = () => {
     if (treeCategory === 'bst') {
       const rnd = generateRandomBST(6);
+      const insertedValue = Math.floor(Math.random() * 80) + 10;
+      setRevisionKey('insert');
+      setInputValue(String(insertedValue));
       setBstTree(rnd);
-      setActiveOperationSteps(generateBSTInsertSteps(rnd, Math.floor(Math.random() * 80) + 10).steps);
+      setActiveOperationSteps(generateBSTInsertSteps(rnd, insertedValue).steps);
     } else if (treeCategory === 'avl') {
       let tree: AVLNodeStructure | undefined = undefined;
       let lastSteps: BSTStep[] = [];
+      let lastValue = 0;
       for (let i = 0; i < 6; i++) {
-        const v = Math.floor(Math.random() * 80) + 10;
-        const res = generateAVLInsertSteps(tree, v);
+        lastValue = Math.floor(Math.random() * 80) + 10;
+        const res = generateAVLInsertSteps(tree, lastValue);
         tree = res.newTree;
         lastSteps = res.steps;
       }
+      setRevisionKey('avlInsert');
+      setInputValue(String(lastValue));
       setAvlTree(tree);
       setActiveOperationSteps(lastSteps);
     } else if (treeCategory === 'heap') {
       const rndArr = Array.from({ length: 6 }, () => Math.floor(Math.random() * 85) + 10);
+      const insertedValue = Math.floor(Math.random() * 85) + 10;
+      setRevisionKey('heapInsert');
+      setInputValue(String(insertedValue));
       setHeapArray(rndArr);
-      setActiveOperationSteps(generateHeapInsertSteps(rndArr, Math.floor(Math.random() * 85) + 10, heapType).steps);
+      setActiveOperationSteps(generateHeapInsertSteps(rndArr, insertedValue, heapType).steps);
     } else if (treeCategory === 'trie') {
       let root = createTrieRoot();
       const count = 4;
       const shuffled = [...RANDOM_WORD_POOL].sort(() => 0.5 - Math.random()).slice(0, count);
+      setRevisionKey('trieInsert');
+      setWordValue(shuffled[0]);
       shuffled.forEach((w) => {
         const res = generateTrieInsertSteps(root, w);
         root = res.newRoot;
       });
       setTrieRoot(root);
       setActiveOperationSteps(generateTrieInsertSteps(root, shuffled[0]).steps);
+    } else if (treeCategory === 'rbt') {
+      let tree: RBNodeStructure | undefined = undefined;
+      let lastSteps: BSTStep[] = [];
+      let lastValue = 0;
+      for (let i = 0; i < 5; i++) {
+        lastValue = Math.floor(Math.random() * 80) + 10;
+        const res = generateRBInsertSteps(tree, lastValue);
+        tree = res.newTree;
+        lastSteps = res.steps;
+      }
+      setRevisionKey('rbtInsert');
+      setInputValue(String(lastValue));
+      setRbtTree(tree);
+      setActiveOperationSteps(lastSteps);
+    } else if (treeCategory === 'segTree') {
+      const arr = Array.from({ length: 6 }, () => Math.floor(Math.random() * 20) + 1);
+      setRevisionKey('segBuild');
+      setSegInputValue(arr.join(', '));
+      setSegArray(arr);
+      const { steps, tree } = generateSegTreeBuildSteps(arr);
+      setSegTree(tree);
+      setSegTreeSteps(steps);
+      setActiveSegStep(steps[steps.length - 1] ?? null);
+      setActiveOperationSteps([]);
     }
     reset();
   };
@@ -442,100 +728,189 @@ export const BSTPage: React.FC = () => {
   };
 
 
-  // Shared Floating Header Controls for FullScreen Modal
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      {treeCategory !== 'trie' ? (
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          className="bst-input"
-          style={{ width: '130px' }}
-          placeholder="e.g. 20, 10, 30"
-        />
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {treeCategory === 'segTree' ? (
+        <>
+          <div className="bst-input-group" title="Enter array of values (e.g. 1, 3, 5, 7, 9, 11)">
+            <span style={{ fontWeight: 600 }}>Array:</span>
+            <input
+              type="text"
+              value={segInputValue}
+              onChange={(e) => {
+                setSegInputValue(e.target.value);
+                if (inputError) setInputError(null);
+              }}
+              className="bst-input"
+              placeholder="e.g. 1, 3, 5, 7"
+              style={{ minWidth: '130px' }}
+            />
+          </div>
+        </>
+      ) : treeCategory !== 'trie' ? (
+        <div className="bst-input-group" title="Enter comma-separated values (e.g. 20, 10, 30, 5, 15)">
+          <span style={{ fontWeight: 600 }}>Values:</span>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              if (inputError) setInputError(null);
+            }}
+            className="bst-input"
+            placeholder="e.g. 20, 10, 30, 5, 15"
+            style={{ minWidth: '150px' }}
+          />
+        </div>
       ) : (
-        <input
-          type="text"
-          value={wordValue}
-          onChange={(e) => setWordValue(e.target.value)}
-          className="bst-input"
-          style={{ width: '130px' }}
-          placeholder="e.g. cat, car"
-        />
+        <div className="bst-input-group" title="Enter comma-separated words (e.g. cat, car, dog)">
+          <span style={{ fontWeight: 600 }}>Words:</span>
+          <input
+            type="text"
+            value={wordValue}
+            onChange={(e) => {
+              setWordValue(e.target.value);
+              if (inputError) setInputError(null);
+            }}
+            className="bst-input"
+            placeholder="e.g. cat, car, dog"
+            style={{ minWidth: '150px' }}
+          />
+        </div>
+      )}
+
+      <button className="bst-btn btn-mode" onClick={handleBuildTreeFromScratch} title="Build dataset sequentially from scratch">
+        <Sparkles size={14} className="text-amber-400" />
+        <span>Build Dataset</span>
+      </button>
+
+      {treeCategory === 'segTree' && (
+        <>
+          <div className="bst-input-group" style={{ marginLeft: '8px' }}>
+            <span style={{ fontSize: '0.75rem' }}>Query [</span>
+            <input type="number" className="bst-input" style={{ width: '40px', padding: '2px 4px' }} value={segQueryRange.start} onChange={e => setSegQueryRange({ ...segQueryRange, start: parseInt(e.target.value) || 0 })} />
+            <span style={{ fontSize: '0.75rem' }}>,</span>
+            <input type="number" className="bst-input" style={{ width: '40px', padding: '2px 4px' }} value={segQueryRange.end} onChange={e => setSegQueryRange({ ...segQueryRange, end: parseInt(e.target.value) || 0 })} />
+            <span style={{ fontSize: '0.75rem' }}>]</span>
+          </div>
+          <button className="bst-btn btn-search" onClick={handleSegQuery}>
+            <Search size={16} />
+            <span>Range Query</span>
+          </button>
+          <div className="bst-input-group" style={{ marginLeft: '8px' }}>
+            <span style={{ fontSize: '0.75rem' }}>Idx:</span>
+            <input type="number" className="bst-input" style={{ width: '40px', padding: '2px 4px' }} value={segUpdateIndex} onChange={e => setSegUpdateIndex(parseInt(e.target.value) || 0)} />
+            <span style={{ fontSize: '0.75rem', marginLeft: '4px' }}>Val:</span>
+            <input type="number" className="bst-input" style={{ width: '50px', padding: '2px 4px' }} value={segUpdateValue} onChange={e => setSegUpdateValue(parseInt(e.target.value) || 0)} />
+          </div>
+          <button className="bst-btn btn-insert" onClick={handleSegUpdate}>
+            <Plus size={16} />
+            <span>Point Update</span>
+          </button>
+        </>
+      )}
+
+      {treeCategory === 'rbt' && (
+        <button className="bst-btn btn-insert" onClick={handleRBTInsert}>
+          <Plus size={16} />
+          <span>Insert & Fix-up</span>
+        </button>
       )}
 
       {treeCategory === 'bst' && (
-        <div className="flex items-center gap-2">
+        <>
           <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
-            <Plus size={14} />
+            <Plus size={16} />
             <span>Insert</span>
           </button>
           <button className="bst-btn btn-search" onClick={handleBSTSearch}>
-            <Search size={14} />
+            <Search size={16} />
             <span>Search</span>
           </button>
-        </div>
+          <button className="bst-btn btn-search" onClick={handleBSTDelete} title="Delete value(s) and show the replacement case">
+            <Trash2 size={14} />
+            <span>Delete</span>
+          </button>
+          <div className="traversal-btn-group">
+            <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('inorder'); setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+              <ListOrdered size={14} />
+              <span>Inorder</span>
+            </button>
+            <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('preorder'); setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+              <GitCommit size={14} />
+              <span>Preorder</span>
+            </button>
+            <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('postorder'); setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
+              <CornerDownRight size={14} />
+              <span>Postorder</span>
+            </button>
+          </div>
+        </>
       )}
 
       {treeCategory === 'avl' && (
-        <div className="flex items-center gap-2">
-          <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
-            <Plus size={14} />
-            <span>Insert AVL</span>
-          </button>
-        </div>
+        <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
+          <Plus size={16} />
+          <span>Insert & Balance</span>
+        </button>
       )}
 
       {treeCategory === 'heap' && (
-        <div className="flex items-center gap-2">
+        <>
           <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
-            <Plus size={14} />
+            <Plus size={16} />
             <span>Push Heap</span>
           </button>
           <button className="bst-btn btn-search" onClick={handleHeapExtract}>
-            <ArrowDown size={14} />
+            <ArrowDown size={16} />
             <span>Extract Root</span>
           </button>
-        </div>
+          <div className="traversal-btn-group">
+            <button className={`bst-btn btn-traversal ${heapType === 'max' ? 'active' : ''}`} onClick={() => setHeapType('max')}>
+              <ArrowUp size={12} />
+              <span>Max Heap</span>
+            </button>
+            <button className={`bst-btn btn-traversal ${heapType === 'min' ? 'active' : ''}`} onClick={() => setHeapType('min')}>
+              <ArrowDown size={12} />
+              <span>Min Heap</span>
+            </button>
+          </div>
+        </>
       )}
 
       {treeCategory === 'trie' && (
-        <div className="flex items-center gap-2">
+        <>
           <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
-            <Plus size={14} />
+            <Plus size={16} />
             <span>Insert Word</span>
           </button>
           <button className="bst-btn btn-search" onClick={handleTrieSearch}>
-            <Search size={14} />
+            <Search size={16} />
             <span>Search Prefix</span>
           </button>
-        </div>
+        </>
       )}
 
-      {/* Preset Action Buttons Shared Across ALL Categories */}
-      <div className="dataset-mode-selector ml-1">
-        <button className="bst-btn btn-mode" onClick={handleEmptyTree} title="Clear Tree Structure">
-          <Trash2 size={13} className="text-rose-400" />
-          <span>Empty</span>
+      {/* Dataset Initialization Selector Group for ALL Categories */}
+      <div className="dataset-mode-selector">
+        <button className="bst-btn btn-mode" onClick={handleEmptyTree}>
+          <Trash2 size={14} className="text-rose-400" />
+          <span>Empty Tree</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleSampleTree} title="Load Standard Sample Tree">
-          <Layers size={13} className="text-amber-400" />
-          <span>Sample</span>
+        <button className="bst-btn btn-mode" onClick={handleSampleTree}>
+          <Layers size={14} className="text-amber-400" />
+          <span>Sample Tree</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleRandomTree} title="Generate Random Tree">
-          <Sparkles size={13} className="text-emerald-400" />
-          <span>Random</span>
+        <button className="bst-btn btn-mode" onClick={handleRandomTree}>
+          <Sparkles size={14} className="text-emerald-400" />
+          <span>Random Tree</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   const renderFullscreenPlayerControls = () => (
@@ -570,6 +945,7 @@ export const BSTPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/bst')} />
       <VisualizerHeader
         icon={<Network size={22} />}
         title="Tree Structures Studio"
@@ -577,7 +953,9 @@ export const BSTPage: React.FC = () => {
         items={[
           { id: 'bst', name: 'Binary Search Tree (BST)', description: 'Ordered insert, search, and depth-first traversals', group: 'Trees' },
           { id: 'avl', name: 'AVL Tree (Self-Balancing)', description: 'Height-balanced tree with LL/RR/LR/RL rotations', group: 'Balanced' },
+          { id: 'rbt', name: 'Red-Black Tree', description: 'Self-balancing tree with complex color-flip and rotation fixups', group: 'Balanced' },
           { id: 'heap', name: 'Binary Heap (Priority Queue)', description: 'Array-backed complete tree with sift-up and sift-down', group: 'Heaps' },
+          { id: 'segTree', name: 'Segment Tree', description: 'Array-backed tree for O(log n) range queries and point updates', group: 'Advanced' },
           { id: 'trie', name: 'Trie (Prefix Tree)', description: 'Character-indexed prefix tree for word lookup', group: 'Strings' },
         ]}
         activeId={treeCategory}
@@ -603,181 +981,32 @@ export const BSTPage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs with Pure Vector Icons */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs">
-          <button
-            className={`category-tab ${treeCategory === 'bst' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('bst')}
-          >
-            <Network size={16} />
-            <span>Binary Search Tree (BST)</span>
-          </button>
 
-          <button
-            className={`category-tab ${treeCategory === 'avl' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('avl')}
-          >
-            <Scale size={16} />
-            <span>AVL Tree (Self-Balancing)</span>
-          </button>
-
-          <button
-            className={`category-tab ${treeCategory === 'heap' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('heap')}
-          >
-            <Layers size={16} />
-            <span>Binary Heap (Priority Queue)</span>
-          </button>
-
-          <button
-            className={`category-tab ${treeCategory === 'trie' ? 'active' : ''}`}
-            onClick={() => setTreeCategory('trie')}
-          >
-            <Binary size={16} />
-            <span>Trie (Prefix Tree)</span>
-          </button>
-        </div>
-      </div>
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {treeCategory !== 'trie' ? (
-            <div className="bst-input-group" title="Enter comma-separated values (e.g. 20, 10, 30, 5, 15)">
-              <span style={{ fontWeight: 600 }}>Values:</span>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  if (inputError) setInputError(null);
-                }}
-                className="bst-input"
-                placeholder="e.g. 20, 10, 30, 5, 15"
-                style={{ minWidth: '150px' }}
-              />
-            </div>
-          ) : (
-            <div className="bst-input-group" title="Enter comma-separated words (e.g. cat, car, dog)">
-              <span style={{ fontWeight: 600 }}>Words:</span>
-              <input
-                type="text"
-                value={wordValue}
-                onChange={(e) => {
-                  setWordValue(e.target.value);
-                  if (inputError) setInputError(null);
-                }}
-                className="bst-input"
-                placeholder="e.g. cat, car, dog"
-                style={{ minWidth: '150px' }}
-              />
-            </div>
-          )}
-
-          <button className="bst-btn btn-mode" onClick={handleBuildTreeFromScratch} title="Build dataset sequentially from scratch">
-            <Sparkles size={14} className="text-amber-400" />
-            <span>Build Dataset</span>
-          </button>
-
-          {treeCategory === 'bst' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleBSTInsert}>
-                <Plus size={16} />
-                <span>Insert</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleBSTSearch}>
-                <Search size={16} />
-                <span>Search</span>
-              </button>
-              <div className="traversal-btn-group">
-                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('inorder'); setActiveOperationSteps(generateBSTInorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
-                  <ListOrdered size={14} />
-                  <span>Inorder</span>
-                </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('preorder'); setActiveOperationSteps(generateBSTPreorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
-                  <GitCommit size={14} />
-                  <span>Preorder</span>
-                </button>
-                <button className="bst-btn btn-traversal" onClick={() => { setRevisionKey('postorder'); setActiveOperationSteps(generateBSTPostorderSteps(bstTree)); reset(); quizSession.resetSession(); play(); }}>
-                  <CornerDownRight size={14} />
-                  <span>Postorder</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {treeCategory === 'avl' && (
-            <button className="bst-btn btn-insert" onClick={handleAVLInsert}>
-              <Plus size={16} />
-              <span>Insert & Balance</span>
-            </button>
-          )}
-
-          {treeCategory === 'heap' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleHeapInsert}>
-                <Plus size={16} />
-                <span>Push Heap</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleHeapExtract}>
-                <ArrowDown size={16} />
-                <span>Extract Root</span>
-              </button>
-              <div className="traversal-btn-group">
-                <button className={`bst-btn btn-traversal ${heapType === 'max' ? 'active' : ''}`} onClick={() => setHeapType('max')}>
-                  <ArrowUp size={12} />
-                  <span>Max Heap</span>
-                </button>
-                <button className={`bst-btn btn-traversal ${heapType === 'min' ? 'active' : ''}`} onClick={() => setHeapType('min')}>
-                  <ArrowDown size={12} />
-                  <span>Min Heap</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {treeCategory === 'trie' && (
-            <>
-              <button className="bst-btn btn-insert" onClick={handleTrieInsert}>
-                <Plus size={16} />
-                <span>Insert Word</span>
-              </button>
-              <button className="bst-btn btn-search" onClick={handleTrieSearch}>
-                <Search size={16} />
-                <span>Search Prefix</span>
-              </button>
-            </>
-          )}
-
-          {/* Dataset Initialization Selector Group for ALL Categories */}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmptyTree}>
-              <Trash2 size={14} className="text-rose-400" />
-              <span>Empty Tree</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSampleTree}>
-              <Layers size={14} className="text-amber-400" />
-              <span>Sample Tree</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomTree}>
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random Tree</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
       {/* Main Learning Workspace */}
       <div className="sorting-workspace scene-workspace">
         <div className="renderer-section">
-          <BSTRenderer
-            currentStep={bstStep}
-            onToggleFullscreen={() => setIsFullScreenOpen(true)}
-          />
+          {isSegTreeMode ? (
+            <IntervalTreeRenderer
+              step={currentSegStep}
+              onToggleFullscreen={() => setIsFullScreenOpen(true)}
+            />
+          ) : (
+            <BSTRenderer
+              currentStep={bstStep}
+              onToggleFullscreen={() => setIsFullScreenOpen(true)}
+            />
+          )}
 
           {/* Traversal Log Banner */}
-          {bstStep?.traversalLog && bstStep.traversalLog.length > 0 && (
+          {!isSegTreeMode && bstStep?.traversalLog && bstStep.traversalLog.length > 0 && (
             <div className="traversal-log-banner animate-fade-in">
               <span className="log-title">TRAVERSAL LOG:</span>
               <div className="log-nodes font-mono">
@@ -790,8 +1019,8 @@ export const BSTPage: React.FC = () => {
 
           <FloatingController
             isPlaying={isPlaying}
-            canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < totalSteps - 1}
+            canStepBack={isSegTreeMode ? currentStepIndex > 0 : currentStepIndex > 0}
+            canStepForward={isSegTreeMode ? currentStepIndex < segTreeSteps.length - 1 : currentStepIndex < totalSteps - 1}
             onPlay={play}
             onPause={pause}
             onReset={reset}
@@ -804,6 +1033,7 @@ export const BSTPage: React.FC = () => {
         </div>
 
         {/* Right Column: Multi-Language Debugger & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -813,11 +1043,15 @@ export const BSTPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="bst" />
+        <ResizablePanelRow
+          storageKey="bst"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={treeCategory}
               title="Tree Operations"
+              categoryId="bst"
+              topicId={treeCategory}
               activeLine={bstStep?.codeLine}
               variables={bstStep?.variables}
               onCustomCodeRun={(arraySteps) => {
@@ -833,16 +1067,22 @@ export const BSTPage: React.FC = () => {
               }}
               currentArray={[10, 20, 30, 40, 50]}
             />
-          )}
-
-          <ExplanationPanel
-            description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)}
-            steps={activeOperationSteps}
+          ) : null}
+          explanationPanel={
+            <ExplanationPanel
+              description={maskNarration(
+              isSegTreeMode
+                ? (currentSegStep?.description || 'Click Play to observe Segment Tree operations.')
+                : (bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.'),
+              quizSession.phase
+            )}
+            steps={isSegTreeMode ? [] : activeOperationSteps}
             currentStepIndex={currentStepIndex}
             timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }}
             spaceComplexity="O(H)"
           />
-        </div>
+          }
+        />
       </div>
 
       <TheoryPanel categoryId="bst" activeTopic={treeCategory} />
@@ -853,14 +1093,23 @@ export const BSTPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Tree Studio | ${treeCategory.toUpperCase()}`}
         subtitle="Interactive Dynamic Tree Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(bstStep?.description || 'Select a Tree structure and enter values to inspect algorithms.', quizSession.phase)} steps={activeOperationSteps} currentStepIndex={currentStepIndex} timeComplexity={{ best: 'O(log N)', average: 'O(log N)', worst: 'O(N)' }} spaceComplexity="O(H)" />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
           <FloatingController
             isPlaying={isPlaying}
             canStepBack={currentStepIndex > 0}
-            canStepForward={currentStepIndex < totalSteps - 1}
+            canStepForward={isSegTreeMode ? currentStepIndex < segTreeSteps.length - 1 : currentStepIndex < totalSteps - 1}
             onPlay={play}
             onPause={pause}
             onReset={reset}
@@ -872,7 +1121,13 @@ export const BSTPage: React.FC = () => {
           />
         }
       >
-        <BSTRenderer currentStep={bstStep} />
+        {isSegTreeMode ? (
+          <IntervalTreeRenderer
+            step={currentSegStep}
+          />
+        ) : (
+          <BSTRenderer currentStep={bstStep} />
+        )}
       </FullScreenCanvasModal>
     </div>
   );

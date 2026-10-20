@@ -2,15 +2,71 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- ── Favicon set (transparent background Octa mascot) ── -->
+    <link rel="icon" type="image/x-icon"         href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml"       href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180"  href="/apple-touch-icon.png" />
+    <link rel="manifest"                          href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:8000 https:; img-src 'self' data: blob:; frame-ancestors 'none'; base-uri 'self';" />
-    <title>STEM Studio | Advanced DSA Suite</title>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- 'unsafe-eval' is required by the Paste-code sandbox (codeExecutionEngine.ts),
+         which compiles user-pasted algorithm code via the Function constructor. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:8000 https:; img-src 'self' data: blob:; frame-src 'self' https://accounts.google.com; frame-ancestors 'none'; base-uri 'self';" />
+    <title>Interactive Data Structures &amp; Algorithms Learning | STEM Studio</title>
+    <meta name="description" content="Learn data structures and algorithms by watching each step unfold. Explore visualizers, compare code in four languages, and practice with guided quizzes." />
+    <meta name="author" content="STEM Studio Team" />
+    <meta name="publisher" content="STEM Studio" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://stem-studio-one.vercel.app/" />
+    <meta name="theme-color" content="#6B5CE7" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="STEM Studio" />
+    <meta property="og:title" content="Interactive Data Structures &amp; Algorithms Learning | STEM Studio" />
+    <meta property="og:description" content="Learn data structures and algorithms by watching each step unfold. Explore visualizers, compare code in four languages, and practice with guided quizzes." />
+    <meta property="og:url" content="https://stem-studio-one.vercel.app/" />
+    <meta property="og:image" content="https://stem-studio-one.vercel.app/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="STEM Studio interactive computer science learning platform" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Interactive Data Structures &amp; Algorithms Learning | STEM Studio" />
+    <meta name="twitter:description" content="Learn data structures and algorithms by watching each step unfold. Explore visualizers, compare code in four languages, and practice with guided quizzes." />
+    <meta name="twitter:image" content="https://stem-studio-one.vercel.app/og-image.jpg" />
+
+    <!-- Structured Data: WebSite & EducationalOrganization -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "STEM Studio",
+        "url": "https://stem-studio-one.vercel.app/",
+        "description": "Learn data structures and algorithms with step-by-step visualizers, code examples, and practice quizzes."
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "EducationalOrganization",
+        "name": "STEM Studio",
+        "url": "https://stem-studio-one.vercel.app/",
+        "logo": "https://stem-studio-one.vercel.app/icon-512.png",
+        "description": "Interactive computer science learning platform with data structures, algorithm visualizers, code examples, and operating systems topics."
+      }
+    ]
+    </script>
 
     <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
   </head>
   <body>
     <div id="root"></div>

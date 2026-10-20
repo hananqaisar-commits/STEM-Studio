@@ -11,13 +11,25 @@ from fastapi.responses import JSONResponse
 
 try:
     from backend.app.api.routes.auth import router as auth_router
+    from backend.app.api.routes.execute import router as execute_router
     from backend.app.api.routes.progress import router as progress_router
     from backend.app.api.routes.stats import router as stats_router
+    from backend.app.api.routes.octa_tutor import router as octa_tutor_router
+    from backend.app.api.routes.support import router as support_router
+    from backend.app.api.routes.preferences import router as preferences_router
+    from backend.app.api.routes.notifications import router as notifications_router
+    from backend.app.api.routes.owner import router as owner_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
+    from app.api.routes.execute import router as execute_router
     from app.api.routes.progress import router as progress_router
     from app.api.routes.stats import router as stats_router
+    from app.api.routes.octa_tutor import router as octa_tutor_router
+    from app.api.routes.support import router as support_router
+    from app.api.routes.preferences import router as preferences_router
+    from app.api.routes.notifications import router as notifications_router
+    from app.api.routes.owner import router as owner_router
     from app.core.config import get_settings
 
 
@@ -56,7 +68,10 @@ def init_db_tables():
         expected = {"users", "user_sessions", "email_verifications", "password_resets",
                     "roles", "permissions", "user_roles", "role_permissions",
                     "login_attempts", "quiz_attempts", "module_progress",
-                    "user_streaks", "saved_sessions", "reviews"}
+                    "user_streaks", "saved_sessions", "tutor_learning_profiles", "reviews",
+                    "support_tickets", "user_preferences", "announcements", "announcement_recipients",
+                    "announcement_reads", "owner_accounts", "owner_mfa_credentials", "owner_session_grants",
+                    "admin_audit_events"}
         missing = expected - set(table_names)
         if missing:
             print(f"⚠️  Missing tables after create_all: {missing}")
@@ -97,7 +112,7 @@ app.add_middleware(
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
     expose_headers=["X-Request-Id"],
     max_age=600,
 )
@@ -111,7 +126,7 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(self), camera=()"
     response.headers["X-XSS-Protection"] = "0"  # Disabled in favour of CSP / framework escaping
     return response
 
@@ -129,13 +144,41 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(auth_router)
 app.include_router(progress_router)
 app.include_router(stats_router)
+app.include_router(execute_router)
+app.include_router(octa_tutor_router)
+app.include_router(support_router)
+app.include_router(preferences_router)
+app.include_router(notifications_router)
+app.include_router(owner_router)
 
 
 
 # ─── Health & DB Check ───────────────────────────────────────────────
 @app.get("/api/health", tags=["Health"])
 def health_check():
+    """Liveness probe: confirms the API process is responding."""
     return {"status": "healthy", "service": settings.APP_NAME}
+
+
+@app.get("/api/ready", tags=["Health"])
+def readiness_check():
+    """Readiness probe: only route traffic when the database is reachable."""
+    try:
+        try:
+            from backend.infrastructure.database.database import engine
+        except ModuleNotFoundError:
+            from infrastructure.database.database import engine
+        from sqlalchemy import text
+
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ready", "service": settings.APP_NAME}
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "service": settings.APP_NAME},
+            headers={"Retry-After": "2"},
+        )
 
 
 @app.get("/api/db-check", tags=["Health"])
@@ -186,4 +229,3 @@ def db_check():
             "success": False,
             "error": "Unable to connect to database",
         }, 500
-

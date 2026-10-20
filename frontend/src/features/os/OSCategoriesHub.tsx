@@ -1,0 +1,76 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Terminal, FolderTree, ArrowLeft, ChevronRight } from 'lucide-react';
+import { OS_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
+import '../hub/DSAHub.css';
+import './linuxModule.css';
+
+const OS_CAT_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
+  Terminal,
+  FolderTree,
+};
+
+export const OSCategoriesHub: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="dsa-hub linux-module-shell linux-os-hub">
+      <SEOHead {...getSEOForRoute('/dashboard/os/linux')} />
+      <div className="module-page-header">
+        <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
+          <ArrowLeft size={16} /> Back to Operating System Module
+        </button>
+        <div className="flex items-center gap-3 mt-2">
+          <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+            <Terminal size={28} />
+          </div>
+          <div>
+            <h2 className="module-page-title">Linux Operating System</h2>
+            <p className="module-page-desc">Master Linux terminal commands and interact with a live virtual filesystem visualizer.</p>
+          </div>
+        </div>
+        <div className="module-page-stats mt-4">
+          <span className="hub-stat-badge">2 Categories</span>
+          <span className="hub-stat-badge">50+ Commands</span>
+          <span className="hub-stat-badge">Live VFS Terminal</span>
+        </div>
+      </div>
+
+      {/* Category Grid */}
+      <div className="hub-grid mt-6">
+        {OS_CATEGORIES.map((cat: CategoryDef) => {
+          const IconComponent = OS_CAT_ICON_MAP[cat.iconName] ?? Terminal;
+          const diffClass = cat.difficulty === 'Beginner' ? 'diff-beginner' : 'diff-intermediate';
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              disabled={!cat.available}
+              className={`hub-card ${!cat.available ? 'hub-card-disabled' : ''}`}
+              onClick={() => cat.available && navigate(`/dashboard/os/${cat.id}`)}
+            >
+              <div className="hub-card-header flex items-center justify-between">
+                <div className="hub-card-icon">
+                  <IconComponent size={24} />
+                </div>
+                <span className={`diff-badge ${diffClass}`}>{cat.difficulty}</span>
+              </div>
+              <div className="hub-card-body">
+                <h3>{cat.name}</h3>
+                <p>{cat.description}</p>
+              </div>
+              <div className="hub-card-footer flex items-center justify-between">
+                <span className="hub-card-topics">{cat.topicCount} {cat.id === 'commands' ? 'Groups' : 'Visualizers'}</span>
+                <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400 text-xs font-bold">
+                  Open Category <ChevronRight size={14} />
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

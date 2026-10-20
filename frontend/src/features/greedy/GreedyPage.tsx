@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Clock, Package, Calendar, FileText, Maximize2, Sparkles, Layers, Trash2
 } from 'lucide-react';
@@ -9,6 +11,8 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -82,6 +86,8 @@ function parseJobs(raw: string): Job[] {
   });
 }
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 export const GreedyPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<GreedyAlgorithmKey>('activitySelection');
   const [searchParams] = useSearchParams();
@@ -142,6 +148,28 @@ export const GreedyPage: React.FC = () => {
     reset,
   seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'greedy',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   // Build quiz checkpoints from the current execution steps
   const quizCheckpoints = useMemo(
@@ -283,9 +311,17 @@ export const GreedyPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="dataset-mode-selector ml-1">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Algorithm-specific inputs */}
+      {renderAlgorithmInputs()}
+
+      {/* Dataset Mode Selector */}
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Inputs">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -296,14 +332,7 @@ export const GreedyPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Algorithm-specific toolbar inputs ─────────────────────────────── */
@@ -405,6 +434,7 @@ export const GreedyPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/greedy')} />
       <VisualizerHeader
         icon={<Package size={22} />}
         title="Greedy Algorithms Studio"
@@ -442,43 +472,12 @@ export const GreedyPage: React.FC = () => {
       />
 
       {/* Category Tabs Bar */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {/* Algorithm-specific inputs */}
-          {renderAlgorithmInputs()}
-
-          {/* Dataset Mode Selector */}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Inputs">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Input">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -507,6 +506,7 @@ export const GreedyPage: React.FC = () => {
         </div>
 
         {/* Right Column: Quiz & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -516,26 +516,31 @@ export const GreedyPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="greedy" />
+        <ResizablePanelRow
+          storageKey="greedy"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Greedy Algorithm"
+              categoryId="greedy"
+              topicId={selectedAlg}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}
               currentArray={[]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step greedy execution.', quizSession.phase)}
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       <TheoryPanel categoryId="greedy" activeTopic={selectedAlg} />
@@ -546,7 +551,16 @@ export const GreedyPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Greedy Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="Greedy Choice Visualizer"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step greedy execution.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

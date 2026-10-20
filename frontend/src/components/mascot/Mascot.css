@@ -1,14 +1,28 @@
 /* ─── Octa Mascot Styles ─────────────────────────────────────────────
-   Clean SVG-based mascot system. Animations are subtle and contextual.
+   Plush sprite states with subtle, contextual movement.
    ─────────────────────────────────────────────────────────────────── */
 
 /* ── Octa wrapper ──────────────────────────────────────────────────── */
 .octa-wrapper {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.3s ease;
+  overflow: visible;
+  line-height: 0;
+  vertical-align: middle;
+  transition: filter 0.25s ease;
+  transform-origin: 50% 78%;
+}
+
+.octa-stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 0 0 auto;
+  overflow: visible;
+  transform-origin: 50% 78%;
 }
 
 .octa-wrapper .octa-img {
@@ -17,22 +31,55 @@
   object-fit: contain;
   display: block;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 7px 10px rgba(74, 36, 151, 0.16));
+  animation: octa-expression-enter 220ms ease-out both;
 }
 
-/* Interactive mascot gets idle breathing animation */
+@keyframes octa-expression-enter {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Slow plush float gives Octa life without the old scale-pulse effect. */
 .octa-interactive {
-  animation: octa-breathe 4s ease-in-out infinite;
+  animation: octa-breathe 4.8s ease-in-out infinite;
 }
 
-.octa-interactive:hover {
-  transform: scale(1.05);
-  animation-play-state: paused;
+.octa-wrapper.octa-interactive:hover {
+  animation: octa-greeting 680ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  filter: drop-shadow(0 10px 14px rgba(74, 36, 151, 0.23));
 }
 
-/* ── Breathing (subtle scale pulse) ────────────────────────────────── */
+/* Expressions add restrained personality while keeping the silhouette stable. */
+.octa-interactive[data-expression='excited'] { animation-name: octa-excited-bounce; animation-duration: 3.2s; }
+.octa-interactive[data-expression='happy'] { animation-duration: 4s; }
+.octa-interactive[data-expression='tired'] { animation-duration: 7s; }
+.octa-interactive[data-expression='thinking'] { animation-name: octa-think-tilt; animation-duration: 6s; }
+
 @keyframes octa-breathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-2px) scale(1.02); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(-0.8deg); }
+}
+
+@keyframes octa-greeting {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  28% { transform: translateY(-5px) rotate(-3deg); }
+  58% { transform: translateY(-2px) rotate(2deg); }
+  82% { transform: translateY(-3px) rotate(-1deg); }
+}
+
+@keyframes octa-excited-bounce {
+  0%, 76%, 100% { transform: translateY(0); }
+  84% { transform: translateY(-7px); }
+  91% { transform: translateY(0); }
+  96% { transform: translateY(-3px); }
+}
+
+@keyframes octa-think-tilt {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-2px) rotate(1.4deg); }
 }
 
 /* ── Floating (for hero/dashboard) ─────────────────────────────────── */
@@ -123,29 +170,75 @@
   pointer-events: none;
 }
 
-.mascot-loading-stage {
+.mascot-loading-stage-horizontal {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding: 2rem;
+  width: 95vw;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.mascot-loading-mascot-left {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 210px;
+  height: 210px;
+  flex-shrink: 0;
+  animation: splash-mascot-float 4.2s ease-in-out 1.2s infinite;
+}
+
+.mascot-loading-text-right {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(1.1rem, 3vh, 1.7rem);
-  padding: 1.5rem;
-  transform: translateY(-2vh); /* optical centering */
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
 }
 
-/* ── Octa crossfade: surprised (loading) → happy (complete) ────────── */
+@media (max-width: 768px) {
+  .mascot-loading-stage-horizontal {
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 1.75rem !important;
+    padding: 1.5rem 1rem !important;
+  }
 
-.mascot-loading-mascot {
-  position: relative;
-  width: 96px;
-  height: 96px;
-  animation: splash-mascot-float 4.2s ease-in-out 1.2s infinite;
+  .mascot-loading-mascot-left {
+    width: clamp(136px, 42vw, 176px) !important;
+    height: clamp(136px, 42vw, 176px) !important;
+    margin-left: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .mascot-loading-text-right {
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
 }
 
 .mascot-layer {
   position: absolute;
   inset: 0;
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: opacity 0.45s ease;
+}
+
+.mascot-loading-mascot-left .octa-wrapper {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .mascot-layer--surprised { opacity: 1; }
@@ -185,7 +278,7 @@
   display: inline-flex;
   align-items: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -263,8 +356,10 @@
 
 .mascot-auth-jump {
   position: absolute;
-  top: -20px;
-  left: -10px;
+  /* Sit fully above the card's top edge so the mascot never overlaps
+     the "Welcome back" heading at any viewport width. */
+  top: -110px;
+  left: 12px;
   z-index: 10;
   pointer-events: none;
 }
@@ -304,7 +399,7 @@
   right: -20px;
   background: var(--bg-card, #fff);
   color: var(--text-primary, #1f2937);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
@@ -363,6 +458,8 @@
   .octa-fade-in,
   .octa-wiggle,
   .octa-nod,
+  .octa-img,
+  .octa-stage,
   .mascot-loading,
   .mascot-loading-mascot,
   .mascot-layer,

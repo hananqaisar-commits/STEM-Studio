@@ -1,0 +1,146 @@
+/* ═══════════════════════════════════════════════════════════════════
+   DEFINITION CARD PANEL — toggleable vocabulary overlay for renderers
+   ═══════════════════════════════════════════════════════════════════
+   Floating panel with 3-5 small definition cards. Collapsed by default,
+   toggled via a pill button. Overlays the right edge of the canvas.
+   ─────────────────────────────────────────────────────────────────── */
+
+/* ── Toggle Button ─────────────────────────────────────────────────── */
+.def-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.def-panel-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+}
+
+.def-panel-toggle.is-open {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+/* ── Overlay Panel ─────────────────────────────────────────────────── */
+.def-panel-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 45%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  border-radius: 0 16px 16px 0;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  animation: defPanelSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes defPanelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+[data-theme="dark"] .def-panel-overlay {
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Panel Header ──────────────────────────────────────────────────── */
+.def-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.def-panel-title {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+}
+
+.def-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.def-panel-close:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+/* ── Definition Card ───────────────────────────────────────────────── */
+.def-card {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-app-bg);
+  transition: border-color 0.2s ease;
+}
+
+.def-card:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+}
+
+.def-card-term {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  margin-bottom: 0.25rem;
+}
+
+.def-card-explanation {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .def-panel-overlay {
+    width: 240px;
+    max-width: 60%;
+    padding: 0.75rem;
+  }
+}

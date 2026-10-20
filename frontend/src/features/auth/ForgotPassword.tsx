@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEOHead } from '../../components/common/SEOHead';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, Send, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth, ApiError } from '../../contexts/AuthContext';
@@ -33,6 +34,7 @@ export const ForgotPassword: React.FC = () => {
 
   return (
     <div className="auth-page-container">
+      <SEOHead title="Forgot Password | STEM Studio" description="Reset your STEM Studio password." noIndex={true} />
       <div className="auth-card animate-fade-in">
         <div className="auth-header">
           <h1 className="auth-title">Reset Password</h1>

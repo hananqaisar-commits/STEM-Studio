@@ -2,11 +2,33 @@ import type { AlgorithmExecution } from '../../../engine/types/AlgorithmState';
 import type { RecNode, RecursionStep } from './recursionTypes';
 import { snapshotStep } from './recursionTypes';
 
+interface HanoiMove { disk: number; from: string; to: string }
+
+/* Each step carries a JSON snapshot of the three pegs (arrays bottom→top)
+   plus the move that produced it, so the renderer can draw the 3-peg board
+   and animate the moved disk with the shared liftShiftDrop preset. */
 export function runTowerOfHanoi(n: number): AlgorithmExecution<RecursionStep> {
   const steps: RecursionStep[] = [];
   const nodes: RecNode[] = [];
   const callStack: string[] = [];
   let moveCount = 0;
+
+  const pegs: Record<string, number[]> = { A: [], B: [], C: [] };
+  for (let d = n; d >= 1; d--) pegs.A.push(d);
+
+  const pegsVar = (move: HanoiMove | null) => ({
+    hanoiPegs: JSON.stringify({
+      pegs: { A: [...pegs.A], B: [...pegs.B], C: [...pegs.C] },
+      move,
+    }),
+  });
+
+  function doMove(disk: number, from: string, to: string): HanoiMove {
+    pegs[from] = pegs[from].filter((x) => x !== disk);
+    pegs[to].push(disk);
+    moveCount++;
+    return { disk, from, to };
+  }
 
   function completedIndices(): number[] {
     return nodes.reduce<number[]>((acc, nd, i) => {
@@ -38,11 +60,12 @@ export function runTowerOfHanoi(n: number): AlgorithmExecution<RecursionStep> {
         : `Entering hanoi(${disks}, ${from}→${to} via ${aux}).`,
       [...callStack],
       disks === 1 ? 2 : 1,
+      pegsVar(null),
     ));
 
     if (disks === 1) {
       // Base case: single disk move
-      moveCount++;
+      const move = doMove(1, from, to);
       nodes[myIdx].state = 'returning';
       nodes[myIdx].returnValue = `Move D1 ${from}→${to}`;
       steps.push(snapshotStep(
@@ -50,6 +73,7 @@ export function runTowerOfHanoi(n: number): AlgorithmExecution<RecursionStep> {
         `Move disk 1 from peg ${from} to peg ${to}. (Move #${moveCount})`,
         [...callStack],
         2,
+        pegsVar(move),
       ));
       callStack.pop();
       nodes[myIdx].state = 'completed';
@@ -60,12 +84,13 @@ export function runTowerOfHanoi(n: number): AlgorithmExecution<RecursionStep> {
     simulate(disks - 1, from, aux, to, myIdx);
 
     // Step 2: move largest disk
-    moveCount++;
+    const move = doMove(disks, from, to);
     steps.push(snapshotStep(
       nodes, [myIdx], completedIndices(), [],
       `Move disk ${disks} from peg ${from} to peg ${to}. (Move #${moveCount})`,
       [...callStack],
       3,
+      pegsVar(move),
     ));
 
     // Step 3: move n-1 disks from auxiliary to destination
@@ -79,6 +104,7 @@ export function runTowerOfHanoi(n: number): AlgorithmExecution<RecursionStep> {
       `hanoi(${disks}, ${from}→${to}) complete. All ${disks} disks moved.`,
       [...callStack],
       4,
+      pegsVar(null),
     ));
     callStack.pop();
     nodes[myIdx].state = 'completed';

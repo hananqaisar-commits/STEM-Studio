@@ -1,11 +1,13 @@
 import type { ArrayStep } from '../../engine/types/Step';
-import { buildOptions, type QuizCheckpoint, type QuizWeight , type QuizRevisionData } from '../../engine/types/Quiz';
+import { buildOptions, type QuizCheckpoint, type QuizWeight, type QuizRevisionData } from '../../engine/types/Quiz';
 
 /* ── Recursion quiz adapter ────────────────────────────────────────────
    Builds conceptual checkpoints for each recursion algorithm.
    Since recursion steps don't have simple compare/swap semantics like
    sorting, we rely on conceptual anchor questions + step-based
    "what happens next?" questions derived from the call tree state.
+   Power and Tower of Hanoi carry curated 15+ question pools tagged with
+   weights 1-3 (the platform's easy/medium/hard difficulty system).
    ─────────────────────────────────────────────────────────────────── */
 
 export type RecursionAlgorithmKey =
@@ -26,69 +28,782 @@ interface Anchor {
   concept: string;
 }
 
-const ANCHORS: Record<RecursionAlgorithmKey, Anchor> = {
-  factorial: {
-    prompt: 'What is the base case for factorial?',
-    correct: 'fact(0) = 1',
-    distractors: ['fact(1) = 0', 'fact(n) = n', 'fact(0) = 0'],
-    explanation:
-      'The base case is fact(0) = 1. Every recursive factorial call chain terminates at n=0, which returns 1. The multiplicative identity (1) is used because factorial is a product.',
-    hint: 'What value of n stops the recursion, and what does it return?',
-    concept: 'Base case',
-  },
-  fibonacci: {
-    prompt: 'Why does naive recursive fibonacci have exponential time complexity?',
-    correct: 'Each call branches into two sub-calls, creating an exponentially growing tree of redundant computations',
-    distractors: [
-      'Because each call does an expensive addition operation',
-      'Because the base case is reached exponentially many times',
-      'Because the recursion depth grows linearly',
-    ],
-    explanation:
-      'fib(n) calls fib(n-1) and fib(n-2), so the call tree roughly doubles at each level. Many sub-problems are solved repeatedly — fib(2) is computed many times for fib(5). This gives O(2^n) total calls.',
-    hint: 'Count how many times fib(2) appears in the call tree for fib(5).',
-    concept: 'Exponential branching',
-  },
-  power: {
-    prompt: 'What is the base case for recursive power(base, exp)?',
-    correct: 'power(b, 0) = 1 — any number to the power 0 is 1',
-    distractors: [
-      'power(b, 1) = b',
-      'power(0, e) = 0',
-      'power(b, 0) = 0',
-    ],
-    explanation:
-      'The base case is exp = 0, which returns 1 (the multiplicative identity). This mirrors the mathematical convention b^0 = 1, and ensures the chain b * b * ... * 1 is correct.',
-    hint: 'What exponent makes any base equal to 1?',
-    concept: 'Base case',
-  },
-  arraySum: {
-    prompt: 'How does recursive array sum decompose the problem?',
-    correct: 'It takes the current element plus the sum of the remaining elements: arr[idx] + sum(arr, idx+1)',
-    distractors: [
-      'It splits the array in half and sums each half',
-      'It accumulates a running total in a parameter',
-      'It sorts the array first then adds elements',
-    ],
-    explanation:
-      'The recursion processes one element at a time: the sum starting at index idx is arr[idx] plus the sum starting at idx+1. The base case (idx past the end) returns 0.',
-    hint: 'Think about what each recursive call is responsible for.',
-    concept: 'Problem decomposition',
-  },
-  towerOfHanoi: {
-    prompt: 'How many moves are required to solve Tower of Hanoi with n disks?',
-    correct: '2^n - 1 moves — each disk configuration must be visited',
-    distractors: [
-      'n moves — one per disk',
-      'n^2 moves — one per pair of disks',
-      '2n moves — twice the number of disks',
-    ],
-    explanation:
-      'Tower of Hanoi with n disks requires exactly 2^n - 1 moves. Moving n-1 disks aside takes 2^(n-1)-1 moves, then 1 move for the largest disk, then 2^(n-1)-1 moves to stack them back — totaling 2^n - 1.',
-    hint: 'For 3 disks the answer is 7. What formula gives 7 when n=3?',
-    concept: 'Move count',
-  },
+const ANCHORS: Record<RecursionAlgorithmKey, Anchor[]> = {
+  factorial: [
+    {
+      prompt: 'What is the base case for factorial?',
+      correct: 'fact(0) = 1',
+      distractors: ['fact(1) = 0', 'fact(n) = n', 'fact(0) = 0'],
+      explanation:
+        'The recursion terminates at n = 0, and 0! = 1 is the multiplicative identity.',
+      hint: 'Which value of n stops the recursion?',
+      concept: 'Base case',
+    },
+    {
+      prompt: 'What recurrence defines factorial?',
+      correct: 'fact(n) = n × fact(n - 1)',
+      distractors: [
+        'fact(n) = n + fact(n - 1)',
+        'fact(n) = fact(n - 2)',
+        'fact(n) = n × fact(n + 1)',
+      ],
+      explanation:
+        'Each factorial call multiplies n by the factorial of the previous integer.',
+      hint: 'Think about n! = n × (n-1)!.',
+      concept: 'Recurrence relation',
+    },
+    {
+      prompt: 'What must happen for a recursive factorial function to terminate?',
+      correct: 'Each call must move toward the base case',
+      distractors: [
+        'The input must increase on every call',
+        'The base case must be removed',
+        'Every call must create two new calls',
+      ],
+      explanation:
+        'The recursive argument decreases toward zero, ensuring the base case is eventually reached.',
+      hint: 'What happens to n after each recursive call?',
+      concept: 'Termination',
+    },
+    {
+      prompt: 'What is the time complexity of recursive factorial?',
+      correct: 'O(n)',
+      distractors: ['O(log n)', 'O(n²)', 'O(2^n)'],
+      explanation:
+        'There is one recursive call for each integer from n down to 0.',
+      hint: 'How many calls are made before reaching zero?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What is the recursive call-stack space complexity of factorial?',
+      correct: 'O(n)',
+      distractors: ['O(1)', 'O(log n)', 'O(2^n)'],
+      explanation:
+        'There can be n+1 active stack frames before the base case returns.',
+      hint: 'Count the nested calls waiting for results.',
+      concept: 'Space complexity',
+    },
+    {
+      prompt: 'What value does fact(1) return?',
+      correct: '1',
+      distractors: ['0', '2', 'Undefined'],
+      explanation:
+        'fact(1) = 1 × fact(0) = 1 × 1 = 1.',
+      hint: 'Apply the recurrence once.',
+      concept: 'Recursive evaluation',
+    },
+    {
+      prompt: 'What happens when fact(0) is reached?',
+      correct: 'The function returns 1 without making another recursive call',
+      distractors: [
+        'It calls fact(-1)',
+        'It returns 0 and continues',
+        'It calls fact(1)',
+      ],
+      explanation:
+        'The base case stops further recursion and returns the multiplicative identity 1.',
+      hint: 'A base case must stop the chain.',
+      concept: 'Base-case evaluation',
+    },
+    {
+      prompt: 'Why is factorial recursion naturally a linear-depth recursion?',
+      correct: 'Each call creates only one smaller subproblem',
+      distractors: [
+        'Each call creates two independent branches',
+        'Each call halves the input',
+        'The recursion uses a heap',
+      ],
+      explanation:
+        'fact(n) only calls fact(n-1), so the recursion forms a single chain rather than a branching tree.',
+      hint: 'How many recursive calls does each frame create?',
+      concept: 'Recursion structure',
+    },
+    {
+      prompt: 'Which input direction would break the usual factorial recursion toward its base case?',
+      correct: 'Increasing n on each recursive call',
+      distractors: [
+        'Decreasing n by one',
+        'Stopping at n = 0',
+        'Returning 1 at the base case',
+      ],
+      explanation:
+        'If the recursive argument grows instead of shrinking, the function may never reach n = 0.',
+      hint: 'The recursive parameter must move toward termination.',
+      concept: 'Progress toward base case',
+    },
+    {
+      prompt: 'What is 5! equal to?',
+      correct: '120',
+      distractors: ['25', '60', '720'],
+      explanation:
+        '5! = 5 × 4 × 3 × 2 × 1 = 120.',
+      hint: 'Expand the factorial product.',
+      concept: 'Factorial evaluation',
+    },
+  ],
+
+  fibonacci: [
+    {
+      prompt: 'Why does naive recursive Fibonacci have exponential time complexity?',
+      correct: 'Each call branches into two sub-calls and repeats the same subproblems',
+      distractors: [
+        'Each addition is exponentially expensive',
+        'The base case is never reached',
+        'The recursion depth is exponential',
+      ],
+      explanation:
+        'fib(n) recursively computes fib(n-1) and fib(n-2), causing many repeated subproblems and exponential growth in calls.',
+      hint: 'Look for repeated fib(k) computations.',
+      concept: 'Exponential branching',
+    },
+    {
+      prompt: 'What are the common base cases for Fibonacci?',
+      correct: 'fib(0) = 0 and fib(1) = 1',
+      distractors: [
+        'fib(0) = 1 and fib(1) = 1',
+        'fib(0) = 0 and fib(1) = 0',
+        'fib(0) = 1 and fib(1) = 0',
+      ],
+      explanation:
+        'These two base cases define the beginning of the Fibonacci sequence.',
+      hint: 'Remember the sequence 0, 1, 1, 2, 3, ...',
+      concept: 'Base cases',
+    },
+    {
+      prompt: 'What recurrence defines Fibonacci for n ≥ 2?',
+      correct: 'fib(n) = fib(n - 1) + fib(n - 2)',
+      distractors: [
+        'fib(n) = fib(n - 1) × fib(n - 2)',
+        'fib(n) = fib(n - 2) - fib(n - 1)',
+        'fib(n) = fib(n + 1) + fib(n - 1)',
+      ],
+      explanation:
+        'Each Fibonacci value is the sum of the two previous values.',
+      hint: 'Think about consecutive sequence terms.',
+      concept: 'Recurrence relation',
+    },
+    {
+      prompt: 'What is the main problem with naive recursive Fibonacci?',
+      correct: 'It recomputes the same subproblems many times',
+      distractors: [
+        'It cannot reach a base case',
+        'It sorts the sequence repeatedly',
+        'It requires a graph',
+      ],
+      explanation:
+        'The same fib(k) values are computed again and again, creating overlapping subproblems.',
+      hint: 'Notice fib(3), fib(2), etc. appearing in multiple branches.',
+      concept: 'Overlapping subproblems',
+    },
+    {
+      prompt: 'What is the recursion-tree space complexity of naive Fibonacci?',
+      correct: 'O(n) call-stack depth',
+      distractors: ['O(1)', 'O(log n)', 'O(2^n) stack frames simultaneously'],
+      explanation:
+        'Although the total number of calls is exponential, the deepest active path is linear in n.',
+      hint: 'Total calls and maximum simultaneous stack depth are different.',
+      concept: 'Space complexity',
+    },
+    {
+      prompt: 'What is fib(2)?',
+      correct: '1',
+      distractors: ['0', '2', '3'],
+      explanation:
+        'fib(2) = fib(1) + fib(0) = 1 + 0 = 1.',
+      hint: 'Apply both base cases.',
+      concept: 'Recursive evaluation',
+    },
+    {
+      prompt: 'How does memoization improve recursive Fibonacci?',
+      correct: 'It stores already computed Fibonacci values and reuses them',
+      distractors: [
+        'It removes the base cases',
+        'It doubles the recursion depth',
+        'It sorts the call tree',
+      ],
+      explanation:
+        'Memoization prevents repeated computation by caching each solved subproblem.',
+      hint: 'Compute each fib(k) once instead of repeatedly.',
+      concept: 'Memoization',
+    },
+    {
+      prompt: 'What is the typical time complexity of memoized Fibonacci?',
+      correct: 'O(n)',
+      distractors: ['O(2^n)', 'O(n²)', 'O(log n)'],
+      explanation:
+        'There are only O(n) distinct Fibonacci states, and each is computed once.',
+      hint: 'Count the number of unique values from 0 through n.',
+      concept: 'Optimized complexity',
+    },
+    {
+      prompt: 'Why does Fibonacci form a branching recursion tree while factorial does not?',
+      correct: 'Each Fibonacci call makes two recursive calls',
+      distractors: [
+        'Fibonacci has no base case',
+        'Factorial uses a queue',
+        'Fibonacci always halves n',
+      ],
+      explanation:
+        'The two recursive dependencies create branching; factorial has only one recursive dependency.',
+      hint: 'Compare the number of recursive calls per function.',
+      concept: 'Branching structure',
+    },
+    {
+      prompt: 'What is fib(5)?',
+      correct: '5',
+      distractors: ['3', '8', '10'],
+      explanation:
+        'fib(5) = fib(4) + fib(3) = 3 + 2 = 5.',
+      hint: 'Sequence: 0, 1, 1, 2, 3, 5.',
+      concept: 'Sequence evaluation',
+    },
+  ],
+
+  power: [
+    {
+      prompt: 'What is the base case for recursive power(base, exp)?',
+      correct: 'power(b, 0) = 1',
+      distractors: ['power(b, 0) = 0', 'power(b, 1) = 0', 'power(0, e) = 1'],
+      explanation:
+        'Any nonzero number raised to exponent zero is 1, which terminates the recursion.',
+      hint: 'Which exponent makes the result equal to the multiplicative identity?',
+      concept: 'Base case',
+    },
+  ],
+
+  arraySum: [
+    {
+      prompt: 'What is the base case for recursive array sum?',
+      correct: 'Return 0 when the index reaches the end of the array',
+      distractors: [
+        'Return the last element forever',
+        'Return 1 for every empty suffix',
+        'Restart from index 0',
+      ],
+      explanation:
+        'The sum of an empty suffix is zero, so recursion stops when there are no elements left.',
+      hint: 'What should the sum of no remaining elements be?',
+      concept: 'Base case',
+    },
+    {
+      prompt: 'How does recursive array sum decompose the problem?',
+      correct: 'arr[idx] + sum(arr, idx + 1)',
+      distractors: [
+        'arr[idx] × sum(arr, idx + 1)',
+        'sum(arr, idx - 1) only',
+        'Split into two equal halves every time',
+      ],
+      explanation:
+        'Each call handles one current element and delegates the remaining suffix to the next call.',
+      hint: 'One element now, the rest later.',
+      concept: 'Problem decomposition',
+    },
+    {
+      prompt: 'What is the time complexity of recursive array sum?',
+      correct: 'O(n)',
+      distractors: ['O(log n)', 'O(n²)', 'O(2^n)'],
+      explanation:
+        'Each element is processed exactly once.',
+      hint: 'How many recursive calls are made for n elements?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What is the call-stack space complexity of recursive array sum?',
+      correct: 'O(n)',
+      distractors: ['O(1)', 'O(log n)', 'O(n²)'],
+      explanation:
+        'There can be one active frame per array position before the recursion starts returning.',
+      hint: 'Think about the depth of the recursive chain.',
+      concept: 'Space complexity',
+    },
+    {
+      prompt: 'What happens when arraySum reaches the final valid element?',
+      correct: 'It adds that element to the base-case result from the empty suffix',
+      distractors: [
+        'It skips the final element',
+        'It starts the array again',
+        'It creates two recursive branches',
+      ],
+      explanation:
+        'The final element is added to sum of the remaining empty suffix, which is 0.',
+      hint: 'The last real element still belongs in the sum.',
+      concept: 'Recursive return',
+    },
+    {
+      prompt: 'Why does recursive array sum form a linear call chain?',
+      correct: 'Each call creates only one recursive call',
+      distractors: [
+        'Each call creates two children',
+        'Each call halves the array',
+        'Each call sorts the suffix',
+      ],
+      explanation:
+        'Only the next index is delegated to the next call, so there is no branching.',
+      hint: 'Count recursive calls made by one frame.',
+      concept: 'Recursion structure',
+    },
+    {
+      prompt: 'What does sum(arr, idx) conceptually represent?',
+      correct: 'The sum of the suffix starting at idx',
+      distractors: [
+        'The maximum element from idx onward',
+        'The whole array length',
+        'Only arr[idx]',
+      ],
+      explanation:
+        'Defining each recursive function in terms of the suffix makes the recurrence easy to reason about.',
+      hint: 'What part of the array is still unresolved?',
+      concept: 'Function meaning',
+    },
+    {
+      prompt: 'Why is 0 the correct base-case return for an empty sum?',
+      correct: 'Zero is the additive identity',
+      distractors: [
+        'Zero is the multiplicative identity',
+        'Zero avoids recursion depth',
+        'Zero represents the last array value',
+      ],
+      explanation:
+        'Adding zero does not change the accumulated sum, making it the natural identity for addition.',
+      hint: 'Compare addition with its identity value.',
+      concept: 'Identity element',
+    },
+    {
+      prompt: 'What happens as idx increases during recursive array sum?',
+      correct: 'The unresolved suffix becomes smaller',
+      distractors: [
+        'The array becomes longer',
+        'The index moves backward',
+        'The same suffix is processed repeatedly',
+      ],
+      explanation:
+        'Every call advances to idx + 1, so fewer elements remain before the base case.',
+      hint: 'Track the recursive parameter.',
+      concept: 'Progress toward base case',
+    },
+    {
+      prompt: 'What is the sum of [1, 2, 3, 4]?',
+      correct: '10',
+      distractors: ['8', '9', '12'],
+      explanation:
+        'The recursive calls eventually return 4 + 3 + 2 + 1 = 10.',
+      hint: 'Add every element once.',
+      concept: 'Evaluation',
+    },
+  ],
+
+  towerOfHanoi: [
+    {
+      prompt: 'What is the base case of Tower of Hanoi recursion?',
+      correct: 'Move one disk directly from the source peg to the target peg',
+      distractors: [
+        'Move all disks in one operation',
+        'Move zero disks to the auxiliary peg',
+        'Start by moving the largest disk',
+      ],
+      explanation:
+        'With one disk, there is no smaller subproblem to solve, so the move is direct.',
+      hint: 'What is the smallest non-trivial Hanoi problem?',
+      concept: 'Base case',
+    },
+  ],
 };
+
+/* ── Step parsing helpers (JSON-encoded tree metadata) ───────────────── */
+
+function labelsOf(step: ArrayStep): string[] {
+  try {
+    const parsed = JSON.parse(String(step.variables?.nodeLabels ?? '[]'));
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function activeLabel(step: ArrayStep): string | null {
+  const labels = labelsOf(step);
+  const idx = step.comparingIndices?.[0];
+  return idx != null && labels[idx] != null ? labels[idx] : null;
+}
+
+/* ── Curated question pools ────────────────────────────────────────────
+   `bind` resolves the natural step for the question against the actual
+   execution; returning -1 drops the question for this input. Weights map
+   to the platform difficulty system: 1 = easy, 2 = medium, 3 = hard. */
+
+interface PoolQuestion {
+  id: string;
+  weight: QuizWeight;
+  kind: 'predict' | 'reason';
+  prompt: string;
+  correct: string;
+  distractors: string[];
+  explanation: string;
+  hint: string;
+  concept: string;
+  bind?: (steps: ArrayStep[]) => number;
+}
+
+const firstIdx = (steps: ArrayStep[], pred: (s: ArrayStep) => boolean) =>
+  steps.findIndex(pred);
+
+function halvingsToBase(e: number): number {
+  let count = 0;
+  while (e > 0) { e = Math.floor(e / 2); count++; }
+  return count;
+}
+
+function buildPowerPool(steps: ArrayStep[]): PoolQuestion[] {
+  const parsePow = (label: string | null): { b: number; e: number } | null => {
+    const m = /pow\((\d+),(\d+)\)/.exec(label ?? '');
+    return m ? { b: Number(m[1]), e: Number(m[2]) } : null;
+  };
+  const firstCall = firstIdx(steps, (s) => String(s.description).startsWith('Calling pow') && !String(s.description).includes(', 0)'));
+  const call = parsePow(firstCall >= 0 ? activeLabel(steps[firstCall]) : null);
+  const callExp = call ? call.e : NaN;
+  const baseReturn = firstIdx(steps, (s) => String(s.description).startsWith('Base case: pow'));
+  const evenReturn = firstIdx(steps, (s) => /= pow\(/.test(String(s.description)));
+  const oddReturn = firstIdx(steps, (s) => /= \d+ × pow\(/.test(String(s.description)));
+  const last = steps.length - 1;
+  const root = parsePow(activeLabel(steps[0]));
+  const rootExp = root ? root.e : 0;
+  const rootBase = root ? root.b : 0;
+
+  return [
+    {
+      id: 'power-depth', weight: 1, kind: 'reason',
+      prompt: `The root call is pow(${rootBase},${rootExp}). Roughly how deep does this call tree go?`,
+      correct: `About ${halvingsToBase(rootExp)} halvings deep — log₂ of the exponent`,
+      distractors: [
+        `${rootExp} levels — one per exponent unit`,
+        `${2 * rootExp} levels — two per unit`,
+        'The depth equals the base value',
+      ],
+      explanation: 'Each level halves the exponent, so depth grows like log₂(exp). That is the divide-and-conquer speedup: doubling exp adds only one level.',
+      hint: 'How many times can you halve the exponent before reaching 0?',
+      concept: 'Log depth',
+    },
+    {
+      id: 'power-why-halving', weight: 1, kind: 'reason',
+      prompt: 'Why is halving the exponent faster than subtracting 1 each call?',
+      correct: 'The problem size shrinks by half each level, so depth is log₂(n) instead of n',
+      distractors: [
+        'It avoids the base case entirely',
+        'Multiplication is cheaper than subtraction',
+        'It only recurses on even numbers',
+      ],
+      explanation: 'Subtracting 1 gives a chain n calls long. Halving gives a tree only log₂(n) deep — for n = 1024 that is 10 levels versus 1024.',
+      hint: 'Compare chain length for exp = 1024 in both approaches.',
+      concept: 'Divide and conquer',
+    },
+    {
+      id: 'power-space', weight: 1, kind: 'reason',
+      prompt: 'How much call-stack space does halving power use?',
+      correct: 'O(log n) frames — one per tree level on the current path',
+      distractors: ['O(n) frames', 'O(1) — no stack needed', 'O(2^n) frames'],
+      explanation: 'Only one path from root to base case is alive at a time, and that path is log₂(exp) long.',
+      hint: 'Stack depth equals tree depth, not total node count.',
+      concept: 'Space complexity',
+    },
+    {
+      id: 'power-two-halves', weight: 2, kind: 'predict',
+      bind: () => firstCall,
+      prompt: `This call splits the problem in half. What exponent do its two sub-calls get?`,
+      correct: `${Math.floor(callExp / 2)} — the exponent halved`,
+      distractors: [`${callExp - 1} — one less`, `${2 * callExp} — doubled`, `${callExp} — unchanged`],
+      explanation: 'Divide-and-conquer: pow(b, e) delegates to two pow(b, ⌊e/2) sub-problems and combines their answers.',
+      hint: 'Watch the exponent shrink at each level.',
+      concept: 'Halving',
+    },
+    {
+      id: 'power-base-return', weight: 2, kind: 'predict',
+      bind: () => baseReturn,
+      prompt: 'A base-case call just fired. What value does it return?',
+      correct: '1 — anything to the power 0 is 1',
+      distractors: ['0', 'The base value', 'It never returns'],
+      explanation: 'pow(b, 0) = 1 is the multiplicative identity that terminates every branch.',
+      hint: 'Which exponent ends the recursion?',
+      concept: 'Base case return',
+    },
+    {
+      id: 'power-even-combine', weight: 2, kind: 'predict',
+      bind: () => evenReturn,
+      prompt: 'This call has an EVEN exponent. How are the two half-results combined?',
+      correct: 'half × half',
+      distractors: ['base × half', 'base × base', 'half + half'],
+      explanation: 'For even e: b^e = b^(e/2) × b^(e/2). The two identical sub-results are multiplied.',
+      hint: 'b^4 = b^2 × b^2.',
+      concept: 'Combine rule',
+    },
+    {
+      id: 'power-odd-combine', weight: 2, kind: 'predict',
+      bind: () => oddReturn,
+      prompt: 'This call has an ODD exponent. How are the results combined?',
+      correct: 'base × half × half — one extra base factor',
+      distractors: ['half × half', 'base × base × half', 'half + half + base'],
+      explanation: 'For odd e: b^e = b × b^((e-1)/2) × b^((e-1)/2). The leftover factor is the base itself.',
+      hint: 'b^3 = b × b^1 × b^1.',
+      concept: 'Odd exponent',
+    },
+    {
+      id: 'power-will-terminate', weight: 2, kind: 'predict',
+      bind: () => firstCall,
+      prompt: 'Will every branch of this tree reach the base case?',
+      correct: 'Yes — halving any positive integer eventually reaches 0',
+      distractors: ['Only if the exponent is even', 'Only if the base is greater than 1', 'No — halving never terminates'],
+      explanation: 'Integer halving strictly decreases positive values, so every path hits pow(b, 0).',
+      hint: 'Try halving 7 repeatedly: 7, 3, 1, 0.',
+      concept: 'Termination',
+    },
+    {
+      id: 'power-halvings-left', weight: 2, kind: 'predict',
+      bind: () => firstCall,
+      prompt: `From exponent ${callExp}, how many more halvings until the base case?`,
+      correct: `${halvingsToBase(callExp)}`,
+      distractors: [`${callExp}`, `${callExp - 1}`, '1'],
+      explanation: 'Count the halvings: each level floors e/2 until 0. That count is the remaining depth.',
+      hint: 'Halve it on paper until you read 0.',
+      concept: 'Depth count',
+    },
+    {
+      id: 'power-root-value', weight: 2, kind: 'predict',
+      bind: () => (last > 0 ? last : -1),
+      prompt: 'Final step: what value does the root return?',
+      correct: `${Math.pow(rootBase, rootExp)} — base^exp`,
+      distractors: [
+        `${rootBase * rootExp} — base times exp`,
+        `${Math.pow(2, rootExp)} — 2^exp`,
+        `${Math.pow(rootBase, Math.max(0, rootExp - 1))} — one power short`,
+      ],
+      explanation: 'All the half × half combinations multiply back up to exactly base^exp.',
+      hint: 'The tree computes the same value as repeated multiplication, just faster.',
+      concept: 'Final result',
+    },
+    {
+      id: 'power-double-exp-depth', weight: 3, kind: 'reason',
+      prompt: 'If the exponent doubled, what would happen to the tree depth?',
+      correct: 'It grows by exactly one level — log₂ grows additively',
+      distractors: ['The depth doubles', 'It grows by two levels', 'Nothing changes'],
+      explanation: 'log₂(2n) = log₂(n) + 1. Doubling the input costs one extra level — the signature of logarithmic depth.',
+      hint: 'Think in halvings: one more doubling = one more halving step.',
+      concept: 'Log growth',
+    },
+    {
+      id: 'power-bottom-level', weight: 3, kind: 'predict',
+      prompt: `How many calls sit on the deepest branching level of this tree (exp = ${rootExp})?`,
+      correct: `${Math.pow(2, halvingsToBase(rootExp))} — the level count doubles each row`,
+      distractors: [
+        `${rootExp}`,
+        `${halvingsToBase(rootExp)}`,
+        `${Math.pow(2, rootExp)}`,
+      ],
+      explanation: 'The tree is binary: level d holds 2^d calls. The deepest branching level has 2^depth calls.',
+      hint: 'Level 0 has 1 call, level 1 has 2, level 2 has 4…',
+      concept: 'Binary branching',
+    },
+    {
+      id: 'power-total-nodes', weight: 3, kind: 'predict',
+      prompt: `Roughly how many total calls does this tree contain (exp = ${rootExp})?`,
+      correct: `${Math.pow(2, halvingsToBase(rootExp) + 1) - 1} — a full binary tree of that depth`,
+      distractors: [
+        `${rootExp + 1}`,
+        `${2 * rootExp}`,
+        `${Math.pow(2, rootExp) - 1}`,
+      ],
+      explanation: 'A full binary tree with depth d has 2^(d+1) - 1 nodes. (The optimized fast-power version keeps only one half per level: O(log n) calls.)',
+      hint: 'Sum 1 + 2 + 4 + … across the levels.',
+      concept: 'Node count',
+    },
+    {
+      id: 'power-duplicate-half', weight: 3, kind: 'reason',
+      prompt: 'Both children solve the same sub-problem pow(b, half). What does the optimized version do?',
+      correct: 'Compute half once and square it — a single O(log n) chain',
+      distractors: [
+        'Nothing — the duplicate work is free',
+        'Use a loop for odd exponents',
+        'Fall back to subtracting 1',
+      ],
+      explanation: 'Classic fast exponentiation: half = pow(b, e/2) once, then half × half (× b if odd). The visualized tree shows the sub-problems; the reference code reuses the half.',
+      hint: 'Why compute the same answer twice?',
+      concept: 'Memoization insight',
+    },
+    {
+      id: 'power-question-mark', weight: 3, kind: 'predict',
+      bind: (st) => firstIdx(st, (s) => labelsOf(s).some((l) => l.startsWith('pow(')) && String(s.description).startsWith('Calling')),
+      prompt: 'While descending, unresolved nodes show “?” as their value. What does that mean?',
+      correct: 'The call is still waiting for its sub-calls to return',
+      distractors: ['It already returned zero', 'It is a base case', 'The call failed'],
+      explanation: 'A call can only compute its return after both halves resolve — “?” marks the waiting (descent) phase.',
+      hint: 'Values appear bottom-up, on the way back.',
+      concept: 'Descent vs return',
+    },
+  ];
+}
+
+function buildHanoiPool(steps: ArrayStep[]): PoolQuestion[] {
+  const moveRe = /^Move disk (\d+) from peg (\w) to peg (\w)\. \(Move #(\d+)\)$/;
+  const moves = steps
+    .map((s, i) => ({ m: moveRe.exec(String(s.description)), i }))
+    .filter((x) => x.m)
+    .map((x) => ({ idx: x.i, disk: Number(x.m![1]), from: x.m![2], to: x.m![3], num: Number(x.m![4]) }));
+  if (moves.length === 0) return [];
+  const n = Math.max(...moves.map((m) => m.disk));
+  const total = Math.pow(2, n) - 1;
+  const first = moves[0];
+  const lastMove = moves[moves.length - 1];
+  const largest = moves.find((m) => m.disk === n);
+  const mid = moves.find((m) => m.num === Math.pow(2, n - 1));
+  const completeStep = firstIdx(steps, (s) => /complete\. All/.test(String(s.description)));
+
+  return [
+    {
+      id: 'hanoi-base', weight: 1, kind: 'reason',
+      prompt: 'What is the base case of the Hanoi recursion?',
+      correct: 'A single disk moves directly from source to target',
+      distractors: ['Move n-1 disks first', 'Swap the two top disks', 'Return without moving any disk'],
+      explanation: 'hanoi(1, from, to) performs exactly one move — the indivisible unit the whole recursion is built from.',
+      hint: 'What is the smallest possible move?',
+      concept: 'Base case',
+    },
+    {
+      id: 'hanoi-clear-stack', weight: 1, kind: 'reason',
+      prompt: 'Before the largest disk can move, where must the top n-1 disks be?',
+      correct: 'All stacked on the auxiliary peg',
+      distractors: ['On the target peg', 'Split between source and target', 'Back on the source in reverse order'],
+      explanation: 'The largest disk can only move when the source is otherwise empty and the target is free — so the n-1 stack must sit entirely on the auxiliary peg.',
+      hint: 'Which peg is “out of the way” for this move?',
+      concept: 'Three-peg logic',
+    },
+    {
+      id: 'hanoi-after-largest', weight: 1, kind: 'reason',
+      prompt: 'Immediately after the largest disk lands on the target, what remains?',
+      correct: 'Move the n-1 stack from the auxiliary peg onto the target',
+      distractors: ['Nothing — the puzzle is solved', 'Move the largest disk once more', 'Rebuild the n-1 stack on the auxiliary peg'],
+      explanation: 'The final phase mirrors the first: hanoi(n-1, aux, target, source) stacks the smaller disks onto the largest.',
+      hint: 'The recursion has three acts; you just watched act two.',
+      concept: 'Recursion phases',
+    },
+    {
+      id: 'hanoi-why-exponential', weight: 1, kind: 'reason',
+      prompt: 'Why is the move count exponential in n?',
+      correct: 'Solving n disks requires solving n-1 twice, plus one move: T(n) = 2T(n-1) + 1',
+      distractors: ['Pegs hold at most three disks', 'Disks must be sorted after moving', 'The algorithm retries failed moves'],
+      explanation: 'Each size level doubles the work of the one below it and adds one — unrolling the recurrence gives 2^n - 1.',
+      hint: 'Write T(3) in terms of T(2).',
+      concept: 'Recurrence',
+    },
+    {
+      id: 'hanoi-first-move', weight: 2, kind: 'predict',
+      bind: () => first.idx,
+      prompt: `Move #1 transferred a disk ${first.from}→${first.to}. Which disk was it?`,
+      correct: 'Disk 1 — the smallest disk always opens the game',
+      distractors: [`Disk ${n} — the largest`, 'Disk 2', 'The middle disk'],
+      explanation: 'To free anything bigger, the smallest disk must move first. For odd n it goes straight to the target.',
+      hint: 'Which disk is free to move at the very start?',
+      concept: 'Opening move',
+    },
+    {
+      id: 'hanoi-total-moves', weight: 2, kind: 'predict',
+      bind: () => first.idx,
+      prompt: `This run has ${n} disks. How many moves in total?`,
+      correct: `${total} — 2^n - 1`,
+      distractors: [`${2 * n}`, `${Math.pow(2, n)}`, `${n * n}`],
+      explanation: 'T(n) = 2T(n-1) + 1 unrolls to 2^n - 1. For n = 3 that is 7 moves.',
+      hint: 'Double and add one, level by level.',
+      concept: 'Move count',
+    },
+    {
+      id: 'hanoi-largest-now', weight: 2, kind: 'predict',
+      bind: () => (largest ? largest.idx : -1),
+      prompt: `The largest disk (${n}) is moving now. Why exactly now?`,
+      correct: 'The n-1 stack was just cleared onto the auxiliary peg',
+      distractors: [
+        'It moved earlier and is moving back',
+        'The smaller disks are already on the target',
+        'The auxiliary peg just became empty',
+      ],
+      explanation: 'Move #2^(n-1) is always the largest disk: the first half of the solution exists solely to make this move legal.',
+      hint: 'Count which move number this is.',
+      concept: 'Middle move',
+    },
+    {
+      id: 'hanoi-moves-left', weight: 2, kind: 'predict',
+      bind: () => (mid ? mid.idx : first.idx),
+      prompt: `After move #${mid ? mid.num : 1} completes, how many moves remain?`,
+      correct: `${total - (mid ? mid.num : 1)}`,
+      distractors: [`${mid ? mid.num : 1}`, `${total}`, `${Math.max(0, total - 2)}`],
+      explanation: 'Total is 2^n - 1; subtract the moves already made. The second half mirrors the first.',
+      hint: 'Total minus done equals left.',
+      concept: 'Progress tracking',
+    },
+    {
+      id: 'hanoi-final-move', weight: 2, kind: 'predict',
+      bind: () => lastMove.idx,
+      prompt: 'This is the final move of the run. Which disk completes the tower?',
+      correct: 'Disk 1 — the smallest disk makes the last move',
+      distractors: [`Disk ${n} — the largest`, 'Disk 2', 'No disk moves last'],
+      explanation: 'The smallest disk moves every other move (odd-numbered moves), including #1 and #2^n-1.',
+      hint: 'Smallest disk moves on move 1, 3, 5, …',
+      concept: 'Closing move',
+    },
+    {
+      id: 'hanoi-role-rotation', weight: 3, kind: 'reason',
+      prompt: 'In hanoi(n-1, from, aux, to), the peg that was the target becomes…',
+      correct: 'The auxiliary peg — roles rotate every level',
+      distractors: ['The source peg', 'Still the target', 'An unused peg'],
+      explanation: 'Each recursive level permutes (source, target, auxiliary). Tracking the rotation is the key to predicting any move.',
+      hint: 'The “out of the way” peg swaps with the target.',
+      concept: 'Role rotation',
+    },
+    {
+      id: 'hanoi-cant-first', weight: 3, kind: 'reason',
+      prompt: 'Why can’t the algorithm move the largest disk first?',
+      correct: 'Smaller disks sit on top of it — only one top disk may move per turn',
+      distractors: ['The largest disk may never move', 'It would exceed 2^n - 1 moves', 'The auxiliary peg must fill first'],
+      explanation: 'Rules allow moving only the top disk of a peg, and never onto a smaller disk. The whole first phase exists to uncover the largest disk.',
+      hint: 'What is physically blocking it?',
+      concept: 'Move rules',
+    },
+    {
+      id: 'hanoi-four-disks', weight: 3, kind: 'predict',
+      prompt: `If the input were 4 disks instead of ${n}, how many moves would the solution take?`,
+      correct: '15 — 2^4 - 1',
+      distractors: ['8', '16', '31'],
+      explanation: 'One more disk doubles the previous count and adds one: 2·7 + 1 = 15.',
+      hint: 'T(4) = 2·T(3) + 1.',
+      concept: 'Recurrence application',
+    },
+    {
+      id: 'hanoi-subcall-cost', weight: 3, kind: 'predict',
+      bind: () => completeStep,
+      prompt: 'A sub-call just reported complete. How many moves did a hanoi(d, …) sub-call make?',
+      correct: '2^d - 1 moves, where d is its disk count',
+      distractors: ['d moves', '2^d moves', '2d - 1 moves'],
+      explanation: 'Every sub-problem is itself a full Hanoi instance on d disks, costing 2^d - 1 moves.',
+      hint: 'The formula applies at every scale.',
+      concept: 'Self-similarity',
+    },
+    {
+      id: 'hanoi-stack-depth', weight: 3, kind: 'predict',
+      prompt: `How deep does the call stack get for ${n} disks?`,
+      correct: `${n} frames — one per disk level`,
+      distractors: [`${total} frames`, `${2 * n} frames`, `${Math.pow(2, n)} frames`],
+      explanation: 'The deepest chain is hanoi(n) → hanoi(n-1) → … → hanoi(1): exactly n frames, even though total moves are exponential.',
+      hint: 'Depth counts nested calls, not moves.',
+      concept: 'Stack depth',
+    },
+    {
+      id: 'hanoi-peg-state', weight: 2, kind: 'predict',
+      bind: () => (largest ? largest.idx : -1),
+      prompt: 'At the moment the largest disk moves, what does the target peg hold?',
+      correct: 'Nothing — it must be completely empty',
+      distractors: ['The smallest disk', 'Half the stack', 'Disk 2'],
+      explanation: 'The n-1 stack is on the auxiliary peg and the source holds only the largest disk, so the target is empty.',
+      hint: 'Where did the n-1 stack go?',
+      concept: 'Peg states',
+    },
+  ];
+}
 
 /* ── Step-based questions (asked during playback) ──────────────────── */
 
@@ -113,8 +828,7 @@ function buildStepQuestion(
   const step = steps[stepIdx];
   if (!step?.variables) return null;
 
-  const nodeLabels = String(step.variables.nodeLabels || '').split(',');
-  const retVals    = String(step.variables.returnValues || '').split(',');
+  const nodeLabels = labelsOf(step);
   const active     = step.comparingIndices ?? [];
 
   // For active base-case steps: ask what the base case returns
@@ -130,7 +844,7 @@ function buildStepQuestion(
     )) {
       return {
         prompt: `This is a base case call: ${label}. What value does it return?`,
-        correct: retVals[idx] ?? '1',
+        correct: '1',
         distractors: ['0', '-1', 'n'],
         explanation: `The base case ${label} returns the identity value for this operation, which terminates the recursion.`,
         hint: 'What stops the recursion at this point?',
@@ -151,10 +865,43 @@ export function buildRecursionCheckpoints(
   if (steps.length < 2) return [];
 
   const checkpoints: QuizCheckpoint[] = [];
+  const usedIndices = new Set<number>();
 
-  // 1. Anchor question at step 0
-  const anchor = ANCHORS[algorithm];
-  const anchorId = `recursion-${algorithm}-anchor`;
+  interface RawQuestion {
+    id: string;
+    prompt: string;
+    correct: string;
+    distractors: string[];
+    explanation: string;
+    hint: string;
+    concept: string;
+    weight: QuizWeight;
+    kind?: 'predict' | 'reason';
+  }
+
+  const place = (preferred: number, q: RawQuestion) => {
+    if (preferred < 0 || preferred >= steps.length) return;
+    let idx = -1;
+    for (let i = preferred; i < steps.length; i++) {
+      if (!usedIndices.has(i)) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    usedIndices.add(idx);
+    const opts = buildOptions(q.id, q.correct, q.distractors);
+    checkpoints.push({
+      stepIndex: idx,
+      question: { ...q, options: opts.options, correctIndex: opts.correctIndex },
+    });
+  };
+
+  // 1. Deterministic conceptual anchor at step 0.
+  // Power/Hanoi already have large curated pools below, so their single
+  // anchor remains lightweight and the existing pools stay untouched.
+  const anchors = ANCHORS[algorithm];
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
+  const anchorId = `recursion-${algorithm}-anchor-${anchorIndex}`;
+  usedIndices.add(0);
   const anchorOpts = buildOptions(anchorId, anchor.correct, anchor.distractors);
   checkpoints.push({
     stepIndex: 0,
@@ -167,10 +914,35 @@ export function buildRecursionCheckpoints(
       hint: anchor.hint,
       concept: anchor.concept,
       weight: 1 as QuizWeight,
+      kind: 'reason',
     },
   });
 
-  // 2. Step-based questions — at most one every 4 steps
+  // 2. Curated pools for the two rebuilt algorithms.
+  const pool =
+    algorithm === 'power' ? buildPowerPool(steps)
+    : algorithm === 'towerOfHanoi' ? buildHanoiPool(steps)
+    : [];
+
+  if (pool.length > 0) {
+    for (const q of pool) {
+      const preferred = q.bind ? q.bind(steps) : Math.floor(steps.length / 2);
+      place(preferred, {
+        id: `recursion-${algorithm}-${q.id}`,
+        prompt: q.prompt,
+        correct: q.correct,
+        distractors: q.distractors,
+        explanation: q.explanation,
+        hint: q.hint,
+        concept: q.concept,
+        weight: q.weight,
+        kind: q.kind,
+      });
+    }
+    return checkpoints;
+  }
+
+  // 3. Legacy step-based questions — at most one every 4 steps.
   let lastAsked = 0;
   for (let i = 1; i < steps.length - 1; i++) {
     if (i - lastAsked < 4) continue;
@@ -179,6 +951,7 @@ export function buildRecursionCheckpoints(
     if (!q) continue;
 
     const id = `recursion-${algorithm}-step-${i}`;
+    usedIndices.add(i);
     const opts = buildOptions(id, q.correct, q.distractors);
     checkpoints.push({
       stepIndex: i,
@@ -219,12 +992,12 @@ const REVISION_DATA: Record<RecursionAlgorithmKey, QuizRevisionData> = {
     example: 'fib(5) = fib(4)+fib(3) = (fib(3)+fib(2))+(fib(2)+fib(1)) = … = 5. Note fib(2) is computed 3 times.',
   },
   power: {
-    description: 'Compute base^exp using recursion',
-    complexity: 'O(exp) time, O(exp) space',
-    keyIdea: 'Base case: power(b, 0) = 1; recursive: power(b, e) = b × power(b, e-1)',
-    watchFor: ['Base case (exp=0)', 'Negative exponent handling', 'Optimization (fast power)'],
-    quickTip: 'Fast exponentiation: power(b, e) = power(b, e/2)² × (b if e is odd) gives O(log e)',
-    example: 'power(2, 4) = 2×power(2,3) = 2×2×power(2,2) = … = 16. Fast power: 2^4 = (2^2)^2 = 4^2 = 16 in 2 calls.',
+    description: 'Compute base^exp by halving the exponent: divide & conquer',
+    complexity: 'O(log n) depth, O(log n) space',
+    keyIdea: 'pow(b, e) splits into two pow(b, e÷2) sub-calls; even: half×half, odd: b×half×half',
+    watchFor: ['Halving per level', 'Log-depth tree', 'Even/odd combine rules'],
+    quickTip: 'Count the halvings: that is the tree depth. Doubling exp adds only one level.',
+    example: '2^4 → two 2^2 → four 2^1 → eight 2^0=1; combine: 1×1=1, 1×1×2=2, 2×2=4, 4×4=16.',
   },
   arraySum: {
     description: 'Sum array elements recursively',

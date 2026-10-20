@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react';
+import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, UserPlus, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { rememberUsername } from '../../api/authPreferences';
 import { Octa, useMascot } from '../../components/mascot';
 import '../../components/mascot/Mascot.css';
 import './Auth.css';
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 export const SignUp: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -19,20 +27,61 @@ export const SignUp: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { state: mascotState, setExpression, setContext } = useMascot();
 
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
   useEffect(() => {
     setContext('signup');
+    // Initialize Google Sign-In only if a valid client ID is configured
+    if (GOOGLE_CLIENT_ID && window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+        context: 'signup',
+        ux_mode: 'popup',
+      });
+      const btnEl = document.getElementById('google-signup-btn');
+      if (btnEl) {
+        window.google.accounts.id.renderButton(btnEl, {
+          theme: 'outline', size: 'large', type: 'standard', shape: 'pill', text: 'signup_with',
+        });
+      }
+    }
   }, [setContext]);
+
+  const handleGoogleResponse = async (response: any) => {
+    setError('');
+    setIsSubmitting(true);
+    setExpression('focused');
+    try {
+      await loginWithGoogle(response.credential, GOOGLE_CLIENT_ID, true);
+      setExpression('happy', { temporary: true, durationMs: 900 });
+      setTimeout(() => navigate('/dashboard'), 300);
+    } catch (err: any) {
+      const msg = typeof err?.message === 'string' ? err.message : 'Google Sign-Up failed.';
+      setError(msg);
+      setExpression('confused', { temporary: true, durationMs: 1500 });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Client-side check: the two passwords must match before we hit the API
+    // Regex for Email Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      setExpression('confused', { temporary: true, durationMs: 1500, message: 'Invalid email' });
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please re-enter them.');
       return;
@@ -42,12 +91,13 @@ export const SignUp: React.FC = () => {
     setExpression('focused');
 
     try {
-      await signup(username, email, password, firstName, lastName);
+      await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim());
+      rememberUsername(username.trim().toLowerCase());
       setSuccess('Account created successfully! Redirecting to login...');
       setExpression('happy', { temporary: true, durationMs: 2000 });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      const message = err?.message || 'Something went wrong. Please try again.';
+      const message = typeof err?.message === 'string' ? err.message : 'Something went wrong. Please try again.';
       setError(message);
       setExpression('confused', { temporary: true, durationMs: 1500, message: 'Oops.' });
     } finally {
@@ -57,6 +107,7 @@ export const SignUp: React.FC = () => {
 
   return (
     <div className="auth-page-container">
+      <SEOHead title="Sign Up | STEM Studio" description="Create a new STEM Studio account." noIndex={true} />
       <div className="auth-card animate-fade-in auth-card-with-mascot">
         <div className="mascot-auth-jump">
           <Octa expression={mascotState.expression} size="medium" />
@@ -69,6 +120,18 @@ export const SignUp: React.FC = () => {
           <h1 className="auth-title">Create an account</h1>
           <p className="auth-subtitle">Join STEM Studio to start your journey</p>
         </div>
+
+        {GOOGLE_CLIENT_ID && (
+          <div className="google-btn-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <div id="google-signup-btn"></div>
+          </div>
+        )}
+
+        {GOOGLE_CLIENT_ID && (
+          <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
+            <span>or create an account with email</span>
+          </div>
+        )}
 
         {error && (
           <div className="auth-error animate-fade-in">
@@ -93,11 +156,13 @@ export const SignUp: React.FC = () => {
                 <input
                   type="text"
                   id="firstName"
+                  name="given-name"
                   className="auth-input"
                   placeholder="John"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                  autoComplete="given-name"
                   required
                   maxLength={50}
                   disabled={isSubmitting}
@@ -112,11 +177,13 @@ export const SignUp: React.FC = () => {
                 <input
                   type="text"
                   id="lastName"
+                  name="family-name"
                   className="auth-input"
                   placeholder="Doe"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                  autoComplete="family-name"
                   required
                   maxLength={50}
                   disabled={isSubmitting}
@@ -132,11 +199,15 @@ export const SignUp: React.FC = () => {
               <input
                 type="text"
                 id="username"
+                name="username"
                 className="auth-input"
                 placeholder="johndoe"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 required
                 minLength={3}
                 maxLength={50}
@@ -152,11 +223,13 @@ export const SignUp: React.FC = () => {
               <input
                 type="email"
                 id="email"
+                name="email"
                 className="auth-input"
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="email"
                 required
                 disabled={isSubmitting}
               />
@@ -170,11 +243,13 @@ export const SignUp: React.FC = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
+                name="new-password"
                 className="auth-input"
                 placeholder="Create a strong password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="new-password"
                 required
                 minLength={8}
                 maxLength={128}
@@ -198,11 +273,13 @@ export const SignUp: React.FC = () => {
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 id="confirmPassword"
+                name="new-password"
                 className="auth-input"
                 placeholder="Re-enter your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1000 })}
+                autoComplete="new-password"
                 required
                 minLength={8}
                 maxLength={128}

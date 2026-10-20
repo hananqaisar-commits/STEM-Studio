@@ -1,0 +1,157 @@
+{
+  "complexity": [
+    "why",
+    "notations",
+    "rules",
+    "loops",
+    "time",
+    "space",
+    "cases",
+    "recursion",
+    "amortized",
+    "tradeoffs",
+    "ds-operations",
+    "comparison"
+  ],
+  "sorting": [
+    "bubble",
+    "selection",
+    "insertion",
+    "merge",
+    "quick",
+    "heap",
+    "shell",
+    "counting",
+    "radix",
+    "bucket"
+  ],
+  "arrays": [
+    "linearSearch",
+    "kadane",
+    "twoPointer",
+    "slidingWindow",
+    "rotation",
+    "prefixSum"
+  ],
+  "strings": [
+    "palindrome",
+    "anagram",
+    "reverse",
+    "frequency"
+  ],
+  "linkedList": [
+    "singly",
+    "reverse",
+    "middleNode",
+    "detectCycle",
+    "josephus",
+    "reverseSublist",
+    "reverseHalf",
+    "reverseFromMiddle",
+    "reverseKGroup",
+    "palindrome",
+    "swapPairs",
+    "mergeSort",
+    "addTwoNumbers",
+    "removeNthFromEnd",
+    "splitHalves",
+    "splitKParts",
+    "mergeKSorted",
+    "lruCache",
+    "doubly",
+    "circular",
+    "doublyCircular"
+  ],
+  "stackQueue": [
+    "stack",
+    "queue",
+    "validParentheses",
+    "minStack",
+    "infixToPostfix",
+    "postfixEval",
+    "dailyTemperatures",
+    "simplifyPath",
+    "removeAdjacentDuplicates",
+    "basicCalculator",
+    "decodeString",
+    "trappingRainWater",
+    "largestRectangle",
+    "queueViaStacks",
+    "stackViaQueues",
+    "circularQueue",
+    "circularDeque",
+    "slidingWindow",
+    "firstNonRepeating",
+    "movingAverage",
+    "taskScheduler",
+    "rottingOranges",
+    "dota2Senate"
+  ],
+  "binarySearch": [
+    "binarySearch",
+    "lowerBound",
+    "upperBound",
+    "searchRotatedArray",
+    "findPeakElement"
+  ],
+  "hashMaps": [
+    "twoSum",
+    "duplicateDetect",
+    "frequencyMap",
+    "subarraySum"
+  ],
+  "bst": [
+    "bst",
+    "avl",
+    "rbt",
+    "heap",
+    "segTree",
+    "trie"
+  ],
+  "graph": [
+    "bfs",
+    "dfs",
+    "dijkstra",
+    "bellmanFord",
+    "prim",
+    "kruskal",
+    "aStar",
+    "topoSort"
+  ],
+  "recursion": [
+    "factorial",
+    "fibonacci",
+    "power",
+    "arraySum",
+    "towerOfHanoi"
+  ],
+  "backtracking": [
+    "subsets",
+    "permutations",
+    "nQueens",
+    "combinationSum"
+  ],
+  "greedy": [
+    "activitySelection",
+    "fractionalKnapsack",
+    "jobScheduling",
+    "huffmanCoding"
+  ],
+  "dp": [
+    "fibonacciDP",
+    "coinChange",
+    "houseRobber",
+    "knapsack01",
+    "lcs",
+    "lis",
+    "editDistance",
+    "uniquePaths"
+  ],
+  "trie": [
+    "trieInsert",
+    "trieSearch",
+    "triePrefix",
+    "wordDictionary",
+    "autocomplete"
+  ]
+}

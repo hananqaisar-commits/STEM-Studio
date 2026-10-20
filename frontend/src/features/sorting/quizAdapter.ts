@@ -66,132 +66,638 @@ interface Anchor {
   concept: string;
 }
 
-const ANCHORS: Record<SortingAlgorithmKey, Anchor> = {
-  bubble: {
-    prompt: 'Before it starts: what does one full pass of bubble sort guarantee?',
-    correct: 'The largest unsorted value reaches the end of the unsorted region',
-    distractors: [
-      'The array becomes fully sorted',
-      'The smallest value reaches index 0',
-      'Exactly one swap takes place',
-    ],
-    explanation:
-      'A pass compares every adjacent pair and swaps whenever they are out of order, which carries the largest value all the way right. That is why exactly one element locks in per pass, and why n-1 passes are enough.',
-    hint: 'Follow one large value as adjacent pairs are compared left to right. Where can it end up?',
-    concept: 'Pass invariant',
-  },
-  selection: {
-    prompt: 'Before it starts: how many times does selection sort write to the array in one pass?',
-    correct: 'At most once — a single swap at the end of the pass',
-    distractors: ['Once per comparison', 'Never — it only reorders indices', 'Twice per comparison'],
-    explanation:
-      'A pass only scans for the minimum, tracking its index in minIdx. The array is written once, when that minimum is swapped into place. Few writes is selection sort’s one real advantage over bubble sort.',
-    hint: 'Scanning for the smallest value does not require moving anything.',
-    concept: 'Write cost',
-  },
-  insertion: {
-    prompt:
-      'Before it starts: what is true of the region left of the current key, but not of the whole array?',
-    correct: 'It is sorted among itself, though not necessarily in final position',
-    distractors: [
-      'It is sorted and every element is already in its final position',
-      'It is untouched from the original array',
-      'It holds the smallest values in the array',
-    ],
-    explanation:
-      'Insertion sort grows a sorted prefix one element at a time. The prefix is internally sorted, but an element not reached yet can still be smaller than everything in it, which would shift the whole prefix right.',
-    hint: 'A value further right could still be smaller than everything scanned so far.',
-    concept: 'Sorted prefix',
-  },
-  merge: {
-    prompt:
-      'Before it starts: why can two sorted halves be merged in a single left-to-right scan?',
-    correct: 'The next smallest value overall is always at the front of one of the two halves',
-    distractors: [
-      'Because the two halves are the same length',
-      'Because merging re-sorts each half as it goes',
-      'Because the halves have no values in common',
-    ],
-    explanation:
-      'Sortedness means each half’s smallest remaining value is its front element, so comparing just those two fronts is enough to choose the next output value. That is what makes a merge O(n) rather than O(n log n).',
-    hint: 'You never have to look at more than one element from each half.',
-    concept: 'Merge invariant',
-  },
-  quick: {
-    prompt: 'Before it starts: what is true of the pivot once one partition finishes?',
-    correct: 'It sits in its final sorted position and never moves again',
-    distractors: [
-      'It sits at the midpoint of the range',
-      'It becomes the pivot for the left half too',
-      'It is compared again during the next partition',
-    ],
-    explanation:
-      'Partitioning puts every smaller value left of the pivot and every larger value right of it — which is exactly the pivot’s sorted position. Recursion can then ignore it and sort only the two sides.',
-    hint: 'After partitioning, nothing left of the pivot is larger and nothing right of it is smaller.',
-    concept: 'Partitioning',
-  },
-  heap: {
-    prompt: 'Before it starts: what does the max-heap property guarantee?',
-    correct: 'The largest remaining value is at the root, index 0',
-    distractors: [
-      'The array is sorted from index 0 upward',
-      'Each level of the heap is sorted left to right',
-      'The smallest remaining value is at the last index',
-    ],
-    explanation:
-      'A max-heap only requires every parent to be at least as large as its children, which forces the maximum to the root. Heap sort repeatedly swaps that root to the end and re-heapifies the shrinking prefix.',
-    hint: 'A heap is not a sorted array. Think about what the parent-child rule forces at the very top.',
-    concept: 'Heap property',
-  },
-  shell: {
-    prompt: 'Before it starts: what does sorting at a large gap accomplish?',
-    correct: 'It moves far-out-of-place values most of the way home in very few writes',
-    distractors: [
-      'It puts every gap-th element into its final position',
-      'It leaves the array fully sorted once the first gap finishes',
-      'It removes the need for any later pass',
-    ],
-    explanation:
-      'Plain insertion sort moves a value one slot per write, so a value far from home is expensive. Large gaps let it jump many positions at once, leaving the final gap-of-1 pass with very little left to do.',
-    hint: 'Compare how far one write can move a value at gap 6 versus at gap 1.',
-    concept: 'Gap sequence',
-  },
-  counting: {
-    prompt: 'What makes counting sort fundamentally different from comparison sorts?',
-    correct: 'It uses the actual values as array indices in a count table — no comparisons needed',
-    distractors: [
-      'It compares values but stores them in a separate table',
-      'It only works on already-sorted input',
-      'It uses a binary search to find positions',
-    ],
-    explanation: 'It uses the actual values as array indices in a count table — no comparisons needed.',
-    hint: 'Think about how it maps values to positions.',
-    concept: 'counting-sort',
-  },
-  radix: {
-    prompt: 'Why does radix sort process digits from least significant to most significant?',
-    correct: 'LSD order preserves the relative ordering from previous passes (stability), which is essential for correctness',
-    distractors: [
-      'Because the most significant digit is always zero',
-      'It processes from most significant to least significant instead',
-      'The order does not matter as long as all digits are processed',
-    ],
-    explanation: 'LSD order preserves the relative ordering from previous passes (stability), which is essential for correctness.',
-    hint: 'Consider what happens if you process digits in the opposite order.',
-    concept: 'radix-sort',
-  },
-  bucket: {
-    prompt: 'What input distribution gives bucket sort its worst-case O(n²) time?',
-    correct: 'When all elements fall into the same bucket, the per-bucket sort becomes O(n²)',
-    distractors: [
-      'When elements are evenly spread across all buckets',
-      'When every bucket has exactly one element',
-      'When the input is already sorted',
-    ],
-    explanation: 'When all elements fall into the same bucket, the per-bucket sort becomes O(n²).',
-    hint: 'Think about what happens when values are clustered.',
-    concept: 'bucket-sort',
-  },
+const ANCHORS: Record<SortingAlgorithmKey, Anchor[]> = {
+  bubble: [
+    {
+      prompt: 'What does one full pass of bubble sort guarantee?',
+      correct: 'The largest unsorted value reaches the end of the unsorted region',
+      distractors: [
+        'The array becomes fully sorted',
+        'The smallest value reaches index 0',
+        'Exactly one swap takes place',
+      ],
+      explanation:
+        'Adjacent comparisons move larger values rightward, so the largest unsorted value bubbles to the end of the active region.',
+      hint: 'Follow a large value during left-to-right adjacent swaps.',
+      concept: 'Pass invariant',
+    },
+    {
+      prompt: 'Why is bubble sort called a stable sorting algorithm?',
+      correct: 'Equal elements can keep their original relative order',
+      distractors: [
+        'It always uses constant memory',
+        'It always runs in O(n)',
+        'It never performs swaps',
+      ],
+      explanation:
+        'Standard bubble sort swaps only when the left value is strictly greater, so equal elements are not unnecessarily reordered.',
+      hint: 'Think about what happens when two compared values are equal.',
+      concept: 'Stability',
+    },
+    {
+      prompt: 'What is bubble sort’s worst-case time complexity?',
+      correct: 'O(n²)',
+      distractors: ['O(n log n)', 'O(n)', 'O(log n)'],
+      explanation:
+        'In the worst case, bubble sort performs quadratic numbers of comparisons and swaps.',
+      hint: 'Think about a reverse-sorted array.',
+      concept: 'Complexity',
+    },
+    {
+      prompt: 'What is bubble sort’s best-case complexity when an early-exit flag is used?',
+      correct: 'O(n)',
+      distractors: ['O(n²)', 'O(n log n)', 'O(log n)'],
+      explanation:
+        'If the array is already sorted, one pass makes no swaps and the algorithm can terminate immediately.',
+      hint: 'What happens when a complete pass performs zero swaps?',
+      concept: 'Best case',
+    },
+    {
+      prompt: 'Why does bubble sort need at most n - 1 passes?',
+      correct: 'Each pass can place one more maximum value into its final position',
+      distractors: [
+        'Each pass removes two elements',
+        'Each pass sorts the entire array',
+        'The algorithm always performs exactly n² swaps',
+      ],
+      explanation:
+        'After each pass, one additional element is fixed at the right end of the unsorted region, leaving at most n - 1 positions to settle.',
+      hint: 'Count how many positions become permanently correct.',
+      concept: 'Pass count',
+    },
+  ],
+
+  selection: [
+    {
+      prompt: 'What is the main invariant of selection sort after each pass?',
+      correct: 'The first position of the unsorted region contains its minimum value',
+      distractors: [
+        'The entire array is sorted',
+        'The last position contains the global maximum',
+        'Every adjacent pair is sorted',
+      ],
+      explanation:
+        'Selection sort scans the unsorted region for its minimum and places it into the first unsorted position.',
+      hint: 'Where does the minimum of the remaining region go?',
+      concept: 'Selection invariant',
+    },
+    {
+      prompt: 'How many swaps does selection sort perform at most in its standard implementation?',
+      correct: 'O(n) swaps',
+      distractors: ['O(n²) swaps', 'O(log n) swaps', 'Exactly one swap total'],
+      explanation:
+        'Each outer pass performs at most one swap after finding the minimum.',
+      hint: 'Separate comparisons from writes/swaps.',
+      concept: 'Write cost',
+    },
+    {
+      prompt: 'What is selection sort’s typical time complexity?',
+      correct: 'O(n²)',
+      distractors: ['O(n)', 'O(n log n)', 'O(log n)'],
+      explanation:
+        'Every pass scans the remaining unsorted portion to find the minimum, resulting in quadratic comparisons.',
+      hint: 'How many candidates are searched on each pass?',
+      concept: 'Complexity',
+    },
+    {
+      prompt: 'Does selection sort normally become linear on an already sorted array?',
+      correct: 'No — it still scans the remaining elements',
+      distractors: [
+        'Yes — it immediately stops',
+        'Yes — sorting is unnecessary after one comparison',
+        'Only when all values are equal',
+      ],
+      explanation:
+        'Selection sort still searches for the minimum on every pass even when the array is already sorted.',
+      hint: 'The algorithm must still verify the minimum.',
+      concept: 'Best-case behavior',
+    },
+    {
+      prompt: 'Why is selection sort often useful when writes are expensive?',
+      correct: 'It performs relatively few swaps compared with many other quadratic sorts',
+      distractors: [
+        'It never compares elements',
+        'It always runs in O(n log n)',
+        'It uses no comparisons at all',
+      ],
+      explanation:
+        'Selection sort may perform many comparisons but only about one swap per pass.',
+      hint: 'Compare the number of comparisons with the number of swaps.',
+      concept: 'Write efficiency',
+    },
+  ],
+
+  insertion: [
+    {
+      prompt: 'What is true about the region to the left of the current key in insertion sort?',
+      correct: 'It is already sorted internally',
+      distractors: [
+        'It contains only the globally smallest values',
+        'Every element is already in its final global position',
+        'It is guaranteed to be unchanged from the input',
+      ],
+      explanation:
+        'Insertion sort maintains a sorted prefix and inserts the next key into the correct position within that prefix.',
+      hint: 'Think about the invariant of the sorted prefix.',
+      concept: 'Sorted prefix',
+    },
+    {
+      prompt: 'What does insertion sort do when the key is smaller than preceding sorted values?',
+      correct: 'Shift larger values right until the key can be inserted',
+      distractors: [
+        'Delete the key',
+        'Move the key directly to index 0 without shifts',
+        'Restart the entire algorithm',
+      ],
+      explanation:
+        'Larger elements in the sorted prefix are shifted one position right to make room for the key.',
+      hint: 'The key moves left by opening a gap.',
+      concept: 'Shifting',
+    },
+    {
+      prompt: 'What is insertion sort’s worst-case time complexity?',
+      correct: 'O(n²)',
+      distractors: ['O(n)', 'O(n log n)', 'O(log n)'],
+      explanation:
+        'A reverse-sorted array can require each new key to shift across most of the sorted prefix.',
+      hint: 'Think about maximum shifts for every insertion.',
+      concept: 'Complexity',
+    },
+    {
+      prompt: 'What is insertion sort’s best-case time complexity?',
+      correct: 'O(n)',
+      distractors: ['O(n²)', 'O(n log n)', 'O(log n)'],
+      explanation:
+        'When the input is already sorted, each key needs only one comparison with the preceding element and no shifts.',
+      hint: 'Consider an already sorted array.',
+      concept: 'Best case',
+    },
+    {
+      prompt: 'Why is insertion sort effective on nearly sorted data?',
+      correct: 'Most elements need only a small number of shifts',
+      distractors: [
+        'It ignores already sorted elements completely',
+        'It always uses a heap',
+        'It guarantees O(1) time per insertion',
+      ],
+      explanation:
+        'When elements are close to their final positions, insertion sort performs little movement and can approach linear time.',
+      hint: 'Think about the amount of disorder rather than only n.',
+      concept: 'Adaptive behavior',
+    },
+  ],
+
+  merge: [
+    {
+      prompt: 'Why can two sorted halves be merged in one linear scan?',
+      correct: 'The smallest remaining value must be at the front of one of the two halves',
+      distractors: [
+        'The halves are always equal in size',
+        'The halves never contain equal values',
+        'Merging re-sorts each half from scratch',
+      ],
+      explanation:
+        'Because each half is already sorted, comparing only their current front elements is sufficient to determine the next output.',
+      hint: 'Only the smallest unmerged value from each half matters.',
+      concept: 'Merge invariant',
+    },
+    {
+      prompt: 'What is the time complexity of merge sort?',
+      correct: 'O(n log n)',
+      distractors: ['O(n²)', 'O(n)', 'O(log n)'],
+      explanation:
+        'There are O(log n) levels of splitting and O(n) work at each level during merging.',
+      hint: 'Think depth of recursion × work per level.',
+      concept: 'Complexity',
+    },
+    {
+      prompt: 'Why does merge sort usually require O(n) auxiliary space?',
+      correct: 'The merge step needs temporary storage for the combined result',
+      distractors: [
+        'Each comparison creates a new array',
+        'The recursion tree stores every permutation',
+        'The input must be duplicated n times',
+      ],
+      explanation:
+        'The standard array-based merge implementation uses temporary space to combine the two sorted halves.',
+      hint: 'Focus on where merged output is temporarily stored.',
+      concept: 'Space complexity',
+    },
+    {
+      prompt: 'Why is merge sort stable in a standard implementation?',
+      correct: 'Equal elements can be taken from the left half before the right half',
+      distractors: [
+        'It never compares equal values',
+        'It sorts only distinct values',
+        'It places equal values randomly',
+      ],
+      explanation:
+        'When equal keys are encountered, choosing the left element first preserves their original relative ordering.',
+      hint: 'Look at the tie-breaking rule during merge.',
+      concept: 'Stability',
+    },
+    {
+      prompt: 'What is the main divide-and-conquer idea of merge sort?',
+      correct: 'Split into smaller subarrays, sort them recursively, then merge them',
+      distractors: [
+        'Select one global minimum repeatedly',
+        'Build a heap before every comparison',
+        'Use hashing to count every value',
+      ],
+      explanation:
+        'Merge sort recursively solves smaller halves and combines their sorted results.',
+      hint: 'Think split → solve → combine.',
+      concept: 'Divide and conquer',
+    },
+  ],
+
+  quick: [
+    {
+      prompt: 'What is true of the pivot after a correct quicksort partition?',
+      correct: 'The pivot is in its final sorted position',
+      distractors: [
+        'The pivot is guaranteed to be the median',
+        'The pivot moves to index 0',
+        'The pivot must be compared again with both sorted halves',
+      ],
+      explanation:
+        'Partitioning places smaller values on one side and larger values on the other, leaving the pivot where it belongs in the final sorted array.',
+      hint: 'What becomes permanently true after partitioning?',
+      concept: 'Partitioning',
+    },
+    {
+      prompt: 'What is quicksort’s average-case time complexity?',
+      correct: 'O(n log n)',
+      distractors: ['O(n²)', 'O(n)', 'O(log n)'],
+      explanation:
+        'Balanced partitions produce about log n levels with O(n) partition work per level.',
+      hint: 'Think of balanced divide-and-conquer.',
+      concept: 'Average complexity',
+    },
+    {
+      prompt: 'What is quicksort’s worst-case time complexity?',
+      correct: 'O(n²)',
+      distractors: ['O(n log n)', 'O(n)', 'O(log n)'],
+      explanation:
+        'Highly unbalanced partitions can leave one side with n-1 elements repeatedly.',
+      hint: 'What happens if the pivot is always near an extreme?',
+      concept: 'Worst-case complexity',
+    },
+    {
+      prompt: 'Why can choosing a good pivot improve quicksort performance?',
+      correct: 'Balanced partitions reduce recursion depth and total work',
+      distractors: [
+        'It eliminates all comparisons',
+        'It makes every partition O(1)',
+        'It removes the need for recursion',
+      ],
+      explanation:
+        'A pivot near the middle tends to produce balanced subproblems, leading toward O(n log n) behavior.',
+      hint: 'Compare balanced and highly unbalanced partitions.',
+      concept: 'Pivot selection',
+    },
+    {
+      prompt: 'Why can quicksort be implemented in-place?',
+      correct: 'Partitioning can rearrange elements within the existing array',
+      distractors: [
+        'It never moves elements',
+        'It requires a second full array by definition',
+        'It uses hashing instead of memory',
+      ],
+      explanation:
+        'Many quicksort implementations partition directly inside the input array, using only recursion-stack space aside from the array.',
+      hint: 'Where does the partitioned data live?',
+      concept: 'In-place sorting',
+    },
+  ],
+
+  heap: [
+    {
+      prompt: 'What does the max-heap property guarantee?',
+      correct: 'The largest remaining value is at the root',
+      distractors: [
+        'The entire array is sorted',
+        'Every level is sorted left to right',
+        'The smallest value is always at the root',
+      ],
+      explanation:
+        'Every parent is at least as large as its children, which places the maximum element at the root.',
+      hint: 'Focus on the parent-child rule.',
+      concept: 'Heap property',
+    },
+    {
+      prompt: 'What does heap sort do after moving the maximum to the end?',
+      correct: 'Shrink the heap and restore the heap property',
+      distractors: [
+        'Delete the entire heap',
+        'Restart from the original array',
+        'Sort the array using merge sort',
+      ],
+      explanation:
+        'The sorted suffix grows by one while the remaining prefix is re-heapified.',
+      hint: 'One maximum becomes fixed at the right edge.',
+      concept: 'Heap extraction',
+    },
+    {
+      prompt: 'What is heap sort’s time complexity?',
+      correct: 'O(n log n)',
+      distractors: ['O(n²)', 'O(n)', 'O(log n)'],
+      explanation:
+        'Building/maintaining the heap and extracting n elements each cost logarithmic work per relevant operation.',
+      hint: 'Think n extractions × log n heap repair.',
+      concept: 'Complexity',
+    },
+    {
+      prompt: 'What is an important property of standard in-place heap sort?',
+      correct: 'It uses O(1) auxiliary array space',
+      distractors: [
+        'It requires O(n) extra arrays',
+        'It needs a hash table of all values',
+        'It requires recursion depth O(n)',
+      ],
+      explanation:
+        'Heap sort can rearrange the input array directly and maintain the heap inside it.',
+      hint: 'The heap can live inside the input array.',
+      concept: 'Space efficiency',
+    },
+    {
+      prompt: 'Why is heap order not the same as sorted-array order?',
+      correct: 'A heap only guarantees parent-child ordering, not complete left-to-right ordering',
+      distractors: [
+        'A heap has no ordering at all',
+        'A heap sorts only odd indices',
+        'Every heap is automatically sorted',
+      ],
+      explanation:
+        'A heap imposes local parent-child constraints, which are weaker than the total ordering of a sorted array.',
+      hint: 'Compare local ordering with global ordering.',
+      concept: 'Heap vs sorted array',
+    },
+  ],
+
+  shell: [
+    {
+      prompt: 'What does sorting at a large gap accomplish in Shell sort?',
+      correct: 'It moves far-apart values closer to their final positions efficiently',
+      distractors: [
+        'It completely sorts the array in the first pass',
+        'It guarantees every gap-spaced value is final',
+        'It removes the need for the final gap of 1',
+      ],
+      explanation:
+        'Large gaps allow elements to move many positions in one insertion-style shift, reducing disorder before the final pass.',
+      hint: 'Think about moving an element six positions using one gap-six operation.',
+      concept: 'Gap sequence',
+    },
+    {
+      prompt: 'What happens when Shell sort eventually uses gap = 1?',
+      correct: 'The algorithm performs a final insertion-sort-like pass',
+      distractors: [
+        'The algorithm switches to merge sort',
+        'Only even indices are processed',
+        'The array is guaranteed sorted before the pass begins',
+      ],
+      explanation:
+        'Gap 1 compares adjacent positions and effectively becomes insertion sort over the nearly sorted array.',
+      hint: 'What does an insertion sort look like when the gap is one?',
+      concept: 'Final pass',
+    },
+    {
+      prompt: 'Why can Shell sort be faster than plain insertion sort?',
+      correct: 'Large gaps reduce long-distance disorder before local insertion passes',
+      distractors: [
+        'It never performs comparisons',
+        'It uses a hash table',
+        'It guarantees O(n) for every input',
+      ],
+      explanation:
+        'Shell sort lets elements travel farther per operation, so the final insertion-style pass has less work.',
+      hint: 'Compare one-step movement with gap-based movement.',
+      concept: 'Performance improvement',
+    },
+    {
+      prompt: 'What determines Shell sort’s performance substantially?',
+      correct: 'The chosen gap sequence',
+      distractors: [
+        'Only the array’s first element',
+        'The name of the programming language',
+        'Whether the array is stored as a linked list',
+      ],
+      explanation:
+        'Different gap sequences produce different numbers of comparisons and movements.',
+      hint: 'The algorithm is defined by how its gaps shrink.',
+      concept: 'Gap sequence',
+    },
+    {
+      prompt: 'Is Shell sort generally stable?',
+      correct: 'No, standard gap-based movement can reorder equal elements',
+      distractors: [
+        'Yes, always',
+        'Only when the gap is greater than 1',
+        'Only for numeric arrays',
+      ],
+      explanation:
+        'Elements can move across equal elements during gapped insertion, so relative order of equal keys is not guaranteed.',
+      hint: 'Can an element jump over another equal element?',
+      concept: 'Stability',
+    },
+  ],
+
+  counting: [
+    {
+      prompt: 'What makes counting sort fundamentally different from comparison sorting?',
+      correct: 'It uses value frequencies instead of comparing elements',
+      distractors: [
+        'It uses a binary search tree for every value',
+        'It compares every possible pair',
+        'It always divides the array recursively',
+      ],
+      explanation:
+        'Counting sort maps values to count positions, avoiding element-to-element comparison.',
+      hint: 'Think about a count table indexed by values.',
+      concept: 'Non-comparison sorting',
+    },
+    {
+      prompt: 'What input condition is especially important for counting sort?',
+      correct: 'The range of values should be reasonably small relative to n',
+      distractors: [
+        'The array must be sorted already',
+        'All values must be distinct',
+        'The array must contain only negative values',
+      ],
+      explanation:
+        'Counting sort allocates storage based on the value range, so a huge sparse range can make it impractical.',
+      hint: 'The count array size depends on max - min.',
+      concept: 'Value range',
+    },
+    {
+      prompt: 'What is counting sort’s typical time complexity when the value range is k?',
+      correct: 'O(n + k)',
+      distractors: ['O(n log n)', 'O(n²)', 'O(log n)'],
+      explanation:
+        'The algorithm processes n input elements and the count range of size k.',
+      hint: 'Account for both input size and count-array range.',
+      concept: 'Complexity',
+    },
+    {
+      prompt: 'Why can counting sort be stable in its standard prefix-sum form?',
+      correct: 'Elements are placed according to cumulative counts while preserving encounter order',
+      distractors: [
+        'It compares equal values by index',
+        'It never stores counts',
+        'It sorts equal values randomly',
+      ],
+      explanation:
+        'Prefix positions and reverse/forward traversal can preserve the relative order of equal elements.',
+      hint: 'Think about where equal elements are placed in output.',
+      concept: 'Stability',
+    },
+    {
+      prompt: 'What is a major weakness of counting sort?',
+      correct: 'Its auxiliary memory depends on the value range',
+      distractors: [
+        'It always takes O(n²)',
+        'It cannot sort integers',
+        'It requires recursion depth O(n)',
+      ],
+      explanation:
+        'A sparse or enormous range can require a very large count array even when n is modest.',
+      hint: 'Compare n with maxValue - minValue.',
+      concept: 'Space trade-off',
+    },
+  ],
+
+  radix: [
+    {
+      prompt: 'Why does LSD radix sort process digits from least significant to most significant?',
+      correct: 'Stable digit sorting preserves the ordering established by previous less-significant passes',
+      distractors: [
+        'The most significant digit is always zero',
+        'Digit order never matters',
+        'It avoids using any auxiliary storage',
+      ],
+      explanation:
+        'Stability ensures that when a more significant digit is processed, ties retain the order established by less-significant digits.',
+      hint: 'Think about what must happen to equal digits from an earlier pass.',
+      concept: 'Stability',
+    },
+    {
+      prompt: 'What kind of inner sorting method is commonly used by LSD radix sort?',
+      correct: 'A stable counting sort by the current digit',
+      distractors: [
+        'An unstable quicksort',
+        'A recursive binary search',
+        'Selection sort without extra space',
+      ],
+      explanation:
+        'Stable counting sort efficiently groups values by one digit while preserving the order from earlier passes.',
+      hint: 'The digit range is usually small and fixed.',
+      concept: 'Digit sorting',
+    },
+    {
+      prompt: 'What does radix sort process at each pass?',
+      correct: 'One digit position of every number',
+      distractors: [
+        'A random subset of numbers',
+        'Only the largest number',
+        'The entire numeric value as one comparison',
+      ],
+      explanation:
+        'Radix sort resolves ordering digit by digit across several passes.',
+      hint: 'Units, tens, hundreds, and so on.',
+      concept: 'Digit-wise processing',
+    },
+    {
+      prompt: 'What is a common time complexity expression for radix sort?',
+      correct: 'O(d(n + k))',
+      distractors: ['O(n²)', 'O(log n)', 'O(d log n) only'],
+      explanation:
+        'With d digit positions and a stable O(n+k) inner sort per pass, the total is O(d(n+k)).',
+      hint: 'Multiply the number of digit passes by the cost of each pass.',
+      concept: 'Complexity',
+    },
+    {
+      prompt: 'Why is stability essential in LSD radix sort?',
+      correct: 'It preserves previous digit ordering when later, more significant digits tie',
+      distractors: [
+        'It guarantees no digit is ever zero',
+        'It removes the need for multiple passes',
+        'It makes the input range smaller',
+      ],
+      explanation:
+        'Without stability, a later digit pass could destroy ordering established by previous less-significant digits.',
+      hint: 'Imagine two numbers tied on the current digit.',
+      concept: 'Stable processing',
+    },
+  ],
+
+  bucket: [
+    {
+      prompt: 'What is the basic idea of bucket sort?',
+      correct: 'Distribute values into ranges or buckets, sort within each bucket, then concatenate them',
+      distractors: [
+        'Compare every pair directly',
+        'Build a binary search tree from the whole array',
+        'Hash every value only to detect duplicates',
+      ],
+      explanation:
+        'Bucket sort separates the input by value ranges, performs local sorting, then combines the buckets in order.',
+      hint: 'Think distribute → sort locally → concatenate.',
+      concept: 'Bucket strategy',
+    },
+    {
+      prompt: 'What input distribution usually makes bucket sort efficient?',
+      correct: 'Values are reasonably and evenly distributed across buckets',
+      distractors: [
+        'All values fall into one bucket',
+        'All values are identical and one bucket is required',
+        'Values are already reverse sorted',
+      ],
+      explanation:
+        'Even distribution keeps individual buckets small, making their internal sorting inexpensive.',
+      hint: 'Small buckets mean less work inside each bucket.',
+      concept: 'Input distribution',
+    },
+    {
+      prompt: 'What causes bucket sort’s worst-case behavior with a quadratic inner sort?',
+      correct: 'Most elements fall into one bucket',
+      distractors: [
+        'Every bucket has one element',
+        'Buckets are perfectly balanced',
+        'The number of buckets equals n',
+      ],
+      explanation:
+        'If many elements collapse into one bucket, the internal sorting method may have to process nearly all n elements together.',
+      hint: 'Think about the bucket containing almost the entire input.',
+      concept: 'Worst case',
+    },
+    {
+      prompt: 'What does increasing the number of buckets generally try to achieve?',
+      correct: 'Reduce the number of elements that need to be sorted inside each bucket',
+      distractors: [
+        'Guarantee O(1) total runtime',
+        'Eliminate the need for internal sorting',
+        'Make all buckets contain identical values',
+      ],
+      explanation:
+        'More appropriate buckets can spread values out, reducing local sorting work, although too many buckets also cost extra space.',
+      hint: 'Balance distribution against bucket overhead.',
+      concept: 'Bucket sizing',
+    },
+    {
+      prompt: 'Why can bucket sort approach linear time under favorable assumptions?',
+      correct: 'Distribution is near-uniform and each bucket stays small',
+      distractors: [
+        'It avoids all sorting operations',
+        'It always uses one bucket',
+        'It compares no values in any implementation',
+      ],
+      explanation:
+        'With a suitable distribution, distributing elements and sorting tiny buckets can produce near-linear expected work.',
+      hint: 'Think about average bucket size.',
+      concept: 'Average-case performance',
+    },
+  ],
 };
 
 /* ── Lock-in wording ───────────────────────────────────────────────────
@@ -349,10 +855,12 @@ export function buildSortingCheckpoints(
 
   const size = steps[0].array.length;
   const kinds = KINDS[algorithm];
-  const anchor = ANCHORS[algorithm];
+  const anchors = ANCHORS[algorithm];
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
   const checkpoints: QuizCheckpoint[] = [];
 
-  const anchorId = `sorting-${algorithm}-anchor`;
+  const anchorId = `sorting-${algorithm}-anchor-${anchorIndex}`;
   const anchorOptions = buildOptions(anchorId, anchor.correct, anchor.distractors);
   checkpoints.push({
     stepIndex: 0,

@@ -1,5 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiClient, ApiError } from '../api/apiClient';
+import { apiClient, ApiError, refreshOwnerCsrfToken, setOwnerCsrfToken } from '../api/apiClient';
+import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
+import { rememberUsername } from '../api/authPreferences';
+import { clearOctaConfig } from '../api/octaConfigStorage';
 
 interface UserData {
   user_id: number;
@@ -9,13 +12,17 @@ interface UserData {
   last_name: string | null;
   is_active: boolean;
   is_verified: boolean;
+  is_owner?: boolean;
+  is_owner_session?: boolean;
 }
 
 interface AuthContextType {
   user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginAsOwner: (identifier: string, password: string, mfaCode: string) => Promise<void>;
+  loginWithGoogle: (credential: string, clientId: string, rememberMe?: boolean) => Promise<void>;
   signup: (
     username: string,
     email: string,
@@ -24,6 +31,7 @@ interface AuthContextType {
     lastName: string
   ) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
 }
@@ -35,20 +43,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
+    setIsLoading(true);
+    let attempt = 0;
     try {
-      const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
-      setUser(userData);
-    } catch {
-      // Token invalid, clear stored tokens
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      setUser(null);
+      // Owner authentication uses HttpOnly cookies and deliberately stores no
+      // owner tokens in local/session storage. This request also restores that
+      // session after a page reload.
+      if (!getAccessToken()) {
+        try { await refreshOwnerCsrfToken(); } catch { /* no existing owner cookie or API unavailable */ }
+      }
+      while (true) {
+        try {
+          const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+          setUser(userData);
+          return;
+        } catch (error) {
+          const credentialsRejected = error instanceof ApiError &&
+            (error.status === 401 || error.status === 403);
+          if (credentialsRejected) {
+            clearTokens();
+            setUser(null);
+            return;
+          }
+
+          // A network error or server outage is not proof that the account or
+          // its session is gone. Keep the refresh credential and make one
+          // short retry before showing the signed-out routes.
+          if (attempt === 0) {
+            attempt += 1;
+            await new Promise((resolve) => window.setTimeout(resolve, 800));
+            continue;
+          }
+
+          setUser(null);
+          return;
+        }
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,20 +88,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchUser();
   }, [fetchUser]);
 
-  const login = async (email: string, password: string) => {
+  useEffect(() => {
+    const restoreSessionOnFocus = () => {
+      if (!user && getAccessToken()) void fetchUser();
+    };
+    window.addEventListener('focus', restoreSessionOnFocus);
+    return () => window.removeEventListener('focus', restoreSessionOnFocus);
+  }, [fetchUser, user]);
+
+  const login = async (identifier: string, password: string, rememberMe = false) => {
+    const cleanId = identifier ? identifier.trim() : '';
     const data = await apiClient<{ access_token: string; refresh_token: string }>(
       '/api/auth/login',
       {
         method: 'POST',
-        body: { email, password },
+        body: {
+          username: cleanId,
+          password,
+          remember_me: rememberMe,
+        },
       }
     );
 
-    localStorage.setItem('access_token', data.access_token);
-    localStorage.setItem('refresh_token', data.refresh_token);
+    // Remember me → localStorage (survives browser restarts); otherwise
+    // sessionStorage (cleared when the browser closes).
+    storeTokens(data.access_token, data.refresh_token, rememberMe);
+    rememberUsername(cleanId);
 
     // Fetch user profile after login
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    setUser(userData);
+  };
+
+  const loginAsOwner = async (identifier: string, password: string, mfaCode: string) => {
+    // Do not let an existing learner bearer token override the isolated owner cookie.
+    clearTokens();
+    const data = await apiClient<{ owner_session: boolean; csrf_token: string }>(
+      '/api/auth/login',
+      {
+        method: 'POST',
+        body: {
+          username: identifier.trim(),
+          password,
+          owner_mode: true,
+          mfa_code: mfaCode,
+        },
+      }
+    );
+    if (data.owner_session !== true || typeof data.csrf_token !== 'string') {
+      throw new ApiError(403, 'The account did not start an owner session.');
+    }
+    setOwnerCsrfToken(data.csrf_token);
+    rememberUsername(identifier.trim());
+    const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    if (!userData.is_owner_session) throw new ApiError(403, 'Owner session verification failed.');
     setUser(userData);
   };
 
@@ -95,21 +165,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (refreshToken) {
-      try {
-        await apiClient('/api/auth/logout', {
-          method: 'POST',
-          body: { refresh_token: refreshToken },
-          requiresAuth: true,
-        });
-      } catch {
-        // Even if server logout fails, clear local state
-      }
+    const refreshToken = getRefreshToken();
+    try {
+      await apiClient('/api/auth/logout', {
+        method: 'POST',
+        body: refreshToken ? { refresh_token: refreshToken } : {},
+        requiresAuth: !!refreshToken,
+      });
+    } catch {
+      // Even if server logout fails, clear local state
     }
 
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearTokens();
+    setOwnerCsrfToken(null);
+    clearOctaConfig();
+    setUser(null);
+  };
+
+  const deleteAccount = async () => {
+    await apiClient('/api/auth/me', {
+      method: 'DELETE',
+      body: { confirmation: 'DELETE' },
+      requiresAuth: true,
+    });
+    clearTokens();
+    clearOctaConfig();
     setUser(null);
   };
 
@@ -129,6 +209,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data.message;
   };
 
+  const loginWithGoogle = async (credential: string, clientId: string, rememberMe = false) => {
+    const data = await apiClient<{ access_token: string; refresh_token: string }>(
+      '/api/auth/google',
+      {
+        method: 'POST',
+        body: { credential, client_id: clientId, remember_me: rememberMe },
+      }
+    );
+    storeTokens(data.access_token, data.refresh_token, rememberMe);
+    const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    rememberUsername(userData.username);
+    setUser(userData);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -136,8 +230,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginAsOwner,
+        loginWithGoogle,
         signup,
         logout,
+        deleteAccount,
         forgotPassword,
         resetPassword,
       }}

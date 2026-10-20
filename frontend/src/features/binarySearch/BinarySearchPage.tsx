@@ -1,5 +1,7 @@
 import React, {useState, useMemo, useEffect} from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Search,
   RotateCcw,
@@ -35,9 +37,15 @@ import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
+import { LiveNumberSequenceControls } from '../../components/controls/LiveNumberSequenceControls';
+import { useTutorContext } from '../../contexts/TutorContext';
 import './BinarySearch.css';
+
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { parseNumberList } from '../../utils/batchInputParser';
 
 interface AlgorithmMeta {
   id: BinarySearchCategory;
@@ -54,7 +62,26 @@ const ALGORITHMS_LIST: AlgorithmMeta[] = [
   { id: 'findPeakElement', name: 'Find Peak Element', group: 'Extremum', description: 'Slope binary search to find a local maximum' },
 ];
 
+function buildSearchSteps(category: BinarySearchCategory, values: number[], target: number): BinarySearchStep[] {
+  if (!values.length) return [];
+  if (category === 'lowerBound') return generateLowerBoundSteps(values, target);
+  if (category === 'upperBound') return generateUpperBoundSteps(values, target);
+  if (category === 'searchRotatedArray') return generateRotatedSearchSteps(values, target);
+  if (category === 'findPeakElement') return generatePeakElementSteps(values);
+  return generateBinarySearchSteps(values, target);
+}
+
+function isValidRotatedSortedArray(values: number[]): boolean {
+  let descents = 0;
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index - 1] > values[index]) descents += 1;
+    if (descents > 1) return false;
+  }
+  return true;
+}
+
 export const BinarySearchPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<BinarySearchCategory>('binarySearch');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -68,6 +95,7 @@ export const BinarySearchPage: React.FC = () => {
   const [array, setArray] = useState<number[]>([4, 8, 15, 23, 42, 56, 77, 89, 94]);
   const [targetInput, setTargetInput] = useState<string>('42');
   const [customArrayInput, setCustomArrayInput] = useState<string>('4, 8, 15, 23, 42, 56, 77, 89, 94');
+  const [arrayInputError, setArrayInputError] = useState<string | null>(null);
 
   // Modes & Modals
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -89,8 +117,35 @@ export const BinarySearchPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
+    seekTo,
     } = useStepPlayer<BinarySearchStep>({ steps: activeSteps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS_LIST.find((a) => a.id === category);
+
+    setTutorContext({
+      algorithmName: algObj?.name || category,
+      algorithmId: category,
+      category: 'binarySearch',
+      currentStepDescription: currentStep?.explanation || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      onSetInput: (newArr: number[]) => {
+        reset();
+        setArray(newArr);
+        setCustomArrayInput(newArr.join(', '));
+      },
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [category, currentStepIndex, totalSteps, currentStep, activeSteps, setTutorContext, play, pause, stepForward, reset]);
 
   usePlaybackShortcuts({
     handlers: {
@@ -160,32 +215,32 @@ export const BinarySearchPage: React.FC = () => {
   // ─── ACTION HANDLERS ────────────────────────────────────────────────────────
 
   const handleRunSearch = () => {
-    const target = Number(targetInput) || 0;
-    let steps: BinarySearchStep[] = [];
-
-    if (category === 'lowerBound') {
-      steps = generateLowerBoundSteps(array, target);
-    } else if (category === 'upperBound') {
-      steps = generateUpperBoundSteps(array, target);
-    } else if (category === 'searchRotatedArray') {
-      steps = generateRotatedSearchSteps(array, target);
-    } else if (category === 'findPeakElement') {
-      steps = generatePeakElementSteps(array);
-    } else {
-      steps = generateBinarySearchSteps(array, target);
+    const target = targetInput.trim() ? Number(targetInput) : NaN;
+    if (category !== 'findPeakElement' && !Number.isFinite(target)) {
+      setArrayInputError('Enter a numeric target to run this search.');
+      return;
     }
-
-    setActiveSteps(steps);
+    setArrayInputError(null);
+    setActiveSteps(buildSearchSteps(category, array, Number.isFinite(target) ? target : 0));
     quizSession.resetSession();
   };
 
   const handleApplyCustomArray = () => {
-    const parsed = customArrayInput
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => !isNaN(n));
+    const result = parseNumberList(customArrayInput, { maxCount: 30 });
+    if (!result.isValid) {
+      setArrayInputError(result.error ?? 'Enter a comma-separated list of numbers.');
+      return;
+    }
+    const parsed = result.values;
+    if (parsed.length === 0) {
+      setArrayInputError('Enter at least one value, or use Empty to clear the array.');
+      return;
+    }
 
-    if (parsed.length === 0) return;
+    if (category === 'searchRotatedArray' && !isValidRotatedSortedArray(parsed)) {
+      setArrayInputError('Rotated search needs a sorted array rotated at one pivot. Correct the order or choose another search mode.');
+      return;
+    }
 
     if (category !== 'searchRotatedArray' && category !== 'findPeakElement') {
       parsed.sort((a, b) => a - b);
@@ -193,22 +248,32 @@ export const BinarySearchPage: React.FC = () => {
 
     setArray(parsed);
     setCustomArrayInput(parsed.join(', '));
-    const target = Number(targetInput) || parsed[Math.floor(parsed.length / 2)];
+    const parsedTarget = targetInput.trim() ? Number(targetInput) : NaN;
+    const target = Number.isFinite(parsedTarget) ? parsedTarget : parsed[Math.floor(parsed.length / 2)];
     setTargetInput(String(target));
-
-    const steps =
-      category === 'lowerBound'
-        ? generateLowerBoundSteps(parsed, target)
-        : category === 'upperBound'
-        ? generateUpperBoundSteps(parsed, target)
-        : category === 'searchRotatedArray'
-        ? generateRotatedSearchSteps(parsed, target)
-        : category === 'findPeakElement'
-        ? generatePeakElementSteps(parsed)
-        : generateBinarySearchSteps(parsed, target);
-
-    setActiveSteps(steps);
+    setActiveSteps(buildSearchSteps(category, parsed, target));
+    setArrayInputError(null);
     quizSession.resetSession();
+  };
+
+  const handleLiveArrayChange = (values: number[]): boolean => {
+    if (category === 'searchRotatedArray' && !isValidRotatedSortedArray(values)) {
+      setArrayInputError('This edit breaks the single-pivot sorted order required by rotated-array search.');
+      return false;
+    }
+    const nextValues = category !== 'searchRotatedArray' && category !== 'findPeakElement'
+      ? [...values].sort((a, b) => a - b)
+      : values;
+    setArray(nextValues);
+    setCustomArrayInput(nextValues.join(', '));
+    setArrayInputError(null);
+    const target = targetInput.trim() ? Number(targetInput) : NaN;
+    setActiveSteps(category === 'findPeakElement' || Number.isFinite(target)
+      ? buildSearchSteps(category, nextValues, Number.isFinite(target) ? target : 0)
+      : []);
+    reset();
+    quizSession.resetSession();
+    return true;
   };
 
   const handleRandomize = () => {
@@ -286,6 +351,8 @@ export const BinarySearchPage: React.FC = () => {
   const snippetKey =
     category === 'lowerBound'
       ? 'lowerBound'
+      : category === 'upperBound'
+      ? 'upperBound'
       : category === 'searchRotatedArray'
       ? 'searchRotatedArray'
       : 'binarySearch';
@@ -322,35 +389,115 @@ export const BinarySearchPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="bst-input-group">
-        <span>Target:</span>
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Target Input */}
+      <div className="bs-input-group">
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
+          Target:
+        </span>
+          <input
+            type="text"
+            className="bs-input"
+            value={targetInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              setTargetInput(value);
+              const target = value.trim() ? Number(value) : NaN;
+              setActiveSteps(category === 'findPeakElement'
+                ? buildSearchSteps(category, array, 0)
+                : Number.isFinite(target) ? buildSearchSteps(category, array, target) : []);
+              reset();
+              quizSession.resetSession();
+            }}
+          />
+      </div>
+
+      {/* Array Input */}
+      <div className="bs-input-group" style={{ minWidth: '220px' }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
+          Arr:
+        </span>
         <input
           type="text"
-          className="bst-input"
-          value={targetInput}
-          onChange={(e) => setTargetInput(e.target.value)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--color-text)',
+            fontSize: '0.8rem',
+            width: '100%',
+            fontFamily: 'monospace',
+          }}
+          value={customArrayInput}
+          onChange={(e) => {
+            const raw = e.target.value;
+            setCustomArrayInput(raw);
+            const parsed = parseNumberList(raw, { maxCount: 30 });
+            if (parsed.isValid && parsed.values.length > 0) {
+              if (category === 'searchRotatedArray' && !isValidRotatedSortedArray(parsed.values)) {
+                setArrayInputError('Rotated search needs a sorted array rotated at one pivot. Correct the order or choose another search mode.');
+                return;
+              }
+              const nextValues = category !== 'searchRotatedArray' && category !== 'findPeakElement'
+                ? [...parsed.values].sort((a, b) => a - b)
+                : parsed.values;
+              setArray(nextValues);
+              const target = targetInput.trim() ? Number(targetInput) : NaN;
+              setActiveSteps(category === 'findPeakElement' || Number.isFinite(target)
+                ? buildSearchSteps(category, nextValues, Number.isFinite(target) ? target : 0)
+                : []);
+              setArrayInputError(null);
+              reset();
+              quizSession.resetSession();
+            } else if (raw.trim()) {
+              setArrayInputError(parsed.error ?? 'Enter a comma-separated list of numbers.');
+            } else {
+              setArrayInputError(null);
+            }
+          }}
+          onBlur={handleApplyCustomArray}
+          onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomArray()}
         />
       </div>
 
-      <button className="bst-btn btn-insert" onClick={handleRunSearch}>
+      <LiveNumberSequenceControls
+        values={array}
+        onChange={handleLiveArrayChange}
+        label="Search array operations"
+        hint={category === 'searchRotatedArray'
+          ? 'Indexes start at 0. The array must remain sorted around one rotation pivot.'
+          : category === 'findPeakElement'
+          ? 'Indexes start at 0. Peak search accepts any numeric sequence.'
+          : 'Indexes start at 0. Standard binary search modes automatically keep values sorted.'}
+      />
+      {arrayInputError && <span className="live-sequence-input-error" role="status">{arrayInputError}</span>}
+
+      <button
+        className="ll-btn ll-btn-primary"
+        onClick={handleRunSearch}
+        style={{ background: '#38bdf8', color: '#0f172a' }}
+      >
         <Play size={14} />
         <span>Search</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleRandomize}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleRandomize}>
         <Shuffle size={14} />
         <span>Random</span>
       </button>
 
-      <button className="bst-btn btn-search" onClick={handleReset}>
+      <button className="ll-btn ll-btn-secondary" onClick={handleReset}>
         <RotateCcw size={14} />
         <span>Reset</span>
       </button>
 
       {/* dataset-mode-selector */}
-      <div className="dataset-mode-selector ml-1">
+      <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
         <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -361,18 +508,12 @@ export const BinarySearchPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
     <div className="bs-container">
+      <SEOHead {...getSEOForRoute('/dashboard/binarySearch')} />
       <VisualizerHeader
         icon={<Search size={22} />}
         title="Binary Search Studio"
@@ -401,96 +542,12 @@ export const BinarySearchPage: React.FC = () => {
         }
       />
 
-      {/* ─── CATEGORY TABS ───────────────────────────────────────────────────── */}
-      <div className="bs-tabs-bar">
-        {ALGORITHMS_LIST.map((alg) => (
-          <button
-            key={alg.id}
-            className={`bs-tab-btn ${category === alg.id ? 'active' : ''}`}
-            onClick={() => handleSelectCategory(alg.id)}
-          >
-            {alg.id === 'searchRotatedArray' ? (
-              <Compass size={14} />
-            ) : alg.id === 'findPeakElement' ? (
-              <TrendingUp size={14} />
-            ) : (
-              <Search size={14} />
-            )}
-            <span>{alg.name}</span>
-          </button>
-        ))}
-      </div>
+
 
       {/* ─── ACTION TOOLBAR ──────────────────────────────────────────────────── */}
       <div className="bs-toolbar">
         <div className="bs-toolbar-actions">
-          {/* Target Input */}
-          <div className="bs-input-group">
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
-              Target:
-            </span>
-            <input
-              type="text"
-              className="bs-input"
-              value={targetInput}
-              onChange={(e) => setTargetInput(e.target.value)}
-            />
-          </div>
-
-          {/* Array Input */}
-          <div className="bs-input-group" style={{ minWidth: '220px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginRight: '4px' }}>
-              Arr:
-            </span>
-            <input
-              type="text"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: 'var(--color-text)',
-                fontSize: '0.8rem',
-                width: '100%',
-                fontFamily: 'monospace',
-              }}
-              value={customArrayInput}
-              onChange={(e) => setCustomArrayInput(e.target.value)}
-              onBlur={handleApplyCustomArray}
-              onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomArray()}
-            />
-          </div>
-
-          <button
-            className="ll-btn ll-btn-primary"
-            onClick={handleRunSearch}
-            style={{ background: '#38bdf8', color: '#0f172a' }}
-          >
-            <Play size={14} />
-            <span>Search</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleRandomize}>
-            <Shuffle size={14} />
-            <span>Random</span>
-          </button>
-
-          <button className="ll-btn ll-btn-secondary" onClick={handleReset}>
-            <RotateCcw size={14} />
-            <span>Reset</span>
-          </button>
-
-          {/* dataset-mode-selector */}
-          <div className="dataset-mode-selector" style={{ marginLeft: '0.5rem' }}>
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -533,6 +590,7 @@ export const BinarySearchPage: React.FC = () => {
         </div>
 
         {/* Right Column: Code & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -542,11 +600,15 @@ export const BinarySearchPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="binarySearch" />
+        <ResizablePanelRow
+          storageKey="binarySearch"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={category}
               title="Binary Search"
+              categoryId="binarySearch"
+              topicId={category}
               snippets={BINARY_SEARCH_SNIPPETS[snippetKey]}
               activeLine={currentStep?.codeLine}
               variables={{
@@ -556,14 +618,15 @@ export const BinarySearchPage: React.FC = () => {
                 right: currentStep?.right ?? null,
               }}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)}
             steps={activeSteps}
             currentStepIndex={currentStepIndex}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* ─── FULL SCREEN MODAL ───────────────────────────────────────────────── */}
@@ -572,7 +635,16 @@ export const BinarySearchPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Binary Search Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Logarithmic Search Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

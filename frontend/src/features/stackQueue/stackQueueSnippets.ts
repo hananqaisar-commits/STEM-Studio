@@ -5,6 +5,272 @@ export interface CodeSnippet {
   lineMapping: Record<number, number>; // maps step codeLine -> code line index
 }
 
+const INFIX_TO_POSTFIX_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
+  javascript: {
+    code: `function infixToPostfix(expression) {
+  const tokens = expression.match(/[A-Za-z_][A-Za-z_0-9]*|\\d+(?:\\.\\d+)?|[()+\\-*/^]/g) || [];
+  const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+  const output = [];
+  const operators = [];
+  const isOperator = (token) => Object.hasOwn(precedence, token);
+
+  for (const token of tokens) {
+    if (/^[A-Za-z_]|^\\d/.test(token)) {
+      output.push(token);
+    } else if (token === '(') {
+      operators.push(token);
+    } else if (token === ')') {
+      while (operators.length && operators.at(-1) !== '(') output.push(operators.pop());
+      if (operators.pop() !== '(') throw new Error('Mismatched parentheses');
+    } else if (isOperator(token)) {
+      while (operators.length && isOperator(operators.at(-1)) &&
+        (precedence[operators.at(-1)] > precedence[token] ||
+          (precedence[operators.at(-1)] === precedence[token] && token !== '^'))) {
+        output.push(operators.pop());
+      }
+      operators.push(token);
+    }
+  }
+  while (operators.length) {
+    const op = operators.pop();
+    if (op === '(') throw new Error('Mismatched parentheses');
+    output.push(op);
+  }
+  return output.join(' ');
+}`,
+    lineMapping: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 7, 7: 11, 8: 20 },
+  },
+  python: {
+    code: `import re
+
+def infix_to_postfix(expression):
+    tokens = re.findall(r'[A-Za-z_][A-Za-z_0-9]*|\\d+(?:\\.\\d+)?|[()+\\-*/^]', expression)
+    precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '^': 3}
+    output, operators = [], []
+
+    for token in tokens:
+        if token[0].isalnum() or token[0] == '_':
+            output.append(token)
+        elif token == '(':
+            operators.append(token)
+        elif token == ')':
+            while operators and operators[-1] != '(':
+                output.append(operators.pop())
+            if not operators:
+                raise ValueError('Mismatched parentheses')
+            operators.pop()
+        else:
+            while operators and operators[-1] in precedence:
+                top = operators[-1]
+                should_pop = precedence[top] > precedence[token] or (precedence[top] == precedence[token] and token != '^')
+                if not should_pop:
+                    break
+                output.append(operators.pop())
+            operators.append(token)
+
+    while operators:
+        top = operators.pop()
+        if top == '(':
+            raise ValueError('Mismatched parentheses')
+        output.append(top)
+    return ' '.join(output)
+
+print(infix_to_postfix('A + B * C'))  # A B C * +`,
+    lineMapping: { 1: 3, 2: 5, 3: 6, 4: 11, 5: 15, 6: 18, 7: 22, 8: 26 },
+  },
+  cpp: {
+    code: `#include <cctype>
+#include <stdexcept>
+#include <string>
+#include <vector>
+using namespace std;
+
+string infixToPostfix(const string& expression) {
+    vector<string> tokens;
+    for (size_t i = 0; i < expression.size();) {
+        unsigned char ch = expression[i];
+        if (isspace(ch)) { ++i; continue; }
+        if (isalpha(ch) || ch == '_') {
+            size_t start = i++;
+            while (i < expression.size() && (isalnum(static_cast<unsigned char>(expression[i])) || expression[i] == '_')) ++i;
+            tokens.push_back(expression.substr(start, i - start));
+        } else if (isdigit(ch)) {
+            size_t start = i++;
+            while (i < expression.size() && isdigit(static_cast<unsigned char>(expression[i]))) ++i;
+            if (i + 1 < expression.size() && expression[i] == '.' && isdigit(static_cast<unsigned char>(expression[i + 1]))) {
+                ++i;
+                while (i < expression.size() && isdigit(static_cast<unsigned char>(expression[i]))) ++i;
+            }
+            tokens.push_back(expression.substr(start, i - start));
+        } else if (string("()+-*/^").find(static_cast<char>(ch)) != string::npos) {
+            tokens.emplace_back(1, static_cast<char>(ch));
+            ++i;
+        } else {
+            throw invalid_argument("Unsupported character in expression");
+        }
+    }
+
+    auto precedence = [](const string& op) {
+        if (op == "+" || op == "-") return 1;
+        if (op == "*" || op == "/") return 2;
+        if (op == "^") return 3;
+        return 0;
+    };
+    vector<string> output;
+    vector<string> operators;
+    bool expectsOperand = true;
+    if (tokens.empty()) throw invalid_argument("Expression must not be empty");
+    for (const string& token : tokens) {
+        const bool isOperand = isalnum(static_cast<unsigned char>(token[0])) || token[0] == '_';
+        if (isOperand) {
+            if (!expectsOperand) throw invalid_argument("Missing operator between operands");
+            output.push_back(token);
+            expectsOperand = false;
+        } else if (token == "(") {
+            if (!expectsOperand) throw invalid_argument("Missing operator before '('");
+            operators.push_back(token);
+            expectsOperand = true;
+        } else if (token == ")") {
+            if (expectsOperand) throw invalid_argument("Expected an operand before ')'");
+            while (!operators.empty() && operators.back() != "(") {
+                output.push_back(operators.back()); operators.pop_back();
+            }
+            if (operators.empty()) throw invalid_argument("Mismatched parentheses");
+            operators.pop_back();
+            expectsOperand = false;
+        } else {
+            if (expectsOperand) throw invalid_argument("Unary operators are not supported");
+            while (!operators.empty() && operators.back() != "(") {
+                const int top = precedence(operators.back());
+                const int current = precedence(token);
+                const bool leftAssociative = token != "^";
+                if (top < current || (top == current && !leftAssociative)) break;
+                output.push_back(operators.back()); operators.pop_back();
+            }
+            operators.push_back(token);
+            expectsOperand = true;
+        }
+    }
+    if (expectsOperand) throw invalid_argument("Expression ends before an operand");
+    while (!operators.empty()) {
+        if (operators.back() == "(") throw invalid_argument("Mismatched parentheses");
+        output.push_back(operators.back()); operators.pop_back();
+    }
+
+    string result;
+    for (const string& token : output) {
+        if (!result.empty()) result += ' ';
+        result += token;
+    }
+    return result;
+}
+
+// infixToPostfix("A + B * C") returns "A B C * +"`,
+    lineMapping: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 6, 6: 7, 7: 10, 8: 15 },
+  },
+  java: {
+    code: `import java.util.*;
+
+class Solution {
+    private int precedence(String op) {
+        if (op.equals("+") || op.equals("-")) return 1;
+        if (op.equals("*") || op.equals("/")) return 2;
+        if (op.equals("^")) return 3;
+        return 0;
+    }
+
+    public String infixToPostfix(String expression) {
+        List<String> tokens = new ArrayList<>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+            .compile("[A-Za-z_][A-Za-z_0-9]*|\\\\d+(?:\\\\.\\\\d+)?|[()+\\\\-*/^]")
+            .matcher(expression);
+        while (matcher.find()) tokens.add(matcher.group());
+        List<String> output = new ArrayList<>();
+        Deque<String> operators = new ArrayDeque<>();
+
+        for (String token : tokens) {
+            if (Character.isLetterOrDigit(token.charAt(0)) || token.charAt(0) == '_') {
+                output.add(token);
+            } else if (token.equals("(")) {
+                operators.push(token);
+            } else if (token.equals(")")) {
+                while (!operators.isEmpty() && !operators.peek().equals("(")) output.add(operators.pop());
+                if (operators.isEmpty()) throw new IllegalArgumentException("Mismatched parentheses");
+                operators.pop();
+            } else {
+                while (!operators.isEmpty() && !operators.peek().equals("(")) {
+                    int top = precedence(operators.peek()), current = precedence(token);
+                    if (top < current || (top == current && token.equals("^"))) break;
+                    output.add(operators.pop());
+                }
+                operators.push(token);
+            }
+        }
+        while (!operators.isEmpty()) {
+            String op = operators.pop();
+            if (op.equals("(")) throw new IllegalArgumentException("Mismatched parentheses");
+            output.add(op);
+        }
+        return String.join(" ", output);
+    }
+}`,
+    lineMapping: { 1: 1, 2: 4, 3: 11, 4: 12, 5: 17, 6: 22, 7: 26, 8: 33 },
+  },
+};
+
+/** Generic linked-node implementation adapted from the user's stack example.
+ * Push/pop operate at the top node, so both stay O(1), and clear frees nodes. */
+export const STACK_LINKED_CPP_SNIPPET: CodeSnippet = {
+  code: `#include <cstddef>
+#include <utility>
+
+template <typename T>
+class Stack {
+    struct Node {
+        T value;
+        Node* next;
+        Node(T item, Node* below) : value(std::move(item)), next(below) {}
+    };
+
+    Node* top_ = nullptr;
+    std::size_t size_ = 0;
+
+public:
+    Stack() = default;
+    Stack(const Stack&) = delete;
+    Stack& operator=(const Stack&) = delete;
+
+    ~Stack() { clear(); }
+
+    void push(T value) {
+        top_ = new Node(std::move(value), top_);
+        ++size_;
+    }
+
+    bool pop() {
+        if (!top_) return false;
+        Node* removed = top_;
+        top_ = top_->next;
+        delete removed;
+        --size_;
+        return true;
+    }
+
+    T* peek() { return top_ ? &top_->value : nullptr; }
+    std::size_t size() const { return size_; }
+
+    void clear() {
+        while (top_) {
+            Node* removed = top_;
+            top_ = top_->next;
+            delete removed;
+        }
+        size_ = 0;
+    }
+};`,
+  lineMapping: { 1: 23, 2: 24, 3: 26, 4: 31, 5: 34, 6: 37 },
+};
+
 export const STACK_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
   javascript: {
     code: `class Stack {
@@ -19,7 +285,7 @@ export const STACK_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
   peek() { return this.items[this.items.length - 1]; }
   isEmpty() { return this.items.length === 0; }
 }`,
-    lineMapping: { 1: 3, 2: 4, 3: 5 },
+    lineMapping: { 1: 3, 2: 4, 3: 5, 4: 9, 5: 10, 6: 11 },
   },
   python: {
     code: `class Stack:
@@ -36,25 +302,51 @@ export const STACK_SNIPPETS: Record<LanguageKey, CodeSnippet> = {
         
     def peek(self):
         return self.items[-1]`,
-    lineMapping: { 1: 5, 2: 6, 3: 6 },
+    lineMapping: { 1: 5, 2: 6, 3: 7, 4: 11, 5: 12, 6: 13 },
   },
   cpp: {
-    code: `#include <iostream>
-#include <vector>
-using namespace std;
+    code: `#include <cstddef>
+#include <utility>
 
+template <typename T>
 class Stack {
-    vector<int> items;
+    std::size_t capacity_ = 2;
+    std::size_t size_ = 0;
+    T* data_;
+
+    void grow() {
+        const std::size_t nextCapacity = capacity_ * 2;
+        T* nextData = new T[nextCapacity];
+        for (std::size_t i = 0; i < size_; ++i)
+            nextData[i] = std::move(data_[i]);
+        delete[] data_;
+        data_ = nextData;
+        capacity_ = nextCapacity;
+    }
+
 public:
-    void push(int val) {
-        items.push_back(val);
+    Stack() : data_(new T[capacity_]) {}
+    Stack(const Stack&) = delete;
+    Stack& operator=(const Stack&) = delete;
+    ~Stack() { delete[] data_; }
+
+    void push(T value) {
+        if (size_ == capacity_) grow();
+        data_[size_++] = std::move(value);
     }
-    void pop() {
-        if (!items.empty()) items.pop_back();
+
+    bool pop() {
+        if (size_ == 0) return false;
+        --size_;
+        return true;
     }
-    int top() { return items.back(); }
+
+    T* peek() { return size_ == 0 ? nullptr : &data_[size_ - 1]; }
+    std::size_t size() const { return size_; }
+    std::size_t capacity() const { return capacity_; }
+    void clear() { size_ = 0; }
 };`,
-    lineMapping: { 1: 8, 2: 9, 3: 9 },
+    lineMapping: { 1: 26, 2: 28, 3: 29, 4: 31, 5: 33, 6: 37 },
   },
   java: {
     code: `import java.util.Stack;
@@ -70,8 +362,12 @@ public class StackDemo {
         if (stack.isEmpty()) throw new IllegalStateException("Underflow");
         return stack.pop();
     }
+
+    public Integer peek() {
+        return stack.isEmpty() ? null : stack.peek();
+    }
 }`,
-    lineMapping: { 1: 6, 2: 7, 3: 7 },
+    lineMapping: { 1: 6, 2: 7, 3: 8, 4: 13, 5: 14, 6: 16 },
   },
 };
 
@@ -1957,11 +2253,12 @@ public class Solution {
 /**
  * Category → snippet-set resolver so every stack/queue problem shows its own
  * reference implementation instead of falling back to the generic Stack class.
- */
-export function getStackQueueSnippets(
+ */export function getStackQueueSnippets(
   category: string
 ): Record<LanguageKey, CodeSnippet> {
   switch (category) {
+    case 'infixToPostfix':
+      return INFIX_TO_POSTFIX_SNIPPETS;
     case 'queue':
       return QUEUE_SNIPPETS;
     case 'validParentheses':
@@ -2008,3 +2305,296 @@ export function getStackQueueSnippets(
       return STACK_SNIPPETS;
   }
 }
+
+/* ── Go reference implementations ──────────────────────────────────
+   Go references exist for the flagship studio set. Topics without an
+   entry must report the gap in the UI — never fall back silently. */
+export const STACKQUEUE_GO_SNIPPETS: Record<string, CodeSnippet> = {
+  stack: {
+    code: `type Stack struct {
+    items []int
+}
+
+func (s *Stack) Push(val int) {
+    s.items = append(s.items, val)
+}
+
+func (s *Stack) Pop() (int, bool) {
+    if len(s.items) == 0 {
+        return 0, false // Underflow
+    }
+    top := s.items[len(s.items)-1]
+    s.items = s.items[:len(s.items)-1]
+    return top, true
+}
+
+func (s *Stack) Peek() int { return s.items[len(s.items)-1] }`,
+    lineMapping: { 1: 6, 2: 9, 3: 17 },
+  },
+  queue: {
+    code: `type Queue struct {
+    items []int
+}
+
+func (q *Queue) Enqueue(val int) {
+    q.items = append(q.items, val) // joins at REAR
+}
+
+func (q *Queue) Dequeue() (int, bool) {
+    if len(q.items) == 0 {
+        return 0, false // Underflow
+    }
+    front := q.items[0]
+    q.items = q.items[1:] // leaves from FRONT
+    return front, true
+}
+
+func (q *Queue) Front() int { return q.items[0] }`,
+    lineMapping: { 1: 6, 2: 9, 3: 17 },
+  },
+  validParentheses: {
+    code: `func isValid(s string) bool {
+    stack := []byte{}
+    pairs := map[byte]byte{')': '(', ']': '[', '}': '{'}
+    for i := 0; i < len(s); i++ {
+        ch := s[i]
+        if ch == '(' || ch == '[' || ch == '{' {
+            stack = append(stack, ch) // opening: push
+        } else {
+            top := byte(0)
+            if len(stack) > 0 {
+                top = stack[len(stack)-1]
+            }
+            if top != pairs[ch] {
+                return false // mismatch or premature close
+            }
+            stack = stack[:len(stack)-1] // matched: pop
+        }
+    }
+    return len(stack) == 0 // leftover openings are invalid
+}`,
+    lineMapping: { 1: 7, 3: 14, 5: 14, 6: 16, 8: 19, 9: 19 },
+  },
+  postfixEval: {
+    code: `func evalRPN(tokens []string) int {
+    stack := []int{}
+    for _, tok := range tokens {
+        if n, err := strconv.Atoi(tok); err == nil {
+            stack = append(stack, n) // operand: push
+        } else {
+            b, a := stack[len(stack)-1], stack[len(stack)-2]
+            stack = stack[:len(stack)-2] // pop two operands
+            switch tok {
+            case "+":
+                stack = append(stack, a+b) // result pushed back
+            case "-":
+                stack = append(stack, a-b)
+            case "*":
+                stack = append(stack, a*b)
+            case "/":
+                stack = append(stack, a/b)
+            }
+        }
+    }
+    return stack[0]
+}`,
+    lineMapping: { 1: 5, 3: 7, 5: 8, 8: 11 },
+  },
+  minStack: {
+    code: `type MinStack struct {
+    data, mins []int
+}
+
+func (s *MinStack) Push(val int) {
+    s.data = append(s.data, val)
+    if len(s.mins) == 0 || val <= s.mins[len(s.mins)-1] {
+        s.mins = append(s.mins, val) // new min tracked in parallel
+    }
+}
+
+func (s *MinStack) Pop() {
+    top := s.data[len(s.data)-1]
+    s.data = s.data[:len(s.data)-1]
+    if top == s.mins[len(s.mins)-1] {
+        s.mins = s.mins[:len(s.mins)-1] // min track pops too
+    }
+}
+
+func (s *MinStack) GetMin() int {
+    return s.mins[len(s.mins)-1] // O(1): no scan needed
+}`,
+    lineMapping: { 1: 6, 3: 7, 6: 8, 8: 13, 10: 21 },
+  },
+  decodeString: {
+    code: `func decodeString(s string) string {
+    numStk, strStk := []int{}, []string{}
+    cur, k := "", 0
+    for _, ch := range s {
+        switch {
+        case unicode.IsDigit(ch):
+            k = k*10 + int(ch-'0')
+        case ch == '[':
+            numStk = append(numStk, k)   // save repeat count
+            strStk = append(strStk, cur) // save outer context
+            cur, k = "", 0
+        case ch == ']':
+            prev := strStk[len(strStk)-1]
+            times := numStk[len(numStk)-1]
+            strStk = strStk[:len(strStk)-1]
+            numStk = numStk[:len(numStk)-1]
+            cur = prev + strings.Repeat(cur, times) // expand frame
+        default:
+            cur += string(ch)
+        }
+    }
+    return cur
+}`,
+    lineMapping: { 1: 9, 3: 10, 4: 11, 5: 12, 7: 13, 9: 17 },
+  },
+  trappingRainWater: {
+    code: `func trap(height []int) int {
+    total := 0
+    stack := []int{} // indices, decreasing heights
+    for i, h := range height {
+        for len(stack) > 0 && h > height[stack[len(stack)-1]] {
+            bottom := stack[len(stack)-1]
+            stack = stack[:len(stack)-1] // taller bar pops boundary
+            if len(stack) == 0 {
+                break
+            }
+            left := stack[len(stack)-1]
+            width := i - left - 1
+            bounded := min(height[left], h) - height[bottom]
+            total += width * bounded // water over the bottom
+        }
+        stack = append(stack, i)
+    }
+    return total
+}`,
+    lineMapping: { 1: 3, 3: 5, 5: 6, 6: 7, 8: 11, 10: 14 },
+  },
+  circularQueue: {
+    code: `type MyCircularQueue struct {
+    buf         []int
+    front, rear int
+    size, cap   int
+}
+
+func (q *MyCircularQueue) EnQueue(v int) bool {
+    if q.size == q.cap {
+        return false // overflow: full
+    }
+    if q.size == 0 {
+        q.front, q.rear = 0, 0
+    } else {
+        q.rear = (q.rear + 1) % q.cap // wraps last -> 0
+    }
+    q.buf[q.rear] = v
+    q.size++
+    return true
+}
+
+func (q *MyCircularQueue) DeQueue() bool {
+    if q.size == 0 {
+        return false // underflow: empty
+    }
+    if q.size == 1 {
+        q.front, q.rear = 0, 0
+        q.size = 0
+        return true
+    }
+    q.front = (q.front + 1) % q.cap // wraps last -> 0
+    q.size--
+    return true
+}`,
+    lineMapping: { 1: 8, 2: 14, 3: 16 },
+  },
+  circularDeque: {
+    code: `type MyCircularDeque struct {
+    buf         []int
+    front, rear int
+    size, cap   int
+}
+
+func (d *MyCircularDeque) InsertFront(v int) bool {
+    if d.size == d.cap {
+        return false
+    }
+    d.front = (d.front - 1 + d.cap) % d.cap // wraps backwards
+    d.buf[d.front] = v
+    d.size++
+    return true
+}
+
+func (d *MyCircularDeque) InsertLast(v int) bool {
+    if d.size == d.cap {
+        return false
+    }
+    d.rear = (d.rear + 1) % d.cap // wraps forwards
+    d.buf[d.rear] = v
+    d.size++
+    return true
+}
+
+func (d *MyCircularDeque) DeleteFront() bool {
+    if d.size == 0 {
+        return false
+    }
+    d.front = (d.front + 1) % d.cap
+    d.size--
+    return true
+}
+
+func (d *MyCircularDeque) DeleteLast() bool {
+    if d.size == 0 {
+        return false
+    }
+    d.rear = (d.rear - 1 + d.cap) % d.cap
+    d.size--
+    return true
+}`,
+    lineMapping: {},
+  },
+  firstNonRepeating: {
+    code: `func firstUniqChar(s string) int {
+    freq := [26]int{}
+    for i := 0; i < len(s); i++ {
+        freq[s[i]-'a']++ // pass 1: count frequencies
+    }
+    for i := 0; i < len(s); i++ {
+        if freq[s[i]-'a'] == 1 {
+            return i // pass 2: first freq==1 wins
+        }
+    }
+    return -1 // every character repeated
+}`,
+    lineMapping: { 1: 4, 3: 4, 5: 6, 7: 7, 9: 11 },
+  },
+  dota2Senate: {
+    code: `func predictPartyVictory(senate string) string {
+    radiant, dire := []int{}, []int{}
+    n := len(senate)
+    for i, c := range senate {
+        if c == 'R' {
+            radiant = append(radiant, i)
+        } else {
+            dire = append(dire, i)
+        }
+    }
+    for len(radiant) > 0 && len(dire) > 0 {
+        r, d := radiant[0], dire[0]
+        radiant, dire = radiant[1:], dire[1:]
+        if r < d {
+            radiant = append(radiant, r+n) // earlier senator bans, re-enqueues
+        } else {
+            dire = append(dire, d+n)
+        }
+    }
+    if len(radiant) > 0 {
+        return "Radiant"
+    }
+    return "Dire"
+}`,
+    lineMapping: { 1: 2, 4: 5, 6: 12, 8: 15 },
+  },
+};

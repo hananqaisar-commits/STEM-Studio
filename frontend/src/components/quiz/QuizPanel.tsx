@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap, Search } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap } from 'lucide-react';
 import type { QuizQuestion, QuizCadence } from '../../engine/types/Quiz';
+import { sendTutorMessage } from '../../api/octaTutorApi';
+import { readOctaConfig } from '../../api/octaConfigStorage';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
 
@@ -42,13 +44,13 @@ export interface QuizPanelProps {
   cadence?: QuizCadence;
   /** Seconds remaining on timer (Challenge mode only); null otherwise. */
   timeRemaining?: number | null;
+  timeLimitSeconds?: number | null;
   /** Streak multiplier: x1, x2 (3+ streak), x3 (5+ streak). */
   streakMultiplier?: number;
   /** True while the transfer challenge (fresh input) is in play. */
   challengeMode?: boolean;
   /** True when the reveal follows a final wrong attempt — Continue then
    *  advances the canvas to the mispredicted step ("watch the step"). */
-  inspectPending?: boolean;
   onAnswer: (index: number) => void;
   onContinue: () => void;
   /** Per-category wording, e.g. "Resume traversal". */
@@ -67,20 +69,53 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   streak,
   cadence = 'normal',
   timeRemaining = null,
+  timeLimitSeconds = 45,
   streakMultiplier = 1,
   challengeMode = false,
-  inspectPending = false,
   onAnswer,
   onContinue,
   continueLabel = 'Continue',
 }) => {
   const [pending, setPending] = useState<number | null>(null);
+  const [reasoning, setReasoning] = useState('');
+  const [reasoningFeedback, setReasoningFeedback] = useState('');
+  const [gradingReasoning, setGradingReasoning] = useState(false);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const continueRef = useRef<HTMLButtonElement | null>(null);
 
   const locked = phase === 'revealed';
   const optionCount = question.options.length;
   const isConcept = cadence === 'light';
+
+  useEffect(() => {
+    setReasoning('');
+    setReasoningFeedback('');
+  }, [question.id]);
+
+  const gradeReasoning = async () => {
+    if (!reasoning.trim() || gradingReasoning) return;
+    setGradingReasoning(true);
+    setReasoningFeedback('');
+    try {
+      const config = readOctaConfig();
+      const result = await sendTutorMessage({
+        message: `Grade the learner's short explanation for this checkpoint. Give a score from 0 to 2, name one correct idea, and one concrete correction or next thought. Do not penalize grammar. Keep the feedback under 80 words.\n\nCheckpoint: ${question.prompt}\nExpected reasoning: ${question.explanation}\nLearner explanation: ${reasoning.trim()}`,
+        mode: 'natural',
+        algorithm_name: question.concept,
+        category: 'quiz reasoning',
+        topic_knowledge: `The checkpoint's accepted reasoning is: ${question.explanation}`,
+        provider: config.provider,
+        api_key: config.apiKey,
+        base_url: config.baseUrl,
+        model_name: config.modelName,
+      });
+      setReasoningFeedback(result.answer_source === 'model' && result.reply
+        ? result.reply
+        : 'Octa’s live AI provider is unavailable, so this explanation was not graded. Your answer is still here; try again when Octa is connected.');
+    } catch {
+      setReasoningFeedback('Octa is unavailable right now. Your explanation is still here; try again later.');
+    } finally { setGradingReasoning(false); }
+  };
 
   /* Move focus to the card when it opens. */
   useEffect(() => {
@@ -131,10 +166,8 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   };
 
   const eyebrow = challengeMode
-    ? `Transfer challenge \u00b7 ${checkpointNumber} of ${totalCheckpoints}`
-    : phase === 'retrying'
-      ? `Checkpoint ${checkpointNumber} of ${totalCheckpoints} \u00b7 attempt 2 of 2`
-      : `Checkpoint ${checkpointNumber} of ${totalCheckpoints}`;
+    ? `Transfer challenge \u00b7 Step ${checkpointNumber} of ${totalCheckpoints}`
+    : `Step ${checkpointNumber} of ${totalCheckpoints}`;
 
   /* The card title states what the question trains. 'reason' questions
    * ask for justification of a visible step; everything else is a
@@ -148,13 +181,10 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   /* After a final wrong answer, Continue becomes an inspection: the
    * canvas advances to the mispredicted step so the student watches the
    * ground truth instead of just reading it. */
-  const effectiveContinueLabel =
-    phase === 'revealed' && !wasCorrect && inspectPending
-      ? 'Watch the step'
-      : continueLabel;
+  const effectiveContinueLabel = continueLabel;
 
   /* Timer bar width percentage (the shared Challenge limit is 10 seconds). */
-  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / 10) * 100) : 100;
+  const timerPct = timeRemaining !== null ? Math.max(0, (timeRemaining / Math.max(1, timeLimitSeconds ?? 45)) * 100) : 100;
   const timerUrgent = timeRemaining !== null && timeRemaining <= 5;
 
   /* Progress percentage for Guided mode. */
@@ -211,9 +241,10 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
         </div>
       </header>
 
-      <p className="quiz-prompt">{question.prompt}</p>
+      <div key={question.id} className="quiz-content-animate">
+        <p className="quiz-prompt">{question.prompt}</p>
 
-      <div
+        <div
         className="quiz-options"
         role="radiogroup"
         aria-label="Answer choices"
@@ -240,6 +271,12 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
                 {index + 1}
               </span>
               <span className="quiz-option-label">{option}</span>
+              {/* Show checkmark if selected (even before locking), or the correct/wrong marks after locking */}
+              {!locked && checked && (
+                <span className="quiz-option-mark">
+                  <CheckCircle2 size={15} />
+                </span>
+              )}
               {locked && index === question.correctIndex && (
                 <span className="quiz-option-mark">
                   <CheckCircle2 size={15} />
@@ -253,6 +290,14 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
             </button>
           );
         })}
+        </div>
+        <details className="quiz-reasoning">
+          <summary>Explain why in your own words <span>Optional · Octa gives feedback</span></summary>
+          <label className="quiz-reasoning-label" htmlFor={`reasoning-${question.id}`}>Write the idea or rule that supports your prediction.</label>
+          <textarea id={`reasoning-${question.id}`} value={reasoning} onChange={(event) => setReasoning(event.target.value)} maxLength={1500} rows={3} placeholder="For example: the larger value moves right because…" />
+          <div className="quiz-reasoning-footer"><span>{reasoning.length}/1500</span><button type="button" onClick={() => void gradeReasoning()} disabled={gradingReasoning || reasoning.trim().length < 8}><Lightbulb size={14} />{gradingReasoning ? 'Octa is reviewing…' : 'Get Octa feedback'}</button></div>
+          {reasoningFeedback && <p className="quiz-reasoning-feedback" role="status">{reasoningFeedback}</p>}
+        </details>
       </div>
 
       <div className="quiz-feedback-region" aria-live="polite">
@@ -260,7 +305,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
           <div className="quiz-feedback is-hint">
             <Lightbulb size={15} />
             <span>
-              <span className="quiz-feedback-title">Not quite — try once more.</span>
               {question.hint}
             </span>
           </div>
@@ -270,30 +314,12 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
           <div className={`quiz-feedback ${wasCorrect ? 'is-ok' : 'is-bad'}`}>
             {wasCorrect ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
             <span>
-              <span className="quiz-feedback-title">
-                {wasCorrect
-                  ? 'Correct.'
-                  : inspectPending
-                    ? "Let's inspect this step."
-                    : 'The correct answer is shown above.'}
-              </span>
               {question.explanation}
             </span>
           </div>
         )}
 
-        {/* Inspect-the-step cue — wrong on the final attempt. Learning does
-            not stop at the wrong answer: Continue runs the exact step on
-            the canvas so the student sees where their model broke. */}
-        {phase === 'revealed' && !wasCorrect && inspectPending && (
-          <div className="quiz-inspect-note">
-            <Search size={14} />
-            <span>
-              Press <strong>Watch the step</strong> — the canvas will run the very step you
-              predicted. Compare it with what you expected, then try the next prediction.
-            </span>
-          </div>
-        )}
+
 
         {/* Key Idea insight — Concept mode only, shown after reveal */}
         {isConcept && phase === 'revealed' && (
@@ -309,7 +335,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
       <footer className="quiz-foot">
         <span className="quiz-score">
           {answeredCount === 0
-            ? 'First checkpoint'
+            ? 'First question'
             : `${correctCount}/${answeredCount} correct${streak > 1 ? ` \u00b7 streak ${streak}` : ''}`}
         </span>
 

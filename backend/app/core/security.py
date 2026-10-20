@@ -40,30 +40,76 @@ def generate_secure_token() -> str:
 
 # ─── JWT Token Creation ──────────────────────────────────────────────
 
-def create_access_token(user_id: int, email: str) -> str:
+def create_access_token(
+    user_id: int,
+    email: str,
+    auth_time: int | None = None,
+    *,
+    owner_mfa: bool = False,
+    session_id: int | None = None,
+) -> str:
     """Create a short-lived JWT access token."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+    expire_minutes = (
+        settings.OWNER_ACCESS_TOKEN_EXPIRE_MINUTES
+        if owner_mfa
+        else settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
     )
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
     payload = {
         "sub": str(user_id),
         "email": email,
         "type": "access",
+        "jti": secrets.token_urlsafe(16),
         "exp": expire,
     }
+    if auth_time is not None:
+        payload["auth_time"] = auth_time
+    if owner_mfa:
+        payload["owner_mfa"] = True
+    if session_id is not None:
+        payload["sid"] = session_id
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_refresh_token(user_id: int) -> str:
-    """Create a long-lived JWT refresh token."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
-    )
+def create_refresh_token(
+    user_id: int,
+    remember_me: bool = False,
+    auth_time: int | None = None,
+    *,
+    owner_mfa: bool = False,
+) -> str:
+    """Create a long-lived JWT refresh token.
+
+    When ``remember_me`` is set the token uses the extended lifetime
+    (JWT_REMEMBER_ME_EXPIRE_DAYS) so the session survives browser
+    restarts; otherwise the standard shorter lifetime applies.
+    """
+    if owner_mfa:
+        session_started = (
+            datetime.fromtimestamp(auth_time, timezone.utc)
+            if type(auth_time) is int
+            else datetime.now(timezone.utc)
+        )
+        expire = session_started + timedelta(hours=settings.OWNER_SESSION_MAX_HOURS)
+        remember_me = False
+    else:
+        days = (
+            settings.JWT_REMEMBER_ME_EXPIRE_DAYS
+            if remember_me
+            else settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        )
+        expire = datetime.now(timezone.utc) + timedelta(days=days)
     payload = {
         "sub": str(user_id),
         "type": "refresh",
+        "remember": remember_me,
+        "jti": secrets.token_urlsafe(16),
         "exp": expire,
     }
+    if auth_time is not None:
+        payload["auth_time"] = auth_time
+    if owner_mfa:
+        payload["owner_mfa"] = True
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 

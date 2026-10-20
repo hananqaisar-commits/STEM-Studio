@@ -3,6 +3,8 @@ uvicorn[standard]>=0.27.0
 sqlalchemy>=2.0.25
 alembic>=1.13.1
 pymysql>=1.1.0 # For MySQL
+redis==6.4.0 # Shared rate-limit counters across API instances
+psycopg2-binary>=2.9.9 # For PostgreSQL / Supabase
 cryptography>=42.0.0 # For MySQL 8+ authentication
 pydantic[email]>=2.5.3
 pydantic-settings>=2.1.0
@@ -10,6 +12,7 @@ bcrypt>=4.1.2
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
 python-multipart>=0.0.9
+httpx>=0.27.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.5
-
+google-auth>=2.27.0

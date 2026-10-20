@@ -1,15 +1,16 @@
 import React from 'react';
-import { HelpCircle, Terminal, Sparkles } from 'lucide-react';
+import { HelpCircle, Terminal } from 'lucide-react';
 
 interface VisualizerActionsProps {
   /** Whether Quiz Mode is currently on. */
-  quizEnabled: boolean;
-  onToggleQuiz: () => void;
-  /** Standalone quiz entry. Predict mode remains the step-pausing workflow. */
+  quizEnabled?: boolean;
+  onToggleQuiz?: () => void;
+  /** Standalone quiz entry. */
   onStartQuiz?: () => void;
   /** Omit both debugger props on pages without a debugger panel. */
   debuggerVisible?: boolean;
   onToggleDebugger?: () => void;
+  
   /** Extra page-level buttons (e.g. fullscreen) rendered in the same group. */
   children?: React.ReactNode;
 }
@@ -23,7 +24,7 @@ interface VisualizerActionsProps {
  * all state lives in the page, so toggling the debugger never resets execution.
  */
 export const VisualizerActions: React.FC<VisualizerActionsProps> = ({
-  quizEnabled,
+  quizEnabled = false,
   onToggleQuiz,
   onStartQuiz,
   debuggerVisible,
@@ -32,25 +33,18 @@ export const VisualizerActions: React.FC<VisualizerActionsProps> = ({
 }) => {
   return (
     <div className="viz-actions">
-      <button
-        type="button"
-        className="viz-action-btn viz-action-quiz"
-        onClick={onStartQuiz ?? onToggleQuiz}
-        title="Start Quiz Mode"
-      >
-        <HelpCircle size={14} />
-        <span>Quiz Mode</span>
-      </button>
-      <button
-        type="button"
-        className={`viz-action-btn viz-action-predict ${quizEnabled ? 'is-active' : ''}`}
-        aria-pressed={quizEnabled}
-        onClick={onToggleQuiz}
-        title="Toggle Predict Mode"
-      >
-        <Sparkles size={14} />
-        <span>Predict Mode</span>
-      </button>
+      {onToggleQuiz && (
+        <button
+          type="button"
+          className="viz-action-btn viz-action-quiz"
+          onClick={onStartQuiz ?? onToggleQuiz}
+          title="Start Quiz Mode"
+        >
+          <HelpCircle size={14} />
+          <span>Quiz Mode</span>
+        </button>
+      )}
+
 
       {onToggleDebugger && (
         <button

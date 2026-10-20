@@ -1,30 +1,60 @@
-import React, { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import React from 'react';
+import { FileCode2 } from 'lucide-react';
 import type { CategoryTopics } from '../../data/categoryTopics';
+import { hasCustomStub } from '../../data/customCode';
 
 export interface VisualizerSearchItem { id: string; name: string; description?: string; group?: string; }
 interface VisualizerHeaderProps {
-  icon: React.ReactNode; title: string; subtitle: string; items: VisualizerSearchItem[];
-  activeId?: string; onSelect: (id: string) => void; placeholder?: string; actions?: React.ReactNode;
+  icon: React.ReactNode; title: string; subtitle: string; items?: VisualizerSearchItem[];
+  activeId?: string; onSelect?: (id: string) => void; placeholder?: string; actions?: React.ReactNode;
   categories?: CategoryTopics[]; activeCategoryId?: string; onSelectCategory?: (categoryId: string) => void; categorySelectorOnly?: boolean;
+  isCustomCodeRunning?: boolean;
 }
 
 /** Shared compact page header. The topic strip remains in the page controls;
  * this row only provides identity, search, and the universal mode actions. */
-export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title, subtitle, items, activeId, onSelect, placeholder = 'Search algorithms...', actions }) => {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const results = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return needle ? items.filter(item => `${item.name} ${item.description ?? ''} ${item.group ?? ''}`.toLowerCase().includes(needle)) : items;
-  }, [items, query]);
-  const choose = (id: string) => { onSelect(id); setQuery(''); setOpen(false); };
-  return <header className="viz-header animate-fade-in">
-    <div className="viz-title-group"><div className="viz-title-icon">{icon}</div><div className="viz-title-text"><h1>{title}</h1><p>{subtitle}</p></div></div>
-    <div className="viz-search-wrapper">
-      <div className="viz-search-input-box"><Search size={15} /><input className="viz-search-input" value={query} placeholder={placeholder} onFocus={() => setOpen(true)} onChange={event => { setQuery(event.target.value); setOpen(true); }} /></div>
-      {open && <div className="viz-search-dropdown">{results.slice(0, 8).map(item => <button type="button" key={item.id} className={`viz-search-item ${item.id === activeId ? 'active' : ''}`} onMouseDown={() => choose(item.id)}><span className="viz-item-body"><span className="viz-item-name">{item.name}</span>{item.description && <span className="viz-item-desc">{item.description}</span>}</span>{item.group && <span className="viz-shortcut-badge">{item.group}</span>}</button>)}</div>}
-    </div>
-    {actions}
-  </header>;
+export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title, subtitle, actions, isCustomCodeRunning, activeId }) => {
+  const categoryByTitle: Record<string, string> = {
+    'Sorting Algorithms Studio': 'sorting',
+    'Linked List Visualizer': 'linkedList',
+    'Stack & Queue Studio': 'stackQueue',
+    'Tree Structures Studio': 'bst',
+    'Graph Algorithms Studio': 'graph',
+    'Binary Search Studio': 'binarySearch',
+    'Hash Map Algorithms Studio': 'hashMaps',
+    'Array Algorithms Studio': 'arrays',
+    'String Algorithms Studio': 'strings',
+    'Recursion Studio': 'recursion',
+    'Backtracking Algorithms Studio': 'backtracking',
+    'Greedy Algorithms Studio': 'greedy',
+    'Dynamic Programming Studio': 'dp',
+    'Trie (Prefix Tree) Studio': 'trie',
+  };
+  const topicCategoryId = categoryByTitle[title];
+  const codeSupported = topicCategoryId && activeId ? hasCustomStub(topicCategoryId, activeId) : null;
+  return (
+    <header className="viz-header animate-fade-in">
+      <div className="viz-title-group">
+        <div className="viz-title-icon">{icon}</div>
+        <div className="viz-title-text">
+          <div className="viz-title-row">
+            <h1>{title}</h1>
+            {isCustomCodeRunning && (
+              <span className="pasted-code-running-badge" title="Executing user-pasted custom code from debugger">
+                <FileCode2 size={13} />
+                <span>Pasted code is running</span>
+              </span>
+            )}
+          </div>
+          <p>{subtitle}</p>
+          {codeSupported !== null && (
+            <span className={`custom-code-coverage ${codeSupported ? 'is-supported' : 'is-coming'}`}>
+              Custom code: {codeSupported ? 'supported' : 'coming soon'}
+            </span>
+          )}
+        </div>
+      </div>
+      {actions}
+    </header>
+  );
 };

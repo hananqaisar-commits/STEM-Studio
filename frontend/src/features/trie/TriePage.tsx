@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   Binary, Search, GitBranch, BookOpen, MessageSquare, Maximize2, Sparkles, Trash2, Layers
 } from 'lucide-react';
@@ -8,6 +10,8 @@ import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasM
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
@@ -15,6 +19,7 @@ import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
+import { parseStringList } from '../../utils/batchInputParser';
 import { buildTrieCheckpoints, buildRevisionData } from './quizAdapter';
 import type { TrieAlgorithmKey } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
@@ -30,6 +35,7 @@ import '../sorting/Sorting.css';
 import '../bst/BST.css';
 import './Trie.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 interface AlgMeta {
   key: TrieAlgorithmKey;
@@ -84,7 +90,7 @@ export const TriePage: React.FC = () => {
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
-    const words = wordsInput.split(/[\s,]+/).filter(w => w.length > 0);
+    const words = parseStringList(wordsInput).values;
     switch (selectedAlg) {
       case 'trieInsert':
         return { steps: runTrieInsert(words), timeComplexity: { best: 'O(m)', average: 'O(m)', worst: 'O(m)' }, spaceComplexity: 'O(n·m)' };
@@ -108,6 +114,28 @@ export const TriePage: React.FC = () => {
     } = useStepPlayer({ steps: executionData.steps });
 
   const trieStep = currentStep as TrieStep | null;
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'trie',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildTrieCheckpoints(executionData.steps, selectedAlg),
@@ -210,8 +238,12 @@ export const TriePage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       <div className="trie-input-group">
         <span>Words:</span>
         <input
@@ -222,33 +254,36 @@ export const TriePage: React.FC = () => {
           className="wide"
         />
       </div>
+
       {selectedAlg !== 'trieInsert' && (
         <div className="trie-input-group">
-          <span>{selectedAlg === 'wordDictionary' ? 'Pattern:' : 'Query:'}</span>
+          <span>{selectedAlg === 'wordDictionary' ? 'Pattern:' : selectedAlg === 'triePrefix' ? 'Prefix:' : 'Query:'}</span>
           <input
             type="text"
             value={queryInput}
             onChange={(e) => { setQueryInput(e.target.value); reset(); }}
-            placeholder={selectedAlg === 'wordDictionary' ? 'e.g. h.l.' : 'e.g. car'}
+            placeholder={selectedAlg === 'wordDictionary' ? 'e.g. h.l.' : selectedAlg === 'triePrefix' ? 'e.g. app' : 'e.g. car'}
           />
         </div>
       )}
-      <div className="dataset-mode-selector ml-1">
-        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear"><Trash2 size={13} className="text-rose-400" /><span>Empty</span></button>
-        <button className="bst-btn btn-mode" onClick={handleSample} title="Sample"><Layers size={13} className="text-amber-400" /><span>Sample</span></button>
-        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random"><Sparkles size={13} className="text-emerald-400" /><span>Random</span></button>
+
+      <div className="dataset-mode-selector">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear All">
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleSample} title="Load Sample">
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
+        </button>
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Words">
+          <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
+        </button>
       </div>
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/trie')} />
       <VisualizerHeader
         icon={<Binary size={22} />}
         title="Trie (Prefix Tree) Studio"
@@ -288,64 +323,11 @@ export const TriePage: React.FC = () => {
         }
       />
 
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map(alg => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                const d = DEFAULT_PARAMS[alg.key];
-                setWordsInput(d.words);
-                setQueryInput(d.query);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          <div className="trie-input-group">
-            <span>Words:</span>
-            <input
-              type="text"
-              value={wordsInput}
-              onChange={(e) => { setWordsInput(e.target.value); reset(); }}
-              placeholder="space-separated words"
-              className="wide"
-            />
-          </div>
-
-          {selectedAlg !== 'trieInsert' && (
-            <div className="trie-input-group">
-              <span>{selectedAlg === 'wordDictionary' ? 'Pattern:' : selectedAlg === 'triePrefix' ? 'Prefix:' : 'Query:'}</span>
-              <input
-                type="text"
-                value={queryInput}
-                onChange={(e) => { setQueryInput(e.target.value); reset(); }}
-                placeholder={selectedAlg === 'wordDictionary' ? 'e.g. h.l.' : selectedAlg === 'triePrefix' ? 'e.g. app' : 'e.g. car'}
-              />
-            </div>
-          )}
-
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear All">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Load Sample">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Words">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -370,6 +352,9 @@ export const TriePage: React.FC = () => {
           />
         </div>
 
+
+
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -378,16 +363,16 @@ export const TriePage: React.FC = () => {
             onEnableQuiz={() => setQuizEnabled(true)}
             onProveIt={handleProveIt}
           />
-
-
         </div>
-
-
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="trie" />
+        <ResizablePanelRow
+          storageKey="trie"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Trie"
+              categoryId="trie"
+              topicId={selectedAlg}
               activeLine={trieStep?.codeLine}
               variables={trieStep?.variables}
               onCustomCodeRun={(arraySteps) => {
@@ -404,16 +389,17 @@ export const TriePage: React.FC = () => {
               }}
               currentArray={[]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)}
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       <FullScreenCanvasModal
@@ -421,7 +407,16 @@ export const TriePage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Trie Studio | ${selectedAlg.toUpperCase()}`}
         subtitle="Prefix Tree Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Sun, Moon, LogOut, User, Menu, ChevronDown, Check, Palette, ChevronRight } from 'lucide-react';
-import { useTheme, type Theme } from '../../contexts/ThemeContext';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
+import {
+  Home, Settings, Moon, Sun, User, LogOut, LogIn, Code2, Layers, Menu, Monitor, ShieldCheck
+} from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getCategoryById, MODULES } from '../../data/categories';
-import { Octa } from '../mascot';
+import { NavbarGlobalSearch } from './NavbarGlobalSearch';
+import { NotificationCenter } from '../notifications/NotificationCenter';
+import { DSA_CATEGORIES } from '../../data/categories';
+import { SettingsModal } from './SettingsModal';
 import '../mascot/Mascot.css';
 import './Layout.css';
+
+const MLink = m.create(Link);
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -14,20 +21,32 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState<string>('home');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [showThemeDropdown, setShowThemeDropdown] = useState(false);
-  
-  const themeDropdownRef = useRef<HTMLDivElement>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns on click outside
+  // Sync activeTab with current route
+  useEffect(() => {
+    if (location.pathname === '/dashboard') {
+      setActiveTab('home');
+    } else if (location.pathname.includes('/dashboard/dsa')) {
+      setActiveTab('dsa');
+    } else if (location.pathname.includes('/dashboard/os')) {
+      setActiveTab('os');
+    } else if (location.pathname.startsWith('/dashboard/')) {
+      setActiveTab('visualizer');
+    }
+  }, [location.pathname]);
+
+  // Close user dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target as Node)) {
-        setShowThemeDropdown(false);
-      }
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
         setShowUserDropdown(false);
       }
@@ -36,113 +55,239 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Derive breadcrumb from current path
-  const pathSegment = location.pathname.split('/')[2] || '';
-  const currentCategory = pathSegment ? getCategoryById(pathSegment) : null;
-  const currentModule = pathSegment ? MODULES.find(m => m.id === pathSegment) : null;
+  const handleTabClick = (tabId: string) => {
+    setActiveTab(tabId);
+    if (tabId === 'home') {
+      navigate('/dashboard');
+    } else if (tabId === 'dsa') {
+      navigate('/dashboard/dsa');
+    } else if (tabId === 'os') {
+      navigate('/dashboard/os');
+    } else if (tabId === 'settings') {
+      setShowSettingsModal(true);
+    } else if (tabId === 'theme') {
+      setTheme(theme === 'dark' ? 'light' : 'dark');
+    }
+  };
 
-  const themeOptions: { value: Theme; label: string; icon: React.ReactNode }[] = [
-    { value: 'light', label: 'Clean Light', icon: <Sun size={14} /> },
-    { value: 'dark', label: 'Midnight Dark', icon: <Moon size={14} /> },
-  ];
-
-  const isOnDashboard = location.pathname === '/dashboard';
 
   return (
-    <header className="app-navbar">
-      <div className="navbar-ribbon">
-        <div className="navbar-left">
-          {/* Hamburger — visible only on mobile/tablet via CSS */}
+    <LazyMotion features={domAnimation}>
+      <header className="expandable-navbar-wrapper">
+        <div className="expandable-navbar-pill">
+          {/* Mobile Menu Toggle */}
           <button
-            className="hamburger-btn"
+            className="expandable-tab-btn mobile-menu-btn"
             onClick={onToggleSidebar}
-            aria-label="Toggle navigation menu"
+            aria-label="Toggle Navigation Sidebar"
           >
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
 
-          <Link to="/dashboard" className="navbar-brand">
-            <div className="brand-logo-glow">
-              <Octa expression="neutral" size={32} interactive={false} className="brand-mascot" />
-            </div>
-            <span className="brand-title">STEM <span className="brand-accent">Studio</span></span>
+          {/* Brand Logo & Title */}
+          <Link to="/dashboard" className="navbar-brand-pill">
+            <span className="brand-pill-title">
+              STEM <span className="brand-accent-text">Studio</span>
+            </span>
           </Link>
-        </div>
 
-        {/* Breadcrumb / section links */}
-        <nav className="navbar-center">
-          {isOnDashboard ? (
-            <div className="nav-section-links">
-              <a href="#hero" className="nav-section-link">Home</a>
-              <a href="#features" className="nav-section-link">Features</a>
-              <a href="#reviews" className="nav-section-link">Reviews</a>
-              <a href="#faqs" className="nav-section-link">FAQs</a>
-            </div>
-          ) : currentModule ? (
-            <div className="nav-breadcrumb">
-              <Link to="/dashboard" className="nav-crumb-link">Dashboard</Link>
-              <ChevronRight size={14} className="nav-crumb-sep" />
-              <span className="nav-crumb-current">{currentModule.name}</span>
-            </div>
-          ) : currentCategory ? (
-            <div className="nav-breadcrumb">
-              <Link to="/dashboard" className="nav-crumb-link">Dashboard</Link>
-              <ChevronRight size={14} className="nav-crumb-sep" />
-              <Link to="/dashboard/dsa" className="nav-crumb-link">DSA</Link>
-              <ChevronRight size={14} className="nav-crumb-sep" />
-              <span className="nav-crumb-current">{currentCategory.name}</span>
-            </div>
-          ) : (
-            <span className="nav-crumb-current">Dashboard</span>
-          )}
-        </nav>
+          <div className="navbar-pill-divider" />
 
-        <div className="navbar-right">
-          <div className="theme-dropdown-container" ref={themeDropdownRef}>
-            <button
-              className={`theme-selector-btn ${showThemeDropdown ? 'active' : ''}`}
-              onClick={() => setShowThemeDropdown((prev) => !prev)}
-              aria-label="Select Appearance"
+          {/* Navigation Items */}
+          <div className="navbar-nav-group">
+            {/* Home Tab */}
+            <MLink
+              layout
+              to="/dashboard"
+              onClick={() => setActiveTab('home')}
+              className={`expandable-tab-btn ${activeTab === 'home' ? 'active' : ''}`}
             >
-              <Palette size={15} className="theme-palette-icon" aria-hidden="true" />
-              <span className="theme-selector-label">
-                {theme === 'dark' ? 'Dark' : 'Light'}
-              </span>
-              <ChevronDown size={14} className={`theme-chevron ${showThemeDropdown ? 'rotated' : ''}`} />
-            </button>
-
-            {showThemeDropdown && (
-              <div className="theme-dropdown-menu animate-fade-in">
-                <div className="dropdown-header">Appearance Mode</div>
-                <div className="dropdown-divider" />
-                {themeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    className={`dropdown-item theme-option-btn ${theme === option.value ? 'active' : ''}`}
-                    onClick={() => {
-                      setTheme(option.value);
-                      setShowThemeDropdown(false);
-                    }}
+              <Home size={18} className="tab-icon" />
+              <AnimatePresence initial={false}>
+                {activeTab === 'home' && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text"
                   >
-                    <span className="theme-option-icon">{option.icon}</span>
-                    <span className="theme-option-text">{option.label}</span>
-                    {theme === option.value && <Check size={14} className="theme-active-icon" />}
-                  </button>
-                ))}
-              </div>
-            )}
+                    Home
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </MLink>
+
+            {/* DSA Modules Tab */}
+            <MLink
+              layout
+              to="/dashboard/dsa"
+              onClick={() => setActiveTab('dsa')}
+              className={`expandable-tab-btn ${activeTab === 'dsa' ? 'active' : ''}`}
+            >
+              <Layers size={18} className="tab-icon" />
+              <AnimatePresence initial={false}>
+                {activeTab === 'dsa' && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text"
+                  >
+                    DSA Modules
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </MLink>
+
+            {/* Operating System Modules Tab */}
+            <MLink
+              layout
+              to="/dashboard/os"
+              onClick={() => setActiveTab('os')}
+              className={`expandable-tab-btn ${activeTab === 'os' ? 'active' : ''}`}
+              aria-label="Operating Systems module"
+            >
+              <Monitor size={18} className="tab-icon" />
+              <AnimatePresence initial={false}>
+                {activeTab === 'os' && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text flex items-center gap-1.5"
+                  >
+                    <span>OS Modules</span>
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm animate-pulse">
+                      NEW
+                    </span>
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </MLink>
+
+            {/* Visualizer Tab */}
+            <m.button
+              layout
+              onClick={() => handleTabClick('visualizer')}
+              className={`expandable-tab-btn ${activeTab === 'visualizer' ? 'active' : ''}`}
+              aria-label="Visualizer"
+            >
+              <Code2 size={18} className="tab-icon" />
+              <AnimatePresence initial={false}>
+                {activeTab === 'visualizer' && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text"
+                  >
+                    Visualizer
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </m.button>
           </div>
 
-          <div className="user-dropdown-container" ref={userDropdownRef}>
-            <button
-              className="user-profile-btn"
-              onClick={() => setShowUserDropdown(!showUserDropdown)}
+          <div className="navbar-pill-divider" />
+
+          {/* Global Universal Navbar Search Bar */}
+          <div className="navbar-global-search flex items-center px-1">
+            <NavbarGlobalSearch />
+          </div>
+
+          <div className="navbar-pill-divider" />
+
+          {/* Tools & Action Group */}
+          <div className="navbar-nav-group">
+            <NotificationCenter />
+
+            {/* Settings Tab */}
+            <m.button
+              layout
+              onClick={() => handleTabClick('settings')}
+              className={`expandable-tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+              title="Settings"
+              aria-label="Settings"
             >
-              <div className="user-avatar">
-                <User size={16} />
-              </div>
-              <span className="user-name">{user?.username || 'Account'}</span>
-            </button>
+              <Settings size={18} className="tab-icon" />
+              <AnimatePresence initial={false}>
+                {activeTab === 'settings' && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text"
+                  >
+                    Settings
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </m.button>
+
+            {/* Theme Toggle Tab */}
+            <m.button
+              layout
+              onClick={() => handleTabClick('theme')}
+              className={`expandable-tab-btn ${activeTab === 'theme' ? 'active' : ''}`}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              aria-label={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            >
+              {theme === 'dark' ? <Moon size={18} className="tab-icon" /> : <Sun size={18} className="tab-icon" />}
+              <AnimatePresence initial={false}>
+                {activeTab === 'theme' && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text"
+                  >
+                    {theme === 'dark' ? 'Dark' : 'Light'}
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </m.button>
+          </div>
+
+          <div className="navbar-pill-divider" />
+
+          {/* Account actions */}
+          {!isAuthenticated ? (
+            <m.button layout onClick={() => navigate('/login')} className="expandable-tab-btn" title="Sign in" aria-label="Sign in">
+              <LogIn size={18} className="tab-icon" />
+              <span className="tab-label-text">Sign In</span>
+            </m.button>
+          ) : (
+          <div className="user-pill-container" ref={userDropdownRef}>
+            <m.button
+              layout
+              onClick={() => {
+                setActiveTab('user');
+                setShowUserDropdown(!showUserDropdown);
+              }}
+              className={`expandable-tab-btn ${activeTab === 'user' || showUserDropdown ? 'active' : ''}`}
+              aria-label="Account menu"
+            >
+              <User size={18} className="tab-icon" />
+              <AnimatePresence initial={false}>
+                {(activeTab === 'user' || showUserDropdown) && (
+                  <m.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="tab-label-text"
+                  >
+                    {user?.username || 'Account'}
+                  </m.span>
+                )}
+              </AnimatePresence>
+            </m.button>
 
             {showUserDropdown && (
               <div className="user-dropdown-menu animate-fade-in">
@@ -151,6 +296,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   <span className="dropdown-email">{user?.email}</span>
                 </div>
                 <div className="dropdown-divider" />
+                {user?.is_owner_session && <button
+                  onClick={() => { setShowUserDropdown(false); navigate('/dashboard/owner'); }}
+                  className="dropdown-item"
+                >
+                  <ShieldCheck size={16} />
+                  <span>Owner Control Center</span>
+                </button>}
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false);
+                    setShowSettingsModal(true);
+                  }}
+                  className="dropdown-item"
+                >
+                  <Settings size={16} />
+                  <span>Settings</span>
+                </button>
                 <button onClick={logout} className="dropdown-item logout-btn">
                   <LogOut size={16} />
                   <span>Sign Out</span>
@@ -158,8 +320,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               </div>
             )}
           </div>
+          )}
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Global Navbar Settings Modal */}
+      <SettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+    </LazyMotion>
   );
 };

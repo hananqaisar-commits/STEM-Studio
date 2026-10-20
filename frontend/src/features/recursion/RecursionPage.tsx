@@ -1,5 +1,7 @@
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
   GitBranch, Calculator, Binary, Sigma, Layers, Maximize2, Sparkles, Trash2,
 } from 'lucide-react';
@@ -9,14 +11,20 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
+import { parseNumberList } from '../../utils/batchInputParser';
 import { buildRecursionCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
+import { executeCustomCode } from '../../api/customCode';
+import type { CustomStubLanguage } from '../../data/customCode';
 
 import { runFactorial } from './algorithms/factorial';
 import { runFibonacci } from './algorithms/fibonacci';
@@ -26,7 +34,7 @@ import { runTowerOfHanoi } from './algorithms/towerOfHanoi';
 
 import '../sorting/Sorting.css';
 import './Recursion.css';
-import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
 
 type RecursionAlgorithmKey = 'factorial' | 'fibonacci' | 'power' | 'arraySum' | 'towerOfHanoi';
 
@@ -40,7 +48,7 @@ interface AlgMeta {
 const ALGORITHMS: AlgMeta[] = [
   { key: 'factorial',     name: 'Factorial',        complexity: 'O(n)',   icon: <Calculator size={14} /> },
   { key: 'fibonacci',     name: 'Fibonacci',         complexity: 'O(2^n)', icon: <GitBranch size={14} /> },
-  { key: 'power',         name: 'Power',             complexity: 'O(n)',   icon: <Binary size={14} /> },
+  { key: 'power',         name: 'Power',             complexity: 'O(log n)', icon: <Binary size={14} /> },
   { key: 'arraySum',      name: 'Array Sum',         complexity: 'O(n)',   icon: <Sigma size={14} /> },
   { key: 'towerOfHanoi',  name: 'Tower of Hanoi',    complexity: 'O(2^n)', icon: <Layers size={14} /> },
 ];
@@ -70,6 +78,10 @@ export const RecursionPage: React.FC = () => {
   const [cadence, setCadence] = useState<QuizCadence>('normal');
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
 
+  // Custom Code sandbox state
+  const [customBusy, setCustomBusy] = useState(false);
+  const [sandboxMessage, setSandboxMessage] = useState<string | null>(null);
+
   /* ── Generate steps ──────────────────────────────────────────────── */
   const executionData = useMemo(() => {
     switch (selectedAlg) {
@@ -92,12 +104,34 @@ export const RecursionPage: React.FC = () => {
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
       onReset: reset,
-    onStepForward: stepForward,
+      onStepForward: stepForward,
       onStepBack: stepBack,
       onStop: () => { pause(); reset(); },
       onResume: play,
     },
   });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'recursion',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   /* ── Quiz ────────────────────────────────────────────────────────── */
   const quizCheckpoints = useMemo(
@@ -118,11 +152,68 @@ export const RecursionPage: React.FC = () => {
     revisionData: buildRevisionData(selectedAlg),
   });
 
-  /* ── Controls ────────────────────────────────────────────────────── */
+  /* ── Custom Code sandbox execution (function-stub model) ─────────────
+     The user fills in the pre-populated signature stub; the backend wraps
+     it in the number_in / array_in harness with the current studio inputs,
+     runs it in Judge0, and returns the result for comparison against the
+     reference value. */
+  const handleCustomExecute = useCallback(async (code: string, lang: CustomStubLanguage) => {
+    const argsFor = (): Record<string, number | number[]> => {
+      switch (selectedAlg) {
+        case 'factorial':    return { n: factorialN };
+        case 'fibonacci':    return { n: fibonacciN };
+        case 'power':        return { base: powerBase, exponent: powerExp };
+        case 'arraySum':     return { arr: arraySumArr };
+        case 'towerOfHanoi': return { n: hanoiN };
+        default:             return { n: 1 };
+      }
+    };
+    const expectedFor = (): number => {
+      switch (selectedAlg) {
+        case 'factorial': { let r = 1; for (let i = 2; i <= factorialN; i++) r *= i; return r; }
+        case 'fibonacci': { let a = 0, b = 1; for (let i = 0; i < fibonacciN; i++) { const t = a + b; a = b; b = t; } return a; }
+        case 'power':        return Math.pow(powerBase, powerExp);
+        case 'arraySum':     return arraySumArr.reduce((s, x) => s + x, 0);
+        case 'towerOfHanoi': return Math.pow(2, hanoiN) - 1;
+        default:             return 0;
+      }
+    };
+
+    setCustomBusy(true);
+    setSandboxMessage(null);
+    try {
+      const response = await executeCustomCode({
+        algorithm_key: `recursion.${selectedAlg}`,
+        language: lang,
+        code,
+        state: { args: argsFor() },
+      });
+
+      if (response.status === 'ok') {
+        const actual = response.result?.result;
+        const expected = expectedFor();
+        setSandboxMessage(
+          actual === expected
+            ? `Your pasted ${lang.toUpperCase()} code ran in the sandbox and returned the expected value ${actual}.`
+            : `Your pasted ${lang.toUpperCase()} code ran in the sandbox, but returned ${JSON.stringify(actual)} instead of ${expected}. Check your logic.`
+        );
+      } else {
+        setSandboxMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Execution service unavailable.';
+      setSandboxMessage(`Sandbox unavailable: ${message}`);
+    } finally {
+      setCustomBusy(false);
+    }
+  }, [selectedAlg, factorialN, fibonacciN, powerBase, powerExp, arraySumArr, hanoiN]);
+
+  /* ── Controls ───────────────────────────────────────────────────── */
   const handleAlgChange = (alg: RecursionAlgorithmKey) => {
     setSelectedAlg(alg);
     reset();
     quizSession.resetSession();
+    setSandboxMessage(null);
   };
 
   const handleRandomize = () => {
@@ -230,10 +321,9 @@ export const RecursionPage: React.FC = () => {
             </div>
             <div className="rec-input-group">
               <span>exp =</span>
-              <input type="range" min={1} max={6} value={powerExp}
-                onChange={e => { setPowerExp(+e.target.value); reset(); }}
-                className="toolbar-range cursor-pointer accent-amber-400 w-20" />
-              <span className="rec-val">{powerExp}</span>
+              <input type="number" min={1} max={8} value={powerExp}
+                onChange={e => { setPowerExp(Math.max(1, Math.min(8, +e.target.value || 1))); reset(); }}
+                className="rec-num-input" />
             </div>
           </>
         );
@@ -244,7 +334,7 @@ export const RecursionPage: React.FC = () => {
             <input type="text"
               value={arraySumArr.join(', ')}
               onChange={e => {
-                const parsed = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+                const parsed = parseNumberList(e.target.value, { integerOnly: true }).values;
                 if (parsed.length > 0 && parsed.length <= 8) { setArraySumArr(parsed); reset(); }
               }}
               className="rec-text-input" />
@@ -254,42 +344,40 @@ export const RecursionPage: React.FC = () => {
         return (
           <div className="rec-input-group">
             <span>disks =</span>
-            <input type="range" min={1} max={4} value={hanoiN}
-              onChange={e => { setHanoiN(+e.target.value); reset(); }}
-              className="toolbar-range cursor-pointer accent-amber-400 w-20" />
-            <span className="rec-val">{hanoiN}</span>
+            <input type="number" min={1} max={5} value={hanoiN}
+              onChange={e => { setHanoiN(Math.max(1, Math.min(5, +e.target.value || 1))); reset(); }}
+              className="rec-num-input" />
           </div>
         );
       default: return null;
     }
   };
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       {renderAlgInputs()}
-      <div className="dataset-mode-selector ml-1">
-        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty">
+      <div className="dataset-mode-selector">
+        <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty Array">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample">
+        <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Array">
           <Layers size={14} className="text-amber-400" /><span>Sample</span>
         </button>
-        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random">
+        <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Render ─────────────────────────────────────────────────────── */
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/recursion')} />
       <VisualizerHeader
         icon={<GitBranch size={22} />}
         title="Recursion Studio"
@@ -323,34 +411,12 @@ export const RecursionPage: React.FC = () => {
       />
 
       {/* Category Tabs */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map(a => (
-            <button key={a.key}
-              className={`category-tab ${selectedAlg === a.key ? 'active' : ''}`}
-              onClick={() => handleAlgChange(a.key)}>
-              {a.icon}
-              <span>{a.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {renderAlgInputs()}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Empty Array">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Sample Array">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -375,6 +441,8 @@ export const RecursionPage: React.FC = () => {
             quizMode={quizEnabled}
           />
         </div>
+
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -383,22 +451,27 @@ export const RecursionPage: React.FC = () => {
             onEnableQuiz={() => setQuizEnabled(true)}
             onProveIt={handleProveIt}
           />
-
         </div>
-
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="recursion" />
+        <ResizablePanelRow
+          storageKey="recursion"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Recursion"
+              categoryId="recursion"
+              topicId={selectedAlg}
+              onCustomExecute={handleCustomExecute}
+              customBusy={customBusy}
+              customMessage={sandboxMessage}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}
               currentArray={[]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(
               currentStep?.description || 'Click Play to explore the recursion call tree step by step.',
               quizSession.phase,
@@ -410,7 +483,8 @@ export const RecursionPage: React.FC = () => {
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* Fullscreen Modal */}
@@ -419,7 +493,16 @@ export const RecursionPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Recursion | ${selectedAlg.toUpperCase()}`}
         subtitle="Call Tree Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to explore the recursion call tree step by step.', quizSession.phase)} stepNumber={currentStepIndex + 1} totalSteps={totalSteps} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} steps={executionData.steps} currentStepIndex={currentStepIndex} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

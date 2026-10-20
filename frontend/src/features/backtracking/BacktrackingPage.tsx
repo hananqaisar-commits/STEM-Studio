@@ -1,21 +1,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
-  Layers, Grid3X3, Target, Shuffle, Maximize2, Sparkles, Trash2, Edit3,
+  Layers, Grid3X3, Target, Shuffle, Maximize2, Sparkles, Trash2,
 } from 'lucide-react';
 import { BacktrackingRenderer } from './BacktrackingRenderer';
-import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
+import { parseNumberList } from '../../utils/batchInputParser';
 import { buildBacktrackingCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
@@ -44,6 +48,8 @@ const ALGORITHMS: AlgMeta[] = [
   { key: 'combinationSum', name: 'Combination Sum', complexity: 'O(2^t)', icon: <Target size={14} /> },
 ];
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 export const BacktrackingPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('subsets');
   const [searchParams] = useSearchParams();
@@ -65,7 +71,6 @@ export const BacktrackingPage: React.FC = () => {
   const [queensN, setQueensN] = useState<number>(4);
   const [comboCandidates, setComboCandidates] = useState<number[]>([2, 3, 6, 7]);
   const [comboTarget, setComboTarget] = useState<number>(7);
-  const [showCustomEditor, setShowCustomEditor] = useState(false);
 
   // Generate execution steps
   const executionData = useMemo(() => {
@@ -95,6 +100,28 @@ export const BacktrackingPage: React.FC = () => {
     reset,
   seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'backtracking',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildBacktrackingCheckpoints(executionData.steps, selectedAlg),
@@ -218,9 +245,15 @@ export const BacktrackingPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="dataset-mode-selector ml-1">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {renderAlgorithmInputs()}
+
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -231,13 +264,7 @@ export const BacktrackingPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Algorithm-specific toolbar inputs ─────────────────────────── */
@@ -251,7 +278,7 @@ export const BacktrackingPage: React.FC = () => {
               type="text"
               value={subsetArr.join(',')}
               onChange={(e) => {
-                const vals = e.target.value.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+                const vals = parseNumberList(e.target.value, { integerOnly: true }).values;
                 if (vals.length > 0 && vals.length <= 4) {
                   setSubsetArr(vals);
                   reset();
@@ -269,7 +296,7 @@ export const BacktrackingPage: React.FC = () => {
               type="text"
               value={permArr.join(',')}
               onChange={(e) => {
-                const vals = e.target.value.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+                const vals = parseNumberList(e.target.value, { integerOnly: true }).values;
                 if (vals.length > 0 && vals.length <= 4) {
                   setPermArr(vals);
                   reset();
@@ -306,7 +333,7 @@ export const BacktrackingPage: React.FC = () => {
                 type="text"
                 value={comboCandidates.join(',')}
                 onChange={(e) => {
-                  const vals = e.target.value.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n) && n > 0);
+                  const vals = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (vals.length > 0 && vals.length <= 5) {
                     setComboCandidates(vals.sort((a, b) => a - b));
                     reset();
@@ -339,6 +366,7 @@ export const BacktrackingPage: React.FC = () => {
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/backtracking')} />
       <VisualizerHeader
         icon={<Layers size={22} />}
         title="Backtracking Algorithms Studio"
@@ -375,45 +403,12 @@ export const BacktrackingPage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs Bar */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {renderAlgorithmInputs()}
-
-          <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
-            <Edit3 size={14} /><span>Custom Values</span>
-          </button>
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Input">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Default Values">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -440,6 +435,9 @@ export const BacktrackingPage: React.FC = () => {
           />
         </div>
 
+
+
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -448,31 +446,32 @@ export const BacktrackingPage: React.FC = () => {
             onEnableQuiz={() => setQuizEnabled(true)}
             onProveIt={handleProveIt}
           />
-
-
         </div>
-
-
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="backtracking" />
+        <ResizablePanelRow
+          storageKey="backtracking"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Backtracking"
+              categoryId="backtracking"
+              topicId={selectedAlg}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}
               currentArray={[]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* FullScreen Modal */}
@@ -481,7 +480,16 @@ export const BacktrackingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Backtracking | ${selectedAlg.toUpperCase()}`}
         subtitle="Decision Tree Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
@@ -506,20 +514,6 @@ export const BacktrackingPage: React.FC = () => {
         />
       </FullScreenCanvasModal>
 
-      {showCustomEditor && (
-        <CustomArrayEditor
-          currentArray={selectedAlg === 'subsets' ? subsetArr : selectedAlg === 'permutations' ? permArr : comboCandidates}
-          onApplyCustomArray={(newArr) => {
-            reset();
-            quizSession.resetSession();
-            if (selectedAlg === 'subsets') setSubsetArr(newArr.slice(0, 4));
-            else if (selectedAlg === 'permutations') setPermArr(newArr.slice(0, 4));
-            else { setComboCandidates(newArr.sort((a, b) => a - b).slice(0, 5)); }
-            setShowCustomEditor(false);
-          }}
-          onClose={() => setShowCustomEditor(false)}
-        />
-      )}
       <TheoryPanel categoryId="backtracking" activeTopic={selectedAlg} />
 
     </div>

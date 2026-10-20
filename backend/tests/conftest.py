@@ -22,6 +22,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 class ASGIResponse:
     def __init__(self, status_code: int, headers: list, body: bytes):
+        self.raw_headers = headers
         self.status_code = status_code
         self.headers = {k.decode("latin1"): v.decode("latin1") for k, v in headers}
         self.body = body

@@ -1,5 +1,5 @@
 import type { TrieStep } from './trieTypes';
-import { createRoot, snapshotTrie, resetIdCounter } from './trieBuilder';
+import { createRoot, snapshotTrie, resetIdCounter, nextId } from './trieBuilder';
 
 export function runTrieInsert(words: string[]): TrieStep[] {
   const steps: TrieStep[] = [];
@@ -22,7 +22,7 @@ export function runTrieInsert(words: string[]): TrieStep[] {
       );
 
       if (!curr.children.has(ch)) {
-        const newNode = { id: `n${Date.now()}_${i}`, char: ch, isEndOfWord: i === word.length - 1, children: new Map<string, typeof curr>() };
+        const newNode = { id: nextId(), char: ch, isEndOfWord: i === word.length - 1, children: new Map<string, typeof curr>() };
         curr.children.set(ch, newNode);
         steps.push(
           snapshotTrie(root, `Created new node '${ch}'${i === word.length - 1 ? ' (end of word)' : ''}`, 2,

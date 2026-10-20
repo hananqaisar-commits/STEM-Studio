@@ -15,103 +15,550 @@ interface Anchor {
   concept: string;
 }
 
-const ANCHORS: Record<DPAlgorithmKey, Anchor> = {
-  fibonacciDP: {
-    prompt: 'Before it starts: what is the recurrence relation for Fibonacci?',
-    correct: 'dp[i] = dp[i-1] + dp[i-2]',
-    distractors: [
-      'dp[i] = dp[i-1] * dp[i-2]',
-      'dp[i] = dp[i-1] + i',
-      'dp[i] = 2 * dp[i-1]',
-    ],
-    explanation: 'The Fibonacci sequence is defined by the recurrence dp[i] = dp[i-1] + dp[i-2], with base cases dp[0]=0 and dp[1]=1. Each term is the sum of the two preceding terms.',
-    hint: 'Each Fibonacci number is built from the two numbers before it.',
-    concept: 'Recurrence relation',
-  },
-  coinChange: {
-    prompt: 'Before it starts: what does dp[i] represent in the Coin Change problem?',
-    correct: 'The minimum number of coins needed to make amount i',
-    distractors: [
-      'The maximum number of coins that sum to i',
-      'Whether amount i can be made at all',
-      'The number of distinct ways to make amount i',
-    ],
-    explanation: 'In the coin change problem, dp[i] stores the minimum number of coins needed to make amount i. If dp[amount] remains infinity, the amount cannot be formed.',
-    hint: 'Think optimization: we want the fewest coins possible.',
-    concept: 'State definition',
-  },
-  houseRobber: {
-    prompt: 'Before it starts: why can\'t the robber simply pick every other house?',
-    correct: 'The optimal non-adjacent subset depends on values, not just positions',
-    distractors: [
-      'Because houses are not always evenly indexed',
-      'Because the robber can rob three houses in a row',
-      'Because the problem allows robbing adjacent houses',
-    ],
-    explanation: 'The house robber problem requires choosing a subset of non-adjacent houses to maximize total value. Simply picking every other house ignores that a different spacing might yield more money.',
-    hint: 'Think about which houses give the best total, not just a fixed pattern.',
-    concept: 'Optimal substructure',
-  },
-  knapsack01: {
-    prompt: 'Before it starts: what does dp[i][w] represent in 0/1 Knapsack?',
-    correct: 'Maximum value using items 1..i with weight capacity w',
-    distractors: [
-      'The total weight of items 1..i',
-      'Whether item i is included in the optimal set',
-      'The number of items that fit in capacity w',
-    ],
-    explanation: 'In 0/1 knapsack, dp[i][w] stores the maximum value achievable using a subset of the first i items with total weight at most w. This captures all necessary information for optimal decisions.',
-    hint: 'The state must encode both which items we have considered and how much capacity remains.',
-    concept: 'State definition',
-  },
-  lcs: {
-    prompt: 'Before it starts: what is the key insight that enables DP for LCS?',
-    correct: 'If s1[i]==s2[j], the LCS includes that character plus LCS of the prefixes',
-    distractors: [
-      'LCS can only be solved by checking all subsequences',
-      'The longest common subsequence is always contiguous',
-      'Characters must appear at the same index in both strings',
-    ],
-    explanation: 'When s1[i]==s2[j], we know this character is part of the LCS, so dp[i][j] = dp[i-1][j-1]+1. When they differ, we take the best of dropping either character.',
-    hint: 'Matching characters give a clear extension; mismatches require a choice.',
-    concept: 'Optimal substructure',
-  },
-  lis: {
-    prompt: 'Before it starts: what does dp[i] represent in the LIS problem?',
-    correct: 'Length of the longest increasing subsequence ending at index i',
-    distractors: [
-      'Length of the longest increasing subsequence in the entire array',
-      'The value of the i-th element in the longest subsequence',
-      'The number of increasing subsequences starting at index i',
-    ],
-    explanation: 'dp[i] stores the length of the longest increasing subsequence that ends specifically at index i. The answer is the maximum over all dp[i].',
-    hint: 'Each index contributes its own subsequence ending there.',
-    concept: 'State definition',
-  },
-  editDistance: {
-    prompt: 'Before it starts: what are the three operations in the Edit Distance problem?',
-    correct: 'Insert a character, delete a character, or replace a character',
-    distractors: [
-      'Swap adjacent characters, reverse a substring, or delete a character',
-      'Insert a character, duplicate a character, or shift a character',
-      'Replace a word, delete a word, or insert a word',
-    ],
-    explanation: 'Edit distance (Levenshtein distance) allows three operations on single characters: insert, delete, or replace. Each costs 1. The goal is to find the minimum total cost to transform one string into another.',
-    hint: 'Think single-character operations, not multi-character ones.',
-    concept: 'Operations',
-  },
-  uniquePaths: {
-    prompt: 'Before it starts: what is the recurrence for counting unique paths in a grid?',
-    correct: 'dp[i][j] = dp[i-1][j] + dp[i][j-1] (paths from above + paths from left)',
-    distractors: [
-      'dp[i][j] = dp[i-1][j] * dp[i][j-1]',
-      'dp[i][j] = dp[i-1][j-1] + 1',
-      'dp[i][j] = dp[i][j] + dp[i-1][j+1]',
-    ],
-    explanation: 'At any cell (i,j), you can only arrive from above (i-1,j) or from the left (i,j-1). So the total paths to (i,j) is the sum of paths to those two cells.',
-    hint: 'You can only move right or down in the grid.',
-    concept: 'Recurrence relation',
-  },
+const ANCHORS: Record<DPAlgorithmKey, Anchor[]> = {
+  fibonacciDP: [
+    {
+      prompt: 'What is the recurrence relation for Fibonacci in a standard DP solution?',
+      correct: 'dp[i] = dp[i-1] + dp[i-2]',
+      distractors: [
+        'dp[i] = dp[i-1] * dp[i-2]',
+        'dp[i] = dp[i-1] + i',
+        'dp[i] = 2 * dp[i-1]',
+      ],
+      explanation:
+        'Each Fibonacci value is the sum of the two preceding values, with base cases such as dp[0] = 0 and dp[1] = 1.',
+      hint: 'Each term depends on the previous two terms.',
+      concept: 'Recurrence relation',
+    },
+    {
+      prompt: 'What are the usual base cases for Fibonacci DP?',
+      correct: 'dp[0] = 0 and dp[1] = 1',
+      distractors: [
+        'dp[0] = 1 and dp[1] = 1',
+        'dp[0] = 0 and dp[1] = 0',
+        'dp[0] = 1 and dp[1] = 0',
+      ],
+      explanation:
+        'The standard Fibonacci sequence starts with 0 and 1. Later values are generated by adding the previous two values.',
+      hint: 'Recall the first two Fibonacci numbers.',
+      concept: 'Base cases',
+    },
+    {
+      prompt: 'Why is bottom-up Fibonacci DP faster than naive recursive Fibonacci?',
+      correct: 'Previously computed values are reused instead of recomputed',
+      distractors: [
+        'It changes Fibonacci into a constant-time problem',
+        'It skips all odd indices',
+        'It uses sorting to reduce recursion',
+      ],
+      explanation:
+        'Naive recursion repeatedly solves the same subproblems. DP stores each result and reuses it.',
+      hint: 'Think about overlapping subproblems.',
+      concept: 'Memoization / reuse',
+    },
+    {
+      prompt: 'What is the typical time complexity of bottom-up Fibonacci DP?',
+      correct: 'O(n)',
+      distractors: [
+        'O(log n)',
+        'O(n²)',
+        'O(2^n)',
+      ],
+      explanation:
+        'The bottom-up solution computes each dp position once, so it takes linear time.',
+      hint: 'How many dp positions are calculated?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What is the space optimization for Fibonacci DP when only the final value is needed?',
+      correct: 'Keep only the previous two Fibonacci values',
+      distractors: [
+        'Store all n values in a table',
+        'Store all recursive call stacks',
+        'Sort the Fibonacci values',
+      ],
+      explanation:
+        'Because dp[i] depends only on dp[i-1] and dp[i-2], the whole table is unnecessary when only the final result is required.',
+      hint: 'How many earlier values does the recurrence actually use?',
+      concept: 'Space optimization',
+    },
+  ],
+
+  coinChange: [
+    {
+      prompt: 'What does dp[i] represent in the minimum Coin Change problem?',
+      correct: 'The minimum number of coins needed to make amount i',
+      distractors: [
+        'The maximum number of coins needed to make amount i',
+        'The number of distinct ways to make amount i',
+        'Whether amount i is prime',
+      ],
+      explanation:
+        'The state stores the minimum number of coins required to form each amount.',
+      hint: 'This is an optimization problem: minimize the coin count.',
+      concept: 'State definition',
+    },
+    {
+      prompt: 'What is the natural base case for Coin Change when solving for amount 0?',
+      correct: 'dp[0] = 0',
+      distractors: [
+        'dp[0] = 1',
+        'dp[0] = infinity',
+        'dp[0] = -1',
+      ],
+      explanation:
+        'Zero coins are required to make amount zero, so dp[0] is zero.',
+      hint: 'How many coins are needed to make nothing?',
+      concept: 'Base case',
+    },
+    {
+      prompt: 'What does an unreachable amount mean in the Coin Change DP table?',
+      correct: 'No available combination of coins can form that amount',
+      distractors: [
+        'The amount automatically requires one coin',
+        'The amount must use every coin exactly once',
+        'The amount is always handled by greedy choice',
+      ],
+      explanation:
+        'If no transition can produce an amount, its dp value remains the chosen unreachable sentinel such as infinity.',
+      hint: 'Ask what it means when no valid transition exists.',
+      concept: 'Unreachable state',
+    },
+    {
+      prompt: 'Why does Coin Change DP consider multiple possible final coins for an amount?',
+      correct: 'Different last coins can lead to different subproblem solutions',
+      distractors: [
+        'Every coin has the same value',
+        'Only the largest coin can be used',
+        'The algorithm must sort all coins after every step',
+      ],
+      explanation:
+        'For each amount, the solution may end with different coin choices. DP compares these alternatives and keeps the minimum.',
+      hint: 'Think about all possible choices for the last coin.',
+      concept: 'State transition',
+    },
+    {
+      prompt: 'What is the common time complexity of the basic Coin Change DP with n amounts and m coin types?',
+      correct: 'O(nm)',
+      distractors: [
+        'O(n + m)',
+        'O(n²m²)',
+        'O(log(nm))',
+      ],
+      explanation:
+        'Each amount is examined against each coin type, giving O(nm) time.',
+      hint: 'Think about the nested amount × coin loops.',
+      concept: 'Time complexity',
+    },
+  ],
+
+  houseRobber: [
+    {
+      prompt: 'Why can the robber not simply rob every other house?',
+      correct: 'The optimal choice depends on house values, not a fixed position pattern',
+      distractors: [
+        'Houses are never indexed',
+        'Adjacent houses are always allowed',
+        'The problem requires robbing exactly half the houses',
+      ],
+      explanation:
+        'A fixed alternating pattern may miss a more valuable non-adjacent combination.',
+      hint: 'Compare house values, not just positions.',
+      concept: 'Optimal substructure',
+    },
+    {
+      prompt: 'What is the key recurrence for the House Robber problem?',
+      correct: 'dp[i] = max(dp[i-1], dp[i-2] + value[i])',
+      distractors: [
+        'dp[i] = dp[i-1] + value[i]',
+        'dp[i] = min(dp[i-1], dp[i-2])',
+        'dp[i] = dp[i-1] * value[i]',
+      ],
+      explanation:
+        'At each house, either skip it and keep dp[i-1], or rob it and add its value to dp[i-2].',
+      hint: 'There are two choices: skip or rob.',
+      concept: 'Recurrence',
+    },
+    {
+      prompt: 'Why does robbing house i force the algorithm to use dp[i-2] rather than dp[i-1]?',
+      correct: 'The immediately previous house cannot also be robbed',
+      distractors: [
+        'House i-1 always has value zero',
+        'The array skips every other value automatically',
+        'dp[i-1] contains a sorting result',
+      ],
+      explanation:
+        'Adjacent houses cannot both be selected, so the best compatible state ends at i-2.',
+      hint: 'What does the adjacency restriction forbid?',
+      concept: 'Constraint',
+    },
+    {
+      prompt: 'What is the time complexity of the standard House Robber DP?',
+      correct: 'O(n)',
+      distractors: [
+        'O(log n)',
+        'O(n²)',
+        'O(2^n)',
+      ],
+      explanation:
+        'Each house is processed once with constant-time state updates.',
+      hint: 'How many times is each house considered?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What is a useful space optimization for House Robber when only the final maximum is required?',
+      correct: 'Keep only the previous two DP values',
+      distractors: [
+        'Store all subsets of houses',
+        'Keep a matrix of all house combinations',
+        'Use recursion without storing any state',
+      ],
+      explanation:
+        'The recurrence only depends on dp[i-1] and dp[i-2], so two rolling values are sufficient.',
+      hint: 'Look at the recurrence dependencies.',
+      concept: 'Space optimization',
+    },
+  ],
+
+  knapsack01: [
+    {
+      prompt: 'What does dp[i][w] represent in 0/1 Knapsack?',
+      correct: 'Maximum value using the first i items with capacity w',
+      distractors: [
+        'Total weight of the first i items',
+        'Whether item i must be selected',
+        'Number of items that fit in capacity w',
+      ],
+      explanation:
+        'The state records both how many items have been considered and the available capacity.',
+      hint: 'The state needs an item dimension and a capacity dimension.',
+      concept: 'State definition',
+    },
+    {
+      prompt: 'Why is it called 0/1 Knapsack?',
+      correct: 'Each item can be chosen either zero times or one time',
+      distractors: [
+        'Each item must be chosen exactly once',
+        'Only items with values 0 and 1 are allowed',
+        'Each item has a binary weight',
+      ],
+      explanation:
+        'For each item, the decision is take it once or do not take it.',
+      hint: 'Think binary choice: take or skip.',
+      concept: 'Problem constraint',
+    },
+    {
+      prompt: 'What happens when an item is too heavy for the current capacity?',
+      correct: 'The item cannot be taken, so inherit the value from the previous item set',
+      distractors: [
+        'Take it anyway',
+        'Increase the capacity automatically',
+        'Reset the whole DP table',
+      ],
+      explanation:
+        'If weight[i] > w, the item is infeasible for that capacity, so dp[i][w] = dp[i-1][w].',
+      hint: 'Can an item heavier than the remaining capacity be selected?',
+      concept: 'Feasibility',
+    },
+    {
+      prompt: 'When an item fits, which two possibilities are compared?',
+      correct: 'Skip the item versus take it and add its value to the compatible previous state',
+      distractors: [
+        'Take it twice versus skip it',
+        'Sort versus reverse the items',
+        'Use current value versus current weight',
+      ],
+      explanation:
+        'The optimal transition compares excluding the item with including it once and using remaining capacity.',
+      hint: 'There are exactly two choices for a 0/1 item.',
+      concept: 'State transition',
+    },
+    {
+      prompt: 'What is the usual time complexity of the standard 0/1 Knapsack DP?',
+      correct: 'O(nW)',
+      distractors: [
+        'O(n + W)',
+        'O(n²)',
+        'O(2^W)',
+      ],
+      explanation:
+        'The table has n item rows and W capacity states, and each state is computed in constant time.',
+      hint: 'Count the number of DP states.',
+      concept: 'Time complexity',
+    },
+  ],
+
+  lcs: [
+    {
+      prompt: 'What is the key recurrence when the current characters match in LCS?',
+      correct: 'dp[i][j] = dp[i-1][j-1] + 1',
+      distractors: [
+        'dp[i][j] = dp[i-1][j] + dp[i][j-1]',
+        'dp[i][j] = 0',
+        'dp[i][j] = dp[i-1][j-1] - 1',
+      ],
+      explanation:
+        'A matching pair can extend the common subsequence by one character.',
+      hint: 'A match lets both prefixes advance together.',
+      concept: 'Match recurrence',
+    },
+    {
+      prompt: 'What happens in LCS when the current characters do not match?',
+      correct: 'Take the maximum of dropping one character from either string',
+      distractors: [
+        'Always set the cell to zero',
+        'Add both characters to the LCS',
+        'Restart the entire table',
+      ],
+      explanation:
+        'When characters differ, the optimal LCS either excludes the current character of the first string or the second string.',
+      hint: 'Mismatch creates two possible prefix choices.',
+      concept: 'Mismatch recurrence',
+    },
+    {
+      prompt: 'What is the usual time complexity of the classic 2D LCS DP?',
+      correct: 'O(nm)',
+      distractors: [
+        'O(n + m)',
+        'O(n² + m²) regardless of n and m',
+        'O(log(nm))',
+      ],
+      explanation:
+        'The DP table contains n × m states, each computed in constant time.',
+      hint: 'How many string-index pairs exist?',
+      concept: 'Time complexity',
+    },
+    {
+      prompt: 'What does dp[i][j] typically represent in LCS?',
+      correct: 'Length of the LCS of the first i characters of s1 and first j characters of s2',
+      distractors: [
+        'The number of matching positions only',
+        'The length of the longest common substring',
+        'The number of distinct subsequences',
+      ],
+      explanation:
+        'The state works on prefixes, which enables the recurrence to reuse smaller subproblems.',
+      hint: 'Think prefixes, not arbitrary positions.',
+      concept: 'State definition',
+    },
+    {
+      prompt: 'Why is LCS not the same as longest common substring?',
+      correct: 'A subsequence may skip characters while preserving order; a substring must be contiguous',
+      distractors: [
+        'LCS ignores character order',
+        'Substring can skip arbitrary characters',
+        'Both require contiguous matches',
+      ],
+      explanation:
+        'LCS preserves relative order but allows gaps. A substring requires consecutive characters.',
+      hint: 'Focus on whether gaps are allowed.',
+      concept: 'Problem distinction',
+    },
+  ],
+
+  lis: [
+    {
+      prompt: 'What does dp[i] represent in the classic O(n²) LIS DP?',
+      correct: 'Length of the longest increasing subsequence ending at index i',
+      distractors: [
+        'Length of the entire LIS immediately',
+        'The value of arr[i]',
+        'Number of increasing subsequences starting at i',
+      ],
+      explanation:
+        'Each dp[i] describes the best increasing subsequence whose final element is arr[i].',
+      hint: 'The state is tied to where the subsequence ends.',
+      concept: 'State definition',
+    },
+    {
+      prompt: 'When can j extend an increasing subsequence ending at i?',
+      correct: 'When arr[j] < arr[i]',
+      distractors: [
+        'When arr[j] > arr[i]',
+        'Only when arr[j] == arr[i]',
+        'Whenever j is adjacent to i',
+      ],
+      explanation:
+        'For an increasing subsequence, the previous value must be smaller than the current value.',
+      hint: 'The values must increase from j to i.',
+      concept: 'Extension condition',
+    },
+    {
+      prompt: 'What is the recurrence when arr[j] < arr[i] in the standard LIS DP?',
+      correct: 'dp[i] = max(dp[i], dp[j] + 1)',
+      distractors: [
+        'dp[i] = dp[j] - 1',
+        'dp[i] = dp[i] + arr[j]',
+        'dp[i] = 0',
+      ],
+      explanation:
+        'A valid predecessor j can extend its subsequence by appending arr[i].',
+      hint: 'Extending a subsequence increases its length by one.',
+      concept: 'State transition',
+    },
+    {
+      prompt: 'How is the final LIS length obtained from the O(n²) DP table?',
+      correct: 'Take the maximum value among all dp[i]',
+      distractors: [
+        'Use only dp[0]',
+        'Use dp[n-1] in every input',
+        'Sum all dp[i] values',
+      ],
+      explanation:
+        'The longest increasing subsequence may end at any index, so the maximum over all endpoints is the answer.',
+      hint: 'The best subsequence does not have to end at the last array element.',
+      concept: 'Final answer',
+    },
+    {
+      prompt: 'What is the usual time complexity of the classic LIS DP?',
+      correct: 'O(n²)',
+      distractors: [
+        'O(n)',
+        'O(log n)',
+        'O(2^n)',
+      ],
+      explanation:
+        'For each i, the algorithm can compare against all previous j values.',
+      hint: 'Think about the nested i and j loops.',
+      concept: 'Time complexity',
+    },
+  ],
+
+  editDistance: [
+    {
+      prompt: 'What are the three standard operations in Levenshtein Edit Distance?',
+      correct: 'Insert, delete, and replace one character',
+      distractors: [
+        'Swap, reverse, and delete',
+        'Insert, duplicate, and shift',
+        'Replace a word, delete a word, and insert a word',
+      ],
+      explanation:
+        'Levenshtein distance allows single-character insertion, deletion, or replacement, each with unit cost in the classic formulation.',
+      hint: 'Think character-level edits.',
+      concept: 'Operations',
+    },
+    {
+      prompt: 'What does dp[i][j] represent in Edit Distance?',
+      correct: 'Minimum edits needed to transform the first i characters into the first j characters',
+      distractors: [
+        'Number of matching characters',
+        'Maximum edits possible between the prefixes',
+        'Length of the longest common substring',
+      ],
+      explanation:
+        'The DP state measures the minimum transformation cost between two prefixes.',
+      hint: 'It stores the cheapest transformation cost.',
+      concept: 'State definition',
+    },
+    {
+      prompt: 'What happens when the current characters match in Edit Distance?',
+      correct: 'No new edit cost is added, and the solution uses dp[i-1][j-1]',
+      distractors: [
+        'Always add one replacement',
+        'Delete both characters',
+        'Reset the cell to zero',
+      ],
+      explanation:
+        'Matching characters already agree, so the optimal cost is inherited from the two shorter prefixes.',
+      hint: 'A match needs no operation.',
+      concept: 'Match case',
+    },
+    {
+      prompt: 'What is done when the current characters differ?',
+      correct: 'Take the minimum of insert, delete, and replace transitions plus one',
+      distractors: [
+        'Always replace regardless of cost',
+        'Always delete the first character',
+        'Take the maximum transition',
+      ],
+      explanation:
+        'A mismatch can be handled by three legal operations, so DP chooses the cheapest resulting subproblem.',
+      hint: 'Three operations, one unit of cost.',
+      concept: 'Mismatch case',
+    },
+    {
+      prompt: 'What is the usual time complexity of the classic Edit Distance DP?',
+      correct: 'O(nm)',
+      distractors: [
+        'O(n + m)',
+        'O(n² + m²) for every input',
+        'O(2^n)',
+      ],
+      explanation:
+        'The DP table contains one state for each pair of prefix lengths.',
+      hint: 'Count the number of (i, j) states.',
+      concept: 'Time complexity',
+    },
+  ],
+
+  uniquePaths: [
+    {
+      prompt: 'What is the recurrence for the number of unique paths to an interior grid cell?',
+      correct: 'dp[i][j] = dp[i-1][j] + dp[i][j-1]',
+      distractors: [
+        'dp[i][j] = dp[i-1][j] * dp[i][j-1]',
+        'dp[i][j] = dp[i-1][j-1] + 1',
+        'dp[i][j] = dp[i][j] + dp[i-1][j+1]',
+      ],
+      explanation:
+        'With only right and down moves, every path to an interior cell must arrive from either above or left.',
+      hint: 'There are two possible predecessor cells.',
+      concept: 'Recurrence',
+    },
+    {
+      prompt: 'What is the usual base value for cells in the first row when only right/down moves are allowed?',
+      correct: '1 — there is only one way along the row',
+      distractors: [
+        '0 for every first-row cell',
+        'The column index',
+        'The number of diagonal paths',
+      ],
+      explanation:
+        'Along the first row, the robot can only keep moving right, so exactly one path reaches each cell.',
+      hint: 'Can you move down when you are already in the first row?',
+      concept: 'Boundary condition',
+    },
+    {
+      prompt: 'Why can the first column also be initialized with 1s?',
+      correct: 'There is only one path down the first column',
+      distractors: [
+        'Every cell has two predecessors',
+        'Diagonal movement is always allowed',
+        'The first column is ignored by DP',
+      ],
+      explanation:
+        'Along the first column, the only possible movement is downward.',
+      hint: 'There is no left move from the first column.',
+      concept: 'Boundary condition',
+    },
+    {
+      prompt: 'What does dp[i][j] represent in Unique Paths?',
+      correct: 'The number of valid paths from the start to cell (i,j)',
+      distractors: [
+        'The minimum path cost',
+        'The number of obstacles in the row',
+        'The Manhattan distance only',
+      ],
+      explanation:
+        'The DP table counts how many right/down paths can reach each cell.',
+      hint: 'This is a counting problem, not an optimization problem.',
+      concept: 'State definition',
+    },
+    {
+      prompt: 'What is the usual time complexity of the 2D Unique Paths DP?',
+      correct: 'O(rows × columns)',
+      distractors: [
+        'O(rows + columns) regardless of table size',
+        'O(2^(rows + columns))',
+        'O(log(rows × columns))',
+      ],
+      explanation:
+        'Each grid cell is computed once from its neighbors.',
+      hint: 'Count the number of cells.',
+      concept: 'Time complexity',
+    },
+  ],
 };
 
 /* ── Mid-execution question generators ────────────────────────────────── */
@@ -333,10 +780,13 @@ export function buildDPCheckpoints(
   if (steps.length < 2) return [];
 
   const checkpoints: QuizCheckpoint[] = [];
-  const anchor = ANCHORS[algorithm];
+  // One fixed conceptual question at step 0.
+  // Selection is deterministic so quiz generation stays reproducible.
+  const anchors = ANCHORS[algorithm];
+  const anchorIndex = steps.length % anchors.length;
+  const anchor = anchors[anchorIndex];
 
-  // Anchor question at step 0
-  const anchorId = `dp-${algorithm}-anchor`;
+  const anchorId = `dp-${algorithm}-anchor-${anchorIndex}`;
   const anchorOptions = buildOptions(anchorId, anchor.correct, anchor.distractors);
   checkpoints.push({
     stepIndex: 0,

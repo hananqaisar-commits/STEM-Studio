@@ -1,0 +1,543 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Terminal, Search, ArrowLeft, FolderGit2, Compass, FolderPlus,
+  Edit3, UserCheck, Users, ShieldCheck, Cpu, Package, Globe, Server, Clock,
+  ChevronRight, ChevronDown, ChevronUp, Sparkles, BookOpen, Key, Info, HelpCircle, FileText, CheckCircle2,
+  Copy, Check
+} from 'lucide-react';
+import { LINUX_COMMAND_GROUPS } from '../../../data/linuxCommandsData';
+import { LINUX_CORE_LESSONS, type LinuxCoreLesson } from '../../../data/linuxCoreLessons';
+import { LinuxCoreLessons } from './LinuxCoreLessons';
+import { VisualizerHeader } from '../../../components/layout/VisualizerHeader';
+import { SEOHead } from '../../../components/common/SEOHead';
+import { getSEOForRoute } from '../../../data/seoMetadata';
+import { VisualizerActions } from '../../../components/layout/VisualizerActions';
+import { TheoryPanel } from '../../../components/layout/TheoryPanel';
+import { CATEGORY_TOPICS } from '../../../data/categoryTopics';
+import { useTutorContext } from '../../../contexts/TutorContext';
+import '../../../features/complexity/Complexity.css';
+import './LinuxCommandsPage.css';
+import '../linuxModule.css';
+
+const GROUP_ICON_MAP: Record<string, React.FC<{ size?: number; className?: string }>> = {
+  FolderGit2,
+  Compass,
+  FolderPlus,
+  Search,
+  Edit3,
+  UserCheck,
+  Users,
+  ShieldCheck,
+  Cpu,
+  Package,
+  Globe,
+  Server,
+  Clock,
+};
+
+export const LinuxCommandsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { setTutorContext } = useTutorContext();
+  const [activeGroupId, setActiveGroupId] = useState<string>('path-concepts');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [coreStep, setCoreStep] = useState({ lesson: LINUX_CORE_LESSONS[0], stepIndex: 0 });
+
+  // Track expanded command card IDs (accordion state)
+  const [expandedCmdIds, setExpandedCmdIds] = useState<Set<string>>(() => {
+    // Start focused: displaying a full expanded command from every group made
+    // the reference feel like an overwhelming wall of text on first visit.
+    const initial = new Set<string>();
+    const firstGroup = LINUX_COMMAND_GROUPS.find(g => g.id === 'path-concepts');
+    if (firstGroup?.commands[0]) initial.add(firstGroup.commands[0].id);
+    return initial;
+  });
+
+  // Track copied feedback
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyAnnouncement, setCopyAnnouncement] = useState('');
+  const copyTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (copyTimeoutRef.current !== null) window.clearTimeout(copyTimeoutRef.current);
+  }, []);
+
+  const toggleCommandExpanded = (id: string) => {
+    setExpandedCmdIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    const all = new Set<string>();
+    LINUX_COMMAND_GROUPS.forEach(g => g.commands.forEach(c => all.add(c.id)));
+    setExpandedCmdIds(all);
+  };
+
+  const collapseAll = () => {
+    setExpandedCmdIds(new Set<string>());
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setCopyAnnouncement('Copied to clipboard.');
+      if (copyTimeoutRef.current !== null) window.clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = window.setTimeout(() => {
+        setCopiedId(null);
+        setCopyAnnouncement('');
+      }, 1800);
+    } catch {
+      setCopiedId(null);
+      setCopyAnnouncement('Clipboard access was blocked by the browser.');
+    }
+  };
+
+  // Items for VisualizerHeader dropdown search
+  const headerSearchItems = useMemo(() => {
+    return [{ id: 'linux-core', name: 'Linux Core', description: 'Firewall, Wi-Fi file sharing, permissions, and services' }, ...LINUX_COMMAND_GROUPS.map(g => ({
+      id: g.id,
+      name: g.title,
+      description: g.description,
+    }))];
+  }, []);
+
+  // Search spans every command group; the group filter applies when search is empty.
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return activeGroupId === 'all'
+        ? LINUX_COMMAND_GROUPS
+        : LINUX_COMMAND_GROUPS.filter(g => g.id === activeGroupId);
+    }
+
+    const query = searchQuery.toLowerCase();
+    return LINUX_COMMAND_GROUPS.map(g => {
+      if (g.title.toLowerCase().includes(query) || g.description.toLowerCase().includes(query)) return g;
+      const matchingCommands = g.commands.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.shortDesc.toLowerCase().includes(query) ||
+        c.theory.toLowerCase().includes(query) ||
+        c.syntax.toLowerCase().includes(query) ||
+        c.examples.some(e => e.cmd.toLowerCase().includes(query) || e.desc.toLowerCase().includes(query))
+      );
+      return { ...g, commands: matchingCommands };
+    }).filter(g => g.commands.length > 0);
+  }, [activeGroupId, searchQuery]);
+
+  useEffect(() => {
+    if (activeGroupId === 'linux-core') {
+      const step = coreStep.lesson.steps[coreStep.stepIndex];
+      setTutorContext({
+        algorithmName: 'Linux Core',
+        algorithmId: 'linux-core',
+        category: 'commands',
+        currentStepDescription: step?.explanation || coreStep.lesson.summary,
+        currentStepIndex: coreStep.stepIndex,
+        totalSteps: coreStep.lesson.steps.length,
+        currentStep: {
+          lessonId: coreStep.lesson.id,
+          lessonTitle: coreStep.lesson.title,
+          stepTitle: step?.title,
+          commands: step?.commands ?? [],
+        },
+        steps: coreStep.lesson.steps,
+        onSetInput: undefined,
+        play: undefined,
+        pause: undefined,
+        stepForward: undefined,
+        reset: undefined,
+        setShowDebugger: undefined,
+        onLaunchQuiz: undefined,
+        setSpeed: undefined,
+        toggleFullscreen: undefined,
+        onExecuteCommand: undefined,
+      });
+      return;
+    }
+    const activeGroup = LINUX_COMMAND_GROUPS.find((group) => group.id === activeGroupId);
+    const visibleCommands = filteredGroups.flatMap((group) => group.commands);
+    const selectedCommand = [...visibleCommands].reverse().find((command) => expandedCmdIds.has(command.id));
+    const selectedCommandGroupId = selectedCommand && LINUX_COMMAND_GROUPS.find((group) => group.commands.some((command) => command.id === selectedCommand.id))?.id;
+    setTutorContext({
+      algorithmName: selectedCommand?.name || activeGroup?.title || 'Linux Command Lessons',
+      algorithmId: selectedCommand?.id || activeGroup?.id || '',
+      category: 'commands',
+      currentStepDescription: selectedCommand?.shortDesc || activeGroup?.description || '',
+      currentStepIndex: 0,
+      totalSteps: 0,
+      currentStep: selectedCommand ? {
+        selectedCommandId: selectedCommand.id,
+        groupId: selectedCommandGroupId || activeGroup?.id,
+        name: selectedCommand.name,
+      } : null,
+      steps: [],
+      onSetInput: undefined,
+      play: undefined,
+      pause: undefined,
+      stepForward: undefined,
+      reset: undefined,
+      setShowDebugger: undefined,
+      onLaunchQuiz: undefined,
+      setSpeed: undefined,
+      toggleFullscreen: undefined,
+      onExecuteCommand: undefined,
+    });
+  }, [activeGroupId, coreStep, expandedCmdIds, filteredGroups, setTutorContext]);
+
+  const onCoreStepChange = useCallback((lesson: LinuxCoreLesson, stepIndex: number) => {
+    setCoreStep((previous) => previous.lesson.id === lesson.id && previous.stepIndex === stepIndex
+      ? previous
+      : { lesson, stepIndex });
+  }, []);
+
+  return (
+    <div className="bst-page-container linux-module-shell linux-commands-page animate-fade-in space-y-6">
+      <SEOHead {...getSEOForRoute('/dashboard/os/commands')} />
+      {/* Universal Visualizer Header matching Complexity & DSA Studio */}
+      <VisualizerHeader
+        icon={<Terminal size={22} />}
+        title="Commands of Linux"
+        subtitle="A practical Linux command reference with guided lessons for networking, security, permissions, and services"
+        items={headerSearchItems}
+        activeId={activeGroupId !== 'all' ? activeGroupId : undefined}
+        onSelect={(id) => setActiveGroupId(id)}
+        placeholder="Search Linux commands or groups..."
+        categories={CATEGORY_TOPICS}
+        activeCategoryId="commands"
+        onSelectCategory={(catId) => catId !== 'commands' && navigate(`/dashboard/${catId}`)}
+        actions={
+          <div className="flex items-center gap-3">
+            <button className="module-back-btn" onClick={() => navigate('/dashboard/os')}>
+              <ArrowLeft size={14} /> Back to OS
+            </button>
+            <VisualizerActions />
+          </div>
+        }
+      />
+
+      {/* Global Command Search & Accordion Controls Toolbar */}
+      <div className="linux-commands-toolbar animate-fade-in">
+        <div className="linux-commands-toolbar__intro">
+          <div className="flex items-center gap-2 text-[var(--color-text)] font-bold text-sm">
+            <BookOpen size={16} className="text-purple-600 dark:text-purple-400" />
+            <span>Linux Core & Command Reference</span>
+          </div>
+
+          <div className="linux-commands-toolbar__actions">
+            <button
+              onClick={expandAll}
+              type="button"
+              className="bst-btn bst-btn-primary"
+            >
+              <ChevronDown size={14} /> Expand All
+            </button>
+            <button
+              onClick={collapseAll}
+              type="button"
+              className="bst-btn"
+            >
+              <ChevronUp size={14} /> Collapse All
+            </button>
+          </div>
+        </div>
+
+        <div className="linux-commands-search">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+          <input
+            type="search"
+            aria-label="Search Linux commands across all groups"
+            placeholder="Search every group by command, syntax, or keyword..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+          />
+          <span className="linux-commands-copy-status" role="status" aria-live="polite">{copyAnnouncement}</span>
+        </div>
+      </div>
+
+      {/* Main Catalog Layout */}
+      <div className="linux-commands-catalog">
+        {/* Group Selection Sidebar */}
+        <aside className="linux-commands-groups">
+          <div className="px-3 py-2 text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+            Command Groups ({LINUX_COMMAND_GROUPS.length})
+          </div>
+          <button
+            onClick={() => setActiveGroupId('linux-core')}
+            aria-pressed={activeGroupId === 'linux-core'}
+            type="button"
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
+              activeGroupId === 'linux-core'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
+                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium border border-transparent'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <ShieldCheck size={16} className={activeGroupId === 'linux-core' ? 'text-white' : ''} />
+              <span>Linux Core</span>
+            </span>
+            <span className="text-[10px] font-semibold opacity-80">4 lessons</span>
+          </button>
+
+          <button
+            onClick={() => setActiveGroupId('all')}
+            aria-pressed={activeGroupId === 'all'}
+            type="button"
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
+              activeGroupId === 'all'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
+                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium border border-transparent'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <BookOpen size={16} className={activeGroupId === 'all' ? 'text-white' : ''} />
+              <span>All Groups</span>
+            </span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              activeGroupId === 'all'
+                ? 'bg-white/20 text-white border border-white/30'
+                : 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20'
+            }`}>
+              {LINUX_COMMAND_GROUPS.reduce((acc, g) => acc + g.commands.length, 0)}
+            </span>
+          </button>
+
+          {LINUX_COMMAND_GROUPS.map(group => {
+            const GroupIcon = GROUP_ICON_MAP[group.iconName] ?? Terminal;
+            const isActive = activeGroupId === group.id;
+            return (
+              <button
+                key={group.id}
+                onClick={() => setActiveGroupId(group.id)}
+                aria-pressed={isActive}
+                type="button"
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-elevated)] font-medium border border-transparent'
+                }`}
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <GroupIcon size={15} className={isActive ? 'text-white shrink-0' : 'text-[var(--color-text-muted)] shrink-0'} />
+                  <span className="truncate">{group.title}</span>
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  isActive
+                    ? 'bg-white/20 text-white border border-white/30'
+                    : 'bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
+                }`}>
+                  {group.commands.length}
+                </span>
+              </button>
+            );
+          })}
+        </aside>
+
+        {/* Command Reference Cards Catalog */}
+        <div className="linux-commands-results">
+          {activeGroupId === 'linux-core' ? (
+            <LinuxCoreLessons onStepChange={onCoreStepChange} />
+          ) : (
+          filteredGroups.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
+              <HelpCircle size={40} className="mx-auto text-[var(--color-text-muted)] mb-3" />
+              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-1">No matching commands found</h3>
+              <p className="text-[var(--color-text-secondary)] text-sm">Try searching for a different command name or syntax keyword.</p>
+              <button
+                onClick={() => { setSearchQuery(''); setActiveGroupId('all'); }}
+                className="bst-btn bst-btn-primary mt-4"
+              >
+                Clear Search & Filters
+              </button>
+            </div>
+          ) : (
+            filteredGroups.map(group => {
+              const GroupIcon = GROUP_ICON_MAP[group.iconName] ?? Terminal;
+              return (
+                <div key={group.id} className="space-y-4">
+                  {/* Group Section Header */}
+                  <div className="flex items-center gap-3 pb-2 border-b border-[var(--color-border)]">
+                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                      <GroupIcon size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-[var(--color-text)]">{group.title}</h2>
+                      <p className="text-xs text-[var(--color-text-secondary)]">{group.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Command Accordion Cards Grid */}
+                  <div className="space-y-3.5">
+                    {group.commands.map(cmd => {
+                      const isExpanded = expandedCmdIds.has(cmd.id);
+
+                      return (
+                        <div
+                          key={cmd.id}
+                          className="linux-command-card"
+                        >
+                          {/* Accordion Card Header */}
+                          <button
+                            type="button"
+                            onClick={() => toggleCommandExpanded(cmd.id)}
+                            className="linux-command-card__trigger"
+                            aria-expanded={isExpanded}
+                            aria-controls={`command-panel-${cmd.id}`}
+                            id={`command-trigger-${cmd.id}`}
+                          >
+                            <div className="flex items-center gap-3.5 flex-1 min-w-0 pr-4">
+                              <span className="font-mono text-sm font-bold text-purple-600 dark:text-purple-300 bg-purple-500/10 px-3.5 py-1.5 rounded-xl border border-purple-500/20 shrink-0">
+                                {cmd.name}
+                              </span>
+
+                              <div className="truncate">
+                                <p className="text-xs text-[var(--color-text-secondary)] font-medium truncate">
+                                  {cmd.shortDesc}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 shrink-0">
+                              {cmd.badge && (
+                                <span className="hidden sm:flex text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold items-center gap-1">
+                                  <Sparkles size={12} /> {cmd.badge}
+                                </span>
+                              )}
+                              {cmd.type === 'concept' && (
+                                <span className="hidden sm:inline-block text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 font-medium">
+                                  Core Concept
+                                </span>
+                              )}
+
+                              <div className="p-1 rounded-lg text-[var(--color-text-muted)]">
+                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Accordion Card Body */}
+                          {isExpanded && (
+                            <div id={`command-panel-${cmd.id}`} role="region" aria-labelledby={`command-trigger-${cmd.id}`} className="linux-command-card__body space-y-4 animate-fade-in">
+                              {/* Theory Block */}
+                              <div className="linux-command-card__theory text-sm leading-relaxed">
+                                <div className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-1.5 flex items-center gap-1.5 uppercase tracking-wider">
+                                  <Info size={14} className="text-purple-500" /> Theory & Purpose
+                                </div>
+                                {cmd.theory}
+                              </div>
+
+                              {/* Syntax Block with One-Click Copy */}
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                                    <FileText size={14} className="text-emerald-500" /> Syntax
+                                  </div>
+                                  <button
+                                    onClick={() => copyToClipboard(cmd.syntax, `syntax-${cmd.id}`)}
+                                    type="button"
+                                    aria-label={`Copy ${cmd.name} syntax`}
+                                    className="px-2.5 py-1 rounded-lg text-[11px] font-mono text-purple-600 dark:text-purple-300 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 flex items-center gap-1 transition-all"
+                                  >
+                                    {copiedId === `syntax-${cmd.id}` ? (
+                                      <>
+                                        <Check size={12} className="text-emerald-500" /> Copied!
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={12} /> Copy Syntax
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                                <div className="linux-command-card__syntax font-mono">
+                                  {cmd.syntax}
+                                </div>
+                              </div>
+
+                              {/* Special Vim Modes Section */}
+                              {cmd.vimModes && (
+                                <div className="mt-4 p-4 rounded-xl bg-[var(--color-surface)] border border-purple-500/30 space-y-3">
+                                  <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300 font-bold text-sm">
+                                    <Key size={16} /> Vim Modal Architecture & 3 Core Modes
+                                  </div>
+                                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                                    Vim&apos;s modal design is built around 3 distinct operation modes to enable keyboard-only editing without taking your hands off the touch-typing home row.
+                                  </p>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                                    {cmd.vimModes.map((mode, idx) => (
+                                      <div key={idx} className="p-3.5 rounded-xl bg-[var(--color-surface-elevated)] border border-[var(--color-border)] space-y-2">
+                                        <div className="text-xs font-bold text-purple-600 dark:text-purple-400">{mode.name}</div>
+                                        <p className="text-[11px] text-[var(--color-text-secondary)] leading-tight">{mode.description}</p>
+                                        <div className="space-y-1 pt-2 border-t border-[var(--color-border)]">
+                                          {mode.keybindings.map((kb, kidx) => (
+                                            <div key={kidx} className="font-mono text-[10px] text-amber-600 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 truncate">
+                                              {kb}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Real-Life Examples Block */}
+                              <div className="space-y-2">
+                                <div className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                                  <CheckCircle2 size={14} className="text-purple-500" /> Real-Life Examples
+                                </div>
+                                <div className="space-y-2">
+                                  {cmd.examples.map((ex, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] gap-2"
+                                    >
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <code className="font-mono text-xs text-purple-600 dark:text-purple-300 bg-purple-500/10 px-3 py-1 rounded-lg border border-purple-500/20">
+                                          $ {ex.cmd}
+                                        </code>
+                                        <button
+                                          onClick={() => copyToClipboard(ex.cmd, `ex-${cmd.id}-${idx}`)}
+                                          type="button"
+                                          aria-label={`Copy example command: ${ex.cmd}`}
+                                          className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
+                                          title="Copy command"
+                                        >
+                                          {copiedId === `ex-${cmd.id}-${idx}` ? (
+                                            <Check size={13} className="text-emerald-500" />
+                                          ) : (
+                                            <Copy size={13} />
+                                          )}
+                                        </button>
+                                      </div>
+                                      <span className="text-xs text-[var(--color-text-secondary)] font-sans flex items-center gap-1.5">
+                                        <ChevronRight size={13} className="text-[var(--color-text-muted)] shrink-0" />
+                                        {ex.desc}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          )
+          )}
+        </div>
+      </div>
+
+      {/* Theory & Concepts Panel matching DSA module */}
+      {activeGroupId !== 'linux-core' && <TheoryPanel categoryId="commands" activeTopic={activeGroupId !== 'all' ? activeGroupId : undefined} />}
+    </div>
+  );
+};

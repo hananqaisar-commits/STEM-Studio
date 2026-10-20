@@ -16,14 +16,9 @@ def send_password_reset_email(to_email: str, reset_url: str) -> bool:
     settings = get_settings()
 
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning(
-            "SMTP_USER or SMTP_PASSWORD not configured. Printing Password Reset Link to terminal instead."
+        logger.error(
+            "Password reset email was not sent because SMTP credentials are not configured."
         )
-        print("\n" + "═" * 65)
-        print(f"📧 PASSWORD RESET LINK FOR [{to_email}]:")
-        print(f"👉 {reset_url}")
-        print("💡 Configure SMTP_USER and SMTP_PASSWORD in backend/.env to send real Gmail emails!")
-        print("═" * 65 + "\n")
         return False
 
     sender_email = settings.SMTP_USER
@@ -157,6 +152,49 @@ The STEM Studio Team
         print(f"✅ Real email successfully delivered via Gmail SMTP to [{to_email}]")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {e}")
         print(f"❌ Failed to send SMTP email to [{to_email}]: {e}")
+        return False
+
+def send_verification_email(to_email: str, verify_url: str) -> bool:
+    """Sends a verification email upon signup."""
+    settings = get_settings()
+
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning(
+            "Verification email was not sent because SMTP credentials are not configured."
+        )
+        return False
+
+    sender_email = settings.SMTP_USER
+    sender_name = settings.EMAILS_FROM_NAME
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"✅ Verify your email — {settings.APP_NAME}"
+    msg["From"] = f"{sender_name} <{sender_email}>"
+    msg["To"] = to_email
+
+    text_content = f"Please verify your email by clicking the link: {verify_url}"
+    html_content = f"""
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2>Welcome to STEM Studio!</h2>
+      <p>Please verify your email address by clicking the link below:</p>
+      <a href="{verify_url}" style="display:inline-block; padding:10px 20px; background-color:#3b82f6; color:#fff; text-decoration:none; border-radius:5px;">Verify Email</a>
+      <p>If you didn't create an account, you can ignore this email.</p>
+    </div>
+    """
+
+    msg.attach(MIMEText(text_content, "plain"))
+    msg.attach(MIMEText(html_content, "html"))
+
+    try:
+        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
+        if settings.SMTP_TLS:
+            server.starttls()
+        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        server.sendmail(sender_email, [to_email], msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {to_email}: {e}")
         return False

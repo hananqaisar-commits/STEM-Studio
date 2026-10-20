@@ -1,0 +1,67 @@
+/* ═══════════════════════════════════════════════════════════════════
+   STATE SUMMARY BAR — unified key-value status pill for all renderers
+   ═══════════════════════════════════════════════════════════════════
+   Reusable light-lavender pill that renders structured state like:
+     HEAD = A · REAR = D · Size = 4 · Rule = FIFO
+   One shared component — never re-implemented per renderer.
+   ─────────────────────────────────────────────────────────────────── */
+
+.state-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1.1rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-primary-text, var(--color-primary));
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.state-summary-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.state-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.state-summary-key {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+}
+
+.state-summary-eq {
+  color: var(--color-text-muted);
+}
+
+.state-summary-value {
+  color: var(--color-primary-text, var(--color-primary));
+  font-weight: 800;
+}
+
+.state-summary-sep {
+  color: var(--color-text-muted);
+  margin: 0 0.15rem;
+  user-select: none;
+}
+
+/* Dark theme subtle adjustment */
+[data-theme="dark"] .state-summary-bar {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+}

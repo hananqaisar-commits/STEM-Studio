@@ -1,3 +1,5 @@
+import topicCatalog from './topicCatalog.json';
+
 /**
  * Central registry for all DSA module categories.
  * Single source of truth for the hub card grid, sidebar, and navbar.
@@ -22,7 +24,7 @@ export interface CategoryDef {
   iconName: string;
 }
 
-export const DSA_CATEGORIES: CategoryDef[] = [
+const DSA_CATEGORY_DEFS: CategoryDef[] = [
   // ── Foundations ─────────────────────────────────────────────
   {
     id: 'complexity',
@@ -65,8 +67,8 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   {
     id: 'linkedList',
     name: 'Linked List',
-    description: 'Singly, Doubly, Circular — Insert/Delete, Reverse, Floyd\'s Cycle Detection, Middle Node',
-    topicCount: 6,
+    description: 'Singly, Doubly, Circular, Doubly Circular — Insert/Delete, Reverse, Floyd\'s Cycle Detection, Middle Node, Josephus Problem',
+    topicCount: 21,
     difficulty: 'Intermediate',
     available: true,
     iconName: 'GitCommit',
@@ -74,8 +76,8 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   {
     id: 'stackQueue',
     name: 'Stack & Queue',
-    description: 'Valid Parentheses, Min Stack, RPN Calculator, Monotonic Stacks, Circular Queue & Deque, Sliding Window Max, Task Scheduler, Rotting Oranges',
-    topicCount: 22,
+    description: 'Stack and queue primitives, expression conversion, monotonic structures, circular buffers, stream processing, and BFS problems',
+    topicCount: 23,
     difficulty: 'Intermediate',
     available: true,
     iconName: 'Layers',
@@ -106,7 +108,7 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     id: 'bst',
     name: 'Trees',
     description: 'BST, AVL, Heap, Trie — insert, search, depth-first traversals, balancing rotations, heapify',
-    topicCount: 4,
+    topicCount: 6,
     difficulty: 'Advanced',
     available: true,
     iconName: 'GitPullRequest',
@@ -115,7 +117,7 @@ export const DSA_CATEGORIES: CategoryDef[] = [
     id: 'graph',
     name: 'Graphs',
     description: 'BFS, DFS, Dijkstra, Prim\'s, Topological Sort',
-    topicCount: 5,
+    topicCount: 8,
     difficulty: 'Advanced',
     available: true,
     iconName: 'Share2',
@@ -169,6 +171,12 @@ export const DSA_CATEGORIES: CategoryDef[] = [
   },
 ];
 
+/** The shared JSON is also read by the backend progress percentage API. */
+export const DSA_CATEGORIES: CategoryDef[] = DSA_CATEGORY_DEFS.map((category) => ({
+  ...category,
+  topicCount: topicCatalog[category.id as keyof typeof topicCatalog]?.length ?? category.topicCount,
+}));
+
 /**
  * Module definitions — top-level subjects shown in the sidebar.
  */
@@ -193,6 +201,14 @@ export const MODULES: ModuleDef[] = [
     categoryCount: 15,
   },
   {
+    id: 'os',
+    name: 'Operating Systems',
+    description: 'Linux terminal commands, Virtual File System simulator, processes, and permissions',
+    available: true,
+    iconName: 'Monitor',
+    categoryCount: 2,
+  },
+  {
     id: 'dld',
     name: 'Digital Logic Design',
     description: 'Boolean algebra, gates, combinational & sequential circuits',
@@ -200,19 +216,84 @@ export const MODULES: ModuleDef[] = [
     iconName: 'Cpu',
     categoryCount: 0,
   },
+];
+
+/**
+ * Operating System Module OS Options (Windows, macOS, Linux)
+ */
+export interface OSModuleDef {
+  id: string;
+  name: string;
+  description: string;
+  available: boolean;
+  iconName: string;
+  badge?: string;
+  categoryCount: number;
+}
+
+export const OS_DISTROS: OSModuleDef[] = [
   {
-    id: 'os',
-    name: 'Operating Systems',
-    description: 'Processes, scheduling, memory management, file systems',
+    id: 'linux',
+    name: 'Linux OS',
+    description: 'Interactive Linux command reference & live Virtual File System visualizer',
+    available: true,
+    iconName: 'Terminal',
+    categoryCount: 2,
+  },
+  {
+    id: 'windows',
+    name: 'Windows OS',
+    description: 'PowerShell, Command Prompt, and Windows architecture',
     available: false,
-    iconName: 'Monitor',
+    iconName: 'LayoutGrid',
+    badge: 'Coming Soon',
+    categoryCount: 0,
+  },
+  {
+    id: 'macos',
+    name: 'macOS',
+    description: 'Darwin kernel, zsh commands, and macOS directory structure',
+    available: false,
+    iconName: 'Laptop',
+    badge: 'Coming Soon',
     categoryCount: 0,
   },
 ];
 
 /**
- * Look up a category by its route id.
+ * OS Linux Categories Registry
+ */
+export const OS_CATEGORIES: CategoryDef[] = [
+  {
+    id: 'commands',
+    name: 'Commands of Linux',
+    description: 'Comprehensive reference catalog for 50+ Linux commands across 13 functional groups',
+    topicCount: 13,
+    difficulty: 'Beginner',
+    available: true,
+    iconName: 'Terminal',
+  },
+  {
+    id: 'filesystem',
+    name: 'File System Simulator',
+    description: 'Live interactive virtual filesystem with real bash interpreter, tree visualizer, stateful Vim/Nano editor, and permissions mutation tracking',
+    topicCount: 1,
+    difficulty: 'Intermediate',
+    available: true,
+    iconName: 'FolderTree',
+  },
+];
+
+/**
+ * Look up a DSA category by its route id.
  */
 export function getCategoryById(id: string): CategoryDef | undefined {
   return DSA_CATEGORIES.find((c) => c.id === id);
+}
+
+/**
+ * Look up an OS category by its route id.
+ */
+export function getOSCategoryById(id: string): CategoryDef | undefined {
+  return OS_CATEGORIES.find((c) => c.id === id);
 }

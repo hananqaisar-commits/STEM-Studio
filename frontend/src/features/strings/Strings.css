@@ -5,30 +5,37 @@
 
 /* String cell grid for character display */
 .string-cells-canvas {
-  display: flex; flex-wrap: wrap; gap: 4px; padding: 1.25rem;
-  justify-content: center; align-items: center; min-height: 120px;
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 1.25rem;
+  justify-content: center; align-items: center; flex: 1; width: 100%;
+  box-sizing: border-box; overflow: auto;
+}
+
+.string-cell-motion {
+  display: flex; flex: 0 0 50px; width: 50px; height: 58px;
+  align-items: center; justify-content: center;
 }
 
 .string-cell {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   width: 48px; height: 56px; border-radius: 8px;
   border: 1px solid var(--color-border); background: var(--color-surface);
-  transition: all 0.2s ease;
+  transform: translateY(0) scale(1);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .string-cell .cell-char {
-  font-size: 1.2rem; font-weight: 700; font-family: 'Fira Code', monospace;
+  font-size: var(--text-xl); font-weight: 700; font-family: 'Fira Code', monospace;
   color: var(--color-text);
 }
 
 .string-cell .cell-index {
-  font-size: 0.6rem; color: var(--color-text-muted); margin-top: 2px;
+  font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;
 }
 
 /* State colors — match the Bar component's state colors */
-.string-cell.state-comparing { border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
+.string-cell.state-comparing { transform: translateY(-3px); border-color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
 .string-cell.state-comparing .cell-char { color: #f59e0b; }
-.string-cell.state-swapping { border-color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+.string-cell.state-swapping { transform: translateY(-6px) scale(1.035); border-color: #ef4444; background: rgba(239, 68, 68, 0.15); box-shadow: 0 7px 18px -12px rgba(239, 68, 68, .8); }
 .string-cell.state-swapping .cell-char { color: #ef4444; }
 .string-cell.state-sorted { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); }
 .string-cell.state-sorted .cell-char { color: #22c55e; }
@@ -37,14 +44,63 @@
 .string-input-group {
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.4rem 0.75rem; background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: 8px; font-size: 0.8rem;
+  border: 1px solid var(--color-border); border-radius: 8px; font-size: var(--text-xs);
 }
 
 .string-input-group input[type="text"] {
   padding: 0.3rem 0.5rem; background: var(--color-surface-elevated);
   border: 1px solid var(--color-border); border-radius: 4px;
-  color: var(--color-text); font-family: 'Fira Code', monospace; font-size: 0.8rem;
+  color: var(--color-text); font-family: 'Fira Code', monospace; font-size: var(--text-xs);
   min-width: 120px;
+}
+
+.string-char-count {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+
+.string-quick-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-primary));
+}
+
+.string-quick-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.string-quick-controls input {
+  width: 76px;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: 500 var(--text-xs)/1.2 'JetBrains Mono', monospace;
+}
+
+.string-quick-controls .bst-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .string-quick-controls .bst-btn {
+    flex: 1 1 125px;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 1024px) {

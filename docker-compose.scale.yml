@@ -1,0 +1,111 @@
+name: stem-studio-scale
+
+x-api-environment: &api-environment
+  DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in deploy/scalability/.env}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in deploy/scalability/.env}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+  DEBUG: "false"
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in deploy/scalability/.env}@redis:6379/0
+  REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-stemstudio:ratelimit}
+  REDIS_MAX_CONNECTIONS: ${REDIS_MAX_CONNECTIONS:-100}
+  REDIS_SOCKET_TIMEOUT_SECONDS: ${REDIS_SOCKET_TIMEOUT_SECONDS:-0.5}
+  REDIS_RATE_LIMIT_FAIL_OPEN: ${REDIS_RATE_LIMIT_FAIL_OPEN:-false}
+  PLATFORM_STATS_CACHE_SECONDS: ${PLATFORM_STATS_CACHE_SECONDS:-30}
+  JUDGE0_URL: ${JUDGE0_URL:-}
+  JUDGE0_API_KEY: ${JUDGE0_API_KEY:-}
+  JUDGE0_AUTH_HEADER: ${JUDGE0_AUTH_HEADER:-X-Auth-Token}
+  JUDGE0_TIMEOUT_SECONDS: ${JUDGE0_TIMEOUT_SECONDS:-20}
+  JUDGE0_RATE_LIMIT_PER_MINUTE: ${JUDGE0_RATE_LIMIT_PER_MINUTE:-20}
+  TRUST_X_FORWARDED_FOR: "true"
+  DB_POOL_SIZE: ${DB_POOL_SIZE:-2}
+  DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-1}
+  DB_POOL_TIMEOUT_SECONDS: ${DB_POOL_TIMEOUT_SECONDS:-10}
+  DB_POOL_RECYCLE_SECONDS: ${DB_POOL_RECYCLE_SECONDS:-300}
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command:
+      - sh
+      - -c
+      - exec redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy noeviction --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in deploy/scalability/.env}
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - private
+
+  api-1:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      <<: *api-environment
+      UVICORN_WORKERS: ${UVICORN_WORKERS_PER_INSTANCE:-1}
+      FORWARDED_ALLOW_IPS: 172.30.250.2
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - private
+
+  api-2:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      <<: *api-environment
+      UVICORN_WORKERS: ${UVICORN_WORKERS_PER_INSTANCE:-1}
+      FORWARDED_ALLOW_IPS: 172.30.250.2
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - private
+
+  load-balancer:
+    image: haproxy:3.4.4-alpine3.24
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - ./deploy/scalability/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      api-1:
+        condition: service_healthy
+      api-2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/api/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      private:
+        ipv4_address: 172.30.250.2
+
+networks:
+  private:
+    ipam:
+      config:
+        - subnet: 172.30.250.0/24

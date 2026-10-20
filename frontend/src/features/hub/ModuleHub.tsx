@@ -3,24 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
-  Sparkles, X, ArrowLeft, type LucideIcon,
+  Sparkles, X, ArrowLeft, Terminal, FolderTree, type LucideIcon,
 } from 'lucide-react';
-import { MODULES, DSA_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { MODULES, DSA_CATEGORIES, OS_CATEGORIES, type CategoryDef } from '../../data/categories';
+import { useAuthPrompt } from '../../contexts/AuthPromptContext'; 
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import './DSAHub.css';
 
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   Activity, BarChart2, LayoutList, Type, GitCommit, Layers, Search, Hash,
   GitPullRequest, Share2, Repeat, CornerDownRight, Zap, Grid3x3, Binary,
+  Terminal, FolderTree,
 };
 
 /**
  * Resolve which categories belong to a given module.
- * Currently all categories belong to DSA; future modules will add their own.
  */
 function getCategoriesForModule(moduleId: string): CategoryDef[] {
   if (moduleId === 'dsa') return DSA_CATEGORIES;
+  if (moduleId === 'os') return OS_CATEGORIES;
   return [];
 }
+
 
 interface ModuleHubProps {
   moduleId: string;
@@ -28,6 +33,7 @@ interface ModuleHubProps {
 
 export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
   const navigate = useNavigate();
+  const { requireAuth } = useAuthPrompt();
   const module = MODULES.find(m => m.id === moduleId);
   const categories = getCategoriesForModule(moduleId);
 
@@ -88,6 +94,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
 
   return (
     <div className="dsa-hub">
+      <SEOHead {...getSEOForRoute('/dashboard/' + moduleId)} />
       <div className="module-page-header">
         <button className="module-back-btn" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={16} /> Back to Dashboard
@@ -110,7 +117,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
               {newFeatures.map(id => {
                 const cat = categories.find(c => c.id === id);
                 return cat ? (
-                  <span key={id} className="new-feature-chip" onClick={() => navigate(`/dashboard/${cat.id}`)}>
+                  <span key={id} className="new-feature-chip" onClick={() => requireAuth(() => navigate(`/dashboard/${cat.id}`), 'Sign in to open this interactive module and save your progress.')}>
                     {cat.name} — {cat.topicCount} topics
                   </span>
                 ) : null;
@@ -131,7 +138,7 @@ export const ModuleHub: React.FC<ModuleHubProps> = ({ moduleId }) => {
             <div
               key={cat.id}
               className={`hub-card ${!cat.available ? 'hub-card-disabled' : ''}`}
-              onClick={() => cat.available && navigate(`/dashboard/${cat.id}`)}
+              onClick={() => cat.available && requireAuth(() => navigate(`/dashboard/${cat.id}`), 'Sign in to open this interactive module and save your progress.')}
             >
               <div className="hub-card-icon">
                 <Icon size={22} />

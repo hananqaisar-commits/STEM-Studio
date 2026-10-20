@@ -1,6 +1,6 @@
 /**
  * Mascot state definitions for Octa the Octopus.
- * Expressions map 1:1 to SVG assets: octa-<expression>.svg
+ * Expressions map to one of Octa's transparent plush sprite states.
  */
 
 export type MascotExpression =
@@ -15,7 +15,10 @@ export type MascotExpression =
   | 'tired'
   | 'sad'
   | 'helping'
-  | 'review';
+  | 'review'
+  | 'listening'
+  | 'wink'
+  | 'angry';
 
 export type MascotContext =
   | 'dashboard'
@@ -29,7 +32,8 @@ export type MascotContext =
   | 'projects'
   | 'tools'
   | 'loading'
-  | 'success';
+  | 'success'
+  | 'tutor';
 
 export type MascotSize = 'tiny' | 'small' | 'medium' | 'large' | 'xl';
 
@@ -56,6 +60,8 @@ export const EXPRESSION_PRIORITY: Record<MascotExpression, number> = {
   surprised: 85,
   happy: 80,
   confused: 70,
+  listening: 65,
+  angry: 63,
   thinking: 60,
   focused: 50,
   reading: 45,
@@ -63,6 +69,7 @@ export const EXPRESSION_PRIORITY: Record<MascotExpression, number> = {
   helping: 43,
   sad: 42,
   tired: 40,
+  wink: 38,
   neutral: 10,
 };
 
@@ -75,5 +82,6 @@ export const DEFAULT_MASCOT_STATE: MascotState = {
 /** All available expressions (for iteration/validation). */
 export const ALL_EXPRESSIONS: readonly MascotExpression[] = [
   'neutral', 'happy', 'focused', 'thinking', 'reading', 'excited',
-  'confused', 'surprised', 'tired', 'sad', 'helping', 'review',
+  'confused', 'surprised', 'tired', 'sad', 'helping', 'review', 'listening',
+  'wink', 'angry',
 ];

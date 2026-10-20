@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
-  Type, Repeat, ArrowLeftRight, BarChart3, Maximize2, Sparkles, Trash2, Layers
+  Type, Repeat, ArrowLeftRight, BarChart3, Maximize2, Sparkles, Trash2, Layers, Plus, Delete
 } from 'lucide-react';
 import { StringRenderer } from './StringRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -9,6 +11,8 @@ import { FloatingController } from '../../components/controls/FloatingController
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -26,6 +30,8 @@ import { generateFrequencyCountSteps } from './algorithms/frequencyCount';
 import '../sorting/Sorting.css';
 import './Strings.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
+import { useTutorContext } from '../../contexts/TutorContext';
+
 
 interface AlgMeta {
   key: StringAlgorithmKey;
@@ -49,6 +55,7 @@ const SAMPLE_STRINGS: Record<StringAlgorithmKey, { primary: string; secondary: s
 };
 
 export const StringsPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<StringAlgorithmKey>('palindrome');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -60,6 +67,7 @@ export const StringsPage: React.FC = () => {
 
   const [inputStr, setInputStr] = useState<string>('racecar');
   const [secondStr, setSecondStr] = useState<string>('silent');
+  const [characterInput, setCharacterInput] = useState('');
 
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
@@ -67,7 +75,8 @@ export const StringsPage: React.FC = () => {
   const [cadence, setCadence] = useState<QuizCadence>('normal');
 
   const executionData = useMemo(() => {
-    const str = inputStr || 'a';
+    if (!inputStr) return generateStringReverseSteps('');
+    const str = inputStr;
     switch (selectedAlg) {
       case 'palindrome':
         return generatePalindromeSteps(str);
@@ -92,8 +101,30 @@ export const StringsPage: React.FC = () => {
     stepForward,
     stepBack,
     reset,
-  seekTo,
+    seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  // Publish active context to Octa AI Tutor
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'strings',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildStringsCheckpoints(executionData.steps, selectedAlg),
@@ -150,6 +181,18 @@ export const StringsPage: React.FC = () => {
     quizSession.resetSession();
     setInputStr('');
     setSecondStr('');
+  };
+
+  const appendCharacter = (target: 'first' | 'second') => {
+    const character = [...characterInput][0];
+    if (!character) return;
+    if (target === 'first') setInputStr((value) => value + character);
+    else setSecondStr((value) => value + character);
+  };
+
+  const removeLastCharacter = (target: 'first' | 'second') => {
+    if (target === 'first') setInputStr((value) => [...value].slice(0, -1).join(''));
+    else setSecondStr((value) => [...value].slice(0, -1).join(''));
   };
 
   const handleSample = () => {
@@ -210,16 +253,22 @@ export const StringsPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
       <div className="string-input-group">
-        <span>Input:</span>
+        <span>String:</span>
         <input
           type="text"
           value={inputStr}
           onChange={(e) => setInputStr(e.target.value)}
           placeholder="Enter string..."
+          aria-label="Primary string input; edits update the visualization immediately"
         />
+        <span className="string-char-count">{[...inputStr].length} chars · live</span>
       </div>
 
       {selectedAlg === 'anagram' && (
@@ -227,37 +276,62 @@ export const StringsPage: React.FC = () => {
           <span>Second:</span>
           <input
             type="text"
-            value={secondStr}
-            onChange={(e) => setSecondStr(e.target.value)}
-            placeholder="Second string..."
-          />
-        </div>
+          value={secondStr}
+          onChange={(e) => setSecondStr(e.target.value)}
+          placeholder="Second string..."
+          aria-label="Second string input; edits update the visualization immediately"
+        />
+        <span className="string-char-count">{[...secondStr].length} chars</span>
+      </div>
       )}
 
-      <div className="dataset-mode-selector ml-1">
+      <div className="string-quick-controls" role="group" aria-label="Quick character edits">
+        <label>
+          <span>Character</span>
+          <input
+            type="text"
+            value={characterInput}
+            onChange={(event) => setCharacterInput(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && appendCharacter('first')}
+            maxLength={2}
+            placeholder="e.g. x"
+            aria-label="Character to append"
+          />
+        </label>
+        <button type="button" className="bst-btn btn-mode" onClick={() => appendCharacter('first')} disabled={!characterInput}>
+          <Plus size={14} /><span>Append to first</span>
+        </button>
+        <button type="button" className="bst-btn btn-mode" onClick={() => removeLastCharacter('first')} disabled={!inputStr}>
+          <Delete size={14} /><span>Remove last</span>
+        </button>
+        {selectedAlg === 'anagram' && <>
+          <button type="button" className="bst-btn btn-mode" onClick={() => appendCharacter('second')} disabled={!characterInput}>
+            <Plus size={14} /><span>Append to second</span>
+          </button>
+          <button type="button" className="bst-btn btn-mode" onClick={() => removeLastCharacter('second')} disabled={!secondStr}>
+            <Delete size={14} /><span>Remove second last</span>
+          </button>
+        </>}
+      </div>
+
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear Input">
-          <Trash2 size={14} /><span>Empty</span>
+          <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleSample} title="Sample Input">
-          <Layers size={14} /><span>Sample</span>
+          <Layers size={14} className="text-amber-400" /><span>Sample</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random String">
-          <Sparkles size={14} />
+          <Sparkles size={14} className="text-emerald-400" />
           <span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/strings')} />
       <VisualizerHeader
         icon={<Type size={22} />}
         title="String Algorithms Studio"
@@ -291,58 +365,12 @@ export const StringsPage: React.FC = () => {
       />
 
       {/* Category Tabs Bar */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => handleAlgorithmChange(alg.key)}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          <div className="string-input-group">
-            <span>String:</span>
-            <input
-              type="text"
-              value={inputStr}
-              onChange={(e) => setInputStr(e.target.value)}
-              placeholder="Enter string..."
-            />
-          </div>
-
-          {selectedAlg === 'anagram' && (
-            <div className="string-input-group">
-              <span>Second:</span>
-              <input
-                type="text"
-                value={secondStr}
-                onChange={(e) => setSecondStr(e.target.value)}
-                placeholder="Second string..."
-              />
-            </div>
-          )}
-
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleEmpty} title="Clear Input">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleSample} title="Sample Input">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random String">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
       </div>
 
@@ -372,6 +400,7 @@ export const StringsPage: React.FC = () => {
         </div>
 
         {/* Right Column: Quiz Dock & Explanation */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -381,22 +410,27 @@ export const StringsPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="strings" />
+        <ResizablePanelRow
+          storageKey="strings"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="String Algorithm"
+              categoryId="strings"
+              topicId={selectedAlg}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* FullScreen Canvas Modal */}
@@ -405,7 +439,16 @@ export const StringsPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`String Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="String Character Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={

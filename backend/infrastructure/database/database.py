@@ -27,7 +27,7 @@ else:
     # Every request gets a fresh connection — no stale pool issues after cold start.
     # Locally, fall back to a small QueuePool for performance.
     is_ephemeral = any(token in db_url for token in [
-        ".aiven", ".render", ".railway", ".fly", "pythonanywhere",
+        ".aiven", ".render", ".railway", ".fly", "pythonanywhere", "supabase",
     ])
 
     if is_ephemeral:
@@ -35,11 +35,11 @@ else:
     else:
         engine_kwargs.update({
             "poolclass": QueuePool,
-            "pool_size": 3,          # keep small for Aiven free tier (max 5)
-            "max_overflow": 2,       # burst ceiling = 5
+            "pool_size": settings.DB_POOL_SIZE,
+            "max_overflow": settings.DB_MAX_OVERFLOW,
             "pool_pre_ping": True,   # detect stale connections before use
-            "pool_recycle": 300,     # recycle after 5 min (Render spin-down window)
-            "pool_timeout": 10,      # fast fail instead of 30s hang
+            "pool_recycle": settings.DB_POOL_RECYCLE_SECONDS,
+            "pool_timeout": settings.DB_POOL_TIMEOUT_SECONDS,
         })
 
     # Configure SSL for remote cloud databases (Aiven / Render / Supabase)

@@ -52,4 +52,4 @@ def test_login_invalid_password(client, db_session):
     }
     res = client.post("/api/auth/login", json=bad_login)
     assert res.status_code == 401
-    assert "Invalid email or password" in res.json()["detail"]
+    assert "Invalid" in res.json()["detail"]

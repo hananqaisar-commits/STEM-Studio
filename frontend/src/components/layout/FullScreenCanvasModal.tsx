@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Minimize2 } from 'lucide-react';
+import { Info, Minimize2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTutorContext } from '../../contexts/TutorContext';
 import './FullScreenCanvasModal.css';
 
 interface FullScreenCanvasModalProps {
@@ -11,6 +12,8 @@ interface FullScreenCanvasModalProps {
   subtitle?: string;
   toolbarControls?: React.ReactNode;
   playbackControls?: React.ReactNode;
+  /** The normal-state explanation card, reused unchanged in fullscreen. */
+  explanationPanel?: React.ReactNode;
   /** Optional floating controller rendered inside the fullscreen body. */
   floatingControls?: React.ReactNode;
   children: React.ReactNode;
@@ -23,10 +26,13 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   subtitle = 'Interactive DSA Inspector',
   toolbarControls,
   playbackControls,
+  explanationPanel,
   floatingControls,
   children,
 }) => {
   const { actualTheme } = useTheme();
+  const { isTutorOpen } = useTutorContext();
+  const [isExplanationVisible, setIsExplanationVisible] = useState(false);
 
   // Trigger native browser fullscreen
   useEffect(() => {
@@ -55,7 +61,7 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={`fs-modal-overlay theme-${actualTheme} animate-fade-in`}>
+    <div className={`fs-modal-overlay theme-${actualTheme} ${isTutorOpen ? 'tutor-open' : ''} animate-fade-in`}>
       {/* Top Floating Glassmorphic Header Toolbar */}
       <header className="fs-modal-header">
         <div className="fs-header-branding">
@@ -68,6 +74,18 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
           <div className="fs-modal-toolbar">
             {toolbarControls}
           </div>
+        )}
+
+        {explanationPanel && (
+          <button
+            className="fs-icon-btn fs-explanation-toggle"
+            type="button"
+            onClick={() => setIsExplanationVisible((visible) => !visible)}
+            aria-pressed={isExplanationVisible}
+          >
+            <Info size={15} />
+            <span>{isExplanationVisible ? 'Hide Explanation Card' : 'Show Explanation Card'}</span>
+          </button>
         )}
 
         <div className="fs-header-actions">
@@ -83,6 +101,11 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
       <main className="fs-modal-body">
         {floatingControls}
         <div className="fs-workspace-scrollable">
+          {isExplanationVisible && explanationPanel && (
+            <section className="fs-explanation-card" aria-label="Explanation card">
+              {explanationPanel}
+            </section>
+          )}
           {children}
         </div>
       </main>

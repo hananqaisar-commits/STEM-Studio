@@ -2,6 +2,10 @@ import type { AlgorithmExecution } from '../../../engine/types/AlgorithmState';
 import type { RecNode, RecursionStep } from './recursionTypes';
 import { snapshotStep } from './recursionTypes';
 
+/* Divide-and-conquer power: xⁿ = (xⁿ⌿²) × (xⁿ⌿²) (× x when n is odd).
+   Each call spawns exactly two half-sized sub-calls, so the tree is binary
+   and only log₂(n) deep — the visual contrast with the linear chains
+   elsewhere in this category is the whole point. */
 export function runPower(base: number, exp: number): AlgorithmExecution<RecursionStep> {
   const steps: RecursionStep[] = [];
   const nodes: RecNode[] = [];
@@ -22,11 +26,14 @@ export function runPower(base: number, exp: number): AlgorithmExecution<Recursio
       state: 'active',
       returnValue: '?',
     });
-    callStack.push(`pow(${b},${e})`);
+    callStack.push(`pow(${b}, ${e})`);
 
+    const half = Math.floor(e / 2);
     steps.push(snapshotStep(
       nodes, [myIdx], completedIndices(), [],
-      `Calling pow(${b}, ${e})${e === 0 ? ' — base case!' : ''}`,
+      e === 0
+        ? `Calling pow(${b}, 0) — base case!`
+        : `Calling pow(${b}, ${e}): exponent ${e} halves to ${half} — two sub-calls pow(${b}, ${half}).`,
       [...callStack],
       e === 0 ? 2 : 1,
     ));
@@ -45,16 +52,19 @@ export function runPower(base: number, exp: number): AlgorithmExecution<Recursio
       return 1;
     }
 
-    const childResult = simulate(b, e - 1, myIdx);
-    const result = b * childResult;
+    const left = simulate(b, half, myIdx);
+    const right = simulate(b, half, myIdx);
+    const result = e % 2 === 0 ? left * right : b * left * right;
 
     nodes[myIdx].state = 'returning';
     nodes[myIdx].returnValue = String(result);
     steps.push(snapshotStep(
       nodes, [], completedIndices(), [myIdx],
-      `pow(${b}, ${e}) = ${b} × pow(${b}, ${e - 1}) = ${b} × ${childResult} = ${result}.`,
+      e % 2 === 0
+        ? `pow(${b}, ${e}) = pow(${b}, ${half}) × pow(${b}, ${half}) = ${left} × ${right} = ${result}.`
+        : `pow(${b}, ${e}) = ${b} × pow(${b}, ${half}) × pow(${b}, ${half}) = ${b} × ${left} × ${right} = ${result}.`,
       [...callStack],
-      3,
+      e % 2 === 0 ? 4 : 5,
     ));
     callStack.pop();
     nodes[myIdx].state = 'completed';
@@ -67,12 +77,14 @@ export function runPower(base: number, exp: number): AlgorithmExecution<Recursio
     steps,
     title: 'Power',
     category: 'Recursion',
-    timeComplexity: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' },
-    spaceComplexity: 'O(n) — call stack depth = exponent',
+    timeComplexity: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' },
+    spaceComplexity: 'O(log n) — tree depth = log₂(exp)',
     pseudocode: [
       'function pow(base, exp):',
-      '  if exp == 0: return 1         // base case',
-      '  return base * pow(base, exp-1) // recursive case',
+      '  if exp == 0: return 1            // base case',
+      '  spawn two halves: pow(base, exp÷2)',
+      '  if exp even: return half × half',
+      '  else: return base × half × half',
     ],
   };
 }

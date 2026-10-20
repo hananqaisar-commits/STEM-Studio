@@ -2,6 +2,8 @@
 __pycache__/
 *.py[codz]
 *$py.class
+backend/stem_studio.db/
+backend/stem_studio.db
 
 # C extensions
 *.so
@@ -14,7 +16,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
+!src/lib/
 lib64/
 parts/
 sdist/
@@ -25,7 +28,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+.agents/
 # PyInstaller
 #   Usually these files are written by a python script from a template
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -57,6 +60,7 @@ cover/
 
 # Django stuff:
 *.log
+artifacts/loadtest/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -147,8 +151,14 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Local environment files and secrets. Keep safe templates such as
+# .env.example and .env.production.example in version control.
 .env
+.env.*
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
 .envrc
 .venv
 env/
@@ -222,3 +232,25 @@ __marimo__/
 .codex
 .agent
 
+# Local credentials, private keys, and generated secret files
+.secrets/
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.p8
+*.tfstate
+*.tfstate.*
+*.secret
+*.token
+**/credentials.json
+**/credentials.yaml
+**/credentials.yml
+**/service-account*.json
+**/secrets.json
+**/secrets.yaml
+**/secrets.yml
+**/id_rsa
+**/id_ed25519

@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
-  Edit3, Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, Hash
+  Layers, CheckCircle2, ArrowDown, GitCommit, Zap, Network, Sparkles, Trash2, Maximize2, Hash
 } from 'lucide-react';
 import { SortingRenderer } from './SortingRenderer';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
@@ -11,8 +13,9 @@ import { StepControls } from '../../components/controls/StepControls';
 import { SpeedSlider } from '../../components/controls/SpeedSlider';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
-import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
@@ -33,9 +36,16 @@ import { generateCountingSortSteps } from './algorithms/countingSort';
 import { generateRadixSortSteps } from './algorithms/radixSort';
 import { generateBucketSortSteps } from './algorithms/bucketSort';
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 import './Sorting.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
+import { executeCustomCode } from '../../api/customCode';
+import { mapArrayExecutionToSteps, resultsMatch } from '../../engine/customCodeSteps';
+import type { CustomStubLanguage } from '../../data/customCode';
+import { AlgorithmRace } from './AlgorithmRace';
+import { countTraceOperations } from './operationMetrics';
 
 type AlgorithmKey = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap' | 'shell' | 'counting' | 'radix' | 'bucket';
 type ArrayPattern = 'random' | 'reversed' | 'nearlySorted';
@@ -83,6 +93,7 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 }
 
 export const SortingPage: React.FC = () => {
+  const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -97,15 +108,18 @@ export const SortingPage: React.FC = () => {
   const [initialArray, setInitialArray] = useState<number[]>(() => generateArray(12, 'random'));
   const [rawArrayInput, setRawArrayInput] = useState<string>(() => generateArray(12, 'random').join(', '));
 
-  // Debugger & Modal & Predict state
+  // Debugger & Modal state
   const [showCustomEditor, setShowCustomEditor] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
+  const [showAlgorithmRace, setShowAlgorithmRace] = useState(false);
 
   // Custom code execution state
   const [customSteps, setCustomSteps] = useState<import('../../engine/types/Step').ArrayStep[] | null>(null);
+  const [sandboxBusy, setSandboxBusy] = useState(false);
+  const [sandboxMessage, setSandboxMessage] = useState<string | null>(null);
 
   // Generate algorithm steps
   const executionData = useMemo(() => {
@@ -150,6 +164,47 @@ export const SortingPage: React.FC = () => {
     setSpeed,
   } = useStepPlayer({ steps: customSteps ?? executionData.steps });
 
+  // Publish active algorithm context to Octa AI Tutor dynamically
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    const activeSteps = customSteps ?? executionData.steps;
+
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'sorting',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: activeSteps,
+      onSetInput: (newArr: number[]) => {
+        reset();
+        setArraySize(newArr.length);
+        setInitialArray(newArr);
+        setRawArrayInput(newArr.join(', '));
+      },
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [
+    selectedAlg,
+    currentStepIndex,
+    totalSteps,
+    currentStep,
+    customSteps,
+    executionData.steps,
+    setTutorContext,
+    play,
+    pause,
+    stepForward,
+    reset,
+  ]);
+
   // Build quiz checkpoints from the current execution steps
   const quizCheckpoints = useMemo(
     () => buildSortingCheckpoints(customSteps ?? executionData.steps, selectedAlg),
@@ -169,9 +224,16 @@ export const SortingPage: React.FC = () => {
     revisionData: buildRevisionData(selectedAlg),
   });
 
+  const activeTrace = customSteps ?? executionData.steps;
+  const operationCounts = useMemo(
+    () => countTraceOperations(activeTrace, currentStepIndex),
+    [activeTrace, currentStepIndex]
+  );
+
   // Clear custom steps when algorithm or array changes
   useEffect(() => {
     setCustomSteps(null);
+    setSandboxMessage(null);
   }, [selectedAlg, initialArray]);
 
   // Callback: receive steps from custom code execution
@@ -179,6 +241,48 @@ export const SortingPage: React.FC = () => {
     setCustomSteps(steps);
     reset();
   }, [reset]);
+
+  /* ── Custom Code sandbox execution (function-stub model) ─────────────
+     The user fills in the pre-populated signature stub; the backend wraps it
+     in the array_in harness with the current Values array, runs it in
+     Judge0, and returns trace steps + final result for comparison against
+     the reference sorted output. */
+  const handleCustomExecute = useCallback(async (code: string, lang: CustomStubLanguage) => {
+    if (initialArray.length === 0) {
+      setSandboxMessage('Add array values first — the sandbox runs your code against the current Values input.');
+      return;
+    }
+    setSandboxBusy(true);
+    setSandboxMessage(null);
+    try {
+      const response = await executeCustomCode({
+        algorithm_key: `sorting.${selectedAlg}`,
+        language: lang,
+        code,
+        state: { args: { arr: initialArray } },
+      });
+
+      if (response.status === 'ok') {
+        const expected = [...initialArray].sort((a, b) => a - b);
+        const actual = response.result?.result;
+        const correct = Array.isArray(actual) && resultsMatch(expected, actual);
+        setCustomSteps(mapArrayExecutionToSteps(initialArray, response, expected));
+        reset();
+        setSandboxMessage(
+          correct
+            ? `Your pasted ${lang.toUpperCase()} code ran in the sandbox and produced the expected sorted array.`
+            : `Your pasted ${lang.toUpperCase()} code ran in the sandbox, but the output does not match the expected sorted array. Check your logic.`
+        );
+      } else {
+        setSandboxMessage(`${response.status.replace('_', ' ')}: ${response.error ?? 'execution failed'}`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Execution service unavailable.';
+      setSandboxMessage(`Sandbox unavailable: ${message}`);
+    } finally {
+      setSandboxBusy(false);
+    }
+  }, [initialArray, selectedAlg, reset]);
 
 
 
@@ -196,7 +300,6 @@ export const SortingPage: React.FC = () => {
     setArraySize(newArr.length);
     setInitialArray(newArr);
     setRawArrayInput(newArr.join(', '));
-    setShowCustomEditor(false);
   };
 
   /* ── Transfer challenge ("Prove You Understand") ─────────────────
@@ -275,8 +378,53 @@ export const SortingPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {/* Direct Batch Array Input */}
+      <div className="bst-input-group" title="Enter custom comma-separated numbers (e.g. 8, 3, 5, 1, 9, 2)">
+        <span style={{ fontWeight: 600 }}>Array:</span>
+        <input
+          type="text"
+          value={rawArrayInput}
+          onChange={(e) => {
+            setRawArrayInput(e.target.value);
+            const res = parseNumberList(e.target.value);
+            if (res.isValid && res.values.length >= 2) {
+              setInitialArray(res.values);
+              setCustomSteps(null);
+              reset();
+            }
+          }}
+          className="bst-input"
+          placeholder="e.g. 8, 3, 5, 1, 9, 2"
+          style={{ minWidth: '150px' }}
+        />
+      </div>
+
+      <div className="bst-input-group">
+        <span>Pattern:</span>
+        <select
+          value={arrayPattern}
+          onChange={(e) => {
+            const pattern = e.target.value as ArrayPattern;
+            setArrayPattern(pattern);
+            reset();
+            const newArr = generateArray(arraySize, pattern);
+            setInitialArray(newArr);
+            setRawArrayInput(newArr.join(', '));
+          }}
+          className="bst-select font-bold text-xs"
+        >
+          <option value="random">Random Unsorted</option>
+          <option value="reversed">Worst Case (Reversed)</option>
+          <option value="nearlySorted">Best Case (Nearly Sorted)</option>
+        </select>
+      </div>
+
       <div className="bst-input-group">
         <span>Size:</span>
         <input
@@ -288,47 +436,41 @@ export const SortingPage: React.FC = () => {
             const size = parseInt(e.target.value);
             setArraySize(size);
             reset();
-            setInitialArray(generateArray(size, arrayPattern));
+            const newArr = generateArray(size, arrayPattern);
+            setInitialArray(newArr);
+            setRawArrayInput(newArr.join(', '));
           }}
-          className="toolbar-range w-24"
+          className="toolbar-range cursor-pointer accent-amber-400 w-24"
         />
-        <span className="text-xs font-mono font-bold">{arraySize}</span>
+        <span className="text-xs font-mono font-bold text-amber-400">{arraySize}</span>
       </div>
 
-      <div className="dataset-mode-selector ml-1">
+      {/* Dataset Mode Selector */}
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
-          <Trash2 size={14} />
+          <Trash2 size={14} className="text-rose-400" />
           <span>Empty</span>
         </button>
-        <button
-          className="bst-btn btn-mode"
-          onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])}
-          title="Sample Array"
-        >
-          <Layers size={14} />
+        <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
+          <Layers size={14} className="text-amber-400" />
           <span>Sample</span>
         </button>
         <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-          <Sparkles size={14} />
+          <Sparkles size={14} className="text-emerald-400" />
           <span>Random</span>
         </button>
       </div>
-
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   return (
-    <div className="bst-page-container">
+    <div className="bst-page-container sorting-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/sorting')} />
       <VisualizerHeader
         icon={<Layers size={22} />}
         title="Sorting Algorithms Studio"
         subtitle="Interactive Comparison, Partitioning, & In-Place Array Sorting"
+        isCustomCodeRunning={customSteps !== null && customSteps.length > 0}
         items={ALGORITHMS.map((alg) => ({
           id: alg.key,
           name: alg.name,
@@ -361,108 +503,19 @@ export const SortingPage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs Bar Matching BST */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedAlg(alg.key);
-                reset();
-                quizSession.resetSession();
-              }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {/* Direct Batch Array Input */}
-          <div className="bst-input-group" title="Enter custom comma-separated numbers (e.g. 8, 3, 5, 1, 9, 2)">
-            <span style={{ fontWeight: 600 }}>Array:</span>
-            <input
-              type="text"
-              value={rawArrayInput}
-              onChange={(e) => {
-                setRawArrayInput(e.target.value);
-                const res = parseNumberList(e.target.value);
-                if (res.isValid && res.values.length >= 2) {
-                  setInitialArray(res.values);
-                  setCustomSteps(null);
-                  reset();
-                }
-              }}
-              className="bst-input"
-              placeholder="e.g. 8, 3, 5, 1, 9, 2"
-              style={{ minWidth: '150px' }}
-            />
-          </div>
-
-          <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
-            <Edit3 size={14} />
-            <span>Editor</span>
+          {renderToolbarControls()}
+          <button type="button" className="bst-btn btn-mode" onClick={() => setShowAlgorithmRace((visible) => !visible)} aria-expanded={showAlgorithmRace}>
+            {showAlgorithmRace ? 'Close comparison' : 'Compare algorithms'}
           </button>
-
-          <div className="bst-input-group">
-            <span>Pattern:</span>
-            <select
-              value={arrayPattern}
-              onChange={(e) => {
-                const pattern = e.target.value as ArrayPattern;
-                setArrayPattern(pattern);
-                reset();
-                setInitialArray(generateArray(arraySize, pattern));
-              }}
-              className="bst-select font-bold text-xs"
-            >
-              <option value="random">Random Unsorted</option>
-              <option value="reversed">Worst Case (Reversed)</option>
-              <option value="nearlySorted">Best Case (Nearly Sorted)</option>
-            </select>
-          </div>
-
-          <div className="bst-input-group">
-            <span>Size:</span>
-            <input
-              type="range"
-              min={5}
-              max={30}
-              value={arraySize}
-              onChange={(e) => {
-                const size = parseInt(e.target.value);
-                setArraySize(size);
-                reset();
-                setInitialArray(generateArray(size, arrayPattern));
-              }}
-              className="toolbar-range cursor-pointer accent-amber-400 w-24"
-            />
-            <span className="text-xs font-mono font-bold text-amber-400">{arraySize}</span>
-          </div>
-
-          {/* Dataset Mode Selector Matching BST */}
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([])} title="Empty Array">
-              <Trash2 size={14} className="text-rose-400" />
-              <span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={() => handleApplyCustomArray([50, 20, 70, 10, 90, 40])} title="Sample Array">
-              <Layers size={14} className="text-amber-400" />
-              <span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Array">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span>Random</span>
-            </button>
-          </div>
         </div>
       </div>
+
+      {showAlgorithmRace && <AlgorithmRace input={initialArray} onClose={() => setShowAlgorithmRace(false)} />}
 
       {/* Main Learning Workspace */}
       <div className="sorting-workspace scene-workspace">
@@ -470,9 +523,15 @@ export const SortingPage: React.FC = () => {
         <div className="renderer-section">
           <SortingRenderer
             currentStep={currentStep}
+            currentStepIndex={currentStepIndex}
+            totalSteps={totalSteps}
             onElementClick={handleBarElementClick}
             onToggleFullscreen={() => setIsFullScreenOpen(true)}
           />
+          <section className="sorting-operation-counters" aria-label="Operation counters at current step">
+            <div><strong>Live operation counters</strong><span>Trace events through step {currentStepIndex + 1}; these count the visualized operations, not CPU instructions.</span></div>
+            <dl><div><dt>Comparisons</dt><dd>{operationCounts.comparisons}</dd></div><div><dt>Swaps</dt><dd>{operationCounts.swaps}</dd></div><div><dt>Writes</dt><dd>{operationCounts.writes}</dd></div></dl>
+          </section>
 
           <FloatingController
             isPlaying={isPlaying}
@@ -490,6 +549,7 @@ export const SortingPage: React.FC = () => {
         </div>
 
         {/* Right Column: Multi-Language Code Panel & Complexity Analysis */}
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -499,8 +559,10 @@ export const SortingPage: React.FC = () => {
             onProveIt={handleProveIt}
           />
         </div>
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="sorting" />
+        <ResizablePanelRow
+          storageKey="sorting"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Sorting Algorithm"
@@ -509,17 +571,24 @@ export const SortingPage: React.FC = () => {
               callStack={currentStep?.callStack}
               onCustomCodeRun={handleCustomCodeRun}
               currentArray={initialArray}
+              categoryId="sorting"
+              topicId={selectedAlg}
+              onCustomExecute={handleCustomExecute}
+              customBusy={sandboxBusy}
+              customMessage={sandboxMessage}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
-            steps={executionData.steps}
+            steps={customSteps ?? executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
+            isCustomCodeRunning={customSteps !== null && customSteps.length > 0}
           />
-        </div>
+          }
+        />
       </div>
 
       <TheoryPanel categoryId="sorting" activeTopic={selectedAlg} />
@@ -530,7 +599,16 @@ export const SortingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={customSteps ?? executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
@@ -551,18 +629,11 @@ export const SortingPage: React.FC = () => {
       >
         <SortingRenderer
           currentStep={currentStep}
+          currentStepIndex={currentStepIndex}
+          totalSteps={totalSteps}
           onElementClick={handleBarElementClick}
         />
       </FullScreenCanvasModal>
-
-      {/* Custom Values Input Modal */}
-      {showCustomEditor && (
-        <CustomArrayEditor
-          currentArray={initialArray}
-          onApplyCustomArray={handleApplyCustomArray}
-          onClose={() => setShowCustomEditor(false)}
-        />
-      )}
     </div>
   );
 };

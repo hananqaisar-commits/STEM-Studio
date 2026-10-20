@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, func
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -54,6 +54,19 @@ class User(Base):
     module_progress: Mapped[List["ModuleProgress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     streak: Mapped[Optional["UserStreak"]] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
     saved_sessions: Mapped[List["SavedSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    tutor_learning_profile: Mapped[Optional["TutorLearningProfile"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+    support_tickets: Mapped[List["SupportTicket"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    preferences: Mapped[Optional["UserPreference"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+    notification_reads: Mapped[List["AnnouncementRead"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    announcement_recipients: Mapped[List["AnnouncementRecipient"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSession(Base):
@@ -67,6 +80,55 @@ class UserSession(Base):
     revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     user: Mapped["User"] = relationship(back_populates="sessions")
+
+
+class OwnerAccount(Base):
+    """Singleton database anchor for the one server-provisioned owner identity."""
+
+    __tablename__ = "owner_accounts"
+    __table_args__ = (CheckConstraint("owner_slot = 1", name="ck_owner_accounts_singleton_slot"),)
+
+    owner_slot: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), unique=True)
+
+
+class OwnerMFACredential(Base):
+    """Encrypted owner TOTP credential; provisioning is server-side only."""
+
+    __tablename__ = "owner_mfa_credentials"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    encrypted_secret: Mapped[str] = mapped_column(String(512))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_used_counter: Mapped[int] = mapped_column(Integer, default=-1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OwnerSessionGrant(Base):
+    """Marks a database session that completed owner MFA."""
+
+    __tablename__ = "owner_session_grants"
+
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("user_sessions.session_id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    mfa_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AdminAuditEvent(Base):
+    """Administrative audit trail containing no credential or token material."""
+
+    __tablename__ = "admin_audit_events"
+
+    event_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    actor_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"), index=True)
+    target_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"), index=True)
+    action: Mapped[str] = mapped_column(String(80), index=True)
+    outcome: Mapped[str] = mapped_column(String(16), default="success")
+    details_json: Mapped[str] = mapped_column(String(2000), default="{}")
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
 class EmailVerification(Base):
@@ -184,6 +246,24 @@ class SavedSession(Base):
     user: Mapped["User"] = relationship(back_populates="saved_sessions")
 
 
+class TutorLearningProfile(Base):
+    """Small, user-controlled tutor adaptation signals; never stores chat transcripts."""
+
+    __tablename__ = "tutor_learning_profiles"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    response_style: Mapped[str] = mapped_column(String(24), default="balanced")
+    helpful_count: Mapped[int] = mapped_column(Integer, default=0)
+    needs_detail_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="tutor_learning_profile")
+
+
 class Review(Base):
     __tablename__ = "reviews"
 
@@ -195,3 +275,84 @@ class Review(Base):
     approved: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+
+    ticket_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    category: Mapped[str] = mapped_column(String(50))
+    subject: Mapped[str] = mapped_column(String(120))
+    message: Mapped[str] = mapped_column(String(5000))
+    status: Mapped[str] = mapped_column(String(20), default="open", index=True)
+    owner_reply: Mapped[Optional[str]] = mapped_column(String(5000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="support_tickets")
+
+
+class UserPreference(Base):
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    theme: Mapped[Optional[str]] = mapped_column(String(10))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="preferences")
+
+
+class Announcement(Base):
+    """An owner-published in-app message for the active account audience."""
+
+    __tablename__ = "announcements"
+
+    announcement_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(140))
+    message: Mapped[str] = mapped_column(String(3000))
+    kind: Mapped[str] = mapped_column(String(24), default="announcement", index=True)
+    audience_size: Mapped[int] = mapped_column(Integer, default=0)
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True
+    )
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    recipients: Mapped[List["AnnouncementRecipient"]] = relationship(
+        back_populates="announcement", cascade="all, delete-orphan"
+    )
+
+
+class AnnouncementRecipient(Base):
+    """Immutable audience snapshot, one row per account eligible at publish time."""
+
+    __tablename__ = "announcement_recipients"
+
+    announcement_id: Mapped[int] = mapped_column(
+        ForeignKey("announcements.announcement_id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+
+    announcement: Mapped["Announcement"] = relationship(back_populates="recipients")
+    user: Mapped["User"] = relationship(back_populates="announcement_recipients")
+
+
+class AnnouncementRead(Base):
+    """Per-user read receipt; broadcasts themselves are stored only once."""
+
+    __tablename__ = "announcement_reads"
+
+    announcement_id: Mapped[int] = mapped_column(
+        ForeignKey("announcements.announcement_id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="notification_reads")

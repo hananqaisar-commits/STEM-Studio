@@ -108,6 +108,65 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
   }
 
   // 3. Postfix Evaluation Renderer
+  if (category === 'infixToPostfix') {
+    const expression = currentStep.inputString ?? '';
+    const activeIndex = currentStep.currentInputIndex ?? 0;
+    const tokens = expression.match(/[A-Za-z_][A-Za-z_0-9]*|\d+(?:\.\d+)?|[()+\-*/^]/g) ?? [];
+    const operators = currentStep.elements;
+    const output = currentStep.auxElements ?? [];
+
+    return (
+      <div className="problem-container animate-fade-in">
+        <div className="chamber-header">
+          <span className="chamber-title">INFIX → POSTFIX · SHUNTING YARD</span>
+          <span className="chamber-subtitle">Operands go to output; precedence and parentheses decide when operators leave the stack.</span>
+        </div>
+
+        <div className="input-string-ribbon infix-token-ribbon">
+          <span className="ribbon-label">EXPRESSION TOKENS</span>
+          <div className="char-stream">
+            {tokens.map((token, index) => (
+              <span
+                key={`${token}-${index}`}
+                className={`stream-char ${index === activeIndex ? 'char-active' : ''} ${index < activeIndex ? 'char-processed' : ''}`}
+              >
+                {token}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="infix-conversion-workspace">
+          <section className="infix-lane" aria-label="Operator stack">
+            <div className="infix-lane-heading"><span>Operator stack</span><small>TOP</small></div>
+            <div className="infix-lane-content infix-stack-lane" aria-live="polite">
+              {[...operators].reverse().map((element) => (
+                <span key={element.id} className={`infix-token ${element.state === 'error' ? 'infix-token-error' : element.state === 'active' ? 'infix-token-active' : ''}`}>{element.value}</span>
+              ))}
+              {operators.length === 0 && <span className="infix-empty">empty</span>}
+            </div>
+          </section>
+
+          <section className="infix-lane infix-output-lane" aria-label="Postfix output">
+            <div className="infix-lane-heading"><span>Postfix output</span><small>LEFT → RIGHT</small></div>
+            <div className="infix-lane-content" aria-live="polite">
+              {output.map((element) => (
+                <span key={element.id} className={`infix-token ${element.state === 'pushed' ? 'infix-token-active' : ''}`}>{element.value}</span>
+              ))}
+              {output.length === 0 && <span className="infix-empty">waiting for first operand</span>}
+            </div>
+          </section>
+        </div>
+
+        <div className="infix-rule-note">
+          <strong>Precedence guide</strong>
+          <span><code>^</code> highest · <code>* /</code> next · <code>+ −</code> lowest · <code>^</code> is right-associative</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Postfix Evaluation Renderer
   if (category === 'postfixEval') {
     const exprStr = currentStep.inputString ?? '';
     const activeIdx = currentStep.currentInputIndex ?? 0;
@@ -158,7 +217,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
     );
   }
 
-  // 4. Queue via Two Stacks Renderer
+  // 5. Queue via Two Stacks Renderer
   if (category === 'queueViaStacks') {
     const inEls = currentStep.elements;
     const outEls = currentStep.auxElements ?? [];
@@ -711,7 +770,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
 
         <div className="circular-workspace">
           <svg className="ring-svg-canvas" width="400" height="340" viewBox="0 0 400 340">
-            <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="rgba(148, 163, 184, 0.2)" strokeWidth="20" />
+            <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="var(--color-border)" strokeWidth="20" />
             {Array.from({ length: capacity }).map((_, idx) => {
               const angle = (idx * (360 / capacity) - 90) * (Math.PI / 180);
               const x = centerX + radius * Math.cos(angle);
@@ -721,15 +780,15 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
               const elData = elements[idx];
               const hasVal = elData && elData.value !== '-';
 
-              let fillColor = 'rgba(30, 41, 59, 0.9)';
-              let strokeColor = '#475569';
-              if (isFront) strokeColor = '#38bdf8';
-              if (isRear) strokeColor = '#f59e0b';
-              if (hasVal) fillColor = 'rgba(99, 102, 241, 0.25)';
-              if (elData?.state === 'pushed') fillColor = 'rgba(129, 140, 248, 0.45)';
+              let fillColor = 'var(--color-surface-elevated)';
+              let strokeColor = 'var(--color-border-strong)';
+              if (isFront) strokeColor = 'var(--color-primary)';
+              if (isRear) strokeColor = 'var(--color-text-secondary)';
+              if (hasVal) fillColor = 'color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))';
+              if (elData?.state === 'pushed') fillColor = 'color-mix(in srgb, var(--color-primary) 20%, var(--color-surface))';
               if (elData?.state === 'error') {
-                fillColor = 'rgba(244, 63, 94, 0.25)';
-                strokeColor = '#f43f5e';
+                fillColor = 'color-mix(in srgb, var(--error-color) 12%, var(--color-surface))';
+                strokeColor = 'var(--error-color)';
               }
 
               return (
@@ -743,19 +802,19 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
                     strokeWidth={isFront || isRear ? '3' : '2'}
                     className="cq-circle"
                   />
-                  <text x={x} y={y + 36} textAnchor="middle" fill="#94a3b8" fontSize="11" fontWeight="700">
+                  <text x={x} y={y + 36} textAnchor="middle" fill="var(--color-text-muted)" fontSize="11" fontWeight="700">
                     [{idx}]
                   </text>
-                  <text x={x} y={y + 4} textAnchor="middle" fill={hasVal ? '#ffffff' : '#64748b'} fontSize="13" fontWeight="800">
+                  <text x={x} y={y + 4} textAnchor="middle" fill={hasVal ? 'var(--color-text)' : 'var(--color-text-muted)'} fontSize="13" fontWeight="800">
                     {elData ? elData.value : '-'}
                   </text>
                   {isFront && (
-                    <text x={x} y={y - 32} textAnchor="middle" fill="#38bdf8" fontSize="10" fontWeight="900">
+                    <text x={x} y={y - 32} textAnchor="middle" fill="var(--color-primary)" fontSize="10" fontWeight="900">
                       FRONT
                     </text>
                   )}
                   {isRear && (
-                    <text x={x} y={y + (isFront ? -42 : -32)} textAnchor="middle" fill="#f59e0b" fontSize="10" fontWeight="900">
+                    <text x={x} y={y + (isFront ? -42 : -32)} textAnchor="middle" fill="var(--color-text-secondary)" fontSize="10" fontWeight="900">
                       REAR
                     </text>
                   )}
@@ -776,7 +835,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
     const timelineEls = currentStep.auxElements ?? [];
 
     return (
-      <div className="problem-container animate-fade-in">
+      <div className="problem-container first-non-repeating-renderer animate-fade-in">
         <div className="chamber-header">
           <span className="chamber-title">FIRST NON-REPEATING CHARACTER IN A STREAM</span>
           <span className="chamber-subtitle">
@@ -800,7 +859,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
 
         <div className="queue-channel-workspace">
           <div>
-            <span className="column-title text-sky-400 mb-1 block">CANDIDATE QUEUE (HEAD = FIRST NON-REPEATING)</span>
+            <span className="column-title stream-panel-title mb-1 block">CANDIDATE QUEUE (HEAD = FIRST NON-REPEATING)</span>
             <div className="queue-glass-tube">
               {queueEls.length === 0 ? (
                 <div className="queue-empty-notice">
@@ -811,11 +870,9 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
                   {queueEls.map((el) => (
                     <div
                       key={el.id}
-                      className={`queue-3d-block ${
-                        el.state === 'highlight' ? 'border-emerald-400 bg-emerald-500/15' : 'border-sky-500/50'
-                      }`}
+                      className={`queue-3d-block stream-candidate-block ${el.state === 'highlight' ? 'stream-result-current' : ''}`}
                     >
-                      <span className="font-mono font-extrabold text-sm text-sky-100">{el.value}</span>
+                      <span className="stream-visualizer-value">{el.value}</span>
                     </div>
                   ))}
                 </div>
@@ -824,18 +881,16 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
           </div>
 
           <div>
-            <span className="column-title text-cyan-400 mb-1 block">FIRST NON-REPEATING TIMELINE</span>
+            <span className="column-title stream-panel-title mb-1 block">FIRST NON-REPEATING TIMELINE</span>
             <div className="queue-glass-tube">
               <div className="queue-elements-wrapper">
                 {timelineEls.map((el) => (
                   <div
                     key={el.id}
-                    className={`queue-3d-block ${
-                      el.state === 'sorted' ? 'border-cyan-400 bg-cyan-500/15' : 'border-cyan-500/40'
-                    }`}
+                    className={`queue-3d-block stream-timeline-block ${el.state === 'sorted' ? 'stream-result-current' : ''}`}
                   >
                     <span
-                      className={`font-mono font-extrabold text-sm ${el.value === '-' ? 'text-slate-500' : 'text-cyan-100'}`}
+                      className={`stream-visualizer-value ${el.value === '-' ? 'stream-no-candidate' : ''}`}
                     >
                       {el.value}
                     </span>
@@ -861,7 +916,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
     const avgEls = currentStep.auxElements ?? [];
 
     return (
-      <div className="problem-container animate-fade-in">
+      <div className="problem-container moving-average-renderer animate-fade-in">
         <div className="chamber-header">
           <span className="chamber-title">MOVING AVERAGE FROM DATA STREAM (SLIDING WINDOW)</span>
           <span className="chamber-subtitle">Sum += new · Sum −= evicted · Average = sum / window size</span>
@@ -885,7 +940,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
 
         <div className="queue-channel-workspace">
           <div>
-            <span className="column-title text-sky-400 mb-1 block">CURRENT WINDOW QUEUE</span>
+            <span className="column-title moving-average-panel-title mb-1 block">CURRENT WINDOW QUEUE</span>
             <div className="queue-glass-tube">
               {windowEls.length === 0 ? (
                 <div className="queue-empty-notice">
@@ -896,11 +951,9 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
                   {windowEls.map((el) => (
                     <div
                       key={el.id}
-                      className={`queue-3d-block ${
-                        el.state === 'pushed' ? 'border-sky-400 bg-sky-500/15' : 'border-sky-500/50'
-                      }`}
+                      className={`queue-3d-block moving-average-window-block ${el.state === 'pushed' ? 'moving-average-current' : ''}`}
                     >
-                      <span className="font-mono font-extrabold text-sm text-sky-100">{el.value}</span>
+                      <span className="moving-average-value">{el.value}</span>
                     </div>
                   ))}
                 </div>
@@ -909,17 +962,15 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
           </div>
 
           <div>
-            <span className="column-title text-emerald-400 mb-1 block">EMITTED AVERAGES</span>
+            <span className="column-title moving-average-panel-title mb-1 block">EMITTED AVERAGES</span>
             <div className="queue-glass-tube">
               <div className="queue-elements-wrapper">
                 {avgEls.map((el) => (
                   <div
                     key={el.id}
-                    className={`queue-3d-block ${
-                      el.state === 'sorted' ? 'border-emerald-400 bg-emerald-500/15' : 'border-emerald-500/40'
-                    }`}
+                    className={`queue-3d-block moving-average-output-block ${el.state === 'sorted' ? 'moving-average-current' : ''}`}
                   >
-                    <span className="font-mono font-extrabold text-sm text-emerald-100">{el.auxValue}</span>
+                    <span className="moving-average-value">{el.auxValue}</span>
                   </div>
                 ))}
               </div>
@@ -1098,7 +1149,7 @@ export const ProblemRenderer: React.FC<ProblemRendererProps> = ({ category, curr
             {senate.split('').map((char, idx) => (
               <span
                 key={idx}
-                className={`stream-char ${char === 'R' ? 'text-emerald-300' : 'text-rose-300'}`}
+                className={`stream-char ${char === 'R' ? 'senate-r' : 'senate-d'}`}
               >
                 {char}
               </span>

@@ -4,6 +4,8 @@ export type GraphCategory =
   | 'dijkstra'
   | 'prim'
   | 'kruskal'
+  | 'bellmanFord'
+  | 'aStar'
   | 'topoSort';
 
 export interface GraphNode {
@@ -41,6 +43,20 @@ export interface GraphStep {
   queueOrStack: string[];
   distances?: Record<string, number>;
   mstWeight?: number;
+  // Kruskal extras
+  sortedEdges?: { edgeId: string; from: string; to: string; weight: number; state: 'pending' | 'current' | 'accepted' | 'rejected' }[];
+  dsuComponents?: string[][];
+  // Bellman-Ford extras
+  passNumber?: number;
+  relaxation?: { edgeId: string; success: boolean; oldDist: number; newDist: number };
+  hasNegativeCycle?: boolean;
+  // A* extras
+  gScore?: Record<string, number>;
+  hScore?: Record<string, number>;
+  fScore?: Record<string, number>;
+  openSet?: string[];
+  closedSet?: string[];
+  path?: string[];
   phase: string;
   explanation: string;
   codeLine: number;
@@ -702,6 +718,648 @@ export function generateTopoSortSteps(
     phase: 'Topological Sort Complete',
     explanation: `Valid topological sort order: [ ${topoOrder.join(' -> ')} ]. Time Complexity: O(V + E).`,
     codeLine: 8,
+  });
+
+  return steps;
+}
+
+// ─── 6. KRUSKAL'S MINIMUM SPANNING TREE ──────────────────────────────────────
+
+class DSU {
+  parent: Map<string, string>;
+  rank: Map<string, number>;
+  constructor(ids: string[]) {
+    this.parent = new Map(ids.map((id) => [id, id]));
+    this.rank = new Map(ids.map((id) => [id, 0]));
+  }
+  find(x: string): string {
+    if (this.parent.get(x) !== x) {
+      this.parent.set(x, this.find(this.parent.get(x)!));
+    }
+    return this.parent.get(x)!;
+  }
+  union(x: string, y: string): boolean {
+    const rx = this.find(x);
+    const ry = this.find(y);
+    if (rx === ry) return false;
+    if ((this.rank.get(rx) ?? 0) < (this.rank.get(ry) ?? 0)) {
+      this.parent.set(rx, ry);
+    } else if ((this.rank.get(rx) ?? 0) > (this.rank.get(ry) ?? 0)) {
+      this.parent.set(ry, rx);
+    } else {
+      this.parent.set(ry, rx);
+      this.rank.set(rx, (this.rank.get(rx) ?? 0) + 1);
+    }
+    return true;
+  }
+  getComponents(ids: string[]): string[][] {
+    const groups = new Map<string, string[]>();
+    for (const id of ids) {
+      const root = this.find(id);
+      if (!groups.has(root)) groups.set(root, []);
+      groups.get(root)!.push(id);
+    }
+    return Array.from(groups.values());
+  }
+}
+
+export function generateKruskalSteps(
+  initNodes: GraphNode[],
+  initEdges: GraphEdge[]
+): GraphStep[] {
+  const steps: GraphStep[] = [];
+  const { nodes, edges } = cloneGraph(initNodes, initEdges);
+  const nodeIds = nodes.map((n) => n.id);
+  const dsu = new DSU(nodeIds);
+
+  // Sort edges by weight
+  const weightedEdges = edges
+    .filter((e) => e.weight !== undefined)
+    .sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+
+  const sortedPanel: { edgeId: string; from: string; to: string; weight: number; state: 'pending' | 'current' | 'accepted' | 'rejected' }[] = weightedEdges.map((e) => ({
+    edgeId: e.id,
+    from: e.from,
+    to: e.to,
+    weight: e.weight ?? 0,
+    state: 'pending',
+  }));
+
+  const mstEdges: string[] = [];
+  let mstWeight = 0;
+
+  steps.push({
+    nodes: cloneGraph(nodes, edges).nodes,
+    edges: cloneGraph(nodes, edges).edges,
+    currentNodeId: null,
+    currentEdgeId: null,
+    visitedNodeIds: [],
+    queueOrStack: [],
+    sortedEdges: sortedPanel.map((s) => ({ ...s })),
+    dsuComponents: dsu.getComponents(nodeIds),
+    phase: 'Sort Edges',
+    explanation: `Kruskal's: Sort all ${weightedEdges.length} edges by weight. Process smallest first to greedily build a Minimum Spanning Tree without creating cycles.`,
+    codeLine: 1,
+    isQuizPoint: true,
+    quizData: {
+      prompt: 'What data structure does Kruskal\'s algorithm use to detect cycles?',
+      options: ['Disjoint Set Union (DSU)', 'Min-Heap', 'Adjacency Matrix', 'DFS Stack'],
+      correctIndex: 0,
+      explanation: 'Kruskal\'s uses a Disjoint Set Union (DSU) to efficiently check whether two vertices belong to the same component, which would indicate a cycle.',
+    },
+  });
+
+  for (let i = 0; i < weightedEdges.length; i++) {
+    const edge = weightedEdges[i];
+    const currentEdge = edges.find((e) => e.id === edge.id)!;
+    currentEdge.state = 'traversing';
+    sortedPanel[i].state = 'current';
+
+    const fromRoot = dsu.find(edge.from);
+    const toRoot = dsu.find(edge.to);
+    const wouldCycle = fromRoot === toRoot;
+
+    steps.push({
+      nodes: cloneGraph(nodes, edges).nodes,
+      edges: cloneGraph(nodes, edges).edges,
+      currentNodeId: null,
+      currentEdgeId: edge.id,
+      visitedNodeIds: mstEdges,
+      queueOrStack: [],
+      sortedEdges: sortedPanel.map((s) => ({ ...s })),
+      dsuComponents: dsu.getComponents(nodeIds),
+      mstWeight,
+      phase: `Evaluate Edge ${edge.from}-${edge.to} (w=${edge.weight})`,
+      explanation: `Evaluating edge ${edge.from}–${edge.to} (weight ${edge.weight}). Component(${edge.from})=${dsu.find(edge.from)}, Component(${edge.to})=${dsu.find(edge.to)}. ${wouldCycle ? 'SAME component — this edge would create a CYCLE.' : 'DIFFERENT components — safe to add.'}`,
+      codeLine: 3,
+      isQuizPoint: i === 0,
+      quizData: i === 0 ? {
+        prompt: 'Kruskal\'s processes edges in which order?',
+        options: ['Ascending weight order', 'Descending weight order', 'Alphabetical order', 'Random order'],
+        correctIndex: 0,
+        explanation: 'Kruskal\'s algorithm processes edges in ascending order of weight, greedily choosing the cheapest edge that doesn\'t create a cycle.',
+      } : undefined,
+    });
+
+    if (wouldCycle) {
+      currentEdge.state = 'backtrack';
+      sortedPanel[i].state = 'rejected';
+      steps.push({
+        nodes: cloneGraph(nodes, edges).nodes,
+        edges: cloneGraph(nodes, edges).edges,
+        currentNodeId: null,
+        currentEdgeId: edge.id,
+        visitedNodeIds: mstEdges,
+        queueOrStack: [],
+        sortedEdges: sortedPanel.map((s) => ({ ...s })),
+        dsuComponents: dsu.getComponents(nodeIds),
+        mstWeight,
+        phase: `REJECTED: ${edge.from}-${edge.to}`,
+        explanation: `REJECTED edge ${edge.from}–${edge.to}: Both vertices are already in the same component (root=${fromRoot}). Adding this edge would form a CYCLE.`,
+        codeLine: 5,
+        isQuizPoint: true,
+        quizData: {
+          prompt: `Edge ${edge.from}–${edge.to} was rejected. Why?`,
+          options: [
+            'Both vertices are in the same component — adding it creates a cycle',
+            'Its weight is too large',
+            'The MST already has enough edges',
+            'The vertex was already visited',
+          ],
+          correctIndex: 0,
+          explanation: `Kruskal's uses DSU to detect cycles. Since ${edge.from} and ${edge.to} share the same component root, connecting them creates a cycle.`,
+        },
+      });
+    } else {
+      dsu.union(edge.from, edge.to);
+      currentEdge.state = 'mst';
+      sortedPanel[i].state = 'accepted';
+      mstEdges.push(edge.id);
+      mstWeight += edge.weight ?? 0;
+      // Mark both endpoint nodes as MST
+      [edge.from, edge.to].forEach((id) => {
+        const n = nodes.find((n) => n.id === id);
+        if (n) n.state = 'mst';
+      });
+      steps.push({
+        nodes: cloneGraph(nodes, edges).nodes,
+        edges: cloneGraph(nodes, edges).edges,
+        currentNodeId: null,
+        currentEdgeId: edge.id,
+        visitedNodeIds: mstEdges,
+        queueOrStack: [],
+        sortedEdges: sortedPanel.map((s) => ({ ...s })),
+        dsuComponents: dsu.getComponents(nodeIds),
+        mstWeight,
+        phase: `ACCEPTED: ${edge.from}-${edge.to}`,
+        explanation: `ACCEPTED edge ${edge.from}–${edge.to} (weight ${edge.weight}). Merged components. MST total weight so far: ${mstWeight}.`,
+        codeLine: 7,
+      });
+    }
+
+    if (mstEdges.length === nodeIds.length - 1) break;
+  }
+
+  steps.push({
+    nodes: cloneGraph(nodes, edges).nodes,
+    edges: cloneGraph(nodes, edges).edges,
+    currentNodeId: null,
+    currentEdgeId: null,
+    visitedNodeIds: mstEdges,
+    queueOrStack: [],
+    sortedEdges: sortedPanel.map((s) => ({ ...s })),
+    dsuComponents: dsu.getComponents(nodeIds),
+    mstWeight,
+    phase: "Kruskal's MST Complete",
+    explanation: `Minimum Spanning Tree complete! Total weight = ${mstWeight} using ${mstEdges.length} edges. This is the minimum cost to connect all vertices.`,
+    codeLine: 9,
+  });
+
+  return steps;
+}
+
+// ─── 7. BELLMAN-FORD SHORTEST PATH ───────────────────────────────────────────
+
+export function generateBellmanFordSteps(
+  initNodes: GraphNode[],
+  initEdges: GraphEdge[],
+  sourceId = 'A'
+): GraphStep[] {
+  const steps: GraphStep[] = [];
+  const { nodes, edges } = cloneGraph(initNodes, initEdges);
+  const V = nodes.length;
+
+  const dist: Record<string, number> = {};
+  nodes.forEach((n) => (dist[n.id] = n.id === sourceId ? 0 : Infinity));
+
+  // Apply distances to nodes
+  const applyDist = () => {
+    nodes.forEach((n) => { n.distance = dist[n.id] === Infinity ? undefined : dist[n.id]; });
+    const srcNode = nodes.find((n) => n.id === sourceId);
+    if (srcNode) srcNode.state = 'shortest';
+  };
+
+  applyDist();
+
+  steps.push({
+    nodes: cloneGraph(nodes, edges).nodes,
+    edges: cloneGraph(nodes, edges).edges,
+    currentNodeId: null,
+    currentEdgeId: null,
+    visitedNodeIds: [sourceId],
+    queueOrStack: [],
+    distances: { ...dist },
+    passNumber: 0,
+    phase: 'Initialize',
+    explanation: `Bellman-Ford: Initialize distances. Source ${sourceId} = 0, all others = ∞. Will run ${V - 1} relaxation passes over all edges.`,
+    codeLine: 1,
+    isQuizPoint: true,
+    quizData: {
+      prompt: 'How many relaxation passes does Bellman-Ford perform?',
+      options: [`V - 1 = ${V - 1} passes`, `V = ${V} passes`, `E passes`, `log V passes`],
+      correctIndex: 0,
+      explanation: `Bellman-Ford runs exactly V-1 passes. A shortest path can have at most V-1 edges, so V-1 rounds of relaxation is sufficient.`,
+    },
+  });
+
+  let updated = true;
+  for (let pass = 1; pass <= V - 1 && updated; pass++) {
+    updated = false;
+
+    steps.push({
+      nodes: cloneGraph(nodes, edges).nodes,
+      edges: cloneGraph(nodes, edges).edges,
+      currentNodeId: null,
+      currentEdgeId: null,
+      visitedNodeIds: [],
+      queueOrStack: [],
+      distances: { ...dist },
+      passNumber: pass,
+      phase: `Pass ${pass} / ${V - 1}`,
+      explanation: `Starting Pass ${pass} of ${V - 1}. Attempt to relax every edge.`,
+      codeLine: 3,
+    });
+
+    for (const edge of edges) {
+      const u = edge.from;
+      const v = edge.to;
+      const w = edge.weight ?? 0;
+      if (dist[u] === Infinity) continue;
+
+      const newDist = dist[u] + w;
+      const oldDist = dist[v];
+      const success = newDist < oldDist;
+
+      // Mark edge as traversing
+      edges.forEach((e) => { e.state = 'default'; });
+      const currentEdge = edges.find((e) => e.id === edge.id);
+      if (currentEdge) currentEdge.state = 'traversing';
+
+      nodes.forEach((n) => {
+        if (n.id === u) n.state = 'current';
+        else if (n.id === v) n.state = 'queued';
+        else n.state = 'default';
+      });
+
+      steps.push({
+        nodes: cloneGraph(nodes, edges).nodes,
+        edges: cloneGraph(nodes, edges).edges,
+        currentNodeId: u,
+        currentEdgeId: edge.id,
+        visitedNodeIds: [],
+        queueOrStack: [],
+        distances: { ...dist },
+        passNumber: pass,
+        relaxation: { edgeId: edge.id, success, oldDist, newDist },
+        phase: `Relax ${u}→${v}`,
+        explanation: success
+          ? `Relax ${u}→${v}: dist[${u}](${dist[u]}) + w(${w}) = ${newDist} < dist[${v}](${oldDist === Infinity ? '∞' : oldDist}). UPDATED! dist[${v}] = ${newDist}.`
+          : `Relax ${u}→${v}: dist[${u}](${dist[u] === Infinity ? '∞' : dist[u]}) + w(${w}) = ${newDist === Infinity ? '∞' : newDist} ≥ dist[${v}](${oldDist === Infinity ? '∞' : oldDist}). No improvement.`,
+        codeLine: 5,
+      });
+
+      if (success) {
+        updated = true;
+        dist[v] = newDist;
+        applyDist();
+        const updEdge = edges.find((e) => e.id === edge.id);
+        if (updEdge) updEdge.state = 'relaxed';
+        const vNode = nodes.find((n) => n.id === v);
+        if (vNode) { vNode.state = 'shortest'; vNode.distance = newDist; }
+
+        steps.push({
+          nodes: cloneGraph(nodes, edges).nodes,
+          edges: cloneGraph(nodes, edges).edges,
+          currentNodeId: v,
+          currentEdgeId: edge.id,
+          visitedNodeIds: [],
+          queueOrStack: [],
+          distances: { ...dist },
+          passNumber: pass,
+          relaxation: { edgeId: edge.id, success: true, oldDist, newDist },
+          phase: `Updated dist[${v}]`,
+          explanation: `dist[${v}] updated to ${newDist}. Path: ${sourceId} → ... → ${u} → ${v}.`,
+          codeLine: 6,
+        });
+      }
+    }
+  }
+
+  // ── Negative cycle detection pass ─────────────────────────────────────
+  let hasNegativeCycle = false;
+  for (const edge of edges) {
+    const u = edge.from;
+    const v = edge.to;
+    const w = edge.weight ?? 0;
+    if (dist[u] !== Infinity && dist[u] + w < dist[v]) {
+      hasNegativeCycle = true;
+      edges.find((e) => e.id === edge.id && (e.state = 'backtrack'));
+    }
+  }
+
+  edges.forEach((e) => { if (e.state !== 'backtrack' && e.state !== 'relaxed') e.state = 'default'; });
+
+  steps.push({
+    nodes: cloneGraph(nodes, edges).nodes,
+    edges: cloneGraph(nodes, edges).edges,
+    currentNodeId: null,
+    currentEdgeId: null,
+    visitedNodeIds: Object.entries(dist).filter(([, d]) => d !== Infinity).map(([id]) => id),
+    queueOrStack: [],
+    distances: { ...dist },
+    hasNegativeCycle,
+    phase: hasNegativeCycle ? 'Negative Cycle Detected!' : 'Bellman-Ford Complete',
+    explanation: hasNegativeCycle
+      ? 'NEGATIVE CYCLE DETECTED! After V-1 passes, further relaxation is still possible — this means there is a negative weight cycle reachable from the source. Shortest paths are undefined.'
+      : `Bellman-Ford complete. Shortest distances from ${sourceId}: ${Object.entries(dist).map(([k, v]) => `${k}=${v === Infinity ? '∞' : v}`).join(', ')}.`,
+    codeLine: 9,
+    isQuizPoint: true,
+    quizData: {
+      prompt: 'What indicates a negative cycle in Bellman-Ford?',
+      options: [
+        'A further improvement is possible after V-1 passes',
+        'The algorithm takes more than O(VE) time',
+        'Two nodes have the same distance',
+        'An edge weight is negative',
+      ],
+      correctIndex: 0,
+      explanation: 'If any edge can still be relaxed after V-1 passes, it means there is a reachable negative weight cycle, causing shortest distances to be undefined.',
+    },
+  });
+
+  return steps;
+}
+
+// ─── 8. A* PATHFINDING ──────────────────────────────────────────────────────
+
+export interface AStarCell {
+  id: string;
+  row: number;
+  col: number;
+  type: 'empty' | 'wall' | 'start' | 'goal';
+  state: 'unvisited' | 'open' | 'closed' | 'path' | 'current';
+  g?: number;
+  h?: number;
+  f?: number;
+  parent?: string;
+}
+
+export interface AStarStep {
+  grid: AStarCell[][];
+  openSet: string[];
+  closedSet: string[];
+  currentCell: string | null;
+  path: string[];
+  phase: string;
+  explanation: string;
+  codeLine: number;
+  found: boolean;
+  unreachable: boolean;
+}
+
+const DEFAULT_GRID_ROWS = 8;
+const DEFAULT_GRID_COLS = 12;
+
+export function getDefaultAStarGrid(): AStarCell[][] {
+  const walls = new Set([
+    '1_3','2_3','3_3','4_3','5_3', // vertical wall
+    '3_5','3_6','3_7','3_8',        // horizontal wall
+    '1_9','2_9','4_9','5_9','6_9',  // right barrier
+  ]);
+  const grid: AStarCell[][] = [];
+  for (let r = 0; r < DEFAULT_GRID_ROWS; r++) {
+    const row: AStarCell[] = [];
+    for (let c = 0; c < DEFAULT_GRID_COLS; c++) {
+      const id = `${r}_${c}`;
+      const isWall = walls.has(id);
+      const isStart = r === 3 && c === 1;
+      const isGoal = r === 3 && c === 11;
+      row.push({
+        id,
+        row: r,
+        col: c,
+        type: isStart ? 'start' : isGoal ? 'goal' : isWall ? 'wall' : 'empty',
+        state: 'unvisited',
+      });
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+function heuristic(r1: number, c1: number, r2: number, c2: number): number {
+  return Math.abs(r1 - r2) + Math.abs(c1 - c2); // Manhattan distance
+}
+
+function cloneGrid(grid: AStarCell[][]): AStarCell[][] {
+  return grid.map((row) => row.map((cell) => ({ ...cell })));
+}
+
+export function generateAStarSteps(initialGrid: AStarCell[][]): AStarStep[] {
+  const steps: AStarStep[] = [];
+
+  let grid = cloneGrid(initialGrid);
+
+  // Find start and goal
+  let startId = '';
+  let goalId = '';
+  let startR = 0, startC = 0, goalR = 0, goalC = 0;
+  for (const row of grid) {
+    for (const cell of row) {
+      if (cell.type === 'start') { startId = cell.id; startR = cell.row; startC = cell.col; }
+      if (cell.type === 'goal')  { goalId = cell.id;  goalR = cell.row;  goalC = cell.col; }
+    }
+  }
+
+  const g: Record<string, number> = {};
+  const h: Record<string, number> = {};
+  const f: Record<string, number> = {};
+  const parent: Record<string, string | null> = {};
+
+  const getCell = (id: string): AStarCell | undefined => {
+    const [r, c] = id.split('_').map(Number);
+    return grid[r]?.[c];
+  };
+
+  // Initialize start
+  g[startId] = 0;
+  h[startId] = heuristic(startR, startC, goalR, goalC);
+  f[startId] = h[startId];
+  parent[startId] = null;
+
+  const openSet = new Set<string>([startId]);
+  const closedSet = new Set<string>();
+
+  const updateGridState = () => {
+    grid = cloneGrid(initialGrid);
+    for (const row of grid) {
+      for (const cell of row) {
+        if (openSet.has(cell.id)) {
+          cell.state = 'open';
+          cell.g = g[cell.id];
+          cell.h = h[cell.id];
+          cell.f = f[cell.id];
+        } else if (closedSet.has(cell.id)) {
+          cell.state = 'closed';
+          cell.g = g[cell.id];
+          cell.h = h[cell.id];
+          cell.f = f[cell.id];
+        }
+      }
+    }
+  };
+
+  steps.push({
+    grid: cloneGrid(grid),
+    openSet: [startId],
+    closedSet: [],
+    currentCell: null,
+    path: [],
+    phase: 'Initialize A*',
+    explanation: `A* Search: Initialize. Start=${startId} (g=0, h=${h[startId]}, f=${f[startId]}). Heuristic: Manhattan distance. Open set contains only the start node.`,
+    codeLine: 1,
+    found: false,
+    unreachable: false,
+  });
+
+  while (openSet.size > 0) {
+    // Pick cell with lowest f score
+    let currentId = '';
+    let lowestF = Infinity;
+    for (const id of openSet) {
+      if ((f[id] ?? Infinity) < lowestF) {
+        lowestF = f[id]!;
+        currentId = id;
+      }
+    }
+
+    const current = getCell(currentId);
+    if (!current) break;
+
+    // Mark current in grid
+    updateGridState();
+    grid[current.row][current.col].state = 'current';
+    grid[current.row][current.col].g = g[currentId];
+    grid[current.row][current.col].h = h[currentId];
+    grid[current.row][current.col].f = f[currentId];
+
+    steps.push({
+      grid: cloneGrid(grid),
+      openSet: Array.from(openSet),
+      closedSet: Array.from(closedSet),
+      currentCell: currentId,
+      path: [],
+      phase: `Expand ${currentId}`,
+      explanation: `Expanding cell ${currentId} (g=${g[currentId]}, h=${h[currentId]}, f=${f[currentId]}) — lowest f in open set. Move to closed set.`,
+      codeLine: 5,
+      found: false,
+      unreachable: false,
+    });
+
+    if (currentId === goalId) {
+      // Reconstruct path
+      const path: string[] = [];
+      let cur: string | null = goalId;
+      while (cur) { path.unshift(cur); cur = parent[cur] ?? null; }
+
+      updateGridState();
+      for (const id of path) {
+        const [r, c] = id.split('_').map(Number);
+        if (grid[r]?.[c]) grid[r][c].state = 'path';
+      }
+
+      steps.push({
+        grid: cloneGrid(grid),
+        openSet: Array.from(openSet),
+        closedSet: Array.from(closedSet),
+        currentCell: goalId,
+        path,
+        phase: 'Goal Reached!',
+        explanation: `GOAL REACHED! Optimal path found: ${path.join(' → ')}. Total cost g=${g[goalId]}. A* guarantees this is the shortest path when the heuristic is admissible.`,
+        codeLine: 8,
+        found: true,
+        unreachable: false,
+      });
+      return steps;
+    }
+
+    openSet.delete(currentId);
+    closedSet.add(currentId);
+
+    // Explore neighbors (4-directional)
+    const [cr, cc] = currentId.split('_').map(Number);
+    const neighbors: [number, number][] = [[cr - 1, cc], [cr + 1, cc], [cr, cc - 1], [cr, cc + 1]];
+
+    for (const [nr, nc] of neighbors) {
+      if (nr < 0 || nr >= DEFAULT_GRID_ROWS || nc < 0 || nc >= DEFAULT_GRID_COLS) continue;
+      const neighbor = grid[nr]?.[nc];
+      if (!neighbor || neighbor.type === 'wall') continue;
+      const nId = neighbor.id;
+      if (closedSet.has(nId)) continue;
+
+      const tentativeG = (g[currentId] ?? Infinity) + 1;
+      const hVal = heuristic(nr, nc, goalR, goalC);
+      const fVal = tentativeG + hVal;
+
+      if (!openSet.has(nId)) {
+        g[nId] = tentativeG;
+        h[nId] = hVal;
+        f[nId] = fVal;
+        parent[nId] = currentId;
+        openSet.add(nId);
+
+        updateGridState();
+        grid[nr][nc].state = 'open';
+        grid[nr][nc].g = tentativeG;
+        grid[nr][nc].h = hVal;
+        grid[nr][nc].f = fVal;
+
+        steps.push({
+          grid: cloneGrid(grid),
+          openSet: Array.from(openSet),
+          closedSet: Array.from(closedSet),
+          currentCell: currentId,
+          path: [],
+          phase: `Add neighbor ${nId} to open set`,
+          explanation: `Adding neighbor ${nId} to open set. g=${tentativeG} (cost from start), h=${hVal} (Manhattan to goal), f=${fVal}. Parent = ${currentId}.`,
+          codeLine: 11,
+          found: false,
+          unreachable: false,
+        });
+      } else if (tentativeG < (g[nId] ?? Infinity)) {
+        const oldG = g[nId];
+        g[nId] = tentativeG;
+        f[nId] = fVal;
+        parent[nId] = currentId;
+        steps.push({
+          grid: cloneGrid(grid),
+          openSet: Array.from(openSet),
+          closedSet: Array.from(closedSet),
+          currentCell: currentId,
+          path: [],
+          phase: `Update ${nId} — better path found`,
+          explanation: `Better path to ${nId} found via ${currentId}! Old g=${oldG} → New g=${tentativeG}. f updated to ${fVal}.`,
+          codeLine: 13,
+          found: false,
+          unreachable: false,
+        });
+      }
+    }
+  }
+
+  // Open set exhausted — goal unreachable
+  updateGridState();
+  steps.push({
+    grid: cloneGrid(grid),
+    openSet: [],
+    closedSet: Array.from(closedSet),
+    currentCell: null,
+    path: [],
+    phase: 'Goal Unreachable',
+    explanation: 'A* exhausted all reachable cells. The goal is completely surrounded by walls or disconnected from the start. No path exists.',
+    codeLine: 15,
+    found: false,
+    unreachable: true,
   });
 
   return steps;

@@ -1,22 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { SEOHead } from '../../components/common/SEOHead';
+import { getSEOForRoute } from '../../data/seoMetadata';
 import {
-  Edit3, Maximize2, Sparkles, Trash2, Layers,
-  Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins,
+  Maximize2, Sparkles, Trash2, Layers,
+  Hash, Target, Grid3X3, Type, ArrowRight, BarChart3, Route, Coins, Gauge, SkipBack, SkipForward,
 } from 'lucide-react';
 import { DPRenderer } from './DPRenderer';
-import { CustomArrayEditor } from '../../components/debugger/CustomArrayEditor';
 import { FullScreenCanvasModal } from '../../components/layout/FullScreenCanvasModal';
 import { FloatingController } from '../../components/controls/FloatingController';
 import { usePlaybackShortcuts } from '../../hooks/usePlaybackShortcuts';
 import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
+import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
+import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
+import { parseNumberList } from '../../utils/batchInputParser';
 import { buildDPCheckpoints, buildRevisionData } from './quizAdapter';
 import type { QuizCadence } from '../../engine/types/Quiz';
 
@@ -34,6 +38,49 @@ import './DP.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 
 type DPAlgorithmKey = 'fibonacciDP' | 'coinChange' | 'houseRobber' | 'knapsack01' | 'lcs' | 'lis' | 'editDistance' | 'uniquePaths';
+
+const DP_GUIDES: Record<DPAlgorithmKey, { state: string; recurrence: string; baseCase: string }> = {
+  fibonacciDP: {
+    state: 'dp[i] stores the i-th Fibonacci number.',
+    recurrence: 'dp[i] = dp[i − 1] + dp[i − 2]',
+    baseCase: 'dp[0] = 0, dp[1] = 1',
+  },
+  coinChange: {
+    state: 'dp[x] stores the fewest coins needed to make amount x.',
+    recurrence: 'dp[x] = min(dp[x − coin] + 1)',
+    baseCase: 'dp[0] = 0; other amounts start unreachable.',
+  },
+  houseRobber: {
+    state: 'dp[i] is the most money we can take from houses 0…i.',
+    recurrence: 'dp[i] = max(dp[i − 1], dp[i − 2] + houses[i])',
+    baseCase: 'dp[0] = houses[0]; dp[1] = max(houses[0], houses[1])',
+  },
+  knapsack01: {
+    state: 'dp[i][w] is the best value using the first i items with capacity w.',
+    recurrence: 'max(skip item, value[i] + dp[i − 1][w − weight[i]])',
+    baseCase: 'With 0 items or 0 capacity, the best value is 0.',
+  },
+  lcs: {
+    state: 'dp[i][j] is the LCS length for the first i and j characters.',
+    recurrence: 'match: 1 + diagonal · else: max(top, left)',
+    baseCase: 'An empty string has an LCS of length 0.',
+  },
+  lis: {
+    state: 'dp[i] is the LIS length ending exactly at input index i.',
+    recurrence: 'dp[i] = max(dp[j] + 1) where j < i and a[j] < a[i]',
+    baseCase: 'Every single item is an increasing subsequence of length 1.',
+  },
+  editDistance: {
+    state: 'dp[i][j] is the fewest edits to turn the first i chars into j chars.',
+    recurrence: 'match: diagonal · else: 1 + min(insert, delete, replace)',
+    baseCase: 'Turning a prefix into empty needs its full length in edits.',
+  },
+  uniquePaths: {
+    state: 'dp[r][c] counts paths from the top-left to this grid cell.',
+    recurrence: 'dp[r][c] = dp[r − 1][c] + dp[r][c − 1]',
+    baseCase: 'Every cell in the top row or left column has 1 path.',
+  },
+};
 
 interface AlgMeta {
   key: DPAlgorithmKey;
@@ -53,6 +100,8 @@ const ALGORITHMS: AlgMeta[] = [
   { key: 'uniquePaths', name: 'Unique Paths', complexity: 'O(m·n)', icon: <Route size={14} /> },
 ];
 
+import { useTutorContext } from '../../contexts/TutorContext';
+
 export const DPPage: React.FC = () => {
   const [selectedAlg, setSelectedAlg] = useState<DPAlgorithmKey>('fibonacciDP');
   const [searchParams] = useSearchParams();
@@ -67,7 +116,6 @@ export const DPPage: React.FC = () => {
   const [quizEnabled, setQuizEnabled] = useState<boolean>(false);
   const [showDebugger, setShowDebugger] = useState<boolean>(true);
   const [cadence, setCadence] = useState<QuizCadence>('normal');
-  const [showCustomEditor, setShowCustomEditor] = useState(false);
 
   // Algorithm-specific inputs
   const [fibN, setFibN] = useState<number>(8);
@@ -102,9 +150,31 @@ export const DPPage: React.FC = () => {
 
   const {
     currentStepIndex, currentStep, totalSteps, isPlaying,
-    play, pause, stepForward, stepBack, reset,
+    play, pause, stepForward, stepBack, reset, speed, setSpeed,
   seekTo,
     } = useStepPlayer({ steps: executionData.steps });
+
+  const { setTutorContext } = useTutorContext();
+
+  useEffect(() => {
+    const algObj = ALGORITHMS.find((a) => a.key === selectedAlg);
+    setTutorContext({
+      algorithmName: algObj?.name || selectedAlg,
+      algorithmId: selectedAlg,
+      category: 'dp',
+      currentStepDescription: currentStep?.description || '',
+      currentStepIndex,
+      totalSteps,
+      currentStep,
+      steps: executionData.steps,
+      play,
+      pause,
+      stepForward,
+      reset,
+      setShowDebugger,
+      onLaunchQuiz: () => setQuizEnabled(true),
+    });
+  }, [selectedAlg, currentStepIndex, totalSteps, currentStep, executionData.steps, setTutorContext, play, pause, stepForward, reset]);
 
   const quizCheckpoints = useMemo(
     () => buildDPCheckpoints(executionData.steps, selectedAlg),
@@ -233,27 +303,6 @@ export const DPPage: React.FC = () => {
     setUpN(2);
   };
 
-  /* ── Custom editor handler ────────────────────────────────────────── */
-  const currentCustomArray = (): number[] => {
-    switch (selectedAlg) {
-      case 'houseRobber': return houses;
-      case 'lis': return lisArr;
-      case 'coinChange': return coins;
-      default: return houses;
-    }
-  };
-
-  const handleApplyCustomArray = (newArr: number[]) => {
-    reset();
-    quizSession.resetSession();
-    switch (selectedAlg) {
-      case 'houseRobber': setHouses(newArr.slice(0, 10)); break;
-      case 'lis': setLisArr(newArr.slice(0, 12)); break;
-      case 'coinChange': setCoins(newArr.sort((a, b) => a - b).slice(0, 5)); break;
-    }
-    setShowCustomEditor(false);
-  };
-
   usePlaybackShortcuts({
     handlers: {
       onTogglePlay: isPlaying ? pause : play,
@@ -295,9 +344,15 @@ export const DPPage: React.FC = () => {
     </div>
   );
 
-  const renderFloatingControls = () => (
-    <div className="fs-floating-controls">
-      <div className="dataset-mode-selector ml-1">
+  /* ── Shared toolbar controls ─────────────────────────────────────────
+     Single source of truth for every input/button: rendered in the page
+     toolbar AND passed to the fullscreen modal, so the two states can
+     never drift out of sync. */
+  const renderToolbarControls = () => (
+    <>
+      {renderAlgorithmInputs()}
+
+      <div className="dataset-mode-selector">
         <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear">
           <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
         </button>
@@ -308,13 +363,7 @@ export const DPPage: React.FC = () => {
           <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
         </button>
       </div>
-      <VisualizerActions
-        quizEnabled={quizEnabled}
-        onToggleQuiz={() => setQuizEnabled((v) => !v)}
-        debuggerVisible={showDebugger}
-        onToggleDebugger={() => setShowDebugger((v) => !v)}
-      />
-    </div>
+    </>
   );
 
   /* ── Algorithm-specific toolbar inputs ─────────────────────────── */
@@ -337,7 +386,7 @@ export const DPPage: React.FC = () => {
               <span>Coins:</span>
               <input type="text" value={coins.join(',')}
                 onChange={(e) => {
-                  const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                  const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (v.length > 0 && v.length <= 5) { setCoins(v.sort((a, b) => a - b)); reset(); }
                 }} />
             </div>
@@ -355,7 +404,7 @@ export const DPPage: React.FC = () => {
             <span>Houses:</span>
             <input type="text" value={houses.join(',')}
               onChange={(e) => {
-                const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 0);
+                const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n >= 0);
                 if (v.length > 0 && v.length <= 10) { setHouses(v); reset(); }
               }} />
           </div>
@@ -367,7 +416,7 @@ export const DPPage: React.FC = () => {
               <span>W:</span>
               <input type="text" value={weights.join(',')}
                 onChange={(e) => {
-                  const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                  const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (v.length > 0 && v.length <= 6) { setWeights(v); reset(); }
                 }} />
             </div>
@@ -375,7 +424,7 @@ export const DPPage: React.FC = () => {
               <span>V:</span>
               <input type="text" value={values.join(',')}
                 onChange={(e) => {
-                  const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                  const v = parseNumberList(e.target.value, { integerOnly: true }).values.filter((n) => n > 0);
                   if (v.length > 0 && v.length <= 6) { setValues(v); reset(); }
                 }} />
             </div>
@@ -408,7 +457,7 @@ export const DPPage: React.FC = () => {
             <span>Array:</span>
             <input type="text" value={lisArr.join(',')}
               onChange={(e) => {
-                const v = e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+                const v = parseNumberList(e.target.value, { integerOnly: true }).values;
                 if (v.length > 0 && v.length <= 12) { setLisArr(v); reset(); }
               }} />
           </div>
@@ -452,10 +501,9 @@ export const DPPage: React.FC = () => {
     }
   };
 
-  const showCustomBtn = ['houseRobber', 'lis', 'coinChange'].includes(selectedAlg);
-
   return (
     <div className="bst-page-container">
+      <SEOHead {...getSEOForRoute('/dashboard/dp')} />
       <VisualizerHeader
         icon={<Grid3X3 size={22} />}
         title="Dynamic Programming Studio"
@@ -488,45 +536,51 @@ export const DPPage: React.FC = () => {
         }
       />
 
-      {/* Category Tabs Bar */}
-      <div className="tree-category-toolbar animate-fade-in">
-        <div className="tree-category-tabs flex-wrap">
-          {ALGORITHMS.map((alg) => (
-            <button
-              key={alg.key}
-              className={`category-tab ${selectedAlg === alg.key ? 'active' : ''}`}
-              onClick={() => { setSelectedAlg(alg.key); reset(); quizSession.resetSession(); }}
-            >
-              {alg.icon}
-              <span>{alg.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">
         <div className="bst-toolbar-left">
-          {renderAlgorithmInputs()}
-
-          {showCustomBtn && (
-            <button className="bst-btn btn-insert" onClick={() => setShowCustomEditor(true)}>
-              <Edit3 size={14} /><span>Custom Values</span>
-            </button>
-          )}
-
-          <div className="dataset-mode-selector">
-            <button className="bst-btn btn-mode" onClick={handleClearInputs} title="Clear Input">
-              <Trash2 size={14} className="text-rose-400" /><span>Empty</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleResetDefaults} title="Default Values">
-              <Layers size={14} className="text-amber-400" /><span>Sample</span>
-            </button>
-            <button className="bst-btn btn-mode" onClick={handleRandomize} title="Random Input">
-              <Sparkles size={14} className="text-emerald-400" /><span>Random</span>
-            </button>
-          </div>
+          {renderToolbarControls()}
         </div>
+      </div>
+
+      <section className="dp-guide" aria-label="How this dynamic programming solution works">
+        <div className="dp-guide-heading">
+          <div>
+            <p>Understand the recurrence</p>
+            <h2>{ALGORITHMS.find((algorithm) => algorithm.key === selectedAlg)?.name}</h2>
+          </div>
+          <span className="dp-approach-badge">Bottom-up · tabulation</span>
+        </div>
+        <div className="dp-guide-grid">
+          <article><span>State</span><p>{DP_GUIDES[selectedAlg].state}</p></article>
+          <article><span>Transition</span><code>{DP_GUIDES[selectedAlg].recurrence}</code></article>
+          <article><span>Base case</span><p>{DP_GUIDES[selectedAlg].baseCase}</p></article>
+        </div>
+        <p className="dp-guide-note">This trace fills a table from smaller answers to larger ones. Top-down memoization reuses the same recurrence but computes only states it needs.</p>
+      </section>
+
+      <div className="dp-playback-strip" aria-label="DP trace timeline and speed">
+        <span className="dp-playback-count">Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}</span>
+        <button type="button" onClick={stepBack} disabled={currentStepIndex <= 0} aria-label="Previous step"><SkipBack size={15} /></button>
+        <input
+          type="range"
+          min={0}
+          max={Math.max(0, totalSteps - 1)}
+          value={Math.min(currentStepIndex, Math.max(0, totalSteps - 1))}
+          onChange={(event) => seekTo(Number(event.target.value))}
+          aria-label="Choose current DP step"
+          aria-valuetext={`Step ${totalSteps > 0 ? currentStepIndex + 1 : 0} of ${totalSteps}`}
+        />
+        <button type="button" onClick={stepForward} disabled={currentStepIndex >= totalSteps - 1} aria-label="Next step"><SkipForward size={15} /></button>
+        <label className="dp-speed-control">
+          <Gauge size={14} aria-hidden="true" />
+          <span>Speed</span>
+          <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">
+            {[0.5, 1, 2, 4].map((rate) => <option key={rate} value={rate}>{rate}×</option>)}
+          </select>
+        </label>
       </div>
 
       {/* Main Learning Workspace */}
@@ -548,6 +602,9 @@ export const DPPage: React.FC = () => {
           />
         </div>
 
+
+
+
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -556,31 +613,32 @@ export const DPPage: React.FC = () => {
             onEnableQuiz={() => setQuizEnabled(true)}
             onProveIt={handleProveIt}
           />
-
-
         </div>
-
-
-        <div className={`bottom-row ${showDebugger ? '' : 'bottom-row--single'}`}>
-          {showDebugger && (
+        <ResizableWorkspaceHandle storageKey="dp" />
+        <ResizablePanelRow
+          storageKey="dp"
+          debuggerPanel={showDebugger ? (
             <MultiLanguageCodePanel
               algorithmKey={selectedAlg}
               title="Dynamic Programming"
+              categoryId="dp"
+              topicId={selectedAlg}
               activeLine={currentStep?.codeLine}
               variables={currentStep?.variables}
               callStack={currentStep?.callStack}
               currentArray={[]}
             />
-          )}
+          ) : null}
 
-          <ExplanationPanel
+          explanationPanel={<ExplanationPanel
             description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)}
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
           />
-        </div>
+          }
+        />
       </div>
 
       {/* FullScreen Modal */}
@@ -589,7 +647,16 @@ export const DPPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Dynamic Programming | ${selectedAlg.toUpperCase()}`}
         subtitle="DP Table Inspector"
-        toolbarControls={renderFloatingControls()}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        toolbarControls={
+          <div className="fs-floating-controls">
+            {renderToolbarControls()}
+            <VisualizerActions
+              quizEnabled={quizEnabled}
+              onToggleQuiz={() => setQuizEnabled((v) => !v)}
+            />
+          </div>
+        }
         playbackControls={renderFullscreenPlayerControls()}
 
         floatingControls={
@@ -611,13 +678,6 @@ export const DPPage: React.FC = () => {
         <DPRenderer currentStep={currentStep} />
       </FullScreenCanvasModal>
 
-      {showCustomEditor && (
-        <CustomArrayEditor
-          currentArray={currentCustomArray()}
-          onApplyCustomArray={handleApplyCustomArray}
-          onClose={() => setShowCustomEditor(false)}
-        />
-      )}
       <TheoryPanel categoryId="dp" activeTopic={selectedAlg} />
 
     </div>
