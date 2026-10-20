@@ -748,3 +748,11 @@
     min-width: 0;
   }
 }
+.sorting-operation-counters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); color: var(--color-text); }
+.sorting-operation-counters>div:first-child { display: grid; gap: 3px; }
+.sorting-operation-counters strong { font-size: 13px; }
+.sorting-operation-counters span { color: var(--color-text-secondary); font-size: 11px; line-height: 1.4; }
+.sorting-operation-counters dl { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.sorting-operation-counters dl div { min-width: 76px; padding: 6px 9px; border: 1px solid var(--color-border); border-radius: 9px; text-align: center; }
+.sorting-operation-counters dt { color: var(--color-text-muted); font-size: 10px; }
+.sorting-operation-counters dd { margin: 2px 0 0; font-size: 15px; font-weight: 750; font-variant-numeric: tabular-nums; }

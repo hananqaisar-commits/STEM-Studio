@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { apiClient, ApiError } from '../api/apiClient';
 import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
 import { rememberUsername } from '../api/authPreferences';
+import { clearOctaConfig } from '../api/octaConfigStorage';
 
 interface UserData {
   user_id: number;
@@ -150,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     clearTokens();
+    clearOctaConfig();
     setUser(null);
   };
 
@@ -160,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       requiresAuth: true,
     });
     clearTokens();
+    clearOctaConfig();
     setUser(null);
   };
 

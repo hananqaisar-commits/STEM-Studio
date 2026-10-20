@@ -99,15 +99,22 @@ def signup(
             detail="This username is already taken. Sign in to the existing account or choose a different username.",
         )
 
-    # If SMTP is not configured, auto-verify account so local/demo users are not trapped
     smtp_enabled = bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
+    dev_unverified_signup = (
+        not smtp_enabled and settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP
+    )
+    if not smtp_enabled and not dev_unverified_signup:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email verification is not configured. Please try again later.",
+        )
     new_user = User(
         username=clean_username,
         email=clean_email,
         password_hash=hash_password(payload.password),
         first_name=payload.first_name,
         last_name=payload.last_name,
-        is_verified=not smtp_enabled,
+        is_verified=dev_unverified_signup,
     )
     from backend.infrastructure.database.models import EmailVerification
     from backend.app.core.email import send_verification_email
@@ -136,7 +143,8 @@ def signup(
     invalidate_platform_stats_cache()
 
     verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
-    send_verification_email(to_email=new_user.email, verify_url=verify_url)
+    if smtp_enabled:
+        send_verification_email(to_email=new_user.email, verify_url=verify_url)
 
     return new_user
 
@@ -226,8 +234,8 @@ def login(
         )
 
     if not user.is_verified:
-        if not bool(settings.SMTP_USER and settings.SMTP_PASSWORD):
-            # Auto-verify in local/demo environment without SMTP setup
+        if settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP and not bool(settings.SMTP_USER and settings.SMTP_PASSWORD):
+            # Explicit development-only escape hatch.
             user.is_verified = True
             db.commit()
         else:

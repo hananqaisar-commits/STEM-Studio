@@ -209,8 +209,8 @@ const AppContent = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <MascotProvider>
           <TutorProvider>
             <Router>
@@ -218,8 +218,8 @@ function App() {
             </Router>
           </TutorProvider>
         </MascotProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

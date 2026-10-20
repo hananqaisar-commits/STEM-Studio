@@ -144,9 +144,39 @@ class SavedSessionResponse(BaseModel):
 # ─── Public Platform Stats ───────────────────────────────────────────
 
 class PlatformStatsResponse(BaseModel):
-    active_learners: int
+    registered_learners: int
     total_reviews: int
     average_rating: float
+
+
+class SupportTicketCreateRequest(BaseModel):
+    category: str = Field(..., min_length=2, max_length=50)
+    subject: str = Field(..., min_length=4, max_length=120)
+    message: str = Field(..., min_length=10, max_length=5000)
+
+
+class SupportTicketResponse(BaseModel):
+    ticket_id: int
+    category: str
+    subject: str
+    message: str
+    status: str
+    owner_reply: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SupportTicketInboxItem(SupportTicketResponse):
+    user_id: int
+    username: str
+    email: str
+
+
+class SupportTicketUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(open|in_progress|resolved)$")
+    owner_reply: Optional[str] = Field(default=None, max_length=5000)
 
 
 # ─── Review Schemas ──────────────────────────────────────────────────

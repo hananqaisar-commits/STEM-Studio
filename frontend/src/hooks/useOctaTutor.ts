@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTutorProviderStatus, sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type OctaTutorFunctionCall, type UserLLMConfig } from '../api/octaTutorApi';
+import { clearOctaConfig, DEFAULT_OCTA_CONFIG, readOctaConfig, writeOctaConfig } from '../api/octaConfigStorage';
 import { useTutorContext, type TutorAlgorithmContext } from '../contexts/TutorContext';
 import { useTheme } from '../contexts/ThemeContext';
 import type { MascotExpression } from '../components/mascot/MascotState';
@@ -140,12 +141,7 @@ function isActionAvailable(call: OctaTutorFunctionCall, context: TutorAlgorithmC
   }
 }
 
-const DEFAULT_LLM_CONFIG: UserLLMConfig = {
-  provider: 'dashscope',
-  apiKey: '',
-  baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
-  modelName: 'qwen-plus',
-};
+const DEFAULT_LLM_CONFIG: UserLLMConfig = DEFAULT_OCTA_CONFIG;
 
 export function useOctaTutor(): UseOctaTutorReturn {
   const { contextState } = useTutorContext();
@@ -321,15 +317,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
     }));
   }, [activeDsaCategory, contextState.algorithmId, contextState.category, contextState.currentStep, contextState.currentStepDescription, hasRouteTutorContext, isCommandsPage, isFilesystemPage, pageTutorContext]);
 
-  // Load custom LLM config from localStorage
-  const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
-    try {
-      const saved = localStorage.getItem('octa_llm_config');
-      return saved ? JSON.parse(saved) : DEFAULT_LLM_CONFIG;
-    } catch {
-      return DEFAULT_LLM_CONFIG;
-    }
-  });
+  const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(readOctaConfig);
 
   const [providerStatus, setProviderStatus] = useState<OctaProviderStatus>(() =>
     llmConfig.apiKey.trim() || llmConfig.provider === 'custom' ? 'connected' : 'checking',
@@ -361,16 +349,12 @@ export function useOctaTutor(): UseOctaTutorReturn {
 
   const saveLLMConfig = useCallback((newConfig: UserLLMConfig) => {
     setLlmConfig(newConfig);
-    try {
-      localStorage.setItem('octa_llm_config', JSON.stringify(newConfig));
-    } catch {}
+    writeOctaConfig(newConfig);
   }, []);
 
   const resetLLMConfig = useCallback(() => {
     setLlmConfig(DEFAULT_LLM_CONFIG);
-    try {
-      localStorage.removeItem('octa_llm_config');
-    } catch {}
+    clearOctaConfig();
   }, []);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => [

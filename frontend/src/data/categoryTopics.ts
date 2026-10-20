@@ -3,12 +3,15 @@
  * Used by the two-level category/topic dropdown in VisualizerHeader.
  * Each entry mirrors the items array passed by individual Page components.
  */
+import topicCatalog from './topicCatalog.json';
 
 export interface TopicEntry {
   id: string;
   name: string;
   description?: string;
   group?: string;
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced';
+  estimatedMinutes?: number;
 }
 
 export interface CategoryTopics {
@@ -17,7 +20,7 @@ export interface CategoryTopics {
   topics: TopicEntry[];
 }
 
-export const CATEGORY_TOPICS: CategoryTopics[] = [
+const CATEGORY_TOPIC_DEFS: CategoryTopics[] = [
   // ── Foundations ─────────────────────────────────────────────────
   {
     categoryId: 'complexity',
@@ -81,14 +84,27 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
     categoryId: 'linkedList',
     categoryName: 'Linked List',
     topics: [
-      { id: 'singly', name: 'Singly Linked List', group: 'Singly' },
-      { id: 'reverse', name: 'Reverse Linked List', group: 'Singly' },
-      { id: 'middleNode', name: 'Find Middle Node', group: 'Two-Pointers' },
-      { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers' },
-      { id: 'josephus', name: 'Josephus Problem', group: 'Circular' },
-      { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly' },
-      { id: 'circular', name: 'Circular Linked List', group: 'Circular' },
-      { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular' },
+      { id: 'singly', name: 'Singly Linked List', group: 'Singly', difficulty: 'Beginner', estimatedMinutes: 8 },
+      { id: 'reverse', name: 'Reverse Linked List', group: 'Singly', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'middleNode', name: 'Find Middle Node', group: 'Two-Pointers', difficulty: 'Beginner', estimatedMinutes: 8 },
+      { id: 'detectCycle', name: 'Cycle Detection (Floyd)', group: 'Two-Pointers', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'josephus', name: 'Josephus Problem', group: 'Circular', difficulty: 'Intermediate', estimatedMinutes: 14 },
+      { id: 'reverseSublist', name: 'Reverse Sublist (L–R)', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 16 },
+      { id: 'reverseHalf', name: 'Reverse a Half', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'reverseFromMiddle', name: 'Reverse from Middle', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'reverseKGroup', name: 'Reverse in K Groups', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 18 },
+      { id: 'palindrome', name: 'Palindrome Check', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 14 },
+      { id: 'swapPairs', name: 'Swap Nodes in Pairs', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'mergeSort', name: 'Merge Sort a List', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 20 },
+      { id: 'addTwoNumbers', name: 'Add Two Numbers', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 14 },
+      { id: 'removeNthFromEnd', name: 'Remove Nth from End', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'splitHalves', name: 'Split into Two Halves', group: 'Classic Problems', difficulty: 'Intermediate', estimatedMinutes: 10 },
+      { id: 'splitKParts', name: 'Split into K Parts', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 16 },
+      { id: 'mergeKSorted', name: 'Merge K Sorted Lists', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 20 },
+      { id: 'lruCache', name: 'LRU Cache', group: 'Classic Problems', difficulty: 'Advanced', estimatedMinutes: 22 },
+      { id: 'doubly', name: 'Doubly Linked List', group: 'Doubly', difficulty: 'Beginner', estimatedMinutes: 10 },
+      { id: 'circular', name: 'Circular Linked List', group: 'Circular', difficulty: 'Intermediate', estimatedMinutes: 12 },
+      { id: 'doublyCircular', name: 'Doubly Circular Linked List', group: 'Circular', difficulty: 'Intermediate', estimatedMinutes: 14 },
     ],
   },
   {
@@ -257,3 +273,14 @@ export const CATEGORY_TOPICS: CategoryTopics[] = [
     ],
   },
 ];
+
+/** Shared topic IDs define the dropdown order and the backend progress denominator. */
+export const CATEGORY_TOPICS: CategoryTopics[] = CATEGORY_TOPIC_DEFS.map((category) => {
+  const canonicalIds = topicCatalog[category.categoryId as keyof typeof topicCatalog] as string[] | undefined;
+  if (!canonicalIds) return category;
+  const topicById = new Map(category.topics.map((topic) => [topic.id, topic]));
+  return {
+    ...category,
+    topics: canonicalIds.map((id) => topicById.get(id)).filter((topic): topic is TopicEntry => Boolean(topic)),
+  };
+});

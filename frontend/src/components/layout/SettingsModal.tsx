@@ -6,6 +6,7 @@ import { ApiError, useAuth } from '../../contexts/AuthContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './SettingsModal.css';
+import { clearOctaConfig, DEFAULT_OCTA_CONFIG, readOctaConfig, writeOctaConfig } from '../../api/octaConfigStorage';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,12 +21,7 @@ const PROVIDER_OPTIONS: { id: LLMProvider; name: string }[] = [
   { id: 'custom', name: 'Custom OpenAI-Compatible (Ollama, Local)' },
 ];
 
-const DEFAULT_CONFIG: UserLLMConfig = {
-  provider: 'dashscope',
-  apiKey: '',
-  baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
-  modelName: 'qwen-plus',
-};
+const DEFAULT_CONFIG: UserLLMConfig = DEFAULT_OCTA_CONFIG;
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { theme, setTheme } = useTheme();
@@ -33,14 +29,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'ai' | 'appearance' | 'account'>('ai');
 
-  const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(() => {
-    try {
-      const saved = localStorage.getItem('octa_llm_config');
-      return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
-    } catch {
-      return DEFAULT_CONFIG;
-    }
-  });
+  const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(readOctaConfig);
 
   const [provider, setProvider] = useState<LLMProvider>(llmConfig.provider || 'dashscope');
   const [apiKey, setApiKey] = useState<string>(llmConfig.apiKey || '');
@@ -101,7 +90,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     const updated: UserLLMConfig = { provider, apiKey, baseUrl, modelName };
     setLlmConfig(updated);
     try {
-      localStorage.setItem('octa_llm_config', JSON.stringify(updated));
+      writeOctaConfig(updated);
     } catch {}
     onClose();
   };
@@ -113,7 +102,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setModelName('qwen-plus');
     setTestResult(null);
     try {
-      localStorage.removeItem('octa_llm_config');
+      clearOctaConfig();
     } catch {}
   };
 
@@ -214,6 +203,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </div>
                 </div>
               )}
+              <p className="settings-key-note">Provider keys stay in this browser tab only and are cleared when its session ends. They are sent to the STEM Studio backend when Octa uses them; avoid configuring a key on a shared device.</p>
 
               <div className="settings-field">
                 <label className="settings-label">Model Name</label>

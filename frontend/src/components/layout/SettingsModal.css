@@ -377,3 +377,4 @@
 .btn-primary:hover {
   opacity: 0.9;
 }
+.settings-key-note { margin: -4px 0 12px; color: var(--color-text-muted); font-size: 11px; line-height: 1.5; }

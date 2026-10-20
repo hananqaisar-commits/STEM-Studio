@@ -101,8 +101,11 @@ class Settings(BaseSettings):
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
+    # This escape hatch is honored only when DEBUG is also enabled.
+    ALLOW_UNVERIFIED_SIGNUP: bool = False
     EMAILS_FROM_EMAIL: str = "noreply@stemstudio.com"
     EMAILS_FROM_NAME: str = "STEM Studio Support"
+    SUPPORT_OWNER_EMAILS: str = ""
 
     # Judge0 (server-to-server sandbox integration for custom code)
     # Keep these values only on the backend host; never expose them to Vite.

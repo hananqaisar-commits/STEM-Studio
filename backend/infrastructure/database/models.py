@@ -57,6 +57,10 @@ class User(Base):
     tutor_learning_profile: Mapped[Optional["TutorLearningProfile"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False
     )
+    support_tickets: Mapped[List["SupportTicket"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    preferences: Mapped[Optional["UserPreference"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
 
 
 class UserSession(Base):
@@ -215,3 +219,33 @@ class Review(Base):
     text: Mapped[str] = mapped_column(String(2000))
     approved: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+
+    ticket_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    category: Mapped[str] = mapped_column(String(50))
+    subject: Mapped[str] = mapped_column(String(120))
+    message: Mapped[str] = mapped_column(String(5000))
+    status: Mapped[str] = mapped_column(String(20), default="open", index=True)
+    owner_reply: Mapped[Optional[str]] = mapped_column(String(5000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="support_tickets")
+
+
+class UserPreference(Base):
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    theme: Mapped[Optional[str]] = mapped_column(String(10))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="preferences")

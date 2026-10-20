@@ -13,6 +13,10 @@ import {
 import { SEOHead } from '../../components/common/SEOHead';
 import { DSA_CATEGORIES, MODULES, OS_CATEGORIES } from '../../data/categories';
 import './DashboardHome.css';
+import { ContinueLearning } from './ContinueLearning';
+import { SupportDesk } from '../../components/support/SupportDesk';
+import { OnboardingTour } from './OnboardingTour';
+import { CheatSheetPrinter } from './CheatSheetPrinter';
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Activity,
@@ -37,6 +41,7 @@ export const DashboardHome: FC = () => {
 
   return (
     <div className="dashboard-home">
+      <OnboardingTour />
       <SEOHead
         title="Your Learning Studio | STEM Studio"
         description="Choose a computer science subject or jump into a data structures and algorithms topic in STEM Studio."
@@ -76,6 +81,8 @@ export const DashboardHome: FC = () => {
         )}
       </section>
 
+      <ContinueLearning />
+
       <section className="dashboard-quick-start" aria-labelledby="quick-start-title">
         <div className="dashboard-section-heading">
           <div>
@@ -85,6 +92,7 @@ export const DashboardHome: FC = () => {
           <Link className="dashboard-all-topics-link" to="/dashboard/dsa">
             All DSA topics <ArrowRight size={15} aria-hidden="true" />
           </Link>
+          <CheatSheetPrinter />
         </div>
 
         <div className="dashboard-topic-grid">
@@ -105,6 +113,7 @@ export const DashboardHome: FC = () => {
           })}
         </div>
       </section>
+      <SupportDesk />
     </div>
   );
 };

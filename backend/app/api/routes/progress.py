@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from typing import List
 
@@ -27,24 +29,9 @@ from backend.infrastructure.database.models import (
 
 router = APIRouter(prefix="/api/progress", tags=["User Progress & Quizzes"])
 
-# Total algorithms per module for percentage calculations.
-# Kept in sync with frontend/src/data/categoryTopics.ts (selectable topics per module).
-MODULE_ALGORITHM_COUNTS = {
-    "sorting": 10,
-    "arrays": 6,
-    "strings": 4,
-    "linkedList": 6,
-    "stackQueue": 23,
-    "binarySearch": 5,
-    "hashMaps": 4,
-    "bst": 4,
-    "graph": 5,
-    "recursion": 5,
-    "backtracking": 4,
-    "greedy": 4,
-    "dp": 8,
-    "trie": 5,
-}
+_TOPIC_CATALOG_PATH = Path(__file__).resolve().parents[4] / "frontend/src/data/topicCatalog.json"
+with _TOPIC_CATALOG_PATH.open(encoding="utf-8") as _topic_catalog_file:
+    MODULE_ALGORITHM_COUNTS = {module: len(topic_ids) for module, topic_ids in json.load(_topic_catalog_file).items()}
 
 
 # ─── 1. SUBMIT QUIZ ANSWER ───────────────────────────────────────────
@@ -230,6 +217,45 @@ def get_user_stats(
         highest_streak=highest_streak,
         modules=modules_data,
     )
+
+
+@router.get("/review-schedule")
+def get_review_schedule(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return due topics using accuracy-based 1 / 3 / 7 day intervals."""
+    attempts = (
+        db.query(QuizAttempt)
+        .filter(QuizAttempt.user_id == current_user.user_id)
+        .order_by(QuizAttempt.created_at.asc())
+        .all()
+    )
+    grouped: dict[tuple[str, str], list[QuizAttempt]] = defaultdict(list)
+    for attempt in attempts:
+        grouped[(attempt.module_name, attempt.algorithm_id)].append(attempt)
+
+    now = datetime.now(timezone.utc)
+    due_topics = []
+    for (module_name, algorithm_id), rows in grouped.items():
+        recent = rows[-5:]
+        accuracy = sum(1 for row in recent if row.is_correct) / len(recent)
+        interval_days = 1 if accuracy < 0.6 else 3 if accuracy < 0.8 else 7
+        last_attempt = rows[-1].created_at
+        if last_attempt.tzinfo is None:
+            last_attempt = last_attempt.replace(tzinfo=timezone.utc)
+        due_at = last_attempt + timedelta(days=interval_days)
+        if due_at <= now:
+            due_topics.append({
+                "module_name": module_name,
+                "algorithm_id": algorithm_id,
+                "accuracy_percentage": round(accuracy * 100),
+                "interval_days": interval_days,
+                "last_attempt_at": last_attempt,
+                "due_at": due_at,
+            })
+    due_topics.sort(key=lambda item: item["due_at"])
+    return {"due_count": len(due_topics), "due_topics": due_topics[:20]}
 
 
 # ─── 4. SAVED SESSIONS (CUSTOM DATASETS & BOOKMARKS) ────────────────

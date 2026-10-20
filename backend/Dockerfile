@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY backend/app /app/backend/app
 COPY backend/infrastructure /app/backend/infrastructure
+# The progress API reads this shared catalog to keep completion percentages
+# aligned with the frontend's visible topic counts.
+COPY frontend/src/data/topicCatalog.json /app/frontend/src/data/topicCatalog.json
 
 EXPOSE 8000
 

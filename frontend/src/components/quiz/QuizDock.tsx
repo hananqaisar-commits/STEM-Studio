@@ -184,6 +184,7 @@ export const QuizDock: React.FC<QuizDockProps> = ({
           streak={session.streak}
           cadence={cadence}
           timeRemaining={session.timeRemaining}
+          timeLimitSeconds={session.timeLimitSeconds}
           streakMultiplier={session.streakMultiplier}
           challengeMode={session.challengeMode}
           onAnswer={session.answer}

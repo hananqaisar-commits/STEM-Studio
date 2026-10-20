@@ -1,6 +1,6 @@
 # STEM Studio: feature map and current limits
 
-**Audit basis:** source tree on branch `codex/production-scalability`, commit `8443ae4` plus the documentation changes in this revision (2026-10-20). This is a source-code review, not a live production inspection or a full manual QA pass. The frontend production build and `git diff --check` passed for the preceding pushed implementation. No tests were run for this documentation-only expansion. Backend integration tests and live service credentials were not checked in this review.
+**Audit basis:** source tree on branch `codex/production-scalability` (2026-10-20). This is a source-code review, not a live production inspection or a full manual QA pass. The frontend production build, Python compilation, and `git diff --check` passed for this revision. Automated tests and live service credentials were not checked in this review. See [the audit implementation status](audit-implementation-status.md) for each finding and what still requires owner action.
 
 ## What STEM Studio is
 
@@ -10,7 +10,7 @@ The frontend and backend deploy separately. Vercel can host the frontend; accoun
 
 ## Learning modules
 
-The central topic registry has 15 DSA categories and 112 named topic entries:
+The shared topic catalog has 15 DSA categories and 125 named topic entries:
 
 | Category | Topics in the central registry |
 | --- | --- |
@@ -30,7 +30,7 @@ The central topic registry has 15 DSA categories and 112 named topic entries:
 | Dynamic Programming | Fibonacci, Coin Change, House Robber, 0/1 Knapsack, LCS, LIS, Edit Distance, Unique Paths |
 | Trie | Insert, Search, Prefix Search, Word Dictionary, Autocomplete |
 
-These are the 112 topic entries in the central navigation registry. They are not the same as the actual selectable page options: the linked-list page has 21 options versus 8 registry entries, the tree page has 6 versus 4 in the category card, and the graph page has 8 versus 5 in the category card. The progress API also uses the older linked-list/tree/graph totals of 6/4/5. Fixing those counts is a known product-data issue. The topic names are not a promise that every topic has identical controls, explanation depth, or pasted-code support. Individual pages own their visualizers and step generation, so coverage differs by category.
+The same `topicCatalog.json` supplies navigation options, category-card topic counts, and backend progress denominators. Linked List has 21 topics, Trees 6, and Graphs 8. Matching catalog entries do not imply that every lesson has identical controls, explanation depth, or pasted-code support; page engines and runner contracts still differ.
 
 ### Stack & Queue
 
@@ -62,13 +62,13 @@ Live execution requires `JUDGE0_URL` and the Judge0 API key/auth-header settings
 
 The API implements signup, username-or-email/password login, optional Google login, access and rotating refresh tokens, logout, email verification, password reset, current-user lookup, and account deletion. Usernames and emails are normalized and unique. Password policy requires at least 8 characters with uppercase, lowercase, and a digit. Account deletion requires a recent sign-in and removes owned records through configured database relationships.
 
-The backend has database models/routes for quiz attempts, module completion, saved sessions, tutor learning-profile data, accounts, and sessions. The current frontend wires quiz-attempt writes and tutor-profile calls; I found no frontend caller for the module-completion or saved-session endpoints, so those two are backend/API capabilities rather than a complete learner-facing save/progress workflow today. SQLite is convenient for local development; production persistence requires a durable hosted database configuration. The source repository does not prove which database or secrets are currently configured in Vercel or the API host.
+The backend has database models/routes for quiz attempts, module completion, saved sessions, tutor learning-profile data, accounts, support tickets, account preferences, and sessions. Quiz completion writes per-topic completion; the dashboard calls progress, saved-session, and review-schedule APIs. Saved-session cards reopen the saved topic, but do not restore the exact input dataset or playback step. SQLite is convenient for local development; production persistence requires a durable hosted database configuration. The source repository does not prove which database or secrets are currently configured in Vercel or the API host.
 
-Important email limitation: when SMTP credentials are missing, signup auto-verifies accounts so local/demo accounts can sign in. That means email verification is **not a production guarantee** until SMTP and a verified sender domain are configured. Password reset email also requires SMTP. Google login requires the frontend OAuth client ID and matching provider configuration.
+Signup requires SMTP in production. The no-SMTP bypass is allowed only when both `DEBUG=true` and `ALLOW_UNVERIFIED_SIGNUP=true`; the repository example keeps the flag false. Password reset and verification email also require working SMTP. Google login requires the frontend OAuth client ID and matching provider configuration.
 
 ### “Active learners” number
 
-The landing page gets this value from `/api/stats/platform`. The API counts all user rows in the database and caches the response in Redis for the configured short TTL (default 30 seconds). It represents **stored accounts**, not currently online or recently active learners. The UI label should be renamed to “registered learners” or backed by a genuine activity definition before presenting it as live activity.
+The landing page gets this value from `/api/stats/platform`. The API counts all user rows in the database and caches the response in Redis for the configured short TTL (default 30 seconds). It represents **registered accounts**, not currently online or recently active learners. The UI label is “registered learners.”
 
 ## Octa tutor
 
@@ -76,7 +76,7 @@ Octa has AI Concept Mode and Interactive Step Mode. The client sends supported p
 
 The learning profile uses saved user feedback and learning signals as context for later answers. This is prompt-time personalization; it does not train or fine-tune model weights. The tutor should not infer a learner's personality or mood from sparse quiz history. Its status indicator distinguishes API ready (green), provider limit reached (orange), key missing (red), unavailable (neutral), and checking; this reports provider state, not answer accuracy.
 
-Octa can propose a limited set of supported in-app actions, such as navigation, theme changes, and available visualization controls. The user must approve a proposal before it runs, and the proposal is cancelled if the page context changes. It cannot arbitrarily operate every control on the site, read hidden account/backend data, access the laptop, or execute host OS commands. The API has review submission/listing, but no owner-query inbox/contact workflow was found in the current route set.
+Octa can propose a limited set of supported in-app actions, such as navigation, theme changes, and available visualization controls. The user must approve a proposal before it runs, and the proposal is cancelled if the page context changes. It cannot arbitrarily operate every control on the site, read hidden account/backend data, access the laptop, or execute host OS commands. Signed-in users can submit support reports from the dashboard; the owner inbox and review moderation queue require the owner's email to be configured in `SUPPORT_OWNER_EMAILS` on the API.
 
 Live model-generated answers require a provider key/configuration. Without one, only supported built-in fallback guidance is available; this should not be described as unrestricted ChatGPT-equivalent responses.
 
@@ -94,17 +94,17 @@ There is a k6 read-only load-test script and a staged runbook. The runbook recor
 
 Redis is optional in simple/local mode. Without a shared Redis service, rate limits are process-local and cannot coordinate between API replicas. The included stack configures Redis, but it is not automatically deployed just because the frontend is on Vercel.
 
-## Known gaps and best next fixes
+## Remaining gaps and owner actions
 
-1. **Correct topic counts in the catalog.** The central registry has six tree topics and eight graph topics while `DSA_CATEGORIES` says four and five. The linked-list dropdown has 21 actual items while its category count says eight. Use one source of truth for hub counts, topic dropdowns, quizzes, and code-run coverage.
-2. **Fix public review moderation.** `/api/stats/reviews` says submissions are for moderation, but the create route currently saves `approved=True`, which makes them immediately visible. Add a real moderation/authorization step or change the UI and contract intentionally.
-3. **Clarify account-count semantics.** Rename “active learners” to “registered learners” or define and calculate activity using real session/activity timestamps.
-4. **Make support/reporting a real workflow.** There is no owner-query inbox route in the current API; add authenticated submission, persistence, and an owner-facing review flow if learners need to report issues.
-5. **Close the execution gap.** Document exact supported code signatures per problem in the editor and expand source-to-visual traces only with per-algorithm adapters and reliable mapping tests. Do not imply all snippets work in all categories.
-6. **Validate the learning flows end to end.** Add/test representative desktop/mobile flows for signup/login/refresh, each visualizer family, quiz persistence, Octa action approval, and paste-code success/error states. Backend and frontend builds alone do not exercise these product paths.
-7. **Run safe staging load tests.** Start with smoke and low VU stages, collect API/HAProxy/Redis/database resource metrics, then do 45k before considering 200k with distributed generators. No capacity target should be announced before those runs.
-8. **Verify deployed settings.** Confirm the hosted database, CORS/frontend origin, SMTP, Google OAuth, Octa provider, Judge0, Redis, TLS, backups, and monitoring independently in their respective hosting consoles.
-9. **Wire the saved-work endpoints into the learner UI.** Backend routes for completed algorithms and saved sessions exist, but the frontend currently has no caller for them. Add an explicit save/list/delete experience and reconcile the progress counts before promising durable per-topic completion tracking.
+1. **Production/staging verification:** no 45k or 200k virtual-user run was performed, and no capacity or availability target is supported. Run the staged k6 plan with distributed generators and API, proxy, Redis, and database metrics before making a throughput claim.
+2. **Hosted configuration:** verify the production database, SMTP, Google OAuth, Judge0, Redis, TLS, backups, monitoring, and frontend/API CORS in their hosting consoles. This workspace cannot inspect those provider dashboards.
+3. **Owner inbox and review queue:** set `SUPPORT_OWNER_EMAILS` on the backend and restart/redeploy the API. The application includes the authenticated routes and dashboard UI; the allowlist determines which account can operate them.
+4. **Production signup email:** configure an SMTP provider, verified sender domain, SPF/DKIM/DMARC, and HTTPS `FRONTEND_URL`; keep `DEBUG=false` and `ALLOW_UNVERIFIED_SIGNUP=false`. No email provider or DNS setup was accessed here.
+5. **Pasted-code coverage:** the badges identify registered custom-code stub contracts, not arbitrary code support. There are 92 runner contracts across 14 categories; some newer lessons still lack matching contracts. Extend coverage per problem and keep signatures explicit.
+6. **Saved-session fidelity:** the dashboard can reopen a saved topic but does not yet restore its exact dataset and playback position.
+7. **Operation metrics:** the new comparison/swap/write event counters and synchronized algorithm race apply to Sorting. Other visualizer engines need a shared event schema before they can show reliable comparable counts.
+8. **Spaced repetition delivery:** due dates are calculated from quiz history and shown on the dashboard. There is no email, push, or browser notification reminder.
+9. **Manual interaction QA:** the changes compiled, but every mobile/desktop flow and API-backed action has not been manually exercised against staging.
 
 ## Where the main implementation lives
 
@@ -130,7 +130,7 @@ This section describes what a learner can do on each page, the information the l
 | `/login` | Enters either username or email plus password; optionally selects Remember me or Google login. | The API verifies the stored password hash and issues access and refresh tokens. Remember me changes the refresh-session lifetime. The frontend coordinates refreshes and retains credentials through temporary API failures. |
 | `/forgot-password`, `/reset-password` | Requests a reset link, then chooses a new password using the token in that link. | Requires a working API and configured SMTP for the link to reach the learner. A reset token expires according to backend configuration (default 20 minutes). |
 | `/dashboard` | Chooses DSA or Operating Systems and opens module/category hubs. | Topic cards and the application navigation shell. Interactive DSA pages and the Linux lesson/simulator pages are account-gated; after signing in the requested destination can be restored. |
-| Settings modal | Changes appearance, configures Octa, and can request account deletion. | Appearance stores light/dark theme in browser local storage. AI settings include DashScope, OpenAI, OpenRouter, Anthropic, or custom OpenAI-compatible provider; API key, base URL, and model fields; a connection test; save and reset. A learner-provided AI key is stored in this browser's local storage and sent to the backend with tutor requests; it is not an account-synced setting. Account deletion calls the API, requires recent authentication, and removes owned progress/session data according to database relationships. This is destructive and irreversible from the product UI. |
+| Settings modal | Changes appearance, configures Octa, and can request account deletion. | Light/dark theme is stored locally and synced to the signed-in account through `user_preferences`. AI settings include DashScope, OpenAI, OpenRouter, Anthropic, or custom OpenAI-compatible provider; API key, base URL, and model fields; a connection test; save and reset. A learner-provided AI key is stored in `sessionStorage`, migrated out of legacy local storage, and sent to the backend with tutor requests. Account deletion calls the API, requires recent authentication, and removes owned progress/session data according to database relationships. This is destructive and irreversible from the product UI. |
 
 The normal account flow is: browser submits credentials to FastAPI, FastAPI checks the database, and the browser stores/refreshes the issued session credentials. With Remember me, browser tokens are kept in local storage; otherwise they use session storage. Each protected API route verifies the access token and loads the current database user. Defaults are 15 minutes for access tokens, 7 days for refresh tokens, and 30 days for Remember me; backend settings can change these. Refresh tokens are one-use and rotated; concurrent browser refreshes are coordinated. The account, quiz records, progress, and saved sessions survive browser restarts only if the configured database is durable and reachable. A local SQLite file is not a hosted backup.
 
@@ -259,8 +259,8 @@ The page has two primitives plus 21 named classic problems; its subtitle current
 | Largest Rectangle in Histogram | Comma-separated heights; Compute Max Area. | Monotonic stack and each popped bar's candidate width/area. |
 | Queue using 2 Stacks | One value per enqueue action; Enqueue In-Stack / Dequeue Out-Stack. | Input stack, transfer to output stack when needed, and FIFO front behavior. |
 | Stack using Queues | One value per push; Push (Drain) / Pop. | Queue rotation that places the newest value at the removable front, implementing LIFO. |
-| Circular Ring Queue | One value; Enqueue Slot / Dequeue Slot. Capacity is fixed at six in the renderer/engine. | Ring slots, each index, FRONT and REAR; wraparound reuses freed slots. |
-| Design Circular Deque | Value plus Insert Front, Insert Last, Delete Front, Delete Last. Capacity is fixed at five slots. | Ring storage with both ends usable and front/rear movements, including wraparound and full/empty conditions. |
+| Circular Ring Queue | One value; Enqueue Slot / Dequeue Slot. Capacity is adjustable from 2 to 12 while preserving queue order. | Ring slots, each index, FRONT and REAR; wraparound reuses freed slots. |
+| Design Circular Deque | Value plus Insert Front, Insert Last, Delete Front, Delete Last. Capacity is adjustable from 2 to 12 while preserving elements. | Ring storage with both ends usable and front/rear movements, including wraparound and full/empty conditions. |
 | Sliding Window Maximum | Comma-separated numbers and window size `k` (1–20); Compute Window Max. | Current window, deque of candidate indices, expired indices removed from the front, smaller candidates removed from the back, and max per window. |
 | First Non-Repeating Character in a Stream | Character stream such as `aabc`; Process Stream. | Incoming character, frequency counts, queue of unresolved candidates, and the first current non-repeating character after each input, rendered as text in both light and dark themes. |
 | Moving Average Data Stream | Comma-separated numeric stream and window size `k` (1–20); Stream Averages. | Queue of the last k values, sum adjustment when old values leave, and average after each number. |
@@ -377,10 +377,10 @@ This dedicated page focuses on prefix-tree operations over words and prefixes. T
 The Quiz Dock is a page panel with an **Observation mode** (quiz off) plus three quiz modes:
 
 - **Concept Mode:** standalone multiple-choice questions (the UI describes 10–15 questions). It tests terms/rules without interrupting playback at each step.
-- **Flow Mode:** starts the visual trace and pauses at generated prediction checkpoints. The learner chooses an answer; the panel reports whether it is correct and then allows execution to continue. Questions have a 15-second response window. Cadence controls determine how often checkpoints appear; checkpoints are generated only where the page has a quiz adapter.
+- **Flow Mode:** starts the visual trace and pauses at generated prediction checkpoints. The learner chooses an answer; the panel reports whether it is correct and then allows execution to continue. In intensive mode questions have a content-adjusted 20–45 second response window; other cadence modes are untimed. Cadence controls determine how often checkpoints appear; checkpoints are generated only where the page has a quiz adapter.
 - **Revision Mode:** focuses on weak concepts available from past results/profile data. If no history exists, the amount of personalization is limited.
 
-At the end, the report summarizes answers, accuracy, streak, weak points, and advice. Fresh input can enable a transfer challenge. Quiz attempts and streaks are written for authenticated users through the backend; guests get session-only tallies. Not every module has equally rich quiz question coverage. The separate module-completion endpoint and saved-session endpoints exist in the backend but currently have no frontend caller, so do not assume algorithm completion or datasets are being saved by the UI.
+Flow checkpoints use cadence-based selection: core questions are retained and reinforcement checkpoints are sampled to the chosen density; intensive mode keeps every checkpoint and uses a question-adjusted 20–45 second timer. The timer is disabled in the untimed modes. Quiz panels also offer optional free-text reasoning feedback from Octa when a live model is available; the response is not saved as a formal quiz grade. At the end, the report summarizes answers, accuracy, streak, weak points, and advice. Fresh input can enable a transfer challenge. Quiz attempts and streaks are written for authenticated users through the backend; completed quizzes mark the algorithm as complete. Saved-session cards reopen their topic but do not hydrate the exact dataset or step. Not every module has equally rich quiz question coverage.
 
 #### Code debugger and pasted-code runner
 
@@ -431,9 +431,9 @@ It is not a real Bash interpreter: shell scripts, arbitrary binaries, system ser
 
 ### Saved learning data and public counts
 
-For signed-in users, the API can store quiz attempts, correct/incorrect outcomes, streaks, completed-algorithm IDs, module completion percentages, saved sessions/datasets, and tutor learning-profile signals. The quiz and tutor-profile paths are called by the frontend. Module completion and saved-session list/create/delete routes are currently backend-only; the UI does not automatically save the current dataset. Browser theme and some UI state are local preferences.
+For signed-in users, the API can store quiz attempts, correct/incorrect outcomes, streaks, completed-algorithm IDs, module completion percentages, saved sessions/datasets, and tutor learning-profile signals. The dashboard loads module progress, saved sessions, and review due dates; quiz completion marks the current topic complete. The saved-session UI reopens the saved topic but does not restore its dataset or playback step. Theme is synced to the account; some UI state remains browser-local.
 
-The landing-page **“active learners”** number calls `/api/stats/platform`, counts all `User` records, and may be cached for 30 seconds in Redis. It means registered accounts in the configured database, not current online users. The value can only be current with respect to the API's database and cache. The review create endpoint currently writes `approved=True` even though its docstring says reviews are awaiting moderation; therefore the moderation model and public-review behavior need a product/security correction before they are described as moderated.
+The landing-page **“registered learners”** number calls `/api/stats/platform`, counts all `User` records, and may be cached for 30 seconds in Redis. It means registered accounts in the configured database, not current online users. The value can only be current with respect to the API's database and cache. New reviews remain pending until an account allowlisted in `SUPPORT_OWNER_EMAILS` approves them; the public review read returns approved reviews only.
 
 ### Service and deployment dependency map
 
@@ -443,9 +443,9 @@ The landing-page **“active learners”** number calls `/api/stats/platform`, c
 | Signup, login, account count, progress, saved sessions | Reachable FastAPI API and configured database | Authenticated API actions fail; stored-account totals/progress cannot be read/written. |
 | Durable accounts/progress | Persistent database on backend host, with migrations/backups | Ephemeral/local storage can be lost or isolated from deployed users. |
 | Shared rate limit/cache/load-balanced API | Redis URL and deployed Redis; optional HAProxy/Compose topology | Redis-backed limits/cache degrade to process-local or bypass behavior depending on setting; multiple replicas will not share local state. |
-| Password reset and real email verification | SMTP credentials, valid sender/domain, public HTTPS frontend URL | Signup may auto-verify when SMTP is absent; reset emails are unavailable. Do not treat that fallback as production email verification. |
+| Password reset and real email verification | SMTP credentials, valid sender/domain, public HTTPS frontend URL | Production signup returns 503 without SMTP; reset emails are unavailable. Local unverified signup requires both `DEBUG=true` and `ALLOW_UNVERIFIED_SIGNUP=true`. |
 | Google sign-in | Frontend Google client ID and matching backend/provider configuration | Google button/verification cannot complete. |
-| AI-generated tutor answer | Either a server-side default provider key or a learner-configured provider/base URL/model/API key and network access | Deterministic fallback only for supported content; no general live model answer. The learner-configured key is stored in local storage and passed to the API with the request. |
+| AI-generated tutor answer | Either a server-side default provider key or a learner-configured provider/base URL/model/API key and network access | Deterministic fallback only for supported content; no general live model answer. The learner-configured key is stored in session storage and passed to the API with the request. |
 | Pasted-code execution | Hosted Judge0 URL and its auth token/header settings on backend | Execution reports that the sandbox service is not configured/unavailable. |
 | 45k/200k load claim | Staging deployment, distributed k6 generators, full observability | No verified capacity claim. The small local direct-endpoint smoke is not end-to-end capacity evidence. |
 

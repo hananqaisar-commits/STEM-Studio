@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { submitQuizAttempt } from '../api/quizApi';
+import { apiClient } from '../api/apiClient';
 import {
   filterByCadence,
   TRANSFER_CHALLENGE_STEPS,
@@ -35,7 +36,7 @@ import {
    Three modes with differentiated features:
    - Concept (light): weight-1 only, insight boxes, no timer
    - Guided (normal): weight 1-2, hints, progress bar
-   - Challenge (intensive): weight 1-3, 10s timer, streak multipliers
+   - Challenge (intensive): every checkpoint, adaptive timer, streak multipliers
    ─────────────────────────────────────────────────────────────────── */
 
 export type QuizPhase = 'idle' | 'revision' | 'asking' | 'retrying' | 'revealed' | 'report';
@@ -93,6 +94,7 @@ export interface QuizSessionState {
   canChallenge: boolean;
   /** Seconds remaining on the timer (Challenge mode only); null otherwise. */
   timeRemaining: number | null;
+  timeLimitSeconds: number | null;
   /** Streak multiplier: x1 base, x2 after 3 correct, x3 after 5 correct. */
   streakMultiplier: number;
   /** Whether the quiz has completed all checkpoints (for report trigger). */
@@ -154,9 +156,11 @@ export function useQuizSession({
 
   /** Per-question results for the post-quiz report. */
   const [questionResults, setQuestionResults] = useState<QuestionResult[]>([]);
+  const progressRecordedRef = useRef(false);
 
   /** Timer state for Challenge mode. */
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [timeLimitSeconds, setTimeLimitSeconds] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /** Step indices already asked, so a checkpoint never re-fires when the
@@ -193,6 +197,7 @@ export function useQuizSession({
     setWasCorrect(false);
     setInspectPending(false);
     setTimeRemaining(null);
+    setTimeLimitSeconds(null);
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -209,6 +214,7 @@ export function useQuizSession({
       setChallengeMode(false);
     }
     consumedRef.current = new Set();
+    progressRecordedRef.current = false;
     revisionAutoShown.current = false;
     setQuestionResults([]);
     dismiss();
@@ -250,9 +256,18 @@ export function useQuizSession({
     setWasCorrect(false);
     setPhase('asking');
 
-    /* Every quiz question has the same 15-second response window. */
-    setTimeRemaining(15);
-  }, [enabled, phase, active, currentStepIndex]);
+    const timedMode = cadence === 'intensive' || challengeMode;
+    if (timedMode) {
+      const wordCount = hit.question.prompt.trim().split(/\s+/).filter(Boolean).length;
+      const optionCount = hit.question.options.length;
+      const limit = Math.max(20, Math.min(45, 18 + (hit.question.weight - 1) * 5 + Math.ceil(wordCount / 12) * 4 + Math.max(0, optionCount - 3) * 2));
+      setTimeLimitSeconds(limit);
+      setTimeRemaining(limit);
+    } else {
+      setTimeLimitSeconds(null);
+      setTimeRemaining(null);
+    }
+  }, [enabled, phase, active, currentStepIndex, cadence, challengeMode]);
 
   /* Challenge mode timer countdown. */
   useEffect(() => {
@@ -275,7 +290,7 @@ export function useQuizSession({
             setPhase((currentPhase) => {
               if (currentPhase === 'asking') {
                 // First timeout -> go to retrying (hint) and reset timer
-                setTimeRemaining(15);
+                setTimeRemaining(timeLimitSeconds);
                 return 'retrying';
               } else if (currentPhase === 'retrying') {
                 // Second timeout -> reveal
@@ -301,7 +316,7 @@ export function useQuizSession({
         timerRef.current = null;
       }
     };
-  }, [phase, timeRemaining]);
+  }, [phase, timeRemaining, timeLimitSeconds]);
 
   /* Dismiss if the student navigates off the question's step using the
      player bar (step back, seek, reset). Without this the panel would
@@ -332,6 +347,16 @@ export function useQuizSession({
     if (active.length === 0) return false;
     return consumedRef.current.size >= active.length && phase === 'idle';
   }, [active, phase]);
+
+  useEffect(() => {
+    if (!quizCompleted || !isAuthenticated || progressRecordedRef.current) return;
+    progressRecordedRef.current = true;
+    void apiClient('/api/progress/complete-algorithm', {
+      method: 'POST',
+      body: { module_name: module, algorithm_id: algorithmId },
+      requiresAuth: true,
+    }).catch(() => { progressRecordedRef.current = false; });
+  }, [algorithmId, isAuthenticated, module, quizCompleted]);
 
   /** Streak multiplier: x1 base, x2 at 3+, x3 at 5+. */
   const streakMultiplier = streak >= 5 ? 3 : streak >= 3 ? 2 : 1;
@@ -500,6 +525,7 @@ export function useQuizSession({
     revisionData: externalRevisionData,
     questionResults,
     timeRemaining,
+    timeLimitSeconds,
     streakMultiplier,
     quizCompleted,
     challengeMode,

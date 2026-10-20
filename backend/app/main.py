@@ -15,6 +15,8 @@ try:
     from backend.app.api.routes.progress import router as progress_router
     from backend.app.api.routes.stats import router as stats_router
     from backend.app.api.routes.octa_tutor import router as octa_tutor_router
+    from backend.app.api.routes.support import router as support_router
+    from backend.app.api.routes.preferences import router as preferences_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
@@ -22,6 +24,8 @@ except ModuleNotFoundError:
     from app.api.routes.progress import router as progress_router
     from app.api.routes.stats import router as stats_router
     from app.api.routes.octa_tutor import router as octa_tutor_router
+    from app.api.routes.support import router as support_router
+    from app.api.routes.preferences import router as preferences_router
     from app.core.config import get_settings
 
 
@@ -60,7 +64,8 @@ def init_db_tables():
         expected = {"users", "user_sessions", "email_verifications", "password_resets",
                     "roles", "permissions", "user_roles", "role_permissions",
                     "login_attempts", "quiz_attempts", "module_progress",
-                    "user_streaks", "saved_sessions", "tutor_learning_profiles", "reviews"}
+                    "user_streaks", "saved_sessions", "tutor_learning_profiles", "reviews",
+                    "support_tickets", "user_preferences"}
         missing = expected - set(table_names)
         if missing:
             print(f"⚠️  Missing tables after create_all: {missing}")
@@ -135,6 +140,8 @@ app.include_router(progress_router)
 app.include_router(stats_router)
 app.include_router(execute_router)
 app.include_router(octa_tutor_router)
+app.include_router(support_router)
+app.include_router(preferences_router)
 
 
 

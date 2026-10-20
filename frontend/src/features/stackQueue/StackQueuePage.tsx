@@ -132,8 +132,21 @@ const INPUT_CONFIG: Record<StackQueueCategory, { label: string; placeholder: str
   dota2Senate: { label: 'Senate', placeholder: 'e.g. RDDR', initial: 'RDDR', helper: 'Enter a sequence of R and D senators.' },
 };
 
-// Circular Deque ring capacity shared by state, handlers and the engine
-const CD_CAPACITY = 5;
+function resizeRing(
+  elements: (number | string | null)[], front: number, capacity: number, nextCapacity: number
+) {
+  const values: (number | string)[] = [];
+  if (front >= 0) {
+    const occupied = elements.filter((value) => value !== null).length;
+    for (let offset = 0; offset < occupied; offset += 1) {
+      const value = elements[(front + offset) % capacity];
+      if (value !== null && value !== undefined) values.push(value);
+    }
+  }
+  const next = Array<(number | string | null)>(nextCapacity).fill(null);
+  values.forEach((value, index) => { next[index] = value; });
+  return { elements: next, front: values.length ? 0 : -1, rear: values.length - 1 };
+}
 
 export const StackQueuePage: React.FC = () => {
   const { setTutorContext } = useTutorContext();
@@ -163,6 +176,7 @@ export const StackQueuePage: React.FC = () => {
   // Internal Data Structure States
   const [stackData, setStackData] = useState<(number | string)[]>([10, 25, 30]);
   const [queueData, setQueueData] = useState<(number | string)[]>([15, 28, 40]);
+  const [cqCapacity, setCqCapacity] = useState(6);
   const [cqElements, setCqElements] = useState<(number | string | null)[]>([10, 20, 30, null, null, null]);
   const [cqFront, setCqFront] = useState<number>(0);
   const [cqRear, setCqRear] = useState<number>(2);
@@ -178,7 +192,8 @@ export const StackQueuePage: React.FC = () => {
   const [svqMain, setSvqMain] = useState<(number | string)[]>([10, 20, 30]);
   const [svqAux, setSvqAux] = useState<(number | string)[]>([]);
 
-  // Circular Deque ring state (CD_CAPACITY slots, front/rear point at elements)
+  // Circular Deque ring state (capacity selected by the learner).
+  const [cdCapacity, setCdCapacity] = useState(5);
   const [cdElements, setCdElements] = useState<(number | string | null)[]>([10, 20, null, null, null]);
   const [cdFront, setCdFront] = useState<number>(0);
   const [cdRear, setCdRear] = useState<number>(1);
@@ -424,7 +439,7 @@ export const StackQueuePage: React.FC = () => {
     const allSteps: StackQueueStep[] = [];
 
     for (const val of rawValues) {
-      const res = generateCircularQueueEnqueueSteps(currentElements, currentFront, currentRear, 6, val);
+      const res = generateCircularQueueEnqueueSteps(currentElements, currentFront, currentRear, cqCapacity, val);
       allSteps.push(...res.steps);
       currentElements = res.newElements;
       currentFront = res.newFront;
@@ -440,7 +455,7 @@ export const StackQueuePage: React.FC = () => {
   };
 
   const handleCircularDequeue = () => {
-    const res = generateCircularQueueDequeueSteps(cqElements, cqFront, cqRear, 6);
+    const res = generateCircularQueueDequeueSteps(cqElements, cqFront, cqRear, cqCapacity);
     setCqElements(res.newElements);
     setCqFront(res.newFront);
     setCqRear(res.newRear);
@@ -672,7 +687,7 @@ export const StackQueuePage: React.FC = () => {
       const raw = inputValue.trim();
       value = raw === '' ? 42 : isNaN(Number(raw)) ? raw : Number(raw);
     }
-    const res = generateCircularDequeSteps(cdElements, cdFront, cdRear, CD_CAPACITY, op, value);
+    const res = generateCircularDequeSteps(cdElements, cdFront, cdRear, cdCapacity, op, value);
     setCdElements(res.newElements);
     setCdFront(res.newFront);
     setCdRear(res.newRear);
@@ -754,7 +769,7 @@ export const StackQueuePage: React.FC = () => {
       case 'queue':
         return generateQueueEnqueueSteps(currQueue.length ? currQueue : [15, 28, 40], 42);
       case 'circularQueue':
-        return generateCircularQueueEnqueueSteps(currCq, currFront, currRear, 6, 50).steps;
+        return generateCircularQueueEnqueueSteps(currCq, currFront, currRear, cqCapacity, 50).steps;
       case 'validParentheses':
         return generateValidParenthesesSteps('({[]})');
       case 'minStack':
@@ -790,10 +805,10 @@ export const StackQueuePage: React.FC = () => {
         ).steps;
       case 'circularDeque':
         return generateCircularDequeSteps(
-          currCd.some((e) => e !== null) ? currCd : [10, 20, null, null, null],
+          currCd.some((e) => e !== null) ? currCd : [10, 20, ...Array<null>(Math.max(0, cdCapacity - 2)).fill(null)],
           currCdFront >= 0 ? currCdFront : 0,
           currCdRear >= 0 ? currCdRear : 1,
-          CD_CAPACITY,
+          cdCapacity,
           'insertLast',
           30
         ).steps;
@@ -1006,10 +1021,10 @@ export const StackQueuePage: React.FC = () => {
         break;
       }
       case 'circularDeque': {
-        const elems: (number | string | null)[] = [randInt(5, 60), randInt(5, 60), null, null, null];
+        const elems: (number | string | null)[] = [randInt(5, 60), randInt(5, 60), ...Array<null>(Math.max(0, cdCapacity - 2)).fill(null)];
         const op = Math.random() < 0.5 ? 'insertFront' : 'insertLast';
         const val = randInt(5, 60);
-        const res = generateCircularDequeSteps(elems, 0, 1, CD_CAPACITY, op, val);
+        const res = generateCircularDequeSteps(elems, 0, 1, cdCapacity, op, val);
         setCdElements(res.newElements);
         setCdFront(res.newFront);
         setCdRear(res.newRear);
@@ -1177,6 +1192,26 @@ export const StackQueuePage: React.FC = () => {
           <label className="stackqueue-param-control">
             Window size k
             <input type="number" min={1} max={20} value={windowSize} onChange={(event) => setWindowSize(Math.max(1, Math.min(20, Number(event.target.value) || 1)))} />
+          </label>
+        )}
+        {category === 'circularQueue' && (
+          <label className="stackqueue-param-control">
+            Capacity
+            <input type="number" min={Math.max(2, cqElements.filter((value) => value !== null).length)} max={12} value={cqCapacity} onChange={(event) => {
+              const nextCapacity = Math.max(cqElements.filter((value) => value !== null).length, Math.min(12, Number(event.target.value) || 2));
+              const ring = resizeRing(cqElements, cqFront, cqCapacity, nextCapacity);
+              setCqCapacity(nextCapacity); setCqElements(ring.elements); setCqFront(ring.front); setCqRear(ring.rear); setActiveSteps([]); reset();
+            }} />
+          </label>
+        )}
+        {category === 'circularDeque' && (
+          <label className="stackqueue-param-control">
+            Capacity
+            <input type="number" min={Math.max(2, cdElements.filter((value) => value !== null).length)} max={12} value={cdCapacity} onChange={(event) => {
+              const nextCapacity = Math.max(cdElements.filter((value) => value !== null).length, Math.min(12, Number(event.target.value) || 2));
+              const ring = resizeRing(cdElements, cdFront, cdCapacity, nextCapacity);
+              setCdCapacity(nextCapacity); setCdElements(ring.elements); setCdFront(ring.front); setCdRear(ring.rear); setActiveSteps([]); reset();
+            }} />
           </label>
         )}
         {category === 'taskScheduler' && (

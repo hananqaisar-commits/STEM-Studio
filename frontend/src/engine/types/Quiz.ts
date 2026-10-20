@@ -106,8 +106,29 @@ export function filterByCadence(
   checkpoints: QuizCheckpoint[],
   cadence: QuizCadence
 ): QuizCheckpoint[] {
-  const ceiling = cadenceCeiling(cadence);
-  return checkpoints.filter((c) => c.question.weight <= ceiling);
+  const eligible = checkpoints.filter((checkpoint) => checkpoint.question.weight <= cadenceCeiling(cadence));
+  if (cadence === 'intensive' || eligible.length <= 1) return eligible;
+
+  const targetRatio = cadence === 'light' ? 0.25 : 0.5;
+  const targetCount = Math.max(1, Math.ceil(checkpoints.length * targetRatio));
+  const core = eligible.filter((checkpoint) => checkpoint.question.weight === 1);
+  const drill = eligible.filter((checkpoint) => checkpoint.question.weight > 1);
+
+  // Never thin out foundational concepts. When there is room, distribute
+  // reinforcement questions across the trace so they do not cluster together.
+  if (cadence === 'light') {
+    if (core.length <= targetCount) return core;
+    return sampleEvenly(core, targetCount);
+  }
+  if (core.length >= targetCount || drill.length === 0) return core;
+  return [...core, ...sampleEvenly(drill, targetCount - core.length)]
+    .sort((left, right) => left.stepIndex - right.stepIndex);
+}
+
+function sampleEvenly<T>(items: T[], count: number): T[] {
+  if (count <= 0 || items.length === 0) return [];
+  if (count >= items.length) return items;
+  return Array.from({ length: count }, (_, index) => items[Math.floor((index + 0.5) * items.length / count)]);
 }
 
 export const CADENCE_LABELS: Record<QuizCadence, string> = {
@@ -133,7 +154,7 @@ export const CADENCE_IDENTITIES: Record<QuizCadence, string> = {
 export const CADENCE_DESCRIPTIONS: Record<QuizCadence, string> = {
   light: 'Conceptual anchors only \u2014 no time pressure. Each answer includes a Key Idea insight to reinforce the core principle.',
   normal: 'Anchors plus step-prediction questions. Hints on wrong attempts, full explanations after reveal, and a progress bar to track your position.',
-  intensive: 'All checkpoints including fine detail. 15-second timer per question, streak multipliers (x2/x3), and thinking tips before each question.',
+  intensive: 'Every checkpoint, an adaptive 20–45 second timer based on question complexity, streak multipliers (x2/x3), and thinking tips.',
 };
 
 /** Lucide icon names per mode (resolved by QuizDock). */
@@ -230,4 +251,3 @@ export function buildOptions(
   options.splice(correctIndex, 0, correct);
   return { options, correctIndex };
 }
-
