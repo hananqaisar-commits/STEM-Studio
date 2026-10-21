@@ -11,20 +11,25 @@ import json
 from typing import Any, Dict, List, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 
 try:
     from backend.app.api.dependencies import get_current_user
     from backend.app.api.schemas import CustomCodeExecutionRequest, CustomCodeExecutionResponse
     from backend.app.core.config import get_settings
+    from backend.app.core.feature_access import require_feature_access
     from backend.app.core.rate_limit import RateLimiter
     from backend.app.services.custom_code import harness, judge0, registry
+    from backend.infrastructure.database.database import get_db
     from backend.infrastructure.database.models import User
 except ModuleNotFoundError:
     from app.api.dependencies import get_current_user
     from app.api.schemas import CustomCodeExecutionRequest, CustomCodeExecutionResponse
     from app.core.config import get_settings
+    from app.core.feature_access import require_feature_access
     from app.core.rate_limit import RateLimiter
     from app.services.custom_code import harness, judge0, registry
+    from infrastructure.database.database import get_db
     from infrastructure.database.models import User
 
 router = APIRouter(prefix="/api/execute", tags=["Custom Code"])
@@ -99,7 +104,10 @@ def parse_execution_output(stdout: str) -> Tuple[List[dict], List[List[int]], Li
 async def execute_custom_code(
     req: CustomCodeExecutionRequest,
     _user: User = Depends(_enforce_submission_limits),
+    db: Session = Depends(get_db),
 ) -> CustomCodeExecutionResponse:
+    feature_key = req.algorithm_key.split(".", 1)[0]
+    require_feature_access(db, _user, feature_key)
     settings = get_settings()
     if not settings.JUDGE0_URL:
         raise HTTPException(

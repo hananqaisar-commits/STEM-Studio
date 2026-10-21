@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, func
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -299,6 +299,7 @@ class UserPreference(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
     theme: Mapped[Optional[str]] = mapped_column(String(10))
+    marketing_email_opt_in: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -321,8 +322,45 @@ class Announcement(Base):
     )
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    email_requested: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    email_audience_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    email_status: Mapped[str] = mapped_column(String(20), default="not_requested", nullable=False)
+    email_sent_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    email_failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     recipients: Mapped[List["AnnouncementRecipient"]] = relationship(
         back_populates="announcement", cascade="all, delete-orphan"
+    )
+
+
+class FeaturePolicy(Base):
+    """Owner-managed availability and premium status for a registered module."""
+
+    __tablename__ = "feature_policies"
+
+    feature_key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    label: Mapped[str] = mapped_column(String(120))
+    is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    updated_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class UserFeatureOverride(Base):
+    """Explicit per-user feature allow/deny override, optionally time limited."""
+
+    __tablename__ = "user_feature_overrides"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    feature_key: Mapped[str] = mapped_column(
+        ForeignKey("feature_policies.feature_key", ondelete="CASCADE"), primary_key=True
+    )
+    granted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    updated_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
 
@@ -356,3 +394,20 @@ class AnnouncementRead(Base):
     read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="notification_reads")
+
+
+class AnnouncementEmailDelivery(Base):
+    """Per-recipient delivery outcome for owner email broadcasts."""
+
+    __tablename__ = "announcement_email_deliveries"
+    __table_args__ = (UniqueConstraint("announcement_id", "user_id", name="uq_announcement_email_recipient"),)
+
+    delivery_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    announcement_id: Mapped[int] = mapped_column(
+        ForeignKey("announcements.announcement_id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="queued", nullable=False)
+    error_type: Mapped[Optional[str]] = mapped_column(String(64))
+    attempted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

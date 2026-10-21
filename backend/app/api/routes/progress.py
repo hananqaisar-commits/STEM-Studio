@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.app.api.dependencies import get_current_user
+from backend.app.core.feature_access import FEATURE_CATALOG, has_feature_access, require_feature_access
 from backend.app.api.schemas import (
     CompleteAlgorithmRequest,
     MessageResponse,
@@ -34,6 +35,18 @@ with _TOPIC_CATALOG_PATH.open(encoding="utf-8") as _topic_catalog_file:
     MODULE_ALGORITHM_COUNTS = {module: len(topic_ids) for module, topic_ids in json.load(_topic_catalog_file).items()}
 
 
+def _available_module_names(db: Session, current_user: User) -> list[str]:
+    available = [
+        key for key, _ in FEATURE_CATALOG
+        if has_feature_access(db, current_user, key)
+    ]
+    available.extend(
+        alias for canonical, alias in (("os-commands", "commands"), ("os-filesystem", "filesystem"))
+        if canonical in available
+    )
+    return available
+
+
 # ─── 1. SUBMIT QUIZ ANSWER ───────────────────────────────────────────
 
 @router.post("/quiz-submit", response_model=QuizSubmissionResponse)
@@ -43,6 +56,7 @@ def submit_quiz(
     db: Session = Depends(get_db),
 ):
     """Record a quiz attempt and update user learning streak."""
+    require_feature_access(db, current_user, payload.module_name)
     # 1. Record Attempt
     attempt = QuizAttempt(
         user_id=current_user.user_id,
@@ -115,6 +129,7 @@ def complete_algorithm(
     db: Session = Depends(get_db),
 ):
     """Mark an algorithm as completed/mastered within a module."""
+    require_feature_access(db, current_user, payload.module_name)
     progress = (
         db.query(ModuleProgress)
         .filter(
@@ -169,17 +184,16 @@ def get_user_stats(
     db: Session = Depends(get_db),
 ):
     """Return total quizzes taken, accuracy, streak, and module completion stats."""
-    total_quizzes = (
-        db.query(QuizAttempt).filter(QuizAttempt.user_id == current_user.user_id).count()
-    )
-    correct_quizzes = (
-        db.query(QuizAttempt)
-        .filter(
-            QuizAttempt.user_id == current_user.user_id,
-            QuizAttempt.is_correct == True,
-        )
-        .count()
-    )
+    available_module_names = _available_module_names(db, current_user)
+    total_quizzes = db.query(QuizAttempt).filter(
+        QuizAttempt.user_id == current_user.user_id,
+        QuizAttempt.module_name.in_(available_module_names),
+    ).count()
+    correct_quizzes = db.query(QuizAttempt).filter(
+        QuizAttempt.user_id == current_user.user_id,
+        QuizAttempt.module_name.in_(available_module_names),
+        QuizAttempt.is_correct.is_(True),
+    ).count()
     accuracy = (correct_quizzes / total_quizzes * 100) if total_quizzes > 0 else 0.0
 
     streak = db.query(UserStreak).filter(UserStreak.user_id == current_user.user_id).first()
@@ -190,6 +204,7 @@ def get_user_stats(
     module_rows = (
         db.query(ModuleProgress)
         .filter(ModuleProgress.user_id == current_user.user_id)
+        .filter(ModuleProgress.module_name.in_(available_module_names))
         .all()
     )
 
@@ -228,6 +243,7 @@ def get_review_schedule(
     attempts = (
         db.query(QuizAttempt)
         .filter(QuizAttempt.user_id == current_user.user_id)
+        .filter(QuizAttempt.module_name.in_(_available_module_names(db, current_user)))
         .order_by(QuizAttempt.created_at.asc())
         .all()
     )
@@ -267,6 +283,7 @@ def save_session(
     db: Session = Depends(get_db),
 ):
     """Save a user visualization state or custom dataset."""
+    require_feature_access(db, current_user, payload.module_name)
     new_session = SavedSession(
         user_id=current_user.user_id,
         title=payload.title,
@@ -286,9 +303,11 @@ def get_user_sessions(
     db: Session = Depends(get_db),
 ):
     """Retrieve all saved datasets and states for the current user."""
+    available_module_names = _available_module_names(db, current_user)
     sessions = (
         db.query(SavedSession)
         .filter(SavedSession.user_id == current_user.user_id)
+        .filter(SavedSession.module_name.in_(available_module_names))
         .order_by(SavedSession.created_at.desc())
         .all()
     )

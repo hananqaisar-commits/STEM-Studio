@@ -28,7 +28,8 @@ interface AuthContextType {
     email: string,
     password: string,
     firstName: string,
-    lastName: string
+    lastName: string,
+    marketingEmailOptIn?: boolean
   ) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -151,7 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     password: string,
     firstName: string,
-    lastName: string
+    lastName: string,
+    marketingEmailOptIn = false
   ) => {
     await apiClient('/api/auth/signup', {
       method: 'POST',
@@ -161,6 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         first_name: firstName,
         last_name: lastName,
+        marketing_email_opt_in: marketingEmailOptIn,
       },
     });
   };

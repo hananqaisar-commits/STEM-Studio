@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -12,13 +12,17 @@ router = APIRouter(prefix="/api/preferences", tags=["Preferences"])
 
 
 class ThemeUpdate(BaseModel):
-    theme: Literal["light", "dark"]
+    theme: Optional[Literal["light", "dark"]] = None
+    marketing_email_opt_in: Optional[bool] = None
 
 
 @router.get("")
 def get_preferences(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     preference = db.query(UserPreference).filter(UserPreference.user_id == current_user.user_id).first()
-    return {"theme": preference.theme if preference else None}
+    return {
+        "theme": preference.theme if preference else None,
+        "marketing_email_opt_in": bool(preference.marketing_email_opt_in) if preference else False,
+    }
 
 
 @router.patch("")
@@ -29,9 +33,19 @@ def update_preferences(
 ):
     preference = db.query(UserPreference).filter(UserPreference.user_id == current_user.user_id).first()
     if preference is None:
-        preference = UserPreference(user_id=current_user.user_id, theme=payload.theme)
+        preference = UserPreference(
+            user_id=current_user.user_id,
+            theme=payload.theme,
+            marketing_email_opt_in=bool(payload.marketing_email_opt_in),
+        )
         db.add(preference)
     else:
-        preference.theme = payload.theme
+        if payload.theme is not None:
+            preference.theme = payload.theme
+        if payload.marketing_email_opt_in is not None:
+            preference.marketing_email_opt_in = payload.marketing_email_opt_in
     db.commit()
-    return {"theme": preference.theme}
+    return {
+        "theme": preference.theme,
+        "marketing_email_opt_in": bool(preference.marketing_email_opt_in),
+    }

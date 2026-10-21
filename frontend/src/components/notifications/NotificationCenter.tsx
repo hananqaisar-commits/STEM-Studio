@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { CSSProperties } from 'react';
 import { Bell, Check, CheckCheck, Inbox, LoaderCircle, X } from 'lucide-react';
 import { apiClient, ApiError } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,8 +33,20 @@ export function NotificationCenter() {
   const [inbox, setInbox] = useState<NotificationInbox>({ unread_count: 0, items: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const positionPopover = useCallback(() => {
+    const button = buttonRef.current?.getBoundingClientRect();
+    if (!button) return;
+    const width = Math.min(410, Math.max(1, window.innerWidth - 16));
+    const left = Math.max(8, Math.min(button.right - width, window.innerWidth - width - 8));
+    const panelHeight = panelRef.current?.getBoundingClientRect().height || Math.min(620, window.innerHeight - 24);
+    let top = button.bottom + 8;
+    if (top + panelHeight > window.innerHeight - 8) top = Math.max(8, button.top - panelHeight - 8);
+    setPopoverStyle({ left, top, right: 'auto', width, maxHeight: Math.max(180, window.innerHeight - 16), zIndex: 1400 });
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -65,6 +78,9 @@ export function NotificationCenter() {
 
   useEffect(() => {
     if (!isOpen) return;
+    const reposition = () => positionPopover();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (!buttonRef.current?.contains(target) && !panelRef.current?.contains(target)) setIsOpen(false);
@@ -80,8 +96,14 @@ export function NotificationCenter() {
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
     };
-  }, [isOpen]);
+  }, [isOpen, positionPopover]);
+
+  useLayoutEffect(() => {
+    if (isOpen) positionPopover();
+  }, [isOpen, positionPopover]);
 
   const markRead = async (announcementId: number) => {
     const current = inbox;
@@ -119,7 +141,15 @@ export function NotificationCenter() {
         ref={buttonRef}
         type="button"
         className="expandable-tab-btn notification-bell-button"
-        onClick={() => { setIsOpen((open) => !open); setError(''); }}
+        onClick={() => {
+          const opening = !isOpen;
+          setIsOpen(opening);
+          if (opening) {
+            void refresh();
+            window.requestAnimationFrame(positionPopover);
+          }
+          setError('');
+        }}
         aria-label={inbox.unread_count ? inbox.unread_count + ' unread notifications' : 'Notifications'}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
@@ -128,7 +158,7 @@ export function NotificationCenter() {
         <Bell size={18} className="tab-icon" aria-hidden="true" />
         {inbox.unread_count > 0 && (
           <span className="notification-unread-badge" aria-hidden="true">
-            {inbox.unread_count > 99 ? '99+' : inbox.unread_count}
+            {inbox.unread_count > 99 ? '99+' : inbox.unread_count.toLocaleString()}
           </span>
         )}
       </button>
@@ -137,7 +167,7 @@ export function NotificationCenter() {
       </span>
 
       {isOpen && createPortal(
-        <div className="notification-popover" ref={panelRef} role="dialog" aria-label="Notifications">
+        <div className="notification-popover" style={popoverStyle} ref={panelRef} role="dialog" aria-label="Notifications">
           <header className="notification-popover-header">
             <div>
               <p className="notification-eyebrow">Your updates</p>

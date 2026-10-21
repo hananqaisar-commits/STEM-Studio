@@ -50,6 +50,7 @@ from backend.infrastructure.database.models import (
     OwnerSessionGrant,
     PasswordReset,
     User,
+    UserPreference,
     UserSession,
 )
 
@@ -197,6 +198,10 @@ def signup(
     try:
         db.add(new_user)
         db.flush()  # Allocate the account ID before inserting its verification row.
+        db.add(UserPreference(
+            user_id=new_user.user_id,
+            marketing_email_opt_in=payload.marketing_email_opt_in,
+        ))
         verification = EmailVerification(
             user_id=new_user.user_id,
             token_hash=hash_token(raw_token),
