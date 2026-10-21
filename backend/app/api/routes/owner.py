@@ -13,6 +13,7 @@ from backend.app.api.dependencies import require_owner, require_recent_owner
 from backend.app.api.schemas import OwnerUserStatusRequest
 from backend.app.core.owner_security import is_owner_identity, record_admin_event
 from backend.app.core.rate_limit import strict
+from backend.app.api.routes.stats import invalidate_platform_stats_cache
 from backend.infrastructure.database.database import get_db
 from backend.infrastructure.database.models import AdminAuditEvent, User, UserSession
 
@@ -111,6 +112,7 @@ def set_user_status(
         ip_address=request.client.host if request.client else None,
     )
     db.commit()
+    invalidate_platform_stats_cache()
     return {"user_id": target.user_id, "is_active": target.is_active}
 
 

@@ -33,6 +33,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
+  resendVerificationEmail: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
 }
 
@@ -201,6 +202,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data.message;
   };
 
+  const resendVerificationEmail = async (email: string): Promise<string> => {
+    const data = await apiClient<{ message: string }>('/api/auth/resend-verification', {
+      method: 'POST',
+      body: { email: email.trim().toLowerCase() },
+    });
+    return data.message;
+  };
+
   const resetPassword = async (token: string, newPassword: string): Promise<string> => {
     const data = await apiClient<{ message: string }>('/api/auth/reset-password', {
       method: 'POST',
@@ -236,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         deleteAccount,
         forgotPassword,
+        resendVerificationEmail,
         resetPassword,
       }}
     >

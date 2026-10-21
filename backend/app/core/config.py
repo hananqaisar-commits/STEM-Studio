@@ -112,6 +112,15 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_owner_boundary(self) -> "Settings":
         if not self.DEBUG:
+            if "DATABASE_URL" not in self.model_fields_set:
+                raise ValueError("Set DATABASE_URL to a managed, persistent production database")
+            database_url = urlsplit(self.DATABASE_URL)
+            if database_url.scheme.startswith("sqlite"):
+                raise ValueError("SQLite is not supported for production accounts; use the shared managed PostgreSQL database")
+            if database_url.scheme not in {"postgresql+psycopg2", "postgresql", "mysql+pymysql", "mysql"}:
+                raise ValueError("Production DATABASE_URL must use PostgreSQL or MySQL")
+            if not database_url.hostname or database_url.hostname.lower() in {"localhost", "127.0.0.1", "::1"}:
+                raise ValueError("Production DATABASE_URL must point to a remote managed database")
             if "JWT_SECRET_KEY" not in self.model_fields_set:
                 raise ValueError("Set a stable JWT_SECRET_KEY in the production environment")
             if len(self.JWT_SECRET_KEY) < 32 or "change-this" in self.JWT_SECRET_KEY.lower():
@@ -122,6 +131,10 @@ class Settings(BaseSettings):
                 parsed = urlsplit(origin)
                 if parsed.scheme != "https" or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:
                     raise ValueError("Production CORS_ORIGINS must contain HTTPS origins without paths")
+            # The Vercel frontend and Render API are cross-site. Owner sessions
+            # use cookies, so browsers require SameSite=None plus Secure.
+            if "OWNER_COOKIE_SAMESITE" not in self.model_fields_set:
+                self.OWNER_COOKIE_SAMESITE = "none"
         owner_cookie_secure = self.OWNER_COOKIE_SECURE if self.OWNER_COOKIE_SECURE is not None else not self.DEBUG
         if self.OWNER_COOKIE_SAMESITE == "none" and not owner_cookie_secure:
             raise ValueError("OWNER_COOKIE_SECURE must be true when OWNER_COOKIE_SAMESITE is none")
@@ -136,7 +149,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     # This escape hatch is honored only when DEBUG is also enabled.
     ALLOW_UNVERIFIED_SIGNUP: bool = False
-    EMAILS_FROM_EMAIL: str = "noreply@stemstudio.com"
+    EMAILS_FROM_EMAIL: str = ""
     EMAILS_FROM_NAME: str = "STEM Studio Support"
     # Deprecated: owner access is granted only by the provisioned database role.
     SUPPORT_OWNER_EMAILS: str = ""

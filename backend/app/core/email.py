@@ -1,200 +1,108 @@
+"""SMTP delivery for account verification and password recovery."""
+
 import logging
 import smtplib
+import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
+
 from backend.app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-def send_password_reset_email(to_email: str, reset_url: str) -> bool:
-    """
-    Sends a professional Password Reset email via SMTP (e.g., Gmail).
-    If SMTP credentials (SMTP_USER & SMTP_PASSWORD) are set in environment or config,
-    it connects to smtp.gmail.com:587 and delivers the email directly to the recipient's inbox.
-    Otherwise, it logs a warning and prints the URL to terminal.
-    """
-    settings = get_settings()
 
+def _send_email(to_email: str, subject: str, text_content: str, html_content: str) -> bool:
+    """Deliver one transactional email; never log addresses, links, or secrets."""
+    settings = get_settings()
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.error(
-            "Password reset email was not sent because SMTP credentials are not configured."
-        )
+        logger.error("SMTP delivery skipped: provider credentials are not configured")
         return False
 
-    sender_email = settings.SMTP_USER
-    sender_name = settings.EMAILS_FROM_NAME
+    sender_email = settings.EMAILS_FROM_EMAIL.strip() or settings.SMTP_USER.strip()
+    message = MIMEMultipart("alternative")
+    message["Subject"] = subject
+    message["From"] = formataddr((settings.EMAILS_FROM_NAME, sender_email))
+    message["To"] = to_email
+    message.attach(MIMEText(text_content, "plain", "utf-8"))
+    message.attach(MIMEText(html_content, "html", "utf-8"))
 
-    # Create MIMEMultipart message
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"🔐 Reset Your Password — {settings.APP_NAME}"
-    msg["From"] = f"{sender_name} <{sender_email}>"
-    msg["To"] = to_email
+    try:
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+            server.ehlo()
+            if settings.SMTP_TLS:
+                server.starttls(context=ssl.create_default_context())
+                server.ehlo()
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            refused = server.sendmail(sender_email, [to_email], message.as_string())
+            if refused:
+                raise smtplib.SMTPRecipientsRefused(refused)
+        logger.info("Transactional email accepted by configured SMTP provider")
+        return True
+    except (OSError, smtplib.SMTPException, ssl.SSLError) as exc:
+        logger.error("SMTP delivery failed (%s)", type(exc).__name__)
+        return False
 
-    # Plain Text Version
-    text_content = f"""
-Hello,
+
+def send_password_reset_email(to_email: str, reset_url: str) -> bool:
+    """Send a password-reset link to the account's registered email."""
+    settings = get_settings()
+    text_content = f"""Hello,
 
 We received a request to reset your password for your STEM Studio account.
-Please click the link below to set a new password:
+Open this link to choose a new password:
 
 {reset_url}
 
-If you did not request a password reset, you can safely ignore this email.
+If you did not request this, you can ignore this email.
 
 Best regards,
 The STEM Studio Team
 """
+    html_content = f"""<!doctype html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;background:#f4f7fb;color:#172033;margin:0;padding:28px">
+  <main style="max-width:520px;margin:auto;background:#fff;border:1px solid #dce4ee;border-radius:14px;padding:30px">
+    <p style="font-size:20px;font-weight:700;color:#176b87">STEM Studio</p>
+    <h1 style="font-size:22px">Reset your password</h1>
+    <p>We received a request to reset the password for your STEM Studio account.</p>
+    <p><a href="{reset_url}" style="display:inline-block;padding:12px 18px;background:#176b87;color:#fff;text-decoration:none;border-radius:8px">Choose a new password</a></p>
+    <p style="font-size:13px;color:#536277">If the button does not open, copy this link into your browser:<br><a href="{reset_url}">{reset_url}</a></p>
+    <p style="font-size:13px;color:#536277">If you did not request this, ignore this email. Your password will remain unchanged.</p>
+  </main>
+</body></html>"""
+    return _send_email(
+        to_email,
+        f"Reset your password — {settings.APP_NAME}",
+        text_content,
+        html_content,
+    )
 
-    # Premium HTML Email Version
-    html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body {{
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #0f172a;
-      color: #e2e8f0;
-      margin: 0;
-      padding: 30px;
-    }}
-    .email-card {{
-      max-width: 520px;
-      margin: 0 auto;
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-    }}
-    .brand-title {{
-      font-size: 22px;
-      font-weight: 800;
-      color: #38bdf8;
-      letter-spacing: 0.5px;
-      margin-bottom: 20px;
-    }}
-    .email-heading {{
-      font-size: 18px;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 12px;
-    }}
-    .email-text {{
-      font-size: 14px;
-      line-height: 1.6;
-      color: #94a3b8;
-      margin-bottom: 24px;
-    }}
-    .reset-btn {{
-      display: inline-block;
-      background-color: #3b82f6;
-      color: #ffffff !important;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 700;
-      padding: 12px 24px;
-      border-radius: 8px;
-      margin-bottom: 24px;
-    }}
-    .reset-link {{
-      font-family: monospace;
-      font-size: 12px;
-      color: #38bdf8;
-      word-break: break-all;
-    }}
-    .email-footer {{
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 1px solid #334155;
-      font-size: 12px;
-      color: #64748b;
-      text-align: center;
-    }}
-  </style>
-</head>
-<body>
-  <div class="email-card">
-    <div class="brand-title">🧪 STEM Studio</div>
-    <div class="email-heading">Password Reset Request</div>
-    <div class="email-text">
-      We received a request to reset the password associated with your STEM Studio account (<strong>{to_email}</strong>).
-      Click the button below to choose a new password:
-    </div>
-    <div>
-      <a href="{reset_url}" class="reset-btn" target="_blank">Reset My Password</a>
-    </div>
-    <div class="email-text">
-      If the button above doesn't work, copy and paste this link into your web browser:
-      <br><br>
-      <span class="reset-link">{reset_url}</span>
-    </div>
-    <div class="email-footer">
-      If you did not request this, please ignore this email. Your password will remain unchanged.
-    </div>
-  </div>
-</body>
-</html>
-"""
-
-    msg.attach(MIMEText(text_content, "plain"))
-    msg.attach(MIMEText(html_content, "html"))
-
-    try:
-        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-        if settings.SMTP_TLS:
-            server.starttls()
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(sender_email, [to_email], msg.as_string())
-        server.quit()
-        logger.info(f"Password reset email successfully sent to {to_email}")
-        print(f"✅ Real email successfully delivered via Gmail SMTP to [{to_email}]")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {e}")
-        print(f"❌ Failed to send SMTP email to [{to_email}]: {e}")
-        return False
 
 def send_verification_email(to_email: str, verify_url: str) -> bool:
-    """Sends a verification email upon signup."""
+    """Send the link that proves the account holder can access this inbox."""
     settings = get_settings()
+    text_content = f"""Welcome to {settings.APP_NAME}!
 
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning(
-            "Verification email was not sent because SMTP credentials are not configured."
-        )
-        return False
+Verify your email address by opening this link:
+{verify_url}
 
-    sender_email = settings.SMTP_USER
-    sender_name = settings.EMAILS_FROM_NAME
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"✅ Verify your email — {settings.APP_NAME}"
-    msg["From"] = f"{sender_name} <{sender_email}>"
-    msg["To"] = to_email
-
-    text_content = f"Please verify your email by clicking the link: {verify_url}"
-    html_content = f"""
-    <div style="font-family: sans-serif; padding: 20px;">
-      <h2>Welcome to STEM Studio!</h2>
-      <p>Please verify your email address by clicking the link below:</p>
-      <a href="{verify_url}" style="display:inline-block; padding:10px 20px; background-color:#3b82f6; color:#fff; text-decoration:none; border-radius:5px;">Verify Email</a>
-      <p>If you didn't create an account, you can ignore this email.</p>
-    </div>
-    """
-
-    msg.attach(MIMEText(text_content, "plain"))
-    msg.attach(MIMEText(html_content, "html"))
-
-    try:
-        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-        if settings.SMTP_TLS:
-            server.starttls()
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(sender_email, [to_email], msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send verification email to {to_email}: {e}")
-        return False
+If you did not create this account, ignore this email.
+"""
+    html_content = f"""<!doctype html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;background:#f4f7fb;color:#172033;margin:0;padding:28px">
+  <main style="max-width:520px;margin:auto;background:#fff;border:1px solid #dce4ee;border-radius:14px;padding:30px">
+    <p style="font-size:20px;font-weight:700;color:#176b87">STEM Studio</p>
+    <h1 style="font-size:22px">Verify your email</h1>
+    <p>Confirm this address to finish creating your account.</p>
+    <p><a href="{verify_url}" style="display:inline-block;padding:12px 18px;background:#176b87;color:#fff;text-decoration:none;border-radius:8px">Verify email address</a></p>
+    <p style="font-size:13px;color:#536277">If you did not create this account, ignore this email.</p>
+  </main>
+</body></html>"""
+    return _send_email(
+        to_email,
+        f"Verify your email — {settings.APP_NAME}",
+        text_content,
+        html_content,
+    )

@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from contextlib import asynccontextmanager
 
 # Ensure backend directory is in sys.path
@@ -34,13 +35,12 @@ except ModuleNotFoundError:
 
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 # ─── Auto-create database tables ─────────────────────────────────────
 def init_db_tables():
     """Create tables with retry logic for cold-start connection issues."""
-    import time
-
     try:
         try:
             from backend.infrastructure.database.database import engine, Base, verify_connection
@@ -52,10 +52,9 @@ def init_db_tables():
         # Step 1: Verify connection is alive (with retries)
         print("🔌 Verifying database connection...")
         if not verify_connection(retries=3, delay=2.0):
-            print("❌ CRITICAL: Cannot connect to database after 3 retries.")
-            print("   Check DATABASE_URL in Render environment variables.")
-            print("   Current URL host: " + engine.url.host)
-            return
+            raise RuntimeError("Cannot connect to the configured database after three retries")
+
+        print(f"🗄️ Database engine: {engine.dialect.name}")
 
         # Step 2: Create tables
         print("📦 Creating database tables...")
@@ -74,7 +73,7 @@ def init_db_tables():
                     "admin_audit_events"}
         missing = expected - set(table_names)
         if missing:
-            print(f"⚠️  Missing tables after create_all: {missing}")
+            raise RuntimeError(f"Database schema is incomplete ({len(missing)} required tables missing)")
         else:
             print(f"✅ All {len(expected)} tables verified. Database ready.")
 
@@ -85,9 +84,9 @@ def init_db_tables():
             user_count = result.scalar()
             print(f"👥 Current user count: {user_count}")
 
-    except Exception as e:
-        import traceback
-        print(f"❌ CRITICAL DATABASE ERROR during table creation:\n{traceback.format_exc()}")
+    except Exception as exc:
+        logger.error("Database initialization failed (%s)", type(exc).__name__)
+        raise RuntimeError("Database initialization failed; check the configured persistent DATABASE_URL") from exc
 
 
 @asynccontextmanager

@@ -93,7 +93,7 @@ export const SignUp: React.FC = () => {
     try {
       await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim());
       rememberEmail(email.trim());
-      setSuccess('Account created successfully! Redirecting to login...');
+      setSuccess('Account created. Check your inbox for the verification link. Redirecting to sign in...');
       setExpression('happy', { temporary: true, durationMs: 2000 });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
