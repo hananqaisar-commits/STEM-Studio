@@ -176,6 +176,28 @@
   text-decoration: underline;
 }
 
+.auth-resend-verification {
+  display: block;
+  margin: -0.4rem 0 1rem auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-hover);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.auth-resend-verification:hover:not(:disabled) {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.auth-resend-verification:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .auth-button {
   width: 100%;
   padding: 0.875rem;

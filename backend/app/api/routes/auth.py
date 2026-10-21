@@ -15,6 +15,7 @@ from backend.app.api.schemas import (
     MessageResponse,
     OwnerLoginResponse,
     OwnerReauthRequest,
+    ResendVerificationRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
     SignUpRequest,
@@ -22,6 +23,7 @@ from backend.app.api.schemas import (
     UserResponse,
 )
 from backend.app.core.config import get_settings
+from backend.app.core.email import send_password_reset_email, send_verification_email
 from backend.app.core.rate_limit import rate_limit, standard, strict
 from backend.app.core.owner_security import (
     consume_owner_totp,
@@ -118,6 +120,11 @@ _PASSWORD_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$")
 
 def _validate_password_strength(password: str) -> None:
     """Ensure passwords meet a minimum complexity bar."""
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be 72 UTF-8 bytes or fewer.",
+        )
     if not _PASSWORD_REGEX.match(password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -186,8 +193,6 @@ def signup(
         is_verified=dev_unverified_signup,
     )
     from backend.infrastructure.database.models import EmailVerification
-    from backend.app.core.email import send_verification_email
-
     raw_token = generate_secure_token()
     try:
         db.add(new_user)
@@ -213,7 +218,11 @@ def signup(
 
     verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
     if smtp_enabled:
-        send_verification_email(to_email=new_user.email, verify_url=verify_url)
+        if not send_verification_email(to_email=new_user.email, verify_url=verify_url):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Your account was created, but the verification email could not be delivered. Sign in and request another verification email.",
+            )
 
     return new_user
 
@@ -259,6 +268,48 @@ def verify_email(
     return MessageResponse(message="Email verified successfully")
 
 
+@router.post("/resend-verification", response_model=MessageResponse, status_code=status.HTTP_202_ACCEPTED)
+def resend_verification_email(
+    payload: ResendVerificationRequest,
+    db: Session = Depends(get_db),
+    _rate: None = Depends(strict),
+):
+    """Issue a fresh verification link without revealing whether an email exists."""
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email delivery is not configured right now. Please try again later.",
+        )
+
+    clean_email = str(payload.email).strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == clean_email).first()
+    message = "If an unverified account exists for that email, a verification link has been sent."
+    if user is None or user.is_verified:
+        return MessageResponse(message=message)
+
+    from backend.infrastructure.database.models import EmailVerification
+    now = datetime.now(timezone.utc)
+    db.query(EmailVerification).filter(
+        EmailVerification.user_id == user.user_id,
+        EmailVerification.verified_at.is_(None),
+    ).update({"expires_at": now}, synchronize_session=False)
+    raw_token = generate_secure_token()
+    db.add(EmailVerification(
+        user_id=user.user_id,
+        token_hash=hash_token(raw_token),
+        expires_at=now + timedelta(hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS),
+    ))
+    db.commit()
+
+    verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
+    if not send_verification_email(to_email=user.email, verify_url=verify_url):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The verification email could not be delivered. Please try again later.",
+        )
+    return MessageResponse(message=message)
+
+
 # ─── POST /api/auth/login ───────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse | OwnerLoginResponse)
@@ -288,11 +339,24 @@ def login(
             failure_reason="Invalid email or password",
         )
         db.add(failed_attempt)
+        if payload.owner_mode:
+            record_admin_event(
+                db,
+                actor_user_id=user.user_id if user is not None and user_has_owner_role(user) else None,
+                action="owner.login",
+                outcome="failure",
+                details={"reason": "authentication_failed"},
+                ip_address=client_ip,
+            )
         db.commit()
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail=(
+                "Owner sign-in could not be verified. Confirm Render is connected to the same database "
+                "where the owner was provisioned, then check the email and password."
+                if payload.owner_mode else "Invalid email or password"
+            ),
         )
 
     if not user.is_active:
@@ -474,7 +538,7 @@ def google_login(
         user = User(
             username=username,
             email=clean_email,
-            password_hash=hash_password(generate_secure_token()), # random unguessable password
+            password_hash=hash_password(generate_secure_token()[:64]), # random unguessable password within bcrypt's byte limit
             first_name=first_name,
             last_name=last_name,
             is_verified=True, # Google verified their email
@@ -894,7 +958,6 @@ def delete_account(
     return MessageResponse(message="Account deleted successfully")
 
 
-from backend.app.core.email import send_password_reset_email
 from backend.app.core.rate_limit import rate_limit
 
 # ─── POST /api/auth/forgot-password ─────────────────────────────────
@@ -908,7 +971,7 @@ def forgot_password(
 ):
     """Generate a password reset token and dispatch email via SMTP."""
 
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = db.query(User).filter(func.lower(User.email) == str(payload.email).strip().lower()).first()
 
     # Always return success to prevent email enumeration attacks
     if user is None:

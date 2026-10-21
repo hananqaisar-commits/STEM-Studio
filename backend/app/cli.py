@@ -11,7 +11,12 @@ from datetime import datetime, timezone
 
 from sqlalchemy import func
 
-from backend.app.core.owner_security import encrypt_totp_secret, generate_totp_secret, record_admin_event, totp_uri
+from backend.app.core.owner_security import (
+    decrypt_totp_secret,
+    encrypt_totp_secret,
+    generate_totp_secret,
+    record_admin_event,
+)
 from backend.app.core.security import hash_password, verify_password
 from backend.infrastructure.database.database import SessionLocal, engine
 from backend.infrastructure.database import models  # noqa: F401 - register model metadata
@@ -93,8 +98,9 @@ def create_owner() -> int:
         db.close()
 
     print(f"Owner account {username!r} ({email}) created with MFA required.")
-    print("Add this one-time authenticator setup URI to an authenticator app now:")
-    print(totp_uri(secret, username))
+    print("Authenticator manual setup key (shown once):")
+    print(secret)
+    print("Add it as a time-based code with 6 digits and a 30-second interval.")
     print("The password and TOTP secret are not stored in source code or application logs.")
     return 0
 
@@ -148,9 +154,115 @@ def reset_owner_mfa() -> int:
         db.close()
 
     print(f"MFA reset for {username!r}. All existing owner sessions were revoked.")
-    print("Add this one-time authenticator setup URI to an authenticator app now:")
-    print(totp_uri(secret, username))
+    print("Authenticator manual setup key (shown once):")
+    print(secret)
+    print("Add it as a time-based code with 6 digits and a 30-second interval.")
     return 0
+
+
+def reset_owner_password() -> int:
+    """Recover the provisioned owner's password from the trusted server shell."""
+    identifier = input("Provisioned owner email: ").strip().lower()
+    password = getpass.getpass("New owner password (hidden): ")
+    confirmation = getpass.getpass("Confirm new owner password (hidden): ")
+    if password != confirmation:
+        print("Passwords did not match.", file=sys.stderr)
+        return 2
+    if (
+        len(password) < 14
+        or not any(char.islower() for char in password)
+        or not any(char.isupper() for char in password)
+        or not any(char.isdigit() for char in password)
+    ):
+        print("Use at least 14 characters with uppercase, lowercase, and a digit.", file=sys.stderr)
+        return 2
+    if len(password.encode("utf-8")) > 72:
+        print("Password must be 72 UTF-8 bytes or fewer for the configured bcrypt hasher.", file=sys.stderr)
+        return 2
+
+    db = SessionLocal()
+    try:
+        with db.begin():
+            account = (
+                db.query(User)
+                .join(OwnerAccount, OwnerAccount.user_id == User.user_id)
+                .join(User.roles)
+                .filter(
+                    OwnerAccount.owner_slot == 1,
+                    Role.role_name == "owner",
+                    func.lower(User.email) == identifier,
+                )
+                .first()
+            )
+            if account is None:
+                raise RuntimeError("The provisioned owner was not found in this database")
+            account.password_hash = hash_password(password)
+            now = datetime.now(timezone.utc)
+            revoked = db.query(UserSession).filter(
+                UserSession.user_id == account.user_id,
+                UserSession.revoked_at.is_(None),
+            ).update({"revoked_at": now}, synchronize_session=False)
+            record_admin_event(
+                db,
+                actor_user_id=account.user_id,
+                action="owner.password.recovery",
+                details={"method": "restricted_cli", "sessions_revoked": revoked},
+            )
+            username = account.username
+    except Exception as exc:
+        print(f"Owner password recovery failed ({type(exc).__name__}). Check server configuration.", file=sys.stderr)
+        return 1
+    finally:
+        db.close()
+
+    print(f"Password updated for owner {username!r}. All existing owner sessions were revoked.")
+    return 0
+
+
+def diagnose_owner() -> int:
+    """Check the configured database and owner credentials without revealing secrets."""
+    identifier = input("Provisioned owner email: ").strip().lower()
+    password = getpass.getpass("Owner password (hidden): ")
+    db = SessionLocal()
+    try:
+        print(f"Database engine: {engine.dialect.name}")
+        user_count = db.query(func.count(User.user_id)).scalar() or 0
+        print(f"User records in this database: {user_count}")
+        account = (
+            db.query(User)
+            .join(OwnerAccount, OwnerAccount.user_id == User.user_id)
+            .join(User.roles)
+            .filter(
+                OwnerAccount.owner_slot == 1,
+                Role.role_name == "owner",
+                func.lower(User.email) == identifier,
+            )
+            .first()
+        )
+        print(f"Provisioned owner found: {'yes' if account else 'no'}")
+        if account is None:
+            return 1
+        password_matches = verify_password(password, account.password_hash)
+        print(f"Password hash matches: {'yes' if password_matches else 'no'}")
+        print(f"Account enabled: {'yes' if account.is_active else 'no'}")
+        print(f"Email verified: {'yes' if account.is_verified else 'no'}")
+        credential = db.query(OwnerMFACredential).filter(
+            OwnerMFACredential.user_id == account.user_id,
+            OwnerMFACredential.enabled.is_(True),
+        ).first()
+        print(f"Authenticator enrollment enabled: {'yes' if credential else 'no'}")
+        if credential:
+            try:
+                decrypt_totp_secret(credential.encrypted_secret)
+                print("Authenticator encryption key matches: yes")
+            except Exception:
+                print("Authenticator encryption key matches: no")
+        return 0 if password_matches and credential and account.is_active and account.is_verified else 1
+    except Exception as exc:
+        print(f"Owner diagnostic failed ({type(exc).__name__}). Check server configuration.", file=sys.stderr)
+        return 1
+    finally:
+        db.close()
 
 
 def main() -> int:
@@ -164,11 +276,17 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("create-owner", help="Provision the first owner interactively")
     subparsers.add_parser("reset-owner-mfa", help="Re-enroll the provisioned owner after password verification")
+    subparsers.add_parser("reset-owner-password", help="Recover the provisioned owner password from this trusted shell")
+    subparsers.add_parser("diagnose-owner", help="Check owner login against this configured database")
     args = parser.parse_args()
     if args.command == "create-owner":
         return create_owner()
     if args.command == "reset-owner-mfa":
         return reset_owner_mfa()
+    if args.command == "reset-owner-password":
+        return reset_owner_password()
+    if args.command == "diagnose-owner":
+        return diagnose_owner()
     return 2
 
 

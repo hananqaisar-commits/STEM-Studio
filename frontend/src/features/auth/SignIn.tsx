@@ -22,9 +22,12 @@ export const SignIn: React.FC = () => {
   const [mfaCode, setMfaCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendStatus, setResendStatus] = useState('');
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { login, loginAsOwner, loginWithGoogle } = useAuth();
+  const { login, loginAsOwner, loginWithGoogle, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const { state: mascotState, setExpression, setContext } = useMascot();
 
@@ -72,6 +75,8 @@ export const SignIn: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setResendStatus('');
+    setShowResendVerification(false);
     setIsSubmitting(true);
     setExpression('focused');
 
@@ -83,9 +88,24 @@ export const SignIn: React.FC = () => {
     } catch (err: any) {
       const message = typeof err?.message === 'string' ? err.message : 'Something went wrong. Please try again.';
       setError(message);
+      setShowResendVerification(!ownerMode && message.toLowerCase().includes('verify your email'));
       setExpression('confused', { temporary: true, durationMs: 1500, message: 'Oops.' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim() || isResendingVerification) return;
+    setIsResendingVerification(true);
+    setError('');
+    setResendStatus('');
+    try {
+      setResendStatus(await resendVerificationEmail(email));
+    } catch (err: any) {
+      setError(typeof err?.message === 'string' ? err.message : 'Could not resend the verification email.');
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -123,6 +143,17 @@ export const SignIn: React.FC = () => {
             <span>{error}</span>
           </div>
         )}
+        {showResendVerification && !ownerMode && (
+          <button
+            className="auth-resend-verification"
+            type="button"
+            onClick={() => void handleResendVerification()}
+            disabled={isResendingVerification || !email.trim()}
+          >
+            {isResendingVerification ? 'Sending verification email…' : 'Resend verification email'}
+          </button>
+        )}
+        {resendStatus && <p className="auth-success" role="status">{resendStatus}</p>}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <fieldset className="auth-signin-mode">
@@ -130,7 +161,7 @@ export const SignIn: React.FC = () => {
             <button
               type="button"
               className={!ownerMode ? 'selected' : ''}
-              onClick={() => { setOwnerMode(false); setMfaCode(''); setError(''); }}
+              onClick={() => { setOwnerMode(false); setMfaCode(''); setError(''); setShowResendVerification(false); setResendStatus(''); }}
               aria-pressed={!ownerMode}
               disabled={isSubmitting}
             >
@@ -139,7 +170,7 @@ export const SignIn: React.FC = () => {
             <button
               type="button"
               className={ownerMode ? 'selected' : ''}
-              onClick={() => { setOwnerMode(true); setError(''); }}
+              onClick={() => { setOwnerMode(true); setError(''); setShowResendVerification(false); setResendStatus(''); }}
               aria-pressed={ownerMode}
               disabled={isSubmitting}
             >
@@ -157,7 +188,7 @@ export const SignIn: React.FC = () => {
                 className="auth-input"
                 placeholder="Enter your email address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setShowResendVerification(false); setResendStatus(''); }}
                 onFocus={() => setExpression('focused', { temporary: true, durationMs: 1200 })}
                 autoComplete="email"
                 autoCapitalize="none"

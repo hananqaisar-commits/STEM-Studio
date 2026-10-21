@@ -33,6 +33,10 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8, max_length=128)
@@ -155,6 +159,7 @@ class SavedSessionResponse(BaseModel):
 
 class PlatformStatsResponse(BaseModel):
     registered_learners: int
+    active_learners: int
     total_reviews: int
     average_rating: float
 

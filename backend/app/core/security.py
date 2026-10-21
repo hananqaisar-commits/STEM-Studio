@@ -14,16 +14,24 @@ settings = get_settings()
 
 def hash_password(password: str) -> str:
     """Hash a plaintext password using bcrypt."""
-    pwd_bytes = password.encode('utf-8')[:72]
+    pwd_bytes = password.encode('utf-8')
+    if len(pwd_bytes) > 72:
+        raise ValueError("Passwords must be 72 UTF-8 bytes or fewer for bcrypt")
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plaintext password against its bcrypt hash."""
+    # Older accounts may have been created before the byte limit was
+    # validated. Keep verifying their legacy bcrypt truncation semantics so
+    # they can sign in and choose a compliant password later.
     pwd_bytes = plain_password.encode('utf-8')[:72]
     hash_bytes = hashed_password.encode('utf-8')
-    return bcrypt.checkpw(pwd_bytes, hash_bytes)
+    try:
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
+    except (ValueError, TypeError):
+        return False
 
 
 # ─── Token Hashing (for storing refresh/reset tokens in DB) ──────────

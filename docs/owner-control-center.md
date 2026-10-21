@@ -15,7 +15,7 @@ This closes the application level privilege escalation paths that were present i
 
 ## Production setup
 
-1. Set a stable `JWT_SECRET_KEY` on the backend host. Production startup rejects a missing key, the example placeholder, wildcard CORS, and non-HTTPS CORS origins.
+1. Set `DATABASE_URL` to the same durable managed PostgreSQL database used to provision the owner. Production startup rejects SQLite, local database hosts, a missing stable `JWT_SECRET_KEY`, the example placeholder, wildcard CORS, and non-HTTPS CORS origins. The owner row and login request must reach this same database.
 2. Generate a Fernet key once and store it as `OWNER_MFA_ENCRYPTION_KEY` in the backend secret manager:
 
    ```bash
@@ -36,10 +36,10 @@ This closes the application level privilege escalation paths that were present i
    bash backend/scripts/create_owner.sh
    ```
 
-   It prompts for username, email, a hidden password, and confirmation. It refuses a second owner, checks uniqueness, writes the owner record and encrypted TOTP credential transactionally, and prints the one-time authenticator setup URI to that terminal. Add it to an authenticator app immediately; treat the terminal output as a secret and do not paste it into chat or application logs.
+   It prompts for username, email, a hidden password, and confirmation. It refuses a second owner, checks uniqueness, writes the owner record and encrypted TOTP credential transactionally, and prints the one-time authenticator setup key to that terminal. Add it manually as a time-based code with 6 digits and a 30-second interval; treat the terminal output as a secret and do not paste it into chat or application logs.
 6. Open `/login`, choose **Sign in as Owner**, and enter the provisioned email address, password, and current authenticator code. Owner sessions expire after at most eight hours; sensitive actions require another password + TOTP verification every ten minutes.
 
-The one-time provisioning and MFA recovery commands are intentionally not HTTP endpoints. To recover a lost authenticator while retaining the password, run `backend/.venv/bin/python -m backend.app.cli reset-owner-mfa` on the trusted host; it verifies the owner password, rotates the encrypted TOTP secret, and revokes every owner session. If the owner password is also lost or the recovery record is damaged, use a separately reviewed break-glass procedure with direct deployment/database operator access. There is no public owner signup or public role recovery endpoint.
+The one-time provisioning and recovery commands are intentionally not HTTP endpoints. To diagnose owner login against the backend's currently configured database, run `python -m backend.app.cli diagnose-owner` in that host's Shell; it reports only the database engine and pass/fail checks, never the hash or TOTP secret. If its password check fails, run `python -m backend.app.cli reset-owner-password`; it accepts the new password through hidden prompts, rotates the bcrypt hash, and revokes current owner sessions. To recover a lost authenticator while retaining the password, run `python -m backend.app.cli reset-owner-mfa`; it verifies the owner password, rotates the encrypted TOTP secret, revokes every owner session, and prints a one-time manual authenticator setup key. Run these only in the backend host Shell after confirming it uses the persistent database. There is no public owner signup or public role recovery endpoint.
 
 ## Current owner controls
 
