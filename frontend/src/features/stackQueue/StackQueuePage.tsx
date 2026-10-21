@@ -1689,7 +1689,7 @@ export const StackQueuePage: React.FC = () => {
               description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)}
               steps={activeSteps}
               currentStepIndex={currentStepIndex}
-            />
+             onStepSelect={seekTo}/>
           )}
         />
       </div>
@@ -1700,7 +1700,7 @@ export const StackQueuePage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Stack & Queue Studio | ${(PROBLEMS_LIST.find((p) => p.id === category)?.name ?? 'Visualizer').toUpperCase()}`}
         subtitle="Interactive LIFO / FIFO Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description ?? 'Run an operation to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

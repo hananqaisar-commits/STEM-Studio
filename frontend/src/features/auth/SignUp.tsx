@@ -27,8 +27,8 @@ export const SignUp: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [verificationRetryRequired, setVerificationRetryRequired] = useState(false);
+  const [verificationDeliveryFailed, setVerificationDeliveryFailed] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
-  const [verificationRetryStatus, setVerificationRetryStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { signup, loginWithGoogle, resendVerificationEmail } = useAuth();
@@ -36,6 +36,9 @@ export const SignUp: React.FC = () => {
   const { state: mascotState, setExpression, setContext } = useMascot();
 
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  const verificationNoticeClass = verificationDeliveryFailed
+    ? 'auth-verification-warning'
+    : 'auth-success';
 
   useEffect(() => {
     setContext('signup');
@@ -97,14 +100,15 @@ export const SignUp: React.FC = () => {
     try {
       await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim(), marketingEmailOptIn);
       rememberEmail(email.trim());
-      setSuccess('Account created. Check your inbox for the verification link. Redirecting to sign in...');
-      setVerificationRetryRequired(false);
+      setSuccess('Account created. A verification email is queued. Check your inbox and spam folder; you can resend it below if it does not arrive.');
+      setVerificationRetryRequired(true);
+      setVerificationDeliveryFailed(false);
       setExpression('happy', { temporary: true, durationMs: 2000 });
-      setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
       const message = typeof err?.message === 'string' ? err.message : 'Something went wrong. Please try again.';
       if (message.toLowerCase().includes('account was created') && message.toLowerCase().includes('verification email')) {
         setVerificationRetryRequired(true);
+        setVerificationDeliveryFailed(true);
         setError('');
         setSuccess('Your account is already saved, but the verification email did not send. Do not create another account; retry delivery below.');
       } else {
@@ -120,9 +124,9 @@ export const SignUp: React.FC = () => {
     if (!email.trim() || isResendingVerification) return;
     setIsResendingVerification(true);
     setError('');
-    setVerificationRetryStatus('');
     try {
-      setVerificationRetryStatus(await resendVerificationEmail(email.trim()));
+      setSuccess(await resendVerificationEmail(email.trim()));
+      setVerificationDeliveryFailed(false);
     } catch (err: any) {
       setError(typeof err?.message === 'string' ? err.message : 'The verification email still could not be delivered. Try again later.');
     } finally {
@@ -166,8 +170,8 @@ export const SignUp: React.FC = () => {
         )}
 
         {success && (
-          <div className={`${verificationRetryRequired ? 'auth-verification-warning' : 'auth-success'} animate-fade-in`} role={verificationRetryRequired ? 'alert' : 'status'}>
-            {verificationRetryRequired ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
+          <div className={verificationNoticeClass + ' animate-fade-in'} role={verificationDeliveryFailed ? 'alert' : 'status'}>
+            {verificationDeliveryFailed ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
             <span>{success}</span>
           </div>
         )}
@@ -181,8 +185,6 @@ export const SignUp: React.FC = () => {
             {isResendingVerification ? 'Retrying email delivery…' : 'Resend verification email'}
           </button>
         )}
-        {verificationRetryStatus && <p className="auth-success" role="status">{verificationRetryStatus}</p>}
-
         {!verificationRetryRequired && <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-row">
             <div className="input-group">

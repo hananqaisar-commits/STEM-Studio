@@ -73,11 +73,12 @@ export interface OctaTutorLearningProfile {
 /**
  * Send a message to the Octa AI Tutor backend API.
  */
-export async function sendTutorMessage(req: OctaTutorRequest): Promise<OctaTutorResponse> {
+export async function sendTutorMessage(req: OctaTutorRequest, signal?: AbortSignal): Promise<OctaTutorResponse> {
   return apiClient<OctaTutorResponse>('/api/octa-tutor', {
     method: 'POST',
     body: req,
     requiresAuth: true,
+    signal,
   });
 }
 

@@ -269,11 +269,16 @@ export function getAbsolutePath(nodes: Record<string, VFSNode>, nodeId: string):
 
   const parts: string[] = [];
   let current: VFSNode | undefined = node;
+  const seen = new Set<string>();
 
-  while (current && current.id !== 'root') {
+  while (current && current.id !== 'root' && !seen.has(current.id)) {
+    seen.add(current.id);
     parts.unshift(current.name);
     current = current.parentId ? nodes[current.parentId] : undefined;
   }
+
+  if (current && current.id !== 'root') parts.unshift('[invalid-parent-cycle]');
+  else if (!current) parts.unshift('[orphan]');
 
   return '/' + parts.join('/');
 }
@@ -317,7 +322,7 @@ export function resolveNodeId(
     }
 
     const currNode = nodes[currId];
-    if (!currNode || currNode.type !== 'directory') return null;
+    if (!currNode || (currNode.type !== 'directory' && currNode.type !== 'mount-point')) return null;
 
     const childId = currNode.childrenIds?.find(cid => nodes[cid]?.name === seg);
     if (!childId) return null;

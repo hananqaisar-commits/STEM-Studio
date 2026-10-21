@@ -404,9 +404,10 @@
 /* ─── GRAPH CANVAS CONTAINER (wraps header + body) ────────────────── */
 
 .graph-canvas-container {
+  --graph-path: #087f5b;
   display: flex;
   flex-direction: column;
-  height: 440px;
+  height: 500px;
   width: 100%;
   box-sizing: border-box;
   background-color: var(--color-app-bg);
@@ -417,14 +418,16 @@
   overflow: hidden;
 }
 
+[data-theme='dark'] .graph-canvas-container { --graph-path: #34d399; }
+
 .graph-canvas-body {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
-  min-height: 340px;
+  padding: 0.75rem 1rem;
+  min-height: 0;
   position: relative;
 }
 
@@ -437,8 +440,30 @@
   overflow: visible;
 }
 
-/* Node and edge styling now handled by shared Primitives.css (CircleNode, Line, Arrow).
-   Graph-specific overlays (glow rings, badges) are rendered inline in GraphRenderer. */
+/* Nodes use the shared studio surface with consistent blue-current and green-visited semantics. */
+.graph-node-halo { fill: none; stroke: transparent; stroke-width: 2; transition: stroke 180ms ease, opacity 180ms ease; }
+.graph-node-disc { fill: var(--color-surface); stroke: color-mix(in srgb, var(--color-primary) 72%, var(--color-border)); stroke-width: 2.5; filter: drop-shadow(0 3px 5px color-mix(in srgb, var(--color-primary) 17%, transparent)); transition: fill 180ms ease, stroke 180ms ease, filter 180ms ease; }
+.graph-node-label { fill: var(--color-text); font: 750 14px 'Plus Jakarta Sans', sans-serif; }
+.graph-node-label.has-sublabel { font-size: 13px; }
+.graph-node-sublabel { fill: var(--color-text-secondary); font: 650 8px 'JetBrains Mono', monospace; }
+.graph-node-current .graph-node-halo { stroke: var(--color-primary); opacity: 0.46; }
+.graph-node-current .graph-node-disc { fill: color-mix(in srgb, var(--color-primary) 13%, var(--color-surface)); stroke: var(--color-primary); stroke-width: 3; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-primary) 35%, transparent)); }
+.graph-node-visited .graph-node-halo, .graph-node-path .graph-node-halo { stroke: var(--graph-path); opacity: 0.3; }
+.graph-node-visited .graph-node-disc, .graph-node-path .graph-node-disc { fill: color-mix(in srgb, var(--graph-path) 12%, var(--color-surface)); stroke: var(--graph-path); }
+.graph-svg-canvas .line-state-sorted { stroke: var(--graph-path) !important; }
+.graph-canvas-container .primitive-arrow-group.state-sorted .primitive-line { stroke: var(--graph-path) !important; }
+.graph-canvas-container .primitive-arrow-group.state-sorted .arrow-head-fill { fill: var(--graph-path); }
+.graph-node-queued .graph-node-disc { fill: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface)); stroke: color-mix(in srgb, var(--color-primary) 64%, var(--color-border)); }
+
+.graph-legend { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.9rem 1.25rem; width: 100%; max-width: 580px; margin-top: 0.4rem; color: var(--color-text-secondary); font-size: var(--text-xs); }
+.graph-legend > span { display: inline-flex; align-items: center; gap: 0.42rem; white-space: nowrap; }
+.graph-legend-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--color-surface); border: 2px solid var(--color-primary); }
+.graph-legend-dot.is-current { background: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent); }
+.graph-legend-dot.is-visited { background: var(--graph-path); border-color: var(--graph-path); }
+.graph-legend-dot.is-unvisited { background: var(--color-surface); border-color: color-mix(in srgb, var(--color-primary) 72%, var(--color-border)); }
+.graph-legend-line { display: inline-block; width: 22px; height: 3px; border-radius: 99px; background: var(--viz-edge); }
+.graph-legend-line.is-path { background: var(--graph-path); }
+.graph-legend-line.is-edge { background: var(--viz-edge); }
 
 /* ─── REAL-TIME GRAPH HUD ─────────────────────────────────────────── */
 
@@ -451,6 +476,13 @@
   max-width: 580px;
   margin-top: 1rem;
 }
+
+.graph-hud-value { overflow-wrap: anywhere; }
+.graph-hud-value.is-current { color: var(--color-primary); }
+.graph-hud-value.is-visited { color: var(--graph-path); }
+.graph-hud-value.is-path { color: var(--graph-path); font-weight: 750; }
+.graph-hud-badge.is-path { border-color: color-mix(in srgb, var(--graph-path) 55%, var(--color-border)); }
+.graph-hud-badge.is-path .graph-hud-badge-title { color: var(--graph-path); }
 
 .graph-hud-badge {
   display: flex;
@@ -469,4 +501,12 @@
   color: var(--color-text-secondary);
   font-size: var(--text-xs);
   letter-spacing: 0.04em;
+}
+
+@media (max-width: 640px) {
+  .graph-canvas-container { height: auto; min-height: 410px; padding: 0.9rem; }
+  .graph-canvas-body { min-height: 0; padding: 0.5rem 0; }
+  .graph-svg-canvas { height: auto; min-height: 240px; }
+  .graph-legend { justify-content: flex-start; gap: 0.65rem 0.9rem; padding-inline: 0.15rem; }
+  .graph-hud-row { margin-top: 0.75rem; }
 }

@@ -1,7 +1,20 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -142,6 +155,29 @@ class EmailVerification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="email_verifications")
+
+
+class EmailOutbox(Base):
+    """Durable, encrypted verification-mail jobs shared by all API replicas."""
+
+    __tablename__ = "email_outbox"
+    __table_args__ = (
+        Index("ix_email_outbox_queue", "status", "available_at", "created_at"),
+    )
+
+    job_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    verification_id: Mapped[int] = mapped_column(
+        ForeignKey("email_verifications.verification_id", ondelete="CASCADE"), index=True
+    )
+    encrypted_token: Mapped[str] = mapped_column(Text())
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_error_category: Mapped[Optional[str]] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class PasswordReset(Base):

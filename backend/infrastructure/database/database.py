@@ -5,7 +5,7 @@ import time
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import QueuePool
 
 from backend.app.core.config import get_settings
 
@@ -23,24 +23,19 @@ if db_url.startswith("sqlite"):
 else:
     connect_args["connect_timeout"] = 10  # fast fail for MySQL/Postgres
 
-    # NullPool for ephemeral hosts (Render free tier spins down after inactivity).
-    # Every request gets a fresh connection — no stale pool issues after cold start.
-    # Locally, fall back to a small QueuePool for performance.
-    is_ephemeral = any(token in db_url for token in [
-        ".aiven", ".render", ".railway", ".fly", "pythonanywhere", "supabase",
-    ])
-
-    if is_ephemeral:
-        engine_kwargs["poolclass"] = NullPool
-    else:
-        engine_kwargs.update({
-            "poolclass": QueuePool,
-            "pool_size": settings.DB_POOL_SIZE,
-            "max_overflow": settings.DB_MAX_OVERFLOW,
-            "pool_pre_ping": True,   # detect stale connections before use
-            "pool_recycle": settings.DB_POOL_RECYCLE_SECONDS,
-            "pool_timeout": settings.DB_POOL_TIMEOUT_SECONDS,
-        })
+    # Keep a small, bounded pool per process. NullPool caused a new TCP/TLS
+    # handshake for every request on hosted Postgres, adding latency and
+    # unnecessary pressure to Supabase/Render. Pre-ping and recycling handle
+    # stale connections after a host or database has been idle.
+    engine_kwargs.update({
+        "poolclass": QueuePool,
+        "pool_size": settings.DB_POOL_SIZE,
+        "max_overflow": settings.DB_MAX_OVERFLOW,
+        "pool_pre_ping": True,
+        "pool_recycle": settings.DB_POOL_RECYCLE_SECONDS,
+        "pool_timeout": settings.DB_POOL_TIMEOUT_SECONDS,
+        "pool_use_lifo": True,
+    })
 
     # Configure SSL for remote cloud databases (Aiven / Render / Supabase)
     if "localhost" not in db_url and "127.0.0.1" not in db_url:

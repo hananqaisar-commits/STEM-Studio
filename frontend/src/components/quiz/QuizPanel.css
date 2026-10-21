@@ -148,8 +148,31 @@
 }
 
 .quiz-content-animate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
   animation: quizFadeSlideIn 0.3s ease-out forwards;
 }
+
+/* Screenshot-inspired learning context card; colors inherit the current theme. */
+.quiz-focus-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--quiz-accent) 22%, var(--border-color));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--quiz-accent) 4%, var(--bg-card));
+}
+
+.quiz-focus-heading { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.quiz-focus-icon { display: grid; flex: 0 0 30px; place-items: center; width: 30px; height: 30px; border: 1px solid color-mix(in srgb, var(--quiz-accent) 18%, var(--border-color)); border-radius: 9px; color: var(--quiz-accent); background: color-mix(in srgb, var(--quiz-accent) 9%, var(--bg-card)); }
+.quiz-focus-heading > div { display: flex; flex-direction: column; min-width: 0; gap: 0.08rem; }
+.quiz-focus-label { color: var(--text-tertiary); font-size: 10px; font-weight: 700; }
+.quiz-focus-heading strong { overflow-wrap: anywhere; color: var(--text-primary); font-size: var(--text-xs); font-weight: 700; }
+.quiz-focus-description { margin: 0; color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.5; }
+.quiz-key-points { display: grid; gap: 0.25rem; padding-top: 0.45rem; border-top: 1px solid var(--border-color); }
+.quiz-key-points h4 { margin: 0; color: var(--text-primary); font-size: var(--text-xs); font-weight: 700; }
+.quiz-key-points ul { display: grid; gap: 0.18rem; margin: 0; padding-left: 1.05rem; color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.45; }
 
 /* ─── Options ──────────────────────────────────────────────────────── */
 

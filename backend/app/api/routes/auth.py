@@ -23,7 +23,11 @@ from backend.app.api.schemas import (
     UserResponse,
 )
 from backend.app.core.config import get_settings
-from backend.app.core.email import send_password_reset_email, send_verification_email, smtp_is_configured
+from backend.app.core.email import (
+    encrypt_verification_token,
+    send_password_reset_email,
+    smtp_is_configured,
+)
 from backend.app.core.rate_limit import rate_limit, standard, strict
 from backend.app.core.owner_security import (
     consume_owner_totp,
@@ -45,6 +49,7 @@ from backend.app.core.security import (
 from backend.app.api.routes.stats import invalidate_platform_stats_cache
 from backend.infrastructure.database.database import get_db
 from backend.infrastructure.database.models import (
+    EmailOutbox,
     LoginAttempt,
     OwnerMFACredential,
     OwnerSessionGrant,
@@ -195,6 +200,7 @@ def signup(
     )
     from backend.infrastructure.database.models import EmailVerification
     raw_token = generate_secure_token()
+    now = datetime.now(timezone.utc)
     try:
         db.add(new_user)
         db.flush()  # Allocate the account ID before inserting its verification row.
@@ -205,11 +211,20 @@ def signup(
         verification = EmailVerification(
             user_id=new_user.user_id,
             token_hash=hash_token(raw_token),
-            expires_at=datetime.now(timezone.utc) + timedelta(
+            expires_at=now + timedelta(
                 hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS
             ),
         )
         db.add(verification)
+        db.flush()
+        if smtp_enabled:
+            db.add(EmailOutbox(
+                user_id=new_user.user_id,
+                verification_id=verification.verification_id,
+                encrypted_token=encrypt_verification_token(raw_token),
+                status="pending",
+                available_at=now,
+            ))
         db.commit()
         db.refresh(new_user)
     except IntegrityError as exc:
@@ -220,14 +235,6 @@ def signup(
         ) from exc
 
     invalidate_platform_stats_cache()
-
-    verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
-    if smtp_enabled:
-        if not send_verification_email(to_email=new_user.email, verify_url=verify_url):
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Your account was created, but the verification email could not be delivered. Sign in and request another verification email.",
-            )
 
     return new_user
 
@@ -288,30 +295,46 @@ def resend_verification_email(
 
     clean_email = str(payload.email).strip().lower()
     user = db.query(User).filter(func.lower(User.email) == clean_email).first()
-    message = "If an unverified account exists for that email, a verification link has been sent."
+    message = "If an unverified account exists for that email, a verification link has been queued for delivery."
     if user is None or user.is_verified:
         return MessageResponse(message=message)
 
     from backend.infrastructure.database.models import EmailVerification
     now = datetime.now(timezone.utc)
-    db.query(EmailVerification).filter(
-        EmailVerification.user_id == user.user_id,
-        EmailVerification.verified_at.is_(None),
-    ).update({"expires_at": now}, synchronize_session=False)
+    old_verification_ids = [
+        row[0]
+        for row in db.query(EmailVerification.verification_id).filter(
+            EmailVerification.user_id == user.user_id,
+            EmailVerification.verified_at.is_(None),
+        ).all()
+    ]
+    if old_verification_ids:
+        db.query(EmailOutbox).filter(
+            EmailOutbox.verification_id.in_(old_verification_ids),
+            EmailOutbox.status.in_({"pending", "processing"}),
+        ).update(
+            {"status": "cancelled", "lease_expires_at": None},
+            synchronize_session=False,
+        )
+        db.query(EmailVerification).filter(
+            EmailVerification.verification_id.in_(old_verification_ids)
+        ).update({"expires_at": now}, synchronize_session=False)
     raw_token = generate_secure_token()
-    db.add(EmailVerification(
+    verification = EmailVerification(
         user_id=user.user_id,
         token_hash=hash_token(raw_token),
         expires_at=now + timedelta(hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS),
+    )
+    db.add(verification)
+    db.flush()
+    db.add(EmailOutbox(
+        user_id=user.user_id,
+        verification_id=verification.verification_id,
+        encrypted_token=encrypt_verification_token(raw_token),
+        status="pending",
+        available_at=now,
     ))
     db.commit()
-
-    verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
-    if not send_verification_email(to_email=user.email, verify_url=verify_url):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="The verification email could not be delivered. Please try again later.",
-        )
     return MessageResponse(message=message)
 
 

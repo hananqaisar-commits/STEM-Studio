@@ -55,6 +55,9 @@ export interface QuizPanelProps {
   onContinue: () => void;
   /** Per-category wording, e.g. "Resume traversal". */
   continueLabel?: string;
+  /** Algorithm-specific learning context shown before the question. */
+  focusDescription?: string;
+  keyPoints?: string[];
 }
 
 export const QuizPanel: React.FC<QuizPanelProps> = ({
@@ -75,6 +78,8 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
   onAnswer,
   onContinue,
   continueLabel = 'Continue',
+  focusDescription,
+  keyPoints = [],
 }) => {
   const [pending, setPending] = useState<number | null>(null);
   const [reasoning, setReasoning] = useState('');
@@ -173,10 +178,8 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
    * ask for justification of a visible step; everything else is a
    * prediction the student must mentally execute. */
   const title = challengeMode
-    ? 'Prove it — new input'
-    : question.kind === 'reason'
-      ? 'Why does this happen?'
-      : 'Predict the next step';
+    ? 'Prove it with new input'
+    : 'Try it yourself';
 
   /* After a final wrong answer, Continue becomes an inspection: the
    * canvas advances to the mispredicted step so the student watches the
@@ -242,6 +245,24 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
       </header>
 
       <div key={question.id} className="quiz-content-animate">
+        {(focusDescription || keyPoints.length > 0) && (
+          <section className="quiz-focus-card" aria-label="Current focus and key points">
+            <div className="quiz-focus-heading">
+              <span className="quiz-focus-icon"><Lightbulb size={16} /></span>
+              <div>
+                <span className="quiz-focus-label">Current focus</span>
+                <strong>{question.concept}</strong>
+              </div>
+            </div>
+            {focusDescription && <p className="quiz-focus-description">{focusDescription}</p>}
+            {keyPoints.length > 0 && (
+              <div className="quiz-key-points">
+                <h4>Key points</h4>
+                <ul>{keyPoints.slice(0, 4).map((point, index) => <li key={`${index}-${point}`}>{point}</li>)}</ul>
+              </div>
+            )}
+          </section>
+        )}
         <p className="quiz-prompt">{question.prompt}</p>
 
         <div
@@ -265,7 +286,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
               disabled={locked}
               tabIndex={index === (pending ?? 0) ? 0 : -1}
               onClick={() => setPending(index)}
-              onDoubleClick={() => onAnswer(index)}
             >
               <span className="quiz-option-key" aria-hidden="true">
                 {index + 1}
