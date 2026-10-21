@@ -11,6 +11,8 @@ interface ArrowProps {
   strokeWidth?: number;
   label?: string;
   markerId?: string;
+  /** Shorten the shaft so its ends meet the visible edges of graph nodes. */
+  endpointInset?: number;
 }
 
 export const Arrow: React.FC<ArrowProps> = ({
@@ -22,9 +24,20 @@ export const Arrow: React.FC<ArrowProps> = ({
   strokeWidth = 2,
   label,
   markerId = 'arrowhead',
+  endpointInset = 0,
 }) => {
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+  const startX = x1 + ux * endpointInset;
+  const startY = y1 + uy * endpointInset;
+  const endX = x2 - ux * endpointInset;
+  const endY = y2 - uy * endpointInset;
+  const midX = (startX + endX) / 2;
+  const midY = (startY + endY) / 2;
+  const labelWidth = label ? Math.max(18, label.length * 7 + 8) : 0;
 
   return (
     <g className={`primitive-arrow-group state-${state}`}>
@@ -33,6 +46,7 @@ export const Arrow: React.FC<ArrowProps> = ({
           id={markerId}
           markerWidth="10"
           markerHeight="7"
+          markerUnits="userSpaceOnUse"
           refX="9"
           refY="3.5"
           orient="auto"
@@ -41,18 +55,19 @@ export const Arrow: React.FC<ArrowProps> = ({
         </marker>
       </defs>
       <line
-        x1={x1}
-        y1={y1}
-        x2={x2}
-        y2={y2}
+        x1={startX}
+        y1={startY}
+        x2={endX}
+        y2={endY}
         className="primitive-line"
         strokeWidth={strokeWidth}
         markerEnd={`url(#${markerId})`}
       />
       {label && (
-        <text x={midX} y={midY - 6} className="line-label" textAnchor="middle">
-          {label}
-        </text>
+        <g className="arrow-label">
+          <rect x={midX - labelWidth / 2} y={midY - 16} width={labelWidth} height={15} rx="5" className="arrow-label-bg" />
+          <text x={midX} y={midY - 5} className="line-label" textAnchor="middle">{label}</text>
+        </g>
       )}
     </g>
   );

@@ -428,7 +428,7 @@ export const StringsPage: React.FC = () => {
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
-          />
+           onStepSelect={seekTo}/>
           }
         />
       </div>
@@ -439,7 +439,7 @@ export const StringsPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`String Algorithms | ${selectedAlg.toUpperCase()}`}
         subtitle="String Character Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

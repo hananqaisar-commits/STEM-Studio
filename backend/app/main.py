@@ -1,6 +1,9 @@
 import os
 import sys
 import logging
+import asyncio
+import time
+import uuid
 from contextlib import asynccontextmanager
 
 # Ensure backend directory is in sys.path
@@ -8,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 try:
@@ -60,38 +64,38 @@ def init_db_tables():
 
         print(f"🗄️ Database engine: {engine.dialect.name}")
 
-        # Step 2: Create tables
-        print("📦 Creating database tables...")
-        Base.metadata.create_all(bind=engine)
+        if settings.AUTO_MIGRATE_ON_STARTUP:
+            # Keep startup migrations for the existing single-service deployment.
+            # Multi-replica deployments should run one migration job, then set
+            # AUTO_MIGRATE_ON_STARTUP=false on every serving API replica.
+            print("📦 Creating missing database tables...")
+            Base.metadata.create_all(bind=engine)
+            from alembic import command
+            from alembic.config import Config
 
-        # create_all creates missing tables, but intentionally does not add
-        # columns to existing tables. Apply the checked-in Alembic revisions
-        # after metadata bootstrap so existing deployments receive additive
-        # schema changes before the API starts serving requests.
-        from alembic import command
-        from alembic.config import Config
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+            alembic_config = Config(os.path.join(repo_root, "backend/alembic.ini"))
+            alembic_config.set_main_option("script_location", os.path.join(repo_root, "backend/migrations"))
+            print("🧭 Applying database migrations...")
+            command.upgrade(alembic_config, "head")
 
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-        alembic_config = Config(os.path.join(repo_root, "backend/alembic.ini"))
-        alembic_config.set_main_option("script_location", os.path.join(repo_root, "backend/migrations"))
-        print("🧭 Applying database migrations...")
-        command.upgrade(alembic_config, "head")
-
-        try:
-            from backend.app.core.feature_access import ensure_feature_catalog
-            from backend.infrastructure.database.database import SessionLocal
-        except ModuleNotFoundError:
-            from app.core.feature_access import ensure_feature_catalog
-            from infrastructure.database.database import SessionLocal
-        with SessionLocal() as feature_db:
-            ensure_feature_catalog(feature_db)
-            feature_db.commit()
+            try:
+                from backend.app.core.feature_access import ensure_feature_catalog
+                from backend.infrastructure.database.database import SessionLocal
+            except ModuleNotFoundError:
+                from app.core.feature_access import ensure_feature_catalog
+                from infrastructure.database.database import SessionLocal
+            with SessionLocal() as feature_db:
+                ensure_feature_catalog(feature_db)
+                feature_db.commit()
+        else:
+            print("🧭 Startup schema changes are disabled; the release migration job owns schema updates.")
 
         # Step 3: Verify tables actually exist
         from sqlalchemy import inspect
         inspector = inspect(engine)
         table_names = inspector.get_table_names()
-        expected = {"users", "user_sessions", "email_verifications", "password_resets",
+        expected = {"users", "user_sessions", "email_verifications", "email_outbox", "password_resets",
                     "roles", "permissions", "user_roles", "role_permissions",
                     "login_attempts", "quiz_attempts", "module_progress",
                     "user_streaks", "saved_sessions", "tutor_learning_profiles", "reviews",
@@ -124,7 +128,19 @@ def init_db_tables():
 async def lifespan(application):
     """Application lifespan handler — runs startup logic."""
     init_db_tables()
-    yield
+    try:
+        from backend.app.core.email_outbox import run_email_outbox_worker
+    except ModuleNotFoundError:
+        from app.core.email_outbox import run_email_outbox_worker
+    email_worker = asyncio.create_task(run_email_outbox_worker(), name="verification-email-outbox")
+    try:
+        yield
+    finally:
+        email_worker.cancel()
+        try:
+            await email_worker
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -146,6 +162,27 @@ app.add_middleware(
     expose_headers=["X-Request-Id"],
     max_age=600,
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
+
+
+@app.middleware("http")
+async def request_timing_middleware(request: Request, call_next):
+    """Expose request latency and a correlation ID without logging request data."""
+    request_id = uuid.uuid4().hex
+    started = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - started) * 1000
+    response.headers["X-Request-Id"] = request_id
+    response.headers["Server-Timing"] = f"app;dur={duration_ms:.1f}"
+    logger.info(
+        "api_request request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
 
 
 # ─── Security Headers Middleware ─────────────────────────────────────

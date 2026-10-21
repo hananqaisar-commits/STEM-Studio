@@ -397,7 +397,7 @@ export const TriePage: React.FC = () => {
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
-          />
+           onStepSelect={seekTo}/>
           }
         />
       </div>
@@ -407,7 +407,7 @@ export const TriePage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Trie Studio | ${selectedAlg.toUpperCase()}`}
         subtitle="Prefix Tree Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(trieStep?.description || 'Select an algorithm and enter words to visualize the Trie.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

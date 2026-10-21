@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = Field(default=2, ge=0, le=100)
     DB_POOL_TIMEOUT_SECONDS: int = Field(default=10, ge=1, le=120)
     DB_POOL_RECYCLE_SECONDS: int = Field(default=300, ge=30, le=3600)
+    # Use a single deployment/release job for schema changes when running
+    # multiple replicas. Keep enabled by default for the existing one-service setup.
+    AUTO_MIGRATE_ON_STARTUP: bool = True
 
     # Shared rate limits are required when the API runs in multiple processes.
     # Leave REDIS_URL empty for local development; the limiter uses bounded
@@ -158,6 +161,7 @@ class Settings(BaseSettings):
 
     # SMTP Email Configuration
     SMTP_TLS: bool = True
+    SMTP_USE_SSL: bool = False
     SMTP_PORT: int = 587
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_USER: str = ""

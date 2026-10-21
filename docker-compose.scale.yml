@@ -22,6 +22,15 @@ x-api-environment: &api-environment
   DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-1}
   DB_POOL_TIMEOUT_SECONDS: ${DB_POOL_TIMEOUT_SECONDS:-10}
   DB_POOL_RECYCLE_SECONDS: ${DB_POOL_RECYCLE_SECONDS:-300}
+  AUTO_MIGRATE_ON_STARTUP: "false"
+  SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_TLS: ${SMTP_TLS:-true}
+  SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL:-}
+  EMAILS_FROM_NAME: ${EMAILS_FROM_NAME:-STEM Studio Support}
 
 services:
   redis:
@@ -41,28 +50,25 @@ services:
     networks:
       - private
 
-  api-1:
+  migrate:
     build:
       context: .
       dockerfile: backend/Dockerfile
     environment:
       <<: *api-environment
-      UVICORN_WORKERS: ${UVICORN_WORKERS_PER_INSTANCE:-1}
-      FORWARDED_ALLOW_IPS: 172.30.250.2
+      AUTO_MIGRATE_ON_STARTUP: "true"
+    command:
+      - python
+      - -c
+      - from backend.app.main import init_db_tables; init_db_tables()
     depends_on:
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=2)"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
+    restart: "no"
     networks:
       - private
 
-  api-2:
+  api:
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -71,6 +77,8 @@ services:
       UVICORN_WORKERS: ${UVICORN_WORKERS_PER_INSTANCE:-1}
       FORWARDED_ALLOW_IPS: 172.30.250.2
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:
@@ -90,9 +98,7 @@ services:
     volumes:
       - ./deploy/scalability/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
-      api-1:
-        condition: service_healthy
-      api-2:
+      api:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/api/ready"]

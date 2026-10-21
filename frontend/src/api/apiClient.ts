@@ -31,13 +31,14 @@ interface ApiOptions {
   body?: unknown;
   headers?: Record<string, string>;
   requiresAuth?: boolean;
+  signal?: AbortSignal;
 }
 
 /**
  * Centralized API client with automatic JWT handling and token refresh.
  */
 export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
-  const { method = 'GET', body, requiresAuth = false } = options;
+  const { method = 'GET', body, requiresAuth = false, signal } = options;
   const upperMethod = method.toUpperCase();
   const isWrite = !['GET', 'HEAD', 'OPTIONS'].includes(upperMethod);
 
@@ -63,6 +64,7 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
     method,
     headers,
     credentials: 'include',
+    ...(signal ? { signal } : {}),
   };
 
   if (body) {

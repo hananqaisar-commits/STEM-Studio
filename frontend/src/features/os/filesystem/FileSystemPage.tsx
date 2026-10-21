@@ -56,7 +56,7 @@ export const FileSystemPage: React.FC = () => {
   >([]);
 
   // Active Highlighted Node & Animated Path
-  const [activeNodeId, setActiveNodeId] = useState<string | undefined>('student-home');
+  const [activeNodeId, setActiveNodeId] = useState<string | undefined>('octa-home');
   const [animatedPathIds, setAnimatedPathIds] = useState<string[]>([]);
   const pathHighlightTimerRef = useRef<number | null>(null);
 
@@ -91,24 +91,33 @@ export const FileSystemPage: React.FC = () => {
     initialContent: '',
   });
 
-  // --- Step History Controls (Back / Forward) ---
-  const handlePrevStep = useCallback(() => {
-    if (currentStepIndex > 0) {
-      const idx = currentStepIndex - 1;
-      setCurrentStepIndex(idx);
-      setSnapshot(snapshotHistory[idx]);
-      setActiveNodeId(stepHistory[idx]?.targetNodeId);
-    }
-  }, [currentStepIndex, snapshotHistory, stepHistory]);
+  // Every way of moving through the trace restores the same snapshot, focus and
+  // operation path. The timeline and playback must behave exactly like Prev/Next.
+  const goToStep = useCallback((requestedIndex: number) => {
+    if (snapshotHistory.length === 0) return;
+    const index = Math.max(0, Math.min(requestedIndex, snapshotHistory.length - 1));
+    const frame = snapshotHistory[index];
+    if (!frame) return;
 
-  const handleNextStep = useCallback(() => {
-    if (currentStepIndex < stepHistory.length - 1) {
-      const idx = currentStepIndex + 1;
-      setCurrentStepIndex(idx);
-      setSnapshot(snapshotHistory[idx]);
-      setActiveNodeId(stepHistory[idx]?.targetNodeId);
-    }
-  }, [currentStepIndex, snapshotHistory, stepHistory]);
+    setCurrentStepIndex(index);
+    setSnapshot(frame);
+    const record = stepHistory[index];
+    const target = record?.targetNodeId;
+    setActiveNodeId(target && frame.nodes[target] ? target : frame.currentDirId);
+
+    const path = (record?.animatedPathIds || []).filter(nodeId => Boolean(frame.nodes[nodeId]));
+    setAnimatedPathIds(path);
+    if (pathHighlightTimerRef.current !== null) window.clearTimeout(pathHighlightTimerRef.current);
+    pathHighlightTimerRef.current = path.length
+      ? window.setTimeout(() => {
+          setAnimatedPathIds([]);
+          pathHighlightTimerRef.current = null;
+        }, 1800)
+      : null;
+  }, [snapshotHistory, stepHistory]);
+
+  const handlePrevStep = useCallback(() => goToStep(currentStepIndex - 1), [currentStepIndex, goToStep]);
+  const handleNextStep = useCallback(() => goToStep(currentStepIndex + 1), [currentStepIndex, goToStep]);
 
   // Quiz Checkpoints and Session Hook
   const checkpoints = useMemo(() => buildOSQuizCheckpoints(stepHistory), [stepHistory]);
@@ -159,7 +168,7 @@ export const FileSystemPage: React.FC = () => {
     ]);
     setCurrentStepIndex(0);
     setTerminalHistory([]);
-    setActiveNodeId('student-home');
+    setActiveNodeId(fresh.currentDirId);
     setAnimatedPathIds([]);
   }, [quizSession.resetSession]);
 
@@ -209,7 +218,7 @@ export const FileSystemPage: React.FC = () => {
       ? window.setTimeout(() => {
           setAnimatedPathIds([]);
           pathHighlightTimerRef.current = null;
-        }, 1000)
+        }, 1800)
       : null;
   }, [currentStepIndex, snapshot, snapshotHistory, stepHistory]);
 
@@ -452,7 +461,7 @@ export const FileSystemPage: React.FC = () => {
               currentStepIndex={currentStepIndex}
               timeComplexity={{ best: 'O(1)', average: 'O(log n)', worst: 'O(n)' }}
               spaceComplexity="O(V + E)"
-            />
+              onStepSelect={goToStep}/>
           }
         />
       </div>
@@ -473,7 +482,7 @@ export const FileSystemPage: React.FC = () => {
             currentStepIndex={currentStepIndex}
             timeComplexity={{ best: 'O(1)', average: 'O(log n)', worst: 'O(n)' }}
             spaceComplexity="O(V + E)"
-          />
+            onStepSelect={goToStep}/>
         }
         floatingControls={
           <FloatingController

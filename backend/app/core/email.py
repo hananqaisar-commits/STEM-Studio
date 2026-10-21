@@ -1,13 +1,18 @@
 """SMTP delivery for account verification and password recovery."""
 
 import html
+import base64
+import hashlib
 import logging
 import smtplib
+import socket
 import ssl
+from contextlib import contextmanager
 from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
+from cryptography.fernet import Fernet
 
 from backend.app.core.config import get_settings
 
@@ -26,6 +31,77 @@ def _smtp_password() -> str:
     return "".join(get_settings().SMTP_PASSWORD.split())
 
 
+def encrypt_verification_token(token: str) -> str:
+    """Encrypt the short-lived bearer token before placing it in the DB outbox.
+
+    A domain-separated key is derived from the stable server JWT secret, so
+    every API replica can work the same queue without adding another secret.
+    Production settings already require this secret to be strong and stable.
+    """
+    settings = get_settings()
+    key_material = hashlib.sha256(
+        b"stem-studio/email-outbox/v1\0" + settings.JWT_SECRET_KEY.encode("utf-8")
+    ).digest()
+    fernet_key = base64.urlsafe_b64encode(key_material)
+    return Fernet(fernet_key).encrypt(token.encode("utf-8")).decode("ascii")
+
+
+def decrypt_verification_token(encrypted_token: str) -> str:
+    settings = get_settings()
+    key_material = hashlib.sha256(
+        b"stem-studio/email-outbox/v1\0" + settings.JWT_SECRET_KEY.encode("utf-8")
+    ).digest()
+    fernet_key = base64.urlsafe_b64encode(key_material)
+    return Fernet(fernet_key).decrypt(encrypted_token.encode("ascii")).decode("utf-8")
+
+
+@contextmanager
+def _smtp_server(settings):
+    """Open SMTP with implicit TLS on 465 or STARTTLS on configured ports."""
+    if settings.SMTP_USE_SSL or settings.SMTP_PORT == 465:
+        server = smtplib.SMTP_SSL(
+            settings.SMTP_HOST.strip(), settings.SMTP_PORT,
+            timeout=10, context=ssl.create_default_context(),
+        )
+    else:
+        server = smtplib.SMTP(settings.SMTP_HOST.strip(), settings.SMTP_PORT, timeout=10)
+    try:
+        server.ehlo()
+        if settings.SMTP_TLS and not (settings.SMTP_USE_SSL or settings.SMTP_PORT == 465):
+            server.starttls(context=ssl.create_default_context())
+            server.ehlo()
+        yield server
+    finally:
+        try:
+            server.quit()
+        except (OSError, smtplib.SMTPException):
+            pass
+
+
+def _smtp_error_category(exc: Exception) -> tuple[str, int | None]:
+    """Reduce provider errors to safe operator diagnostics (no email/body data)."""
+    code = getattr(exc, "smtp_code", None)
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        return "authentication_rejected", code
+    if isinstance(exc, smtplib.SMTPRecipientsRefused):
+        return "recipient_rejected", code
+    if isinstance(exc, smtplib.SMTPSenderRefused):
+        return "sender_rejected", code
+    if isinstance(exc, ssl.SSLError):
+        return "tls_error", code
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return "connection_timeout", code
+    if isinstance(exc, socket.gaierror):
+        return "host_resolution_error", code
+    if isinstance(exc, smtplib.SMTPResponseException):
+        return ("provider_temporary_rejection" if code and code < 500 else "provider_rejection"), code
+    if isinstance(exc, OSError):
+        return "connection_error", code
+    if isinstance(exc, smtplib.SMTPException):
+        return "smtp_protocol_error", code
+    return "unexpected_delivery_error", code
+
+
 def _send_email(to_email: str, subject: str, text_content: str, html_content: str) -> bool:
     """Deliver one transactional email; never log addresses, links, or secrets."""
     settings = get_settings()
@@ -33,7 +109,6 @@ def _send_email(to_email: str, subject: str, text_content: str, html_content: st
         logger.error("SMTP delivery skipped: provider credentials are not configured")
         return False
 
-    smtp_host = settings.SMTP_HOST.strip()
     smtp_user = settings.SMTP_USER.strip()
     sender_email = settings.EMAILS_FROM_EMAIL.strip() or smtp_user
     sender_name = " ".join(settings.EMAILS_FROM_NAME.replace("\r", " ").replace("\n", " ").split())
@@ -45,11 +120,7 @@ def _send_email(to_email: str, subject: str, text_content: str, html_content: st
     message.attach(MIMEText(html_content, "html", "utf-8"))
 
     try:
-        with smtplib.SMTP(smtp_host, settings.SMTP_PORT, timeout=15) as server:
-            server.ehlo()
-            if settings.SMTP_TLS:
-                server.starttls(context=ssl.create_default_context())
-                server.ehlo()
+        with _smtp_server(settings) as server:
             server.login(smtp_user, _smtp_password())
             refused = server.sendmail(sender_email, [to_email], message.as_string())
             if refused:
@@ -60,8 +131,8 @@ def _send_email(to_email: str, subject: str, text_content: str, html_content: st
         # SMTP response codes help an operator distinguish authentication,
         # sender policy, and transient provider failures without logging an
         # address, message body, verification URL, or credential.
-        smtp_code = getattr(exc, "smtp_code", None)
-        logger.error("SMTP delivery failed (%s; provider code %s)", type(exc).__name__, smtp_code or "unavailable")
+        category, smtp_code = _smtp_error_category(exc)
+        logger.error("SMTP delivery failed (%s; provider code %s)", category, smtp_code or "unavailable")
         return False
 
 
@@ -170,7 +241,6 @@ def send_owner_broadcast_emails(
     if not recipients:
         return {}
 
-    smtp_host = settings.SMTP_HOST.strip()
     smtp_user = settings.SMTP_USER.strip()
     sender_email = settings.EMAILS_FROM_EMAIL.strip() or smtp_user
     sender_name = " ".join(settings.EMAILS_FROM_NAME.replace("\r", " ").replace("\n", " ").split())
@@ -189,11 +259,8 @@ def send_owner_broadcast_emails(
     statuses: dict[int, tuple[str, str | None]] = {}
     server = None
     try:
-        server = smtplib.SMTP(smtp_host, settings.SMTP_PORT, timeout=15)
-        server.ehlo()
-        if settings.SMTP_TLS:
-            server.starttls(context=ssl.create_default_context())
-            server.ehlo()
+        server_context = _smtp_server(settings)
+        server = server_context.__enter__()
         server.login(smtp_user, _smtp_password())
         for user_id, address in recipients:
             message = EmailMessage()
@@ -225,13 +292,11 @@ def send_owner_broadcast_emails(
                         statuses[pending_id] = ("failed", type(exc).__name__[:64])
                 break
     except (OSError, smtplib.SMTPException, ssl.SSLError) as exc:
-        logger.error("Owner broadcast email delivery failed (%s)", type(exc).__name__)
+        category, smtp_code = _smtp_error_category(exc)
+        logger.error("Owner broadcast email delivery failed (%s; provider code %s)", category, smtp_code or "unavailable")
         for user_id, _ in recipients:
             statuses.setdefault(user_id, ("failed", type(exc).__name__[:64]))
     finally:
         if server is not None:
-            try:
-                server.quit()
-            except (OSError, smtplib.SMTPException):
-                pass
+            server_context.__exit__(None, None, None)
     return statuses

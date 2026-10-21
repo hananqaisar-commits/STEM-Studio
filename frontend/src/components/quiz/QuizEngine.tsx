@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,14 +27,17 @@ export interface QuizEngineProps {
 export const QuizEngine: React.FC<QuizEngineProps> = ({ mode, onBack }) => {
   const quiz = useConceptQuiz(mode);
   const continueRef = useRef<HTMLButtonElement | null>(null);
-  const firstOptionRef = useRef<HTMLButtonElement | null>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [pending, setPending] = useState<number | null>(null);
 
   const locked = quiz.phase === 'revealed';
 
   useEffect(() => {
     if (locked) continueRef.current?.focus({ preventScroll: true });
-    else firstOptionRef.current?.focus({ preventScroll: true });
+    else optionRefs.current[0]?.focus({ preventScroll: true });
   }, [locked, quiz.questionNumber]);
+
+  useEffect(() => setPending(null), [quiz.questionNumber]);
 
   /* ── Done screen ─────────────────────────────────────────────────── */
   if (quiz.phase === 'done' || !quiz.question) {
@@ -127,6 +130,34 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({ mode, onBack }) => {
     return 'quiz-option is-muted';
   };
 
+  const focusOption = (index: number) => {
+    const count = question.options.length;
+    if (!count) return;
+    const next = (index + count) % count;
+    setPending(next);
+    optionRefs.current[next]?.focus({ preventScroll: true });
+  };
+
+  const handleOptionKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (locked) return;
+    if (event.key >= '1' && event.key <= '9') {
+      const index = Number(event.key) - 1;
+      if (index < question.options.length) {
+        event.preventDefault();
+        focusOption(index);
+      }
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      focusOption((pending ?? 0) + 1);
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      focusOption((pending ?? 0) - 1);
+    } else if (event.key === 'Enter' && pending !== null) {
+      event.preventDefault();
+      quiz.answer(pending);
+    }
+  };
+
   return (
     <div className="quiz-dock">
       <div className="quiz-dock-mascot">
@@ -171,19 +202,41 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({ mode, onBack }) => {
         </header>
 
         <div className="quiz-content-animate">
+          <section className="quiz-focus-card" aria-label="Current focus and key points">
+            <div className="quiz-focus-heading">
+              <span className="quiz-focus-icon"><Lightbulb size={16} /></span>
+              <div>
+                <span className="quiz-focus-label">Current focus</span>
+                <strong>{question.concept}</strong>
+              </div>
+            </div>
+            <p className="quiz-focus-description">
+              {question.kind === 'reason'
+                ? 'Identify the rule that makes this concept work, then choose the explanation that matches it.'
+                : 'Read the prompt carefully and reason from the algorithm rule before choosing an answer.'}
+            </p>
+            <div className="quiz-key-points">
+              <h4>Key points</h4>
+              <ul>
+                <li>Compare the choices with the named concept.</li>
+                <li>Select an option, then check it when you are ready.</li>
+              </ul>
+            </div>
+          </section>
           <p className="quiz-prompt">{question.prompt}</p>
 
-          <div className="quiz-options" role="radiogroup" aria-label="Answer choices">
+          <div className="quiz-options" role="radiogroup" aria-label="Answer choices" onKeyDown={handleOptionKeyDown}>
             {question.options.map((option, index) => (
               <button
                 key={`${questionNumber}-${index}`}
-                ref={index === 0 ? firstOptionRef : undefined}
+                ref={(element) => { optionRefs.current[index] = element; }}
                 type="button"
                 role="radio"
-                aria-checked={index === selectedIndex}
+                aria-checked={locked ? index === selectedIndex : index === pending}
+                tabIndex={index === (pending ?? 0) ? 0 : -1}
                 className={optionClass(index)}
                 disabled={locked}
-                onClick={() => quiz.answer(index)}
+                onClick={() => setPending(index)}
               >
                 <span className="quiz-option-key" aria-hidden="true">{index + 1}</span>
                 <span className="quiz-option-label">{option}</span>
@@ -225,9 +278,12 @@ export const QuizEngine: React.FC<QuizEngineProps> = ({ mode, onBack }) => {
               <ArrowRight size={14} />
             </button>
           ) : (
-            <span className="quiz-score">
-              {quiz.correctCount}/{Math.max(0, questionNumber - 1)} correct
-            </span>
+            <>
+              <span className="quiz-score">{quiz.correctCount}/{Math.max(0, questionNumber - 1)} correct</span>
+              <button type="button" className="quiz-action" disabled={pending === null} onClick={() => pending !== null && quiz.answer(pending)}>
+                {phase === 'retrying' ? 'Check again' : 'Check answer'}
+              </button>
+            </>
           )}
         </footer>
       </section>

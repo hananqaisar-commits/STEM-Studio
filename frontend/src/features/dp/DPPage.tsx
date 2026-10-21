@@ -636,7 +636,7 @@ export const DPPage: React.FC = () => {
             currentStepIndex={currentStepIndex}
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
-          />
+           onStepSelect={seekTo}/>
           }
         />
       </div>
@@ -647,7 +647,7 @@ export const DPPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Dynamic Programming | ${selectedAlg.toUpperCase()}`}
         subtitle="DP Table Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

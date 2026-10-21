@@ -624,7 +624,7 @@ export const BinarySearchPage: React.FC = () => {
             description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)}
             steps={activeSteps}
             currentStepIndex={currentStepIndex}
-          />
+           onStepSelect={seekTo}/>
           }
         />
       </div>
@@ -635,7 +635,7 @@ export const BinarySearchPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Binary Search Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Logarithmic Search Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Click Search to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

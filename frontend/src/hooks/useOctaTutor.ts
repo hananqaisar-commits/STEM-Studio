@@ -24,6 +24,7 @@ export interface ChatMessage {
   actionDecision?: 'pending' | 'allowed' | 'cancelled';
   actionContextKey?: string;
   answerSource?: 'model' | 'offline' | 'grounded';
+  requestFailed?: boolean;
 }
 
 export type SupportedSpeechLang = 'en-US' | 'ur-PK' | 'zh-CN';
@@ -47,7 +48,9 @@ export interface UseOctaTutorReturn {
   isSpeechSupported: boolean;
   mascotExpression: MascotExpression;
   setMascotExpression: React.Dispatch<React.SetStateAction<MascotExpression>>;
-  sendMessage: (customText?: string) => Promise<void>;
+  sendMessage: (customText?: string, modeOverride?: 'interactive' | 'natural', options?: { appendUser?: boolean; historyThroughMessageId?: string }) => Promise<void>;
+  stopGeneration: () => void;
+  resendAssistantMessage: (assistantMessageId: string) => void;
   startListening: () => void;
   stopListening: () => void;
   clearHistory: () => void;
@@ -370,6 +373,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
 
   const [inputText, setInputText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const isLoadingRef = useRef(false);
+  const requestControllerRef = useRef<AbortController | null>(null);
   const [isListening, setIsListening] = useState<boolean>(false);
   const [speechLang, setSpeechLang] = useState<SupportedSpeechLang>('en-US');
   const [mascotExpression, setMascotExpression] = useState<MascotExpression>('neutral');
@@ -660,11 +665,17 @@ export function useOctaTutor(): UseOctaTutorReturn {
 
   // Handle send message
   const sendMessage = useCallback(
-    async (customText?: string) => {
+    async (customText?: string, modeOverride?: 'interactive' | 'natural', options?: { appendUser?: boolean; historyThroughMessageId?: string }) => {
       const promptToUse = (customText || inputText).trim();
-      if (!promptToUse || isLoading) return;
+      if (!promptToUse || isLoadingRef.current) return;
 
-      if (!customText) {
+      const requestMode = modeOverride || tutorMode;
+      const appendUser = options?.appendUser !== false;
+      isLoadingRef.current = true;
+      const controller = new AbortController();
+      requestControllerRef.current = controller;
+
+      if (!customText && appendUser) {
         setInputText('');
       }
 
@@ -673,11 +684,11 @@ export function useOctaTutor(): UseOctaTutorReturn {
         id: userMsgId,
         role: 'user',
         content: promptToUse,
-        mode: tutorMode,
+        mode: requestMode,
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, newHistoryItem]);
+      if (appendUser) setMessages((prev) => [...prev, newHistoryItem]);
       setIsLoading(true);
       setMascotExpression('thinking');
 
@@ -712,8 +723,12 @@ export function useOctaTutor(): UseOctaTutorReturn {
       }
 
       // Prepare payload
-      const historyPayload: OctaTutorMessage[] = messages
-        .filter((message) => !message.mode || message.mode === tutorMode)
+      const historyEndIndex = options?.historyThroughMessageId
+        ? messages.findIndex((message) => message.id === options.historyThroughMessageId)
+        : messages.length - 1;
+      const historySource = historyEndIndex >= 0 ? messages.slice(0, historyEndIndex + 1) : messages;
+      const historyPayload: OctaTutorMessage[] = historySource
+        .filter((message) => !message.mode || message.mode === requestMode)
         .slice(-10)
         .map((m) => ({
           role: m.role,
@@ -734,13 +749,15 @@ export function useOctaTutor(): UseOctaTutorReturn {
           site_catalog: siteCatalog,
           topic_knowledge: topicKnowledgeFor(promptToUse),
           conversation_history: historyPayload,
-          mode: tutorMode,
+          mode: requestMode,
           // BYOK Custom LLM configuration
           provider: llmConfig.provider,
           api_key: llmConfig.apiKey,
           base_url: llmConfig.baseUrl,
           model_name: llmConfig.modelName,
-        });
+        }, controller.signal);
+
+        if (!response.reply?.trim()) throw new Error('Octa returned an empty response. Please try again.');
 
         if (response.provider_status) setProviderStatus(response.provider_status);
 
@@ -760,7 +777,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
             id: botMsgId,
             role: 'assistant',
             content: response.reply,
-            mode: tutorMode,
+            mode: requestMode,
             expression: expr,
             timestamp: new Date(),
             isRevealing: true,
@@ -772,27 +789,55 @@ export function useOctaTutor(): UseOctaTutorReturn {
           },
         ]);
       } catch (err: any) {
-        if (err?.status === 429) setProviderStatus('limit');
-        else if (err?.status !== 401 && err?.status !== 403) setProviderStatus('unavailable');
-        const errorDetail = err?.message || 'Unable to connect to Octa Tutor server.';
-        setMascotExpression('confused');
+        const wasStopped = err?.name === 'AbortError';
+        if (!wasStopped) {
+          if (err?.status === 429) setProviderStatus('limit');
+          else if (err?.status !== 401 && err?.status !== 403) setProviderStatus('unavailable');
+        }
+        const errorDetail = wasStopped
+          ? 'Response stopped. Retry this question when you are ready.'
+          : (err?.message || 'Unable to connect to Octa Tutor server.');
+        if (!wasStopped) setMascotExpression('confused');
         setMessages((prev) => [
           ...prev,
           {
             id: `err-${Date.now()}`,
             role: 'assistant',
-            content: `Oops! ${errorDetail} Please check your AI Settings ⚙️ or server key configuration.`,
-            mode: tutorMode,
-            expression: 'confused',
+            content: wasStopped
+              ? errorDetail
+              : `Octa could not answer: ${errorDetail} Check AI settings or retry.`,
+            mode: requestMode,
+            expression: wasStopped ? 'neutral' : 'confused',
             timestamp: new Date(),
+            requestFailed: true,
           },
         ]);
       } finally {
+        if (requestControllerRef.current === controller) requestControllerRef.current = null;
+        isLoadingRef.current = false;
         setIsLoading(false);
       }
     },
-    [inputText, isLoading, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, tutorMode, llmConfig]
+    [inputText, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, tutorMode, llmConfig]
   );
+
+  const stopGeneration = useCallback(() => {
+    requestControllerRef.current?.abort();
+  }, []);
+
+  const resendAssistantMessage = useCallback((assistantMessageId: string) => {
+    if (isLoadingRef.current) return;
+    const assistantIndex = messages.findIndex((message) => message.id === assistantMessageId && message.role === 'assistant');
+    if (assistantIndex < 0) return;
+    const userIndex = messages.slice(0, assistantIndex).findLastIndex((message) => message.role === 'user');
+    if (userIndex < 0) return;
+    const sourceMessage = messages[userIndex];
+    setMessages((previous) => previous.slice(0, userIndex + 1));
+    void sendMessage(sourceMessage.content, sourceMessage.mode || tutorMode, {
+      appendUser: false,
+      historyThroughMessageId: sourceMessage.id,
+    });
+  }, [messages, sendMessage, tutorMode]);
 
   return {
     messages,
@@ -806,6 +851,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
     mascotExpression,
     setMascotExpression,
     sendMessage,
+    stopGeneration,
+    resendAssistantMessage,
     startListening,
     stopListening,
     clearHistory,

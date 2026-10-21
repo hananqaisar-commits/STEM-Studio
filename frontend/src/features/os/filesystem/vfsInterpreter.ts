@@ -10,7 +10,7 @@ export interface CommandExecutionResult {
     explanation: string;
     targetNodeId?: string;
     animatedPathIds?: string[];
-    mutationType?: 'create' | 'delete' | 'permission' | 'editor';
+    mutationType?: 'create' | 'delete' | 'move' | 'permission' | 'editor';
   };
   editorTrigger?: {
     type: 'nano' | 'vim';
@@ -18,6 +18,66 @@ export interface CommandExecutionResult {
     filePath: string;
     initialContent: string;
   };
+}
+
+const isDirectoryNode = (node?: VFSNode) => node?.type === 'directory' || node?.type === 'mount-point';
+
+function uniqueNodeId(prefix: string, nodes: Record<string, VFSNode>): string {
+  let id = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  while (nodes[id]) id = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  return id;
+}
+
+function resolveParentAndName(
+  nodes: Record<string, VFSNode>,
+  currentDirId: string,
+  rawPath: string,
+): { parentId: string; name: string } | null {
+  const path = rawPath.replace(/\/+$/, '') || (rawPath.startsWith('/') ? '/' : '');
+  if (!path || path === '/' || path === '.' || path === '..') return null;
+  const slash = path.lastIndexOf('/');
+  const name = path.slice(slash + 1);
+  if (!name || name === '.' || name === '..') return null;
+  const parentPath = slash < 0 ? '.' : path.startsWith('/') ? (slash === 0 ? '/' : path.slice(0, slash)) : (path.slice(0, slash) || '.');
+  const parentId = resolveNodeId(nodes, currentDirId, parentPath);
+  if (!parentId || !isDirectoryNode(nodes[parentId])) return null;
+  return { parentId, name };
+}
+
+function expandHomePath(nodes: Record<string, VFSNode>, currentDirId: string, path: string): string {
+  if (!path.startsWith('~')) return path;
+  const homeId = resolveNodeId(nodes, currentDirId, '~');
+  if (!homeId) return path;
+  return `${getAbsolutePath(nodes, homeId)}${path.slice(1)}`;
+}
+
+function isDescendantOrSelf(nodes: Record<string, VFSNode>, ancestorId: string, nodeId: string): boolean {
+  let node: VFSNode | undefined = nodes[nodeId];
+  while (node) {
+    if (node.id === ancestorId) return true;
+    node = node.parentId ? nodes[node.parentId] : undefined;
+  }
+  return false;
+}
+
+function hasConsistentSubtree(nodes: Record<string, VFSNode>, nodeId: string, visited = new Set<string>()): boolean {
+  if (visited.has(nodeId)) return false;
+  const node = nodes[nodeId];
+  if (!node) return false;
+  visited.add(nodeId);
+  for (const childId of node.childrenIds || []) {
+    if (nodes[childId]?.parentId !== nodeId || !hasConsistentSubtree(nodes, childId, visited)) return false;
+  }
+  return true;
+}
+
+function removeSubtree(nodes: Record<string, VFSNode>, nodeId: string, visited = new Set<string>()): void {
+  if (visited.has(nodeId)) return;
+  visited.add(nodeId);
+  const node = nodes[nodeId];
+  if (!node) return;
+  for (const childId of [...(node.childrenIds || [])]) removeSubtree(nodes, childId, visited);
+  delete nodes[nodeId];
 }
 
 /**
@@ -104,13 +164,27 @@ export function executeVFSCommand(
       };
     }
 
-    // Build path trace from current to target for flow-line animation
-    const traceIds: string[] = [];
-    let curr: VFSNode | undefined = targetNode;
-    while (curr) {
-      traceIds.unshift(curr.id);
-      curr = curr.parentId ? nodes[curr.parentId] : undefined;
+    // Trace the actual route: walk from the current directory to the lowest
+    // common ancestor, then down the destination branch.
+    const currentAncestors: string[] = [];
+    let currentCursor: VFSNode | undefined = currentDir;
+    while (currentCursor) {
+      currentAncestors.push(currentCursor.id);
+      currentCursor = currentCursor.parentId ? nodes[currentCursor.parentId] : undefined;
     }
+    const targetAncestors: string[] = [];
+    let targetCursor: VFSNode | undefined = targetNode;
+    while (targetCursor) {
+      targetAncestors.push(targetCursor.id);
+      targetCursor = targetCursor.parentId ? nodes[targetCursor.parentId] : undefined;
+    }
+    const commonAncestor = currentAncestors.find(id => targetAncestors.includes(id));
+    const traceIds = commonAncestor
+      ? [
+          ...currentAncestors.slice(0, currentAncestors.indexOf(commonAncestor) + 1),
+          ...targetAncestors.slice(0, targetAncestors.indexOf(commonAncestor)).reverse(),
+        ]
+      : [targetNode.id];
 
     nextSnapshot.envVars.OLDPWD = currentPath;
     nextSnapshot.currentDirId = targetId;
@@ -123,7 +197,7 @@ export function executeVFSCommand(
       stepRecord: {
         command: line,
         diff: `PWD changed: ${currentPath} -> ${newPath}`,
-        explanation: `Changed active working directory to "${newPath}". Flow-line animation highlighted path traversal from root.`,
+        explanation: `Changed active working directory to "${newPath}". The highlighted route follows real parent links from the previous directory to the destination.`,
         targetNodeId: targetId,
         animatedPathIds: traceIds,
       },
@@ -146,7 +220,7 @@ export function executeVFSCommand(
     }
 
     const targetNode = nodes[targetId];
-    const childIds = targetNode.type === 'directory' ? (targetNode.childrenIds || []) : [targetNode.id];
+    const childIds = isDirectoryNode(targetNode) ? (targetNode.childrenIds || []) : [targetNode.id];
     let childNodes = childIds.map(id => nodes[id]).filter(Boolean);
 
     if (!showAll) {
@@ -180,42 +254,87 @@ export function executeVFSCommand(
 
   // --- 4. mkdir ---
   if (cmd === 'mkdir') {
-    const dirName = args.find(a => !a.startsWith('-'));
-    if (!dirName) {
+    const createParents = args.some(arg => arg === '-p' || arg === '--parents');
+    const dirPath = args.find(a => !a.startsWith('-'));
+    if (!dirPath) {
       return {
         output: 'mkdir: missing operand',
         newSnapshot: snapshot,
         stepRecord: { command: line, diff: 'Syntax error', explanation: 'mkdir requires a directory name argument.' },
       };
     }
-
     const now = new Date().toISOString().split('T')[0];
-    const newId = `dir-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    const newDirNode: VFSNode = {
-      id: newId,
-      name: dirName,
-      type: 'directory',
-      parentId: currentDir.id,
-      childrenIds: [],
-      owner: nextSnapshot.currentUser,
-      group: nextSnapshot.currentGroup,
-      permissions: 'rwxr-xr-x',
-      octalPermissions: '755',
-      createdAt: now,
-      modifiedAt: now,
-    };
+    const expandedDirPath = expandHomePath(nodes, nextSnapshot.currentDirId, dirPath);
+    const segments = expandedDirPath.split('/').filter(Boolean);
+    let parentId = expandedDirPath.startsWith('/') ? nextSnapshot.rootId : nextSnapshot.currentDirId;
+    let lastCreatedId: string | undefined;
+    let existingFinalId: string | undefined;
+    const createdIds: string[] = [];
 
-    nodes[newId] = newDirNode;
-    currentDir.childrenIds = [...(currentDir.childrenIds || []), newId];
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index];
+      if (segment === '.') continue;
+      if (segment === '..') {
+        parentId = nodes[parentId]?.parentId || parentId;
+        continue;
+      }
+      const parent = nodes[parentId];
+      if (!isDirectoryNode(parent)) {
+        return { output: `mkdir: cannot create directory '${dirPath}': parent is not a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid parent directory', explanation: `Cannot create ${dirPath}: ${getAbsolutePath(nodes, parentId)} is not a directory.` } };
+      }
+      const existingId = parent.childrenIds?.find(id => nodes[id]?.name === segment);
+      if (existingId) {
+        if (!isDirectoryNode(nodes[existingId])) {
+          return { output: `mkdir: cannot create directory '${dirPath}': Not a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Path component is not a directory', explanation: `The existing path component "${segment}" is not a directory.` } };
+        }
+        if (index === segments.length - 1 && !createParents) {
+          return { output: `mkdir: cannot create directory '${dirPath}': File exists`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Directory already exists', explanation: `The directory entry "${segment}" already exists under ${getAbsolutePath(nodes, parentId)}.` } };
+        }
+        parentId = existingId;
+        if (index === segments.length - 1) existingFinalId = existingId;
+        continue;
+      }
+      if (!createParents && index < segments.length - 1) {
+        return { output: `mkdir: cannot create directory '${dirPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Missing parent directory', explanation: `Use mkdir -p to create the missing parent directories in "${dirPath}".` } };
+      }
+      const newId = uniqueNodeId('dir', nodes);
+      nodes[newId] = {
+        id: newId,
+        name: segment,
+        type: 'directory',
+        parentId,
+        childrenIds: [],
+        owner: nextSnapshot.currentUser,
+        group: nextSnapshot.currentGroup,
+        permissions: 'rwxr-xr-x',
+        octalPermissions: '755',
+        createdAt: now,
+        modifiedAt: now,
+      };
+      parent.childrenIds = [...(parent.childrenIds || []), newId];
+      parent.modifiedAt = now;
+      parentId = newId;
+      lastCreatedId = newId;
+      createdIds.push(newId);
+    }
+
+    if (!lastCreatedId) {
+      if (createParents && existingFinalId) {
+        return { output: '', newSnapshot: nextSnapshot, stepRecord: { command: line, diff: `Directory already exists: ${getAbsolutePath(nodes, existingFinalId)}`, explanation: `mkdir -p leaves the existing directory and its contents unchanged.`, targetNodeId: existingFinalId } };
+      }
+      return { output: `mkdir: cannot create directory '${dirPath}': File exists`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Directory already exists', explanation: `The requested directory path "${dirPath}" already exists.` } };
+    }
+    const createdPath = getAbsolutePath(nodes, lastCreatedId);
 
     return {
       output: '',
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `+ Created directory: ${dirName} (755)`,
-        explanation: `Created new directory "${dirName}" in ${currentPath}. Node added to VFS tree with popIn animation.`,
-        targetNodeId: newId,
+        diff: `+ Created ${createdIds.length} director${createdIds.length === 1 ? 'y' : 'ies'}: ${createdPath}`,
+        explanation: `${createParents ? 'Created each missing path component' : 'Created the directory'} and linked every new node beneath its actual parent. Final path: ${createdPath}.`,
+        targetNodeId: lastCreatedId,
+        animatedPathIds: [nodes[lastCreatedId].parentId, ...createdIds].filter((id): id is string => Boolean(id)),
         mutationType: 'create',
       },
     };
@@ -223,18 +342,17 @@ export function executeVFSCommand(
 
   // --- 5. touch ---
   if (cmd === 'touch') {
-    const fileName = args[0];
-    if (!fileName) {
+    const filePath = args.find(a => !a.startsWith('-'));
+    if (!filePath) {
       return {
         output: 'touch: missing file operand',
         newSnapshot: snapshot,
         stepRecord: { command: line, diff: 'Syntax error', explanation: 'touch requires a file name.' },
       };
     }
-
-    const existingId = currentDir.childrenIds?.find(id => nodes[id]?.name === fileName);
     const now = new Date().toISOString().split('T')[0];
 
+    const existingId = resolveNodeId(nodes, nextSnapshot.currentDirId, filePath);
     if (existingId && nodes[existingId]) {
       nodes[existingId].modifiedAt = now;
       return {
@@ -242,19 +360,22 @@ export function executeVFSCommand(
         newSnapshot: nextSnapshot,
         stepRecord: {
           command: line,
-          diff: `Updated timestamp for ${fileName}`,
-          explanation: `Updated modification time for existing file "${fileName}".`,
+          diff: `Updated timestamp for ${filePath}`,
+          explanation: `Updated the modification time of the existing entry at ${getAbsolutePath(nodes, existingId)}.`,
           targetNodeId: existingId,
         },
       };
     }
-
-    const newId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const destination = resolveParentAndName(nodes, nextSnapshot.currentDirId, filePath);
+    if (!destination) {
+      return { output: `touch: cannot touch '${filePath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Parent directory not found', explanation: `The parent directory for "${filePath}" does not exist. Create it first, then touch the file.` } };
+    }
+    const newId = uniqueNodeId('file', nodes);
     const newFileNode: VFSNode = {
       id: newId,
-      name: fileName,
+      name: destination.name,
       type: 'file',
-      parentId: currentDir.id,
+      parentId: destination.parentId,
       owner: nextSnapshot.currentUser,
       group: nextSnapshot.currentGroup,
       permissions: 'rw-r--r--',
@@ -265,18 +386,22 @@ export function executeVFSCommand(
     };
 
     nodes[newId] = newFileNode;
-    currentDir.childrenIds = [...(currentDir.childrenIds || []), newId];
+    const parent = nodes[destination.parentId];
+    parent.childrenIds = [...(parent.childrenIds || []), newId];
+    parent.modifiedAt = now;
+    const fileAbsolutePath = getAbsolutePath(nodes, newId);
 
     return {
       output: '',
       newSnapshot: nextSnapshot,
       stepRecord: {
-        command: line,
-        diff: `+ Created empty file: ${fileName} (644)`,
-        explanation: `Created new empty file "${fileName}" inside ${currentPath}.`,
-        targetNodeId: newId,
-        mutationType: 'create',
-      },
+          command: line,
+          diff: `+ Created empty file: ${fileAbsolutePath} (644)`,
+          explanation: `Created a new empty file and linked it to ${getAbsolutePath(nodes, destination.parentId)}.`,
+          targetNodeId: newId,
+          animatedPathIds: [destination.parentId, newId],
+          mutationType: 'create',
+        },
     };
   }
 
@@ -484,6 +609,7 @@ export function executeVFSCommand(
 
   // --- 11. rm ---
   if (cmd === 'rm') {
+    const recursive = args.some(arg => arg.startsWith('-') && arg.includes('r'));
     const fileArg = args.find(a => !a.startsWith('-'));
     if (!fileArg) {
       return { output: 'rm: missing operand', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'rm requires a file path.' } };
@@ -497,19 +623,32 @@ export function executeVFSCommand(
     const targetNode = nodes[targetId];
     const parentId = targetNode.parentId;
 
+    if (targetId === nextSnapshot.rootId) {
+      return { output: `rm: cannot remove '${fileArg}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Protected filesystem root', explanation: 'The root directory is the top of the virtual filesystem and cannot be removed.' } };
+    }
+    if (isDescendantOrSelf(nodes, targetId, nextSnapshot.currentDirId)) {
+      return { output: `rm: cannot remove '${fileArg}': current working directory is inside this path`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Cannot remove current working directory', explanation: 'Change to a directory outside this subtree before removing it.' } };
+    }
+    if (isDirectoryNode(targetNode) && (targetNode.childrenIds?.length || 0) > 0 && !recursive) {
+      return { output: `rm: cannot remove '${fileArg}': Is a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Recursive flag required', explanation: `"${getAbsolutePath(nodes, targetId)}" contains children. Use rm -r to remove the directory and its descendants.` } };
+    }
+
     if (parentId && nodes[parentId]) {
       nodes[parentId].childrenIds = nodes[parentId].childrenIds?.filter(id => id !== targetId);
+      nodes[parentId].modifiedAt = new Date().toISOString().split('T')[0];
     }
-    delete nodes[targetId];
+    const removedPath = getAbsolutePath(nodes, targetId);
+    removeSubtree(nodes, targetId);
 
     return {
       output: '',
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `- Deleted node: ${fileArg}`,
-        explanation: `Removed file/directory node "${fileArg}" from VFS tree.`,
+        diff: `- Removed subtree: ${removedPath}`,
+        explanation: `Detached ${removedPath} from its parent and removed every descendant from the snapshot${recursive ? ' recursively' : ''}.`,
         targetNodeId: parentId || undefined,
+        animatedPathIds: parentId ? [parentId] : [],
         mutationType: 'delete',
       },
     };
@@ -532,32 +671,64 @@ export function executeVFSCommand(
     }
 
     const srcNode = nodes[srcId];
+    if (!hasConsistentSubtree(nodes, srcId)) {
+      return { output: `cp: cannot copy '${srcPath}': inconsistent directory entries`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Source tree is inconsistent', explanation: 'A child link does not point back to its directory, so copying was stopped without changing the filesystem.' } };
+    }
     if (srcNode.type === 'directory' && !isRecursive) {
       return { output: `cp: -r not specified; omitting directory '${srcPath}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Directory copy omitted', explanation: 'Use cp -r to recursively copy directories.' } };
     }
 
-    const now = new Date().toISOString().split('T')[0];
-    const newId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    const copyNode: VFSNode = {
-      ...JSON.parse(JSON.stringify(srcNode)),
-      id: newId,
-      name: dstPath.split('/').pop() || dstPath,
-      parentId: currentDir.id,
-      createdAt: now,
-      modifiedAt: now,
-    };
+    const existingDestinationId = resolveNodeId(nodes, nextSnapshot.currentDirId, dstPath);
+    let destinationParentId: string;
+    let destinationName: string;
+    if (existingDestinationId && isDirectoryNode(nodes[existingDestinationId])) {
+      destinationParentId = existingDestinationId;
+      destinationName = srcNode.name;
+    } else {
+      const destination = resolveParentAndName(nodes, nextSnapshot.currentDirId, dstPath);
+      if (!destination) {
+        return { output: `cp: cannot create '${dstPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Destination parent not found', explanation: `The destination parent for "${dstPath}" does not exist or is not a directory.` } };
+      }
+      destinationParentId = destination.parentId;
+      destinationName = destination.name;
+    }
+    if (existingDestinationId === srcId || isDescendantOrSelf(nodes, srcId, destinationParentId)) {
+      return { output: `cp: cannot copy '${srcPath}' into itself`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid recursive destination', explanation: 'A directory cannot be copied into itself or one of its descendants.' } };
+    }
+    const destinationParent = nodes[destinationParentId];
+    if (!destinationParent) {
+      return { output: `cp: cannot create '${dstPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Destination parent not found', explanation: `Parent directory for "${dstPath}" no longer exists.` } };
+    }
+    const collisionId = destinationParent.childrenIds?.find(id => nodes[id]?.name === destinationName);
+    if (collisionId) {
+      return { output: `cp: cannot create '${dstPath}': File exists`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Destination already exists', explanation: `An entry named "${destinationName}" already exists in ${getAbsolutePath(nodes, destinationParentId)}.` } };
+    }
 
-    nodes[newId] = copyNode;
-    currentDir.childrenIds = [...(currentDir.childrenIds || []), newId];
+    const now = new Date().toISOString().split('T')[0];
+    const copySubtree = (sourceId: string, parentId: string, name: string): string => {
+      const source = nodes[sourceId];
+      const newId = uniqueNodeId(source.type === 'directory' ? 'dir' : 'file', nodes);
+      const childIds: string[] = [];
+      nodes[newId] = { ...JSON.parse(JSON.stringify(source)), id: newId, name, parentId, childrenIds: source.childrenIds ? childIds : undefined, createdAt: now, modifiedAt: now };
+      for (const childId of source.childrenIds || []) {
+        if (nodes[childId]) childIds.push(copySubtree(childId, newId, nodes[childId].name));
+      }
+      return newId;
+    };
+    const newId = copySubtree(srcId, destinationParentId, destinationName);
+    destinationParent.childrenIds = [...(destinationParent.childrenIds || []), newId];
+    destinationParent.modifiedAt = now;
+    const copiedPath = getAbsolutePath(nodes, newId);
 
     return {
       output: '',
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `+ Copied ${srcPath} -> ${dstPath}`,
-        explanation: `Duplicated node "${srcPath}" to new destination "${dstPath}". Added node to tree.`,
+        diff: `+ Copied ${srcPath} -> ${copiedPath}`,
+        explanation: `Copied ${srcPath} to ${copiedPath}. Every copied descendant received a new node ID and a parent link inside the copied subtree.`,
         targetNodeId: newId,
+        animatedPathIds: [destinationParentId, newId],
         mutationType: 'create',
       },
     };
@@ -577,20 +748,54 @@ export function executeVFSCommand(
     }
 
     const srcNode = nodes[srcId];
-    const newName = dstPath.split('/').pop() || dstPath;
-    const oldName = srcNode.name;
+    if (!hasConsistentSubtree(nodes, srcId)) {
+      return { output: `mv: cannot move '${srcPath}': inconsistent directory entries`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Source tree is inconsistent', explanation: 'A child link does not point back to its directory, so moving was stopped without changing the filesystem.' } };
+    }
+    const oldPath = getAbsolutePath(nodes, srcId);
+    const destinationId = resolveNodeId(nodes, nextSnapshot.currentDirId, dstPath);
+    let destinationParentId: string;
+    let newName: string;
+    if (destinationId && isDirectoryNode(nodes[destinationId])) {
+      destinationParentId = destinationId;
+      newName = srcNode.name;
+    } else {
+      const destination = resolveParentAndName(nodes, nextSnapshot.currentDirId, dstPath);
+      if (!destination) {
+        return { output: `mv: cannot move '${srcPath}' to '${dstPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Destination parent not found', explanation: `The destination parent for "${dstPath}" does not exist or is not a directory.` } };
+      }
+      destinationParentId = destination.parentId;
+      newName = destination.name;
+    }
+    if (srcId === nextSnapshot.rootId || isDescendantOrSelf(nodes, srcId, destinationParentId)) {
+      return { output: `mv: cannot move '${srcPath}' into itself`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid move destination', explanation: 'The filesystem root cannot be moved, and a directory cannot be moved into itself or its descendants.' } };
+    }
+    const oldParentId = srcNode.parentId;
+    const destinationParent = nodes[destinationParentId];
+    const collisionId = destinationParent?.childrenIds?.find(id => id !== srcId && nodes[id]?.name === newName);
+    if (collisionId) {
+      return { output: `mv: cannot move '${srcPath}' to '${dstPath}': File exists`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Destination already exists', explanation: `An entry named "${newName}" already exists in ${getAbsolutePath(nodes, destinationParentId)}.` } };
+    }
+    if (oldParentId && oldParentId !== destinationParentId) {
+      nodes[oldParentId].childrenIds = nodes[oldParentId].childrenIds?.filter(id => id !== srcId);
+      nodes[destinationParentId].childrenIds = [...(nodes[destinationParentId].childrenIds || []), srcId];
+      nodes[oldParentId].modifiedAt = new Date().toISOString().split('T')[0];
+      nodes[destinationParentId].modifiedAt = new Date().toISOString().split('T')[0];
+    }
+    srcNode.parentId = destinationParentId;
     srcNode.name = newName;
     srcNode.modifiedAt = new Date().toISOString().split('T')[0];
+    const newPath = getAbsolutePath(nodes, srcId);
 
     return {
       output: '',
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `Renamed/Moved: ${oldName} -> ${newName}`,
-        explanation: `Moved/Renamed file node from "${oldName}" to "${newName}".`,
+        diff: `Moved: ${oldPath} -> ${newPath}`,
+        explanation: `Updated the entry name and parent-child links. The node now belongs to ${getAbsolutePath(nodes, destinationParentId)} at ${newPath}.`,
         targetNodeId: srcId,
-        mutationType: 'create',
+        animatedPathIds: [oldParentId, destinationParentId, srcId].filter((id): id is string => Boolean(id)),
+        mutationType: 'move',
       },
     };
   }
@@ -701,11 +906,44 @@ export function executeVFSCommand(
   if (cmd === 'userdel') {
     const targetUser = args.find(a => !a.startsWith('-'));
     if (targetUser) {
+      if (targetUser === nextSnapshot.currentUser) {
+        return { output: `userdel: user ${targetUser} is currently in use`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Active user cannot be deleted', explanation: 'This shell is running as the requested user, so the account cannot be removed during this session.' } };
+      }
+      const passwdNode = nodes['passwd-file'];
+      if (passwdNode?.content) {
+        passwdNode.content = passwdNode.content.split('\n').filter(entry => entry.split(':', 1)[0] !== targetUser).join('\n');
+      }
+      const groupNode = nodes['group-file'];
+      if (groupNode?.content) {
+        groupNode.content = groupNode.content.split('\n').map(entry => {
+          const fields = entry.split(':');
+          if (fields.length > 3) fields[3] = fields[3].split(',').filter(member => member !== targetUser).join(',');
+          return fields.join(':');
+        }).join('\n');
+      }
       const userHomeNode = Object.values(nodes).find(n => n.name === targetUser && n.parentId === 'home');
       if (userHomeNode) {
-        delete nodes[userHomeNode.id];
+        if (isDescendantOrSelf(nodes, userHomeNode.id, nextSnapshot.currentDirId)) {
+          return { output: `userdel: user ${targetUser} is currently in use`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'User is active in this shell', explanation: 'The active user or current working directory cannot be removed from this simulated session.' } };
+        }
         const homeNode = nodes['home'];
-        if (homeNode) homeNode.childrenIds = homeNode.childrenIds?.filter(id => id !== userHomeNode.id);
+        if (homeNode) {
+          homeNode.childrenIds = homeNode.childrenIds?.filter(id => id !== userHomeNode.id);
+          homeNode.modifiedAt = new Date().toISOString().split('T')[0];
+        }
+        removeSubtree(nodes, userHomeNode.id);
+        return {
+          output: '',
+          newSnapshot: nextSnapshot,
+          stepRecord: {
+            command: line,
+            diff: `- Deleted user account ${targetUser} and /home/${targetUser}`,
+            explanation: `Removed the home directory entry from /home and deleted its full descendant tree.`,
+            targetNodeId: 'home',
+            animatedPathIds: ['home'],
+            mutationType: 'delete',
+          },
+        };
       }
       return {
         output: '',
@@ -713,7 +951,7 @@ export function executeVFSCommand(
         stepRecord: {
           command: line,
           diff: `- Deleted user account ${targetUser}`,
-          explanation: `Deleted user account "${targetUser}" and removed /home/${targetUser} node.`,
+          explanation: `Deleted user account "${targetUser}". No matching home-directory node existed in the VFS.`,
           mutationType: 'delete',
         },
       };
@@ -1266,5 +1504,3 @@ export function executeVFSCommand(
     },
   };
 }
-
-
