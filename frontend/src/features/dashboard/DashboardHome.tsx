@@ -17,6 +17,7 @@ import { ContinueLearning } from './ContinueLearning';
 import { SupportDesk } from '../../components/support/SupportDesk';
 import { OnboardingTour } from './OnboardingTour';
 import { CheatSheetPrinter } from './CheatSheetPrinter';
+import { AdSensePlacement } from '../../components/common/AdSensePlacement';
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Activity,
@@ -82,6 +83,7 @@ export const DashboardHome: FC = () => {
       </section>
 
       <ContinueLearning />
+      <AdSensePlacement placement="learner" />
 
       <section className="dashboard-quick-start" aria-labelledby="quick-start-title">
         <div className="dashboard-section-heading">

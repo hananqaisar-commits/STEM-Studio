@@ -10,9 +10,11 @@ interface Announcement {
   announcement_id: number;
   title: string;
   message: string;
-  kind: 'announcement' | 'product_update' | 'promotion' | 'maintenance';
+  kind: 'announcement' | 'product_update' | 'promotion' | 'maintenance' | 'billing';
   published_at: string;
   is_read: boolean;
+  source?: 'announcement' | 'billing';
+  notification_id?: string | null;
 }
 
 interface NotificationInbox {
@@ -25,6 +27,7 @@ const announcementLabels: Record<Announcement['kind'], string> = {
   product_update: 'Product update',
   promotion: 'From STEM Studio',
   maintenance: 'Service notice',
+  billing: 'Plan update',
 };
 
 export function NotificationCenter() {
@@ -105,15 +108,18 @@ export function NotificationCenter() {
     if (isOpen) positionPopover();
   }, [isOpen, positionPopover]);
 
-  const markRead = async (announcementId: number) => {
+  const markRead = async (item: Announcement) => {
     const current = inbox;
-    const wasUnread = current.items.some((item) => item.announcement_id === announcementId && !item.is_read);
+    const wasUnread = current.items.some((candidate) => candidate.announcement_id === item.announcement_id && candidate.source === item.source && !candidate.is_read);
     setInbox({
       unread_count: Math.max(0, current.unread_count - (wasUnread ? 1 : 0)),
-      items: current.items.map((item) => item.announcement_id === announcementId ? { ...item, is_read: true } : item),
+      items: current.items.map((candidate) => candidate.announcement_id === item.announcement_id && candidate.source === item.source ? { ...candidate, is_read: true } : candidate),
     });
     try {
-      await apiClient('/api/notifications/' + announcementId + '/read', { method: 'POST', requiresAuth: true });
+      const endpoint = item.source === 'billing'
+        ? '/api/notifications/billing/' + encodeURIComponent(item.notification_id ?? String(Math.abs(item.announcement_id))) + '/read'
+        : '/api/notifications/' + item.announcement_id + '/read';
+      await apiClient(endpoint, { method: 'POST', requiresAuth: true });
       void refresh();
     } catch {
       setInbox(current);
@@ -191,7 +197,7 @@ export function NotificationCenter() {
             {inbox.items.length === 0 ? (
               <div className="notification-empty"><Inbox size={24} /><strong>You’re all caught up</strong><span>New studio announcements will appear here.</span></div>
             ) : inbox.items.map((item) => (
-              <article className={'notification-item ' + (item.is_read ? '' : 'is-unread')} key={item.announcement_id}>
+              <article className={'notification-item ' + (item.is_read ? '' : 'is-unread')} key={`${item.source ?? 'announcement'}-${item.notification_id ?? item.announcement_id}`}>
                 <div className="notification-item-marker" aria-hidden="true">{item.is_read ? <Check size={13} /> : <span />}</div>
                 <div className="notification-item-copy">
                   <div className="notification-item-meta">
@@ -200,7 +206,7 @@ export function NotificationCenter() {
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.message}</p>
-                  {!item.is_read && <button type="button" className="notification-item-read" onClick={() => void markRead(item.announcement_id)}>Mark as read</button>}
+                  {!item.is_read && <button type="button" className="notification-item-read" onClick={() => void markRead(item)}>Mark as read</button>}
                 </div>
               </article>
             ))}

@@ -26,9 +26,12 @@ export const SignUp: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [verificationRetryRequired, setVerificationRetryRequired] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [verificationRetryStatus, setVerificationRetryStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signup, loginWithGoogle } = useAuth();
+  const { signup, loginWithGoogle, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const { state: mascotState, setExpression, setContext } = useMascot();
 
@@ -95,14 +98,35 @@ export const SignUp: React.FC = () => {
       await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim(), marketingEmailOptIn);
       rememberEmail(email.trim());
       setSuccess('Account created. Check your inbox for the verification link. Redirecting to sign in...');
+      setVerificationRetryRequired(false);
       setExpression('happy', { temporary: true, durationMs: 2000 });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
       const message = typeof err?.message === 'string' ? err.message : 'Something went wrong. Please try again.';
-      setError(message);
+      if (message.toLowerCase().includes('account was created') && message.toLowerCase().includes('verification email')) {
+        setVerificationRetryRequired(true);
+        setError('');
+        setSuccess('Your account is already saved, but the verification email did not send. Do not create another account; retry delivery below.');
+      } else {
+        setError(message);
+      }
       setExpression('confused', { temporary: true, durationMs: 1500, message: 'Oops.' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRetryVerification = async () => {
+    if (!email.trim() || isResendingVerification) return;
+    setIsResendingVerification(true);
+    setError('');
+    setVerificationRetryStatus('');
+    try {
+      setVerificationRetryStatus(await resendVerificationEmail(email.trim()));
+    } catch (err: any) {
+      setError(typeof err?.message === 'string' ? err.message : 'The verification email still could not be delivered. Try again later.');
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -142,13 +166,24 @@ export const SignUp: React.FC = () => {
         )}
 
         {success && (
-          <div className="auth-success animate-fade-in">
-            <CheckCircle size={16} />
+          <div className={`${verificationRetryRequired ? 'auth-verification-warning' : 'auth-success'} animate-fade-in`} role={verificationRetryRequired ? 'alert' : 'status'}>
+            {verificationRetryRequired ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
             <span>{success}</span>
           </div>
         )}
+        {verificationRetryRequired && (
+          <button
+            className="auth-resend-verification"
+            type="button"
+            onClick={() => void handleRetryVerification()}
+            disabled={isResendingVerification || !email.trim()}
+          >
+            {isResendingVerification ? 'Retrying email delivery…' : 'Resend verification email'}
+          </button>
+        )}
+        {verificationRetryStatus && <p className="auth-success" role="status">{verificationRetryStatus}</p>}
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        {!verificationRetryRequired && <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-row">
             <div className="input-group">
               <label htmlFor="firstName">First Name</label>
@@ -311,7 +346,7 @@ export const SignUp: React.FC = () => {
             {isSubmitting ? <Loader2 size={18} className="spinner" /> : <UserPlus size={18} />}
             {isSubmitting ? 'Creating account...' : 'Create Account'}
           </button>
-        </form>
+        </form>}
 
         <div className="auth-footer">
           Already have an account? <Link to="/login" className="auth-link">Sign in here</Link>

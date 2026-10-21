@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, KeyRound, RefreshCw, Search, ShieldCheck, Users, Megaphone, LifeBuoy, ScrollText, Layers, Eye, Clock3, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, KeyRound, RefreshCw, Search, ShieldCheck, Users, Megaphone, LifeBuoy, ScrollText, Layers, Eye, Clock3, X, CreditCard, Plus } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { OwnerAnnouncementPanel } from '../../components/notifications/OwnerAnnouncementPanel';
 import { SupportDesk } from '../../components/support/SupportDesk';
+import { OwnerBillingPanel } from './OwnerBillingPanel';
 import './OwnerControlCenter.css';
 
 type Overview = { registered_users: number; enabled_accounts: number; verified_accounts: number; audit_events: number; current_owner: string };
 type OwnerUser = { user_id: number; username: string; email: string; is_active: boolean; is_verified: boolean; is_owner: boolean; created_at: string; active_sessions: number };
-type FeaturePolicy = { feature_key: string; label: string; is_premium: boolean; is_enabled: boolean; updated_at: string | null };
+type FeaturePolicy = { feature_key: string; label: string; description: string; is_premium: boolean; is_enabled: boolean; is_archived: boolean; disabled_until: string | null; updated_at: string | null };
 type OwnerUserDetail = {
   profile: { user_id: number; username: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; is_active: boolean; is_verified: boolean; is_owner: boolean; created_at: string; updated_at: string };
   learning: { quiz_count: number; correct_quiz_count: number; quiz_accuracy: number; current_streak: number; highest_streak: number; modules: Array<{ module_name: string; completed_algorithms: string; completion_percentage: number; updated_at: string }>; recent_quiz_attempts: Array<{ module_name: string; algorithm_id: string; question_prompt: string; selected_option: string; is_correct: boolean; created_at: string }>; saved_sessions: Array<{ session_id: number; title: string; module_name: string; algorithm_id: string; dataset_json: string; created_at: string }> };
@@ -21,12 +22,13 @@ type OwnerUserDetail = {
 };
 type AuditEvent = { event_id: number; actor: string; target?: string | null; action: string; outcome: string; details: Record<string, unknown>; created_at: string };
 type UserPage = { items: OwnerUser[]; page: number; page_size: number; total: number };
-type Section = 'overview' | 'users' | 'features' | 'broadcasts' | 'support' | 'audit';
+type Section = 'overview' | 'users' | 'features' | 'billing' | 'broadcasts' | 'support' | 'audit';
 
 const sectionItems: { id: Section; label: string; icon: typeof Users }[] = [
   { id: 'overview', label: 'Overview', icon: ShieldCheck },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'features', label: 'Features & access', icon: Layers },
+  { id: 'billing', label: 'Plans & billing', icon: CreditCard },
   { id: 'broadcasts', label: 'Broadcasts', icon: Megaphone },
   { id: 'support', label: 'Support inbox', icon: LifeBuoy },
   { id: 'audit', label: 'Audit log', icon: ScrollText },
@@ -43,7 +45,10 @@ export function OwnerControlCenter() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [users, setUsers] = useState<UserPage | null>(null);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
+  const [selectedAuditIds, setSelectedAuditIds] = useState<number[]>([]);
   const [features, setFeatures] = useState<FeaturePolicy[]>([]);
+  const [featureSearch, setFeatureSearch] = useState('');
+  const [newFeature, setNewFeature] = useState({ feature_key: '', label: '', description: '', is_premium: false, is_enabled: true });
   const [selectedUser, setSelectedUser] = useState<OwnerUserDetail | null>(null);
   const [selectedFeature, setSelectedFeature] = useState('');
   const [grantExpiresAt, setGrantExpiresAt] = useState('');
@@ -70,11 +75,35 @@ export function OwnerControlCenter() {
 
   const loadAudit = useCallback(async () => {
     setAudit(await apiClient<AuditEvent[]>('/api/owner/audit?limit=100', { requiresAuth: true }));
+    setSelectedAuditIds([]);
   }, []);
 
   const loadFeatures = useCallback(async () => {
     setFeatures(await apiClient<FeaturePolicy[]>('/api/owner/features', { requiresAuth: true }));
   }, []);
+
+  const createFeature = async (event: React.FormEvent) => {
+    event.preventDefault(); setBusy(true); setError(''); setNotice('');
+    try {
+      await apiClient('/api/owner/features', { method: 'POST', requiresAuth: true, body: newFeature });
+      setNewFeature({ feature_key: '', label: '', description: '', is_premium: false, is_enabled: true });
+      setNotice('Feature registered. It appears in plan controls; a route or server operation must reference its stable key before it can unlock app behavior.');
+      await Promise.all([loadFeatures(), loadAudit()]);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to register this feature.'); }
+    finally { setBusy(false); }
+  };
+
+  const cleanupAudit = async (payload: { event_ids?: number[]; older_than_days?: number; delete_all?: boolean }) => {
+    const label = payload.delete_all ? 'Delete the entire visible audit history' : payload.event_ids?.length ? `Delete ${payload.event_ids.length} selected audit events` : `Delete audit events older than ${payload.older_than_days} days`;
+    if (!window.confirm(`${label}? This action is permanent. The cleanup itself will be recorded as a new audit event.`)) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const result = await apiClient<{ deleted: number }>('/api/owner/audit', { method: 'DELETE', requiresAuth: true, body: payload });
+      setNotice(`${result.deleted} audit event(s) deleted. The cleanup action was recorded.`);
+      await Promise.all([loadAudit(), loadOverview()]);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Audit cleanup failed.'); }
+    finally { setBusy(false); }
+  };
 
   const loadVisibleSection = useCallback(async () => {
     setBusy(true);
@@ -107,11 +136,20 @@ export function OwnerControlCenter() {
     finally { setBusy(false); }
   };
 
-  const updateFeaturePolicy = async (feature: FeaturePolicy, changes: Partial<Pick<FeaturePolicy, 'is_premium' | 'is_enabled'>>) => {
-    const next = { is_premium: changes.is_premium ?? feature.is_premium, is_enabled: changes.is_enabled ?? feature.is_enabled };
+  const updateFeaturePolicy = async (feature: FeaturePolicy, changes: Partial<Pick<FeaturePolicy, 'is_premium' | 'is_enabled' | 'is_archived' | 'disabled_until'>>) => {
+    const next = {
+      is_premium: changes.is_premium ?? feature.is_premium,
+      is_enabled: changes.is_enabled ?? feature.is_enabled,
+      is_archived: changes.is_archived ?? feature.is_archived,
+      disabled_until: changes.is_enabled === true ? null : changes.disabled_until !== undefined ? changes.disabled_until : feature.disabled_until,
+    };
     const changeLabel = changes.is_premium !== undefined
       ? (next.is_premium ? 'Mark this module as premium for learners without an override' : 'Make this module free for learners')
-      : (next.is_enabled ? 'Enable this module platform-wide' : 'Disable this module platform-wide');
+      : changes.is_archived !== undefined
+        ? (next.is_archived ? 'Archive this feature for learners' : 'Restore this feature')
+        : changes.disabled_until !== undefined
+          ? (changes.disabled_until ? 'Pause this feature until the selected date' : 'Remove the scheduled pause')
+          : (next.is_enabled ? 'Enable this module platform-wide' : 'Disable this module platform-wide');
     if (!window.confirm(`${changeLabel}: ${feature.label}?`)) return;
     setBusy(true); setError(''); setNotice('');
     try {
@@ -255,19 +293,24 @@ export function OwnerControlCenter() {
 
       {section === 'features' && <section className="owner-section">
         <div className="owner-section-heading"><div><p className="owner-eyebrow">Global and individual entitlements</p><h2>Features &amp; access</h2></div><button type="button" className="owner-secondary" onClick={() => void loadFeatures()} disabled={busy}><RefreshCw size={14} /> Refresh</button></div>
-        <p className="owner-honesty-note">Mark a module premium to require an owner-granted entitlement. Premium access here is manually managed; this project has no payment or subscription billing integration.</p>
+        <p className="owner-honesty-note">The backend syncs DSA topic IDs from the shared catalog at startup, so newly added algorithms appear automatically. Unknown and archived keys fail closed. A new feature created here is registered for plans and grants; developers still need to wire its stable key into an app route/API check before that feature has gated behavior.</p>
+        <form className="owner-feature-create" onSubmit={(event) => void createFeature(event)}><strong><Plus size={14} /> Register an application feature</strong><input required minLength={2} maxLength={80} pattern="[a-z0-9][a-z0-9._-]*" aria-label="Feature key" placeholder="Stable key, e.g. os.networking" value={newFeature.feature_key} onChange={(event) => setNewFeature({ ...newFeature, feature_key: event.target.value })} /><input required minLength={2} maxLength={120} aria-label="Feature name" placeholder="Feature name" value={newFeature.label} onChange={(event) => setNewFeature({ ...newFeature, label: event.target.value })} /><input maxLength={500} aria-label="Feature description" placeholder="Description (optional)" value={newFeature.description} onChange={(event) => setNewFeature({ ...newFeature, description: event.target.value })} /><label><input type="checkbox" checked={newFeature.is_premium} onChange={(event) => setNewFeature({ ...newFeature, is_premium: event.target.checked })} /> Premium</label><button type="submit" disabled={busy}>Add feature</button></form>
+        <div className="owner-feature-tools"><label><Search size={14} /><input value={featureSearch} onChange={(event) => setFeatureSearch(event.target.value)} placeholder="Search modules and individual algorithms" /></label><span>{features.filter((feature) => !feature.is_archived).length.toLocaleString()} available feature keys</span></div>
         {busy && features.length === 0 ? <p className="owner-muted">Loading module policies…</p> : <div className="owner-feature-list">
-          {features.map((feature) => <article className="owner-feature-row" key={feature.feature_key}>
-            <div><strong>{feature.label}</strong><small>{feature.is_enabled ? (feature.is_premium ? 'Premium access required by default' : 'Available to all enabled accounts') : 'Disabled for all learner accounts'}</small></div>
-            <label><input type="checkbox" checked={feature.is_premium} disabled={busy || !feature.is_enabled} onChange={(event) => void updateFeaturePolicy(feature, { is_premium: event.target.checked })} /><span>Premium</span></label>
-            <label><input type="checkbox" checked={feature.is_enabled} disabled={busy} onChange={(event) => void updateFeaturePolicy(feature, { is_enabled: event.target.checked })} /><span>Enabled</span></label>
+          {features.filter((feature) => `${feature.label} ${feature.feature_key} ${feature.description}`.toLowerCase().includes(featureSearch.toLowerCase())).map((feature) => <article className={`owner-feature-row ${feature.is_archived ? 'archived' : ''}`} key={feature.feature_key}>
+            <div><strong>{feature.label}</strong><small>{feature.feature_key} · {feature.is_archived ? 'Archived and locked' : feature.disabled_until && !feature.is_enabled ? `Paused until ${new Date(feature.disabled_until).toLocaleDateString()}` : !feature.is_enabled ? 'Disabled for learners' : feature.is_premium ? 'Premium plan or owner grant required' : 'Included in the Free package'}</small></div>
+            <label><input type="checkbox" checked={feature.is_premium} disabled={busy || feature.is_archived || !feature.is_enabled} onChange={(event) => void updateFeaturePolicy(feature, { is_premium: event.target.checked })} /><span>Premium</span></label>
+            <label><input type="checkbox" checked={feature.is_enabled} disabled={busy || feature.is_archived} onChange={(event) => void updateFeaturePolicy(feature, { is_enabled: event.target.checked })} /><span>Enabled</span></label>
+            {!feature.is_archived && <label className="owner-feature-pause">Pause until<input aria-label={`Set pause expiry for ${feature.label}`} type="date" min={new Date().toISOString().slice(0, 10)} value={feature.disabled_until ? new Date(feature.disabled_until).toISOString().slice(0, 10) : ''} disabled={busy} onChange={(event) => { const date = event.target.value; void updateFeaturePolicy(feature, date ? { is_enabled: false, disabled_until: new Date(`${date}T23:59:59`).toISOString() } : { is_enabled: true, disabled_until: null }); }} /></label>}
+            <button className="owner-feature-archive" type="button" disabled={busy} onClick={() => void updateFeaturePolicy(feature, { is_archived: !feature.is_archived })}>{feature.is_archived ? 'Restore' : 'Archive'}</button>
           </article>)}
         </div>}
       </section>}
 
+      {section === 'billing' && <OwnerBillingPanel />}
       {section === 'broadcasts' && <OwnerAnnouncementPanel />}
       {section === 'support' && <SupportDesk />}
-      {section === 'audit' && <section className="owner-section"><div className="owner-section-heading"><div><p className="owner-eyebrow">Administrative history</p><h2>Audit log</h2></div><span className="owner-count">Latest 100</span></div><div className="owner-audit-list">{audit.map((event) => <article key={event.event_id}><div><strong>{event.action.replaceAll('.', ' ')}</strong><span>{event.actor}{event.target ? ` → ${event.target}` : ''}</span></div><time>{new Date(event.created_at).toLocaleString()}</time><small>{event.outcome}{Object.keys(event.details).length ? ` · ${Object.entries(event.details).map(([key, value]) => `${key}: ${String(value)}`).join(' · ')}` : ''}</small></article>)}{audit.length === 0 && <p className="owner-empty">No administrative events have been recorded yet.</p>}</div></section>}
+      {section === 'audit' && <section className="owner-section"><div className="owner-section-heading"><div><p className="owner-eyebrow">Administrative history</p><h2>Audit log</h2></div><span className="owner-count">Latest 100</span></div><div className="owner-audit-tools"><label><input type="checkbox" checked={audit.length > 0 && selectedAuditIds.length === audit.length} onChange={(event) => setSelectedAuditIds(event.target.checked ? audit.map((row) => row.event_id) : [])} /> Select latest 100</label><button type="button" disabled={busy || selectedAuditIds.length === 0} onClick={() => void cleanupAudit({ event_ids: selectedAuditIds })}>Delete selected ({selectedAuditIds.length})</button><button type="button" disabled={busy} onClick={() => void cleanupAudit({ older_than_days: 365 })}>Delete older than 1 year</button><button type="button" className="danger" disabled={busy || audit.length === 0} onClick={() => void cleanupAudit({ delete_all: true })}>Delete all audit history</button></div><div className="owner-audit-list">{audit.map((event) => <article key={event.event_id}><label className="owner-audit-select"><input type="checkbox" checked={selectedAuditIds.includes(event.event_id)} onChange={(e) => setSelectedAuditIds((ids) => e.target.checked ? [...ids, event.event_id] : ids.filter((id) => id !== event.event_id))} aria-label={`Select audit event ${event.event_id}`} /></label><div><strong>{event.action.replaceAll('.', ' ')}</strong><span>{event.actor}{event.target ? ` → ${event.target}` : ''}</span></div><time>{new Date(event.created_at).toLocaleString()}</time><small>{event.outcome}{Object.keys(event.details).length ? ` · ${Object.entries(event.details).map(([key, value]) => `${key}: ${String(value)}`).join(' · ')}` : ''}</small></article>)}{audit.length === 0 && <p className="owner-empty">No administrative events have been recorded yet.</p>}</div></section>}
 
       {selectedUser && <div className="owner-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedUser(null); }}>
         <section className="owner-user-detail" role="dialog" aria-modal="true" aria-labelledby="owner-user-detail-title">

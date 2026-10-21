@@ -17,7 +17,7 @@ try:
     from backend.app.api.dependencies import get_current_user
     from backend.app.api.schemas import CustomCodeExecutionRequest, CustomCodeExecutionResponse
     from backend.app.core.config import get_settings
-    from backend.app.core.feature_access import require_feature_access
+    from backend.app.core.feature_access import require_algorithm_access, require_feature_access
     from backend.app.core.rate_limit import RateLimiter
     from backend.app.services.custom_code import harness, judge0, registry
     from backend.infrastructure.database.database import get_db
@@ -26,7 +26,7 @@ except ModuleNotFoundError:
     from app.api.dependencies import get_current_user
     from app.api.schemas import CustomCodeExecutionRequest, CustomCodeExecutionResponse
     from app.core.config import get_settings
-    from app.core.feature_access import require_feature_access
+    from app.core.feature_access import require_algorithm_access, require_feature_access
     from app.core.rate_limit import RateLimiter
     from app.services.custom_code import harness, judge0, registry
     from infrastructure.database.database import get_db
@@ -108,6 +108,11 @@ async def execute_custom_code(
 ) -> CustomCodeExecutionResponse:
     feature_key = req.algorithm_key.split(".", 1)[0]
     require_feature_access(db, _user, feature_key)
+    try:
+        category, algorithm_id = req.algorithm_key.split(".", 1)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Algorithm key must include its category.") from exc
+    require_algorithm_access(db, _user, category, algorithm_id)
     settings = get_settings()
     if not settings.JUDGE0_URL:
         raise HTTPException(

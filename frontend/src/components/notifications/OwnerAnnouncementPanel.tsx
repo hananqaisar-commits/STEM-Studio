@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { AlertTriangle, Megaphone, Send, Users } from 'lucide-react';
+import { AlertTriangle, Megaphone, Send, Users, Trash2, RotateCw } from 'lucide-react';
 import { apiClient, ApiError } from '../../api/apiClient';
 import './OwnerAnnouncementPanel.css';
 
@@ -37,6 +37,7 @@ export function OwnerAnnouncementPanel() {
   const [marketingAudienceSize, setMarketingAudienceSize] = useState<number | null>(null);
   const [emailConfigured, setEmailConfigured] = useState(false);
   const [history, setHistory] = useState<Announcement[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [kind, setKind] = useState<AnnouncementKind>('announcement');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -61,6 +62,12 @@ export function OwnerAnnouncementPanel() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!history.some((item) => item.email_status === 'queued')) return;
+    const timer = window.setInterval(() => { void refresh(); }, 4000);
+    return () => window.clearInterval(timer);
+  }, [history, refresh]);
 
   const reviewDraft = async (event: FormEvent) => {
     event.preventDefault();
@@ -98,7 +105,9 @@ export function OwnerAnnouncementPanel() {
       setConfirming(false);
       setAudienceSize(published.audience_size);
       setStatus(sendEmail
-        ? `Published in-app to ${published.audience_size.toLocaleString()} accounts. Email: ${published.email_sent_count.toLocaleString()} of ${published.email_audience_size.toLocaleString()} accepted by SMTP, ${published.email_failed_count.toLocaleString()} failed${published.email_status === 'no_recipients' ? ' (no eligible email recipients)' : ''}.`
+        ? published.email_status === 'queued'
+          ? `Published in-app to ${published.audience_size.toLocaleString()} accounts. Email delivery is queued for ${published.email_audience_size.toLocaleString()} eligible recipients; progress will update in broadcast history.`
+          : `Published in-app to ${published.audience_size.toLocaleString()} accounts. Email: ${published.email_sent_count.toLocaleString()} of ${published.email_audience_size.toLocaleString()} accepted by SMTP, ${published.email_failed_count.toLocaleString()} failed${published.email_status === 'no_recipients' ? ' (no eligible email recipients)' : ''}.`
         : `Published to ${published.audience_size.toLocaleString()} active, verified accounts. It is now in their in-app inbox.`);
       await refresh();
     } catch (error) {
@@ -106,6 +115,35 @@ export function OwnerAnnouncementPanel() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const deleteBroadcasts = async (deleteAll: boolean) => {
+    if (!deleteAll && selectedIds.length === 0) return;
+    const count = history.filter((item) => deleteAll || selectedIds.includes(item.announcement_id)).length;
+    if (!window.confirm(deleteAll
+      ? 'Delete all broadcasts and their in-app read receipts and email delivery records? This cannot be undone.'
+      : `Delete ${count} selected broadcasts and their read receipts/email delivery records? This cannot be undone.`)) return;
+    setBusy(true); setStatus('');
+    try {
+      const result = await apiClient<{ deleted: number }>('/api/notifications/owner/announcements', {
+        method: 'DELETE', requiresAuth: true, body: { announcement_ids: deleteAll ? [] : selectedIds, delete_all: deleteAll },
+      });
+      setSelectedIds([]);
+      setStatus(`${result.deleted} broadcast(s) deleted.`);
+      await refresh();
+    } catch (error) { setStatus(error instanceof ApiError ? error.message : 'Broadcasts could not be deleted.'); }
+    finally { setBusy(false); }
+  };
+
+  const retryEmail = async (item: Announcement) => {
+    if (!window.confirm(`Queue a retry for failed email deliveries for “${item.title}”? Previously accepted messages will not be sent again.`)) return;
+    setBusy(true); setStatus('');
+    try {
+      const result = await apiClient<{ retry_queued: number }>('/api/notifications/owner/announcements/' + item.announcement_id + '/retry-email', { method: 'POST', requiresAuth: true, body: {} });
+      setStatus(`Queued ${result.retry_queued} failed email delivery${result.retry_queued === 1 ? '' : 'ies'} for retry.`);
+      await refresh();
+    } catch (error) { setStatus(error instanceof ApiError ? error.message : 'Email retry could not be queued.'); }
+    finally { setBusy(false); }
   };
 
   const isPromotional = kind === 'promotion' || kind === 'product_update';
@@ -177,15 +215,18 @@ export function OwnerAnnouncementPanel() {
       {status && <p className="owner-announcement-status" role="status">{status}</p>}
 
       <div className="owner-announcement-history">
-        <h4>Recent broadcasts</h4>
-        {history.length === 0 ? <p className="owner-announcement-empty">No broadcasts have been published yet.</p> : history.slice(0, 5).map((item) => (
+        <div className="owner-announcement-history-heading"><h4>Recent broadcasts</h4><label><input type="checkbox" checked={history.length > 0 && selectedIds.length === history.length} onChange={(event) => setSelectedIds(event.target.checked ? history.map((item) => item.announcement_id) : [])} /> Select all</label></div>
+        {history.length > 0 && <div className="owner-announcement-delete-tools"><button type="button" onClick={() => void deleteBroadcasts(false)} disabled={busy || selectedIds.length === 0}><Trash2 size={13} /> Delete selected ({selectedIds.length})</button><button type="button" className="danger" onClick={() => void deleteBroadcasts(true)} disabled={busy}><Trash2 size={13} /> Delete all</button></div>}
+        {history.length === 0 ? <p className="owner-announcement-empty">No broadcasts have been published yet.</p> : history.map((item) => (
           <article key={item.announcement_id}>
+            <label className="owner-announcement-select"><input type="checkbox" checked={selectedIds.includes(item.announcement_id)} onChange={(event) => setSelectedIds((ids) => event.target.checked ? [...ids, item.announcement_id] : ids.filter((id) => id !== item.announcement_id))} aria-label={`Select broadcast ${item.title}`} /></label>
             <div><span>{kindNames[item.kind]}</span><time dateTime={item.published_at}>{new Date(item.published_at).toLocaleString()}</time></div>
             <strong>{item.title}</strong>
             <p>{item.message}</p>
             <small>In-app: {item.audience_size.toLocaleString()} accounts{item.email_requested
-              ? ` · Email accepted by SMTP: ${item.email_sent_count.toLocaleString()} of ${item.email_audience_size.toLocaleString()}, failed: ${item.email_failed_count.toLocaleString()}${item.email_status === 'no_recipients' ? ' · no eligible recipients' : ''}`
+              ? ` · Email status: ${item.email_status} · SMTP accepted: ${item.email_sent_count.toLocaleString()} of ${item.email_audience_size.toLocaleString()}, failed: ${item.email_failed_count.toLocaleString()}${item.email_status === 'no_recipients' ? ' · no eligible recipients' : ''}`
               : ' · no email sent'}</small>
+            {item.email_status === 'partial' || item.email_status === 'failed' ? <button className="owner-announcement-retry" type="button" disabled={busy} onClick={() => void retryEmail(item)}><RotateCw size={12} /> Retry failed emails</button> : null}
           </article>
         ))}
       </div>

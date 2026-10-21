@@ -21,6 +21,7 @@ try:
     from backend.app.api.routes.notifications import router as notifications_router
     from backend.app.api.routes.owner import router as owner_router
     from backend.app.api.routes.entitlements import router as entitlements_router
+    from backend.app.api.routes.billing import router as billing_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
@@ -33,6 +34,7 @@ except ModuleNotFoundError:
     from app.api.routes.notifications import router as notifications_router
     from app.api.routes.owner import router as owner_router
     from app.api.routes.entitlements import router as entitlements_router
+    from app.api.routes.billing import router as billing_router
     from app.core.config import get_settings
 
 
@@ -97,6 +99,9 @@ def init_db_tables():
                     "announcement_reads", "owner_accounts", "owner_mfa_credentials", "owner_session_grants",
                     "admin_audit_events"}
         expected.update({"feature_policies", "user_feature_overrides", "announcement_email_deliveries"})
+        expected.update({"subscription_plans", "plan_features", "subscriptions", "payment_records",
+                         "payment_webhook_events", "manual_payment_methods", "manual_payment_claims",
+                         "billing_notices", "ad_configuration"})
         missing = expected - set(table_names)
         if missing:
             raise RuntimeError(f"Database schema is incomplete ({len(missing)} required tables missing)")
@@ -176,6 +181,7 @@ app.include_router(preferences_router)
 app.include_router(notifications_router)
 app.include_router(owner_router)
 app.include_router(entitlements_router)
+app.include_router(billing_router)
 
 
 

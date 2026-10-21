@@ -23,7 +23,7 @@ from backend.app.api.schemas import (
     UserResponse,
 )
 from backend.app.core.config import get_settings
-from backend.app.core.email import send_password_reset_email, send_verification_email
+from backend.app.core.email import send_password_reset_email, send_verification_email, smtp_is_configured
 from backend.app.core.rate_limit import rate_limit, standard, strict
 from backend.app.core.owner_security import (
     consume_owner_totp,
@@ -176,7 +176,7 @@ def signup(
             detail="This username is already taken. Sign in to the existing account or choose a different username.",
         )
 
-    smtp_enabled = bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
+    smtp_enabled = smtp_is_configured()
     dev_unverified_signup = (
         not smtp_enabled and settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP
     )
@@ -280,7 +280,7 @@ def resend_verification_email(
     _rate: None = Depends(strict),
 ):
     """Issue a fresh verification link without revealing whether an email exists."""
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    if not smtp_is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Email delivery is not configured right now. Please try again later.",
@@ -371,7 +371,7 @@ def login(
         )
 
     if not user.is_verified:
-        if settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP and not bool(settings.SMTP_USER and settings.SMTP_PASSWORD):
+        if settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP and not smtp_is_configured():
             # Explicit development-only escape hatch.
             user.is_verified = True
             db.commit()
