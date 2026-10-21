@@ -1,7 +1,20 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -142,6 +155,29 @@ class EmailVerification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="email_verifications")
+
+
+class EmailOutbox(Base):
+    """Durable, encrypted verification-mail jobs shared by all API replicas."""
+
+    __tablename__ = "email_outbox"
+    __table_args__ = (
+        Index("ix_email_outbox_queue", "status", "available_at", "created_at"),
+    )
+
+    job_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    verification_id: Mapped[int] = mapped_column(
+        ForeignKey("email_verifications.verification_id", ondelete="CASCADE"), index=True
+    )
+    encrypted_token: Mapped[str] = mapped_column(Text())
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_error_category: Mapped[Optional[str]] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class PasswordReset(Base):
@@ -339,8 +375,192 @@ class FeaturePolicy(Base):
 
     feature_key: Mapped[str] = mapped_column(String(80), primary_key=True)
     label: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(String(500), default="")
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    disabled_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    updated_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SubscriptionPlan(Base):
+    """Versioned, owner-managed free or paid package offered to learners."""
+
+    __tablename__ = "subscription_plans"
+
+    plan_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(String(1000), default="")
+    price_minor: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    list_price_minor: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    discount_label: Mapped[Optional[str]] = mapped_column(String(80))
+    currency: Mapped[str] = mapped_column(String(3), default="PKR", nullable=False)
+    billing_interval: Mapped[str] = mapped_column(String(12), default="monthly", nullable=False)
+    is_free: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    safepay_plan_id: Mapped[Optional[str]] = mapped_column(String(120), unique=True)
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PlanFeature(Base):
+    """Feature membership for one plan; unknown feature keys fail closed."""
+
+    __tablename__ = "plan_features"
+
+    plan_id: Mapped[int] = mapped_column(ForeignKey("subscription_plans.plan_id", ondelete="CASCADE"), primary_key=True)
+    feature_key: Mapped[str] = mapped_column(
+        ForeignKey("feature_policies.feature_key", ondelete="CASCADE"), primary_key=True
+    )
+    included: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class Subscription(Base):
+    """Provider- or owner-backed access period; state changes come from verified events."""
+
+    __tablename__ = "subscriptions"
+
+    subscription_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    plan_id: Mapped[int] = mapped_column(ForeignKey("subscription_plans.plan_id", ondelete="RESTRICT"), index=True)
+    provider: Mapped[str] = mapped_column(String(24), default="safepay", nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="pending", index=True)
+    reference: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    provider_subscription_id: Mapped[Optional[str]] = mapped_column(String(120), unique=True)
+    current_period_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), index=True)
+    past_due_since: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    premium_hold_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_payment_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_provider_transaction_id: Mapped[Optional[str]] = mapped_column(String(120), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PaymentRecord(Base):
+    """Minimal payment ledger; no card numbers or security codes are stored."""
+
+    __tablename__ = "payment_records"
+
+    payment_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"), index=True)
+    plan_id: Mapped[Optional[int]] = mapped_column(ForeignKey("subscription_plans.plan_id", ondelete="SET NULL"))
+    subscription_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("subscriptions.subscription_id", ondelete="SET NULL"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(24), nullable=False)
+    provider_transaction_id: Mapped[Optional[str]] = mapped_column(String(120), unique=True)
+    amount_minor: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    payment_method: Mapped[Optional[str]] = mapped_column(String(32))
+    external_reference: Mapped[Optional[str]] = mapped_column(String(160), index=True)
+    reviewed_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
+    failure_code: Mapped[Optional[str]] = mapped_column(String(64))
+    paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class PaymentWebhookEvent(Base):
+    """Idempotency and retry ledger for signed payment-provider events."""
+
+    __tablename__ = "payment_webhook_events"
+
+    event_id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    reference: Mapped[Optional[str]] = mapped_column(String(80), index=True)
+    payload_summary: Mapped[str] = mapped_column(String(4000), default="{}", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="queued", nullable=False, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error_code: Mapped[Optional[str]] = mapped_column(String(64))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class ManualPaymentMethod(Base):
+    """Public owner-configured bank or wallet instructions; never store card credentials."""
+
+    __tablename__ = "manual_payment_methods"
+
+    payment_method_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    provider_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    label: Mapped[str] = mapped_column(String(100), nullable=False)
+    account_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    account_identifier: Mapped[str] = mapped_column(String(160), nullable=False)
+    instructions: Mapped[str] = mapped_column(String(1000), default="")
+    currency: Mapped[str] = mapped_column(String(3), default="PKR", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    updated_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ManualPaymentClaim(Base):
+    """Learner-submitted transfer reference awaiting owner reconciliation."""
+
+    __tablename__ = "manual_payment_claims"
+    __table_args__ = (UniqueConstraint("transaction_reference", name="uq_manual_payment_claim_reference"),)
+
+    claim_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    plan_id: Mapped[int] = mapped_column(ForeignKey("subscription_plans.plan_id", ondelete="RESTRICT"))
+    payment_method_id: Mapped[int] = mapped_column(
+        ForeignKey("manual_payment_methods.payment_method_id", ondelete="RESTRICT")
+    )
+    transaction_reference: Mapped[str] = mapped_column(String(160), index=True)
+    amount_minor: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="PKR", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    owner_note: Mapped[Optional[str]] = mapped_column(String(500))
+    reviewed_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    payment_id: Mapped[Optional[int]] = mapped_column(ForeignKey("payment_records.payment_id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BillingNotice(Base):
+    """Uniquely staged renewal reminders and delivery status for retry safety."""
+
+    __tablename__ = "billing_notices"
+    __table_args__ = (UniqueConstraint("subscription_id", "cycle_key", "stage", name="uq_billing_notice_stage"),)
+
+    notice_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    subscription_id: Mapped[int] = mapped_column(ForeignKey("subscriptions.subscription_id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    cycle_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(String(140), nullable=False, default="Subscription reminder")
+    message: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    email_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class AdConfiguration(Base):
+    """Owner-managed public ad identifiers and placements; disabled by default."""
+
+    __tablename__ = "ad_configuration"
+
+    config_id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    publisher_id: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    landing_slot_id: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    learner_slot_id: Mapped[str] = mapped_column(String(40), default="", nullable=False)
     updated_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="SET NULL"))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

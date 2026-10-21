@@ -1448,7 +1448,7 @@ export const LinkedListPage: React.FC = () => {
             description={maskNarration(currentStep?.explanation || 'Run an operation to observe step-by-step execution.', quizSession.phase)}
             steps={activeSteps}
             currentStepIndex={currentStepIndex}
-          />
+           onStepSelect={seekTo}/>
           }
         />
       </div>
@@ -1459,7 +1459,7 @@ export const LinkedListPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Linked List Visualizer | ${category.toUpperCase()}`}
         subtitle="Interactive Pointer Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Run an operation to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Run an operation to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

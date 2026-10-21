@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.app.api.dependencies import get_current_user
-from backend.app.core.feature_access import FEATURE_CATALOG, has_feature_access, require_feature_access
+from backend.app.core.feature_access import FEATURE_CATALOG, has_feature_access, require_algorithm_access, require_feature_access
 from backend.app.api.schemas import (
     CompleteAlgorithmRequest,
     MessageResponse,
@@ -57,6 +57,7 @@ def submit_quiz(
 ):
     """Record a quiz attempt and update user learning streak."""
     require_feature_access(db, current_user, payload.module_name)
+    require_algorithm_access(db, current_user, payload.module_name, payload.algorithm_id)
     # 1. Record Attempt
     attempt = QuizAttempt(
         user_id=current_user.user_id,
@@ -130,6 +131,7 @@ def complete_algorithm(
 ):
     """Mark an algorithm as completed/mastered within a module."""
     require_feature_access(db, current_user, payload.module_name)
+    require_algorithm_access(db, current_user, payload.module_name, payload.algorithm_id)
     progress = (
         db.query(ModuleProgress)
         .filter(

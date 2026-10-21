@@ -18,6 +18,7 @@ import { DSA_CATEGORIES } from '../../data/categories';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiClient } from '../../api/apiClient';
+import { AdSensePlacement } from '../../components/common/AdSensePlacement';
 import './MarketingHome.css';
 
 const featureCards: { icon: LucideIcon; title: string; description: string }[] = [
@@ -236,6 +237,8 @@ export function MarketingHome() {
           <span>Practice at your pace</span><i aria-hidden="true" />
           <span>Connect ideas to code</span>
         </section>
+
+        <AdSensePlacement placement="landing" />
 
         <section className="marketing-section" id="features" aria-labelledby="features-title">
           <div className="marketing-section-heading">

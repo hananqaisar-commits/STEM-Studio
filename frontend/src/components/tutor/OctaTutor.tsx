@@ -3,11 +3,18 @@ import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
 import {
   BrainCircuit,
   Check,
+  Copy,
   Mic,
+  Maximize2,
   MoreHorizontal,
   MessageSquare,
+  Minimize2,
+  RefreshCw,
+  RotateCcw,
   Send,
   Settings,
+  Sparkles,
+  Square,
   Trash2,
   ThumbsDown,
   ThumbsUp,
@@ -60,7 +67,7 @@ function describeAction(call: OctaTutorFunctionCall, currentPageLabel: string): 
  * Format & render rich markdown (bold, italic, code blocks, lists, headers)
  */
 function parseInlineFormatting(text: string): React.ReactNode[] {
-  const tokenRegex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
+  const tokenRegex = /(\*\*.*?\*\*|`.*?`|\$[^$\n]+\$|\*.*?\*)/g;
   const parts = text.split(tokenRegex);
 
   return parts.map((part, i) => {
@@ -74,6 +81,9 @@ function parseInlineFormatting(text: string): React.ReactNode[] {
         </code>
       );
     }
+    if (part.startsWith('$') && part.endsWith('$')) {
+      return <span key={i} className="tutor-math-inline" role="math" aria-label={`Math notation ${part.slice(1, -1)}`}>{part.slice(1, -1)}</span>;
+    }
     if (part.startsWith('*') && part.endsWith('*')) {
       return <em key={i} className="tutor-markdown-emphasis">{part.slice(1, -1)}</em>;
     }
@@ -81,52 +91,134 @@ function parseInlineFormatting(text: string): React.ReactNode[] {
   });
 }
 
+function tableCells(line: string): string[] {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim());
+}
+
 function renderTextBlocks(text: string) {
   const lines = text.split('\n');
-  return lines.map((line, idx) => {
+  const blocks: React.ReactNode[] = [];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index];
     const trimmed = line.trim();
     if (!trimmed) {
-      return <div key={idx} className="h-1.5" />;
+      index += 1;
+      continue;
+    }
+
+    if (trimmed.startsWith('|') && index + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[index + 1])) {
+      const headers = tableCells(line);
+      index += 2;
+      const rows: string[][] = [];
+      while (index < lines.length && lines[index].trim().startsWith('|')) {
+        rows.push(tableCells(lines[index]));
+        index += 1;
+      }
+      blocks.push(
+        <div key={`table-${index}`} className="tutor-table-wrap">
+          <table className="tutor-markdown-table">
+            <thead><tr>{headers.map((cell, cellIndex) => <th key={cellIndex}>{parseInlineFormatting(cell)}</th>)}</tr></thead>
+            <tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{headers.map((_, cellIndex) => <td key={cellIndex}>{parseInlineFormatting(row[cellIndex] || '')}</td>)}</tr>)}</tbody>
+          </table>
+        </div>,
+      );
+      continue;
     }
 
     if (trimmed.startsWith('### ')) {
-      return (
-        <h4 key={idx} className="tutor-markdown-h4">
-          {parseInlineFormatting(trimmed.slice(4))}
-        </h4>
-      );
+      blocks.push(<h4 key={`h4-${index}`} className="tutor-markdown-h4">{parseInlineFormatting(trimmed.slice(4))}</h4>);
+      index += 1;
+      continue;
     }
     if (trimmed.startsWith('## ')) {
-      return (
-        <h3 key={idx} className="tutor-markdown-h3">
-          {parseInlineFormatting(trimmed.slice(3))}
-        </h3>
-      );
+      blocks.push(<h3 key={`h3-${index}`} className="tutor-markdown-h3">{parseInlineFormatting(trimmed.slice(3))}</h3>);
+      index += 1;
+      continue;
     }
     if (trimmed.startsWith('# ')) {
-      return (
-        <h2 key={idx} className="tutor-markdown-h2">
-          {parseInlineFormatting(trimmed.slice(2))}
-        </h2>
-      );
+      blocks.push(<h2 key={`h2-${index}`} className="tutor-markdown-h2">{parseInlineFormatting(trimmed.slice(2))}</h2>);
+      index += 1;
+      continue;
     }
-
-    if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      const content = trimmed.slice(2);
-      return (
-        <div key={idx} className="flex items-start gap-1.5 ml-1 my-0.5">
-          <span className="tutor-markdown-bullet">•</span>
-          <span className="flex-1">{parseInlineFormatting(content)}</span>
-        </div>
-      );
+    if (trimmed.startsWith('$$')) {
+      const math: string[] = [];
+      const inlineEnd = trimmed.lastIndexOf('$$', trimmed.length - 1);
+      if (inlineEnd > 1) {
+        math.push(trimmed.slice(2, inlineEnd));
+      } else {
+        math.push(trimmed.slice(2));
+        while (index + 1 < lines.length && lines[index + 1].trim() !== '$$') {
+          index += 1;
+          math.push(lines[index]);
+        }
+        if (lines[index + 1]?.trim() === '$$') index += 1;
+      }
+      blocks.push(<div key={`math-${index}`} className="tutor-math-block" role="math">{math.join('\n')}</div>);
+      index += 1;
+      continue;
     }
+    if (/^(?:•|-|\*)\s+/.test(trimmed)) {
+      const items: string[] = [];
+      while (index < lines.length && /^(?:•|-|\*)\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^(?:•|-|\*)\s+/, ''));
+        index += 1;
+      }
+      blocks.push(<ul key={`ul-${index}`} className="tutor-markdown-list">{items.map((item, itemIndex) => <li key={itemIndex}>{parseInlineFormatting(item)}</li>)}</ul>);
+      continue;
+    }
+    if (/^\d+[.)]\s+/.test(trimmed)) {
+      const items: string[] = [];
+      while (index < lines.length && /^\d+[.)]\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^\d+[.)]\s+/, ''));
+        index += 1;
+      }
+      blocks.push(<ol key={`ol-${index}`} className="tutor-markdown-list">{items.map((item, itemIndex) => <li key={itemIndex}>{parseInlineFormatting(item)}</li>)}</ol>);
+      continue;
+    }
+    blocks.push(<p key={`p-${index}`} className="tutor-markdown-paragraph">{parseInlineFormatting(line)}</p>);
+    index += 1;
+  }
+  return blocks;
+}
 
-    return (
-      <p key={idx} className="my-0.5 leading-relaxed">
-        {parseInlineFormatting(line)}
-      </p>
-    );
+function highlightCode(code: string): React.ReactNode[] {
+  const tokenPattern = /(\/\/[^\n]*|#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:auto|bool|break|case|catch|class|const|continue|def|else|elif|enum|false|for|from|function|if|import|in|int|let|new|null|nullptr|object|private|public|return|self|static|string|struct|switch|this|throw|true|try|using|var|void|while|async|await|export|extends|implements|interface|package|protected|virtual|template|typename)\b|\b\d+(?:\.\d+)?\b)/g;
+  return code.split(tokenPattern).map((token, index) => {
+    if (/^(\/\/|#)/.test(token)) return <span key={index} className="tutor-code-comment">{token}</span>;
+    if (/^["'`]/.test(token)) return <span key={index} className="tutor-code-string">{token}</span>;
+    if (/^\d/.test(token)) return <span key={index} className="tutor-code-number">{token}</span>;
+    if (/^(auto|bool|break|case|catch|class|const|continue|def|else|elif|enum|false|for|from|function|if|import|in|int|let|new|null|nullptr|object|private|public|return|self|static|string|struct|switch|this|throw|true|try|using|var|void|while|async|await|export|extends|implements|interface|package|protected|virtual|template|typename)$/.test(token)) {
+      return <span key={index} className="tutor-code-keyword">{token}</span>;
+    }
+    return token;
   });
+}
+
+const TutorCodeBlock: React.FC<{ language: string; code: string }> = ({ language, code }) => {
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopyState('copied');
+      window.setTimeout(() => setCopyState('idle'), 1600);
+    } catch {
+      setCopyState('failed');
+      window.setTimeout(() => setCopyState('idle'), 2200);
+    }
+  };
+  return (
+    <div className="tutor-code-block">
+      <div className="tutor-code-toolbar">
+        <span className="tutor-code-language">{language}</span>
+        <button type="button" className="tutor-copy-code" onClick={() => void copyCode()} title="Copy code" aria-label="Copy code">
+          {copyState === 'copied' ? <Check size={14} /> : <Copy size={14} />}
+          <span>{copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}</span>
+        </button>
+      </div>
+      <pre><code>{highlightCode(code)}</code></pre>
+    </div>
+  );
 }
 
 function renderFormattedMessage(text: string) {
@@ -147,12 +239,7 @@ function renderFormattedMessage(text: string) {
     const lang = match[1] || 'code';
     const codeContent = match[2].trim();
 
-    parts.push(
-      <div key={`code-${key++}`} className="tutor-code-block">
-        {lang && <div className="tutor-code-language">{lang}</div>}
-        <pre className="whitespace-pre wrap-break-words"><code>{codeContent}</code></pre>
-      </div>
-    );
+    parts.push(<TutorCodeBlock key={`code-${key++}`} language={lang} code={codeContent} />);
 
     lastIndex = match.index + match[0].length;
   }
@@ -179,6 +266,8 @@ export const OctaTutor: React.FC = () => {
     isSpeechSupported,
     mascotExpression,
     sendMessage,
+    stopGeneration,
+    resendAssistantMessage,
     startListening,
     stopListening,
     clearHistory,
@@ -204,24 +293,55 @@ export const OctaTutor: React.FC = () => {
   const [feedbackOpenFor, setFeedbackOpenFor] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<Record<string, string>>({});
   const [revealedMessage, setRevealedMessage] = useState<{ id: string; count: number } | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const composerRef = React.useRef<HTMLTextAreaElement>(null);
   const messageListRef = React.useRef<HTMLDivElement>(null);
   const followMessagesRef = React.useRef(true);
-  const providerStatusCopy = {
-    checking: 'Checking AI configuration',
-    connected: 'AI API configured',
-    limit: 'AI provider limit reached',
-    missing: 'AI API key not configured',
-    unavailable: 'AI provider unavailable',
-  }[providerStatus];
+  const previousOpenRef = React.useRef(false);
+  const previousMessageCountRef = React.useRef(messages.length);
+  const providerStatusCopy: Record<typeof providerStatus, string> = {
+    checking: 'Checking the AI service.',
+    connected: 'AI service is ready.',
+    limit: 'The AI provider has reached its current usage limit.',
+    missing: 'No AI provider is connected. Built-in lesson explanations may still be available.',
+    unavailable: 'The AI service is temporarily unavailable. You can retry or use built-in lesson notes.',
+  };
 
-  // Keep the conversation scrolled inside its own panel, without moving the page.
+  // Follow new content only when the learner was already at the end of the chat.
   useEffect(() => {
     const list = messageListRef.current;
-    if (list) {
+    const justOpened = isTutorOpen && !previousOpenRef.current;
+    if (list && justOpened) {
       followMessagesRef.current = true;
+      requestAnimationFrame(() => list.scrollTo({ top: list.scrollHeight, behavior: 'auto' }));
+    } else if (list && messages.length > previousMessageCountRef.current && followMessagesRef.current) {
       list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
     }
-  }, [isTutorOpen, messages.length, isLoading]);
+    previousOpenRef.current = isTutorOpen;
+    previousMessageCountRef.current = messages.length;
+  }, [isTutorOpen, messages.length]);
+
+  useEffect(() => {
+    const textarea = composerRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 132)}px`;
+  }, [inputText]);
+
+  useEffect(() => {
+    if (!isTutorOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (actionsMenuOpen) setActionsMenuOpen(false);
+        else if (learningProfileOpen || isSettingsOpen) return;
+        else toggleTutor();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isTutorOpen, actionsMenuOpen, learningProfileOpen, isSettingsOpen, toggleTutor]);
 
   const latestRevealingMessage = [...messages].reverse().find((message) => message.role === 'assistant' && message.isRevealing);
   useEffect(() => {
@@ -253,6 +373,7 @@ export const OctaTutor: React.FC = () => {
     (e: React.FormEvent) => {
       e.preventDefault();
       if (inputText.trim() && !isLoading) {
+        followMessagesRef.current = true;
         sendMessage();
       }
     },
@@ -274,6 +395,17 @@ export const OctaTutor: React.FC = () => {
   }, []);
 
   const closeMenu = () => setActionsMenuOpen(false);
+  const copyMessage = useCallback(async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      window.setTimeout(() => setCopiedMessageId((current) => current === messageId ? null : current), 1600);
+    } catch {
+      setCopiedMessageId(null);
+    }
+  }, []);
+  const hasWelcomeOnly = messages.length === 1 && messages[0].id.startsWith('welcome');
+  const hasServiceIssue = providerStatus === 'missing' || providerStatus === 'limit' || providerStatus === 'unavailable';
 
   return (
     <LazyMotion features={domAnimation}>
@@ -284,7 +416,7 @@ export const OctaTutor: React.FC = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, x: 16 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="octa-tutor-window"
+        className={`octa-tutor-window${isExpanded ? ' is-expanded' : ''}${isMinimized ? ' is-minimized' : ''}`}
         role="region"
         aria-label="Octa AI Tutor"
       >
@@ -297,10 +429,7 @@ export const OctaTutor: React.FC = () => {
               <span className="tutor-header-name">Octa</span>
               <span className="tutor-header-subtitle">
                 AI learning tutor
-                <span className={`tutor-status tutor-status-${providerStatus}`} title={providerStatusCopy} aria-label={providerStatusCopy}>
-                  <i className="tutor-status-dot" aria-hidden="true" />
-                  <span>{providerStatus === 'connected' ? 'API ready' : providerStatus === 'checking' ? 'Checking' : providerStatus === 'limit' ? 'Limit reached' : providerStatus === 'missing' ? 'API missing' : 'Unavailable'}</span>
-                </span>
+                {providerStatus === 'connected' && <span className="tutor-status tutor-status-connected" title={providerStatusCopy[providerStatus]} aria-label={providerStatusCopy[providerStatus]}><i className="tutor-status-dot" aria-hidden="true" /><span>Ready</span></span>}
               </span>
             </div>
           </div>
@@ -316,159 +445,110 @@ export const OctaTutor: React.FC = () => {
                 <button type="button" role="menuitem" onClick={() => { closeMenu(); clearHistory(); }}><Trash2 size={16} /> New conversation</button>
               </div>}
             </div>
-            <button type="button" className="tutor-icon-btn" onClick={toggleTutor} title="Minimize tutor" aria-label="Minimize tutor">
-              <X size={18} aria-hidden="true" />
-            </button>
+            {!isMinimized && <button type="button" className="tutor-icon-btn" onClick={() => setIsExpanded((value) => !value)} title={isExpanded ? 'Restore panel size' : 'Expand tutor'} aria-label={isExpanded ? 'Restore panel size' : 'Expand tutor'} aria-pressed={isExpanded}>
+              {isExpanded ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}
+            </button>}
+            {!isMinimized && <button type="button" className="tutor-icon-btn" onClick={() => setIsMinimized(true)} title="Minimize tutor" aria-label="Minimize tutor"><Minimize2 size={18} aria-hidden="true" /></button>}
+            <button type="button" className="tutor-icon-btn" onClick={toggleTutor} title="Close tutor" aria-label="Close tutor"><X size={18} aria-hidden="true" /></button>
           </div>
         </div>
+
+        {isMinimized ? (
+          <div className="tutor-minimized-body">
+            <span>Conversation saved while Octa is minimized.</span>
+            <button type="button" className="tutor-restore-btn" onClick={() => setIsMinimized(false)}>Return to chat</button>
+          </div>
+        ) : <>
 
         <div className="tutor-context-ribbon">
           <span className="context-chip"><MessageSquare size={14} aria-hidden="true" />{currentPageLabel}</span>
           {totalSteps > 0 && <span className="step-chip">Step {currentStepIndex + 1} of {totalSteps}</span>}
         </div>
 
-        <div className="tutor-mode-bar" role="group" aria-label="Tutor response mode">
-          <button
-            type="button"
-            className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`}
-            onClick={() => setTutorMode('natural')}
-            aria-pressed={tutorMode === 'natural'}
-            title="Ask open questions and learn concepts"
-          >
-            <BrainCircuit size={16} aria-hidden="true" /> Concept mode
-          </button>
-          {hasVisualizerContext && (
-            <button
-              type="button"
-              className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`}
-              onClick={() => setTutorMode('interactive')}
-              aria-pressed={tutorMode === 'interactive'}
-              title="Explain the active visualizer step"
-            >
-              <Workflow size={16} aria-hidden="true" /> Step mode
+        <div className="tutor-mode-row">
+          <div className="tutor-mode-bar" role="group" aria-label="Tutor response mode">
+            <button type="button" className={`tutor-mode-btn ${tutorMode === 'natural' ? 'active' : ''}`} onClick={() => setTutorMode('natural')} aria-pressed={tutorMode === 'natural'} title="Explain concepts and answer open questions">
+              <BrainCircuit size={15} aria-hidden="true" /> Concept
             </button>
-          )}
+            {hasVisualizerContext && <button type="button" className={`tutor-mode-btn ${tutorMode === 'interactive' ? 'active' : ''}`} onClick={() => setTutorMode('interactive')} aria-pressed={tutorMode === 'interactive'} title="Use the live visualizer state to explain each step">
+              <Workflow size={15} aria-hidden="true" /> Step-by-step
+            </button>}
+          </div>
+          <p className="tutor-mode-hint" aria-live="polite">{tutorMode === 'natural' ? 'Ask about concepts, code, or STEM Studio.' : totalSteps > 0 ? `Using the live state at step ${currentStepIndex + 1}.` : 'Open a visualizer to explain its active step.'}</p>
+          {hasVisualizerContext && totalSteps > 0 && <button type="button" className="tutor-explain-step" disabled={isLoading} onClick={() => { followMessagesRef.current = true; setTutorMode('interactive'); void sendMessage(`Explain the current step, step ${currentStepIndex + 1}, using the active visualization state.`, 'interactive'); }} title="Explain the current visualizer step">
+            <Sparkles size={14} aria-hidden="true" /> Explain current step
+          </button>}
         </div>
-        <p className="tutor-mode-hint" aria-live="polite">
-          {tutorMode === 'natural'
-            ? 'Ask about a concept, code, or an issue in STEM Studio.'
-            : hasVisualizerContext && totalSteps > 0
-              ? `Explaining step ${currentStepIndex + 1} from the live visualizer. Requested controls wait for your approval.`
-              : 'Open a visualizer for step-by-step guidance. Requested controls wait for your approval.'}
-        </p>
 
-        <div
-          className="tutor-message-list"
-          ref={messageListRef}
-          onScroll={(event) => {
-            const list = event.currentTarget;
-            followMessagesRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
-          }}
-        >
-          {messages.map((msg) => {
+        <div className={`tutor-message-list${hasWelcomeOnly ? ' is-empty' : ''}`} ref={messageListRef} onScroll={(event) => {
+          const list = event.currentTarget;
+          followMessagesRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+        }}>
+          {hasServiceIssue && <div className={`tutor-service-note tutor-service-${providerStatus}`} role="status">
+            <div><strong>{providerStatus === 'missing' ? 'Connect an AI model' : providerStatus === 'limit' ? 'AI provider limit reached' : 'AI service is unavailable'}</strong><p>{providerStatusCopy[providerStatus]}</p></div>
+            <button type="button" onClick={() => setIsSettingsOpen(true)}>{providerStatus === 'missing' ? 'Open settings' : 'Check settings'}</button>
+          </div>}
+
+          {hasWelcomeOnly && <section className="tutor-welcome" aria-label="Welcome to Octa">
+            <div className="tutor-welcome-avatar"><Octa expression="happy" size={38} interactive={false} /></div>
+            <h2>What are you learning today?</h2>
+            <p>Ask Octa to explain a concept, reason through code, or walk through the active visualization.</p>
+            {suggestions.length > 0 && <div className="tutor-suggestions" aria-label="Suggested questions">
+              {suggestions.slice(0, 4).map((suggestion) => <button type="button" key={suggestion.label} className="tutor-suggestion-pill" disabled={isLoading} onClick={() => { followMessagesRef.current = true; void sendMessage(suggestion.text); }}>{suggestion.label}<span aria-hidden="true">↗</span></button>)}
+            </div>}
+          </section>}
+
+          {messages.filter((message) => !(hasWelcomeOnly && message.id.startsWith('welcome'))).map((msg, messageIndex, visibleMessages) => {
             const isAssis = msg.role === 'assistant';
             const isTyping = isAssis && msg.id === revealedMessage?.id && revealedMessage.count < Array.from(msg.content).length;
-            const visibleContent = isAssis && msg.id === revealedMessage?.id
-              ? Array.from(msg.content).slice(0, revealedMessage.count).join('')
-              : msg.content;
-
+            const visibleContent = isAssis && msg.id === revealedMessage?.id ? Array.from(msg.content).slice(0, revealedMessage.count).join('') : msg.content;
+            const previousUser = isAssis ? [...visibleMessages.slice(0, messageIndex)].reverse().find((message) => message.role === 'user') : undefined;
             return (
-              <div key={msg.id} className={`tutor-message-bubble ${msg.role}`}>
-                <div className="tutor-message-content">
-                  {renderFormattedMessage(visibleContent)}
-                  {isTyping && <span className="tutor-typing-caret" aria-hidden="true" />}
+              <div key={msg.id} className={`tutor-message-bubble ${msg.role}${msg.requestFailed ? ' is-failed' : ''}`}>
+                <div className="tutor-message-content">{renderFormattedMessage(visibleContent)}{isTyping && <span className="tutor-typing-caret" aria-hidden="true" />}</div>
+                {isAssis && msg.answerSource === 'offline' && <div className="tutor-offline-note"><span>Built-in lesson answer</span><button type="button" onClick={() => setIsSettingsOpen(true)}>Connect AI model</button></div>}
+                {isAssis && msg.answerSource === 'grounded' && <div className="tutor-grounded-note" role="note">Based on the supplied visualization state</div>}
+                {isAssis && msg.proposedActions?.length ? <div className="tutor-action-card" role="group" aria-label="Octa action approval">
+                  <div className="tutor-action-card__copy"><strong>{msg.actionDecision === 'pending' ? 'Octa is ready to' : msg.actionDecision === 'allowed' ? 'Approved' : 'Cancelled'}</strong><ul>{msg.proposedActions.map((action, index) => <li key={`${action.name}-${index}`}>{describeAction(action, currentPageLabel)}</li>)}</ul></div>
+                  {msg.actionDecision === 'pending' ? <div className="tutor-action-card__buttons"><button type="button" className="tutor-action-allow" onClick={() => approveActions(msg.id)}><Check size={14} /> Allow</button><button type="button" className="tutor-action-cancel" onClick={() => dismissActions(msg.id)}>Cancel</button></div> : <p className="tutor-action-result" role="status">{msg.actionDecision === 'allowed' ? 'Action approved and sent to this page.' : 'No action was run.'}</p>}
+                </div> : null}
+                <div className="tutor-message-tools" role="group" aria-label={`${isAssis ? 'Octa' : 'Your'} message actions`}>
+                  <button type="button" onClick={() => void copyMessage(msg.id, msg.content)} title="Copy message" aria-label="Copy message">{copiedMessageId === msg.id ? <Check size={14} /> : <Copy size={14} />}<span>{copiedMessageId === msg.id ? 'Copied' : 'Copy'}</span></button>
+                  {!isAssis && <button type="button" onClick={() => { setInputText(msg.content); composerRef.current?.focus(); }} title="Edit this message in the composer" aria-label="Edit message"><span>Edit</span></button>}
+                  {isAssis && msg.requestFailed && <button type="button" onClick={() => resendAssistantMessage(msg.id)} disabled={isLoading} title="Retry this question" aria-label="Retry this question"><RotateCcw size={14} /><span>Retry</span></button>}
+                  {isAssis && !msg.requestFailed && previousUser && !msg.proposedActions?.length && <button type="button" onClick={() => resendAssistantMessage(msg.id)} disabled={isLoading} title="Generate another answer to the previous question" aria-label="Regenerate answer"><RefreshCw size={14} /><span>Regenerate</span></button>}
+                  {isAssis && !msg.requestFailed && !msg.proposedActions?.length && msg.answerSource !== 'grounded' && <>
+                    {feedbackState[msg.id] && feedbackState[msg.id] !== 'failed' && feedbackState[msg.id] !== 'saving' ? <span className="tutor-feedback-confirmation" role="status">{feedbackState[msg.id] === 'helpful' ? 'Thanks for the feedback.' : 'Preference saved.'}</span> : <>
+                      <button type="button" title="Helpful answer" aria-label="Helpful answer" disabled={feedbackState[msg.id] === 'saving'} onClick={() => void handleFeedback(msg.id, true)}><ThumbsUp size={14} /></button>
+                      <button type="button" title="Needs a different explanation" aria-label="Needs a different explanation" disabled={feedbackState[msg.id] === 'saving'} onClick={() => setFeedbackOpenFor((id) => id === msg.id ? null : msg.id)}><ThumbsDown size={14} /></button>
+                    </>}
+                    {feedbackState[msg.id] === 'failed' && <span role="alert">Feedback could not be saved.</span>}
+                  </>}
                 </div>
-                {isAssis && msg.answerSource === 'offline' && (
-                  <div className="tutor-offline-note">
-                    <span>Offline guide</span>
-                    <button type="button" onClick={() => setIsSettingsOpen(true)}>Connect AI model</button>
-                  </div>
-                )}
-                {isAssis && msg.answerSource === 'grounded' && (
-                  <div className="tutor-grounded-note" role="note">
-                    Verified from the supplied visualizer state
-                  </div>
-                )}
-                {isAssis && msg.proposedActions?.length ? (
-                  <div className="tutor-action-card" role="group" aria-label="Octa action approval">
-                    <div className="tutor-action-card__copy">
-                      <div>
-                        <strong>{msg.actionDecision === 'pending' ? 'Octa is ready to' : msg.actionDecision === 'allowed' ? 'Approved' : 'Cancelled'}</strong>
-                        <ul>
-                          {msg.proposedActions.map((action, index) => <li key={`${action.name}-${index}`}>{describeAction(action, currentPageLabel)}</li>)}
-                        </ul>
-                      </div>
-                    </div>
-                    {msg.actionDecision === 'pending' ? (
-                      <div className="tutor-action-card__buttons">
-                        <button type="button" className="tutor-action-allow" onClick={() => approveActions(msg.id)}>
-                          <Check size={14} /> Allow
-                        </button>
-                        <button type="button" className="tutor-action-cancel" onClick={() => dismissActions(msg.id)}>Cancel</button>
-                      </div>
-                    ) : (
-                      <p className="tutor-action-result" role="status">
-                        {msg.actionDecision === 'allowed' ? 'Action approved and sent to this page.' : 'No action was run.'}
-                      </p>
-                    )}
-                  </div>
-                ) : null}
-                {isAssis && msg.id !== 'welcome-1' && !msg.proposedActions?.length && msg.answerSource !== 'grounded' && (
-                  <div className="tutor-answer-feedback">
-                    {feedbackState[msg.id] && feedbackState[msg.id] !== 'failed' && feedbackState[msg.id] !== 'saving' ? (
-                      <span role="status">{feedbackState[msg.id] === 'helpful' ? 'Thanks, this helps Octa adapt.' : 'Got it — Octa will adjust future explanations.'}</span>
-                    ) : (
-                      <>
-                        <span>Was this useful?</span>
-                        <button type="button" aria-label="This answer was useful" title="Helpful" disabled={feedbackState[msg.id] === 'saving'} onClick={() => void handleFeedback(msg.id, true)}><ThumbsUp size={14} /></button>
-                        <button type="button" aria-label="This answer needs a different explanation" title="Needs a different explanation" disabled={feedbackState[msg.id] === 'saving'} onClick={() => setFeedbackOpenFor((id) => id === msg.id ? null : msg.id)}><ThumbsDown size={14} /></button>
-                        {feedbackState[msg.id] === 'saving' && <span>Saving…</span>}
-                        {feedbackState[msg.id] === 'failed' && <span role="alert">Could not save feedback.</span>}
-                      </>
-                    )}
-                  </div>
-                )}
-                {isAssis && feedbackOpenFor === msg.id && (
-                  <div className="tutor-feedback-options" role="group" aria-label="Choose a clearer response style">
-                    <span>What would help next time?</span>
-                    <button type="button" onClick={() => void handleFeedback(msg.id, false, 'simpler')}>Simpler</button>
-                    <button type="button" onClick={() => void handleFeedback(msg.id, false, 'stepwise')}>More steps</button>
-                    <button type="button" onClick={() => void handleFeedback(msg.id, false, 'examples')}>More examples</button>
-                  </div>
-                )}
+                {isAssis && feedbackOpenFor === msg.id && <div className="tutor-feedback-options" role="group" aria-label="Choose a clearer response style"><span>What would help next time?</span><button type="button" onClick={() => void handleFeedback(msg.id, false, 'simpler')}>Simpler</button><button type="button" onClick={() => void handleFeedback(msg.id, false, 'stepwise')}>More steps</button><button type="button" onClick={() => void handleFeedback(msg.id, false, 'examples')}>More examples</button></div>}
               </div>
             );
           })}
 
-          {isLoading && (
-            <div className="tutor-thinking" role="status" aria-live="polite">
-              <span className="tutor-thinking-dots" aria-hidden="true"><i /><i /><i /></span>
-              <span>Octa is working through your question</span>
-              </div>
-          )}
+          {isLoading && <div className="tutor-thinking" role="status" aria-live="polite"><span className="tutor-thinking-dots" aria-hidden="true"><i /><i /><i /></span><span>Octa is working through your question</span></div>}
         </div>
-
-        {suggestions.length > 0 && messages.length === 1 && (
-          <div className="tutor-suggestions">
-            {suggestions.slice(0, 2).map((suggestion) => <button type="button" key={suggestion.label} className="tutor-suggestion-pill" onClick={() => sendMessage(suggestion.text)}>{suggestion.label}</button>)}
-          </div>
-        )}
 
         <div className="tutor-input-container">
           <form className="tutor-input-form" onSubmit={handleInputSubmit}>
             <label className="sr-only" htmlFor="octa-tutor-message">Message Octa</label>
             <textarea
+              ref={composerRef}
               id="octa-tutor-message"
               value={inputText}
               onChange={(event) => setInputText(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); if (inputText.trim() && !isLoading) sendMessage(); } }}
+              onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); if (inputText.trim() && !isLoading) { followMessagesRef.current = true; sendMessage(); } } }}
               placeholder={tutorMode === 'interactive' ? 'Ask about this step…' : 'Ask Octa a question…'}
-              rows={2}
+              rows={1}
               maxLength={5000}
-              disabled={isLoading}
+              aria-describedby="octa-tutor-keyboard-hint"
             />
             <div className="tutor-input-footer">
-              <div className="tutor-input-hint">
+              <div className="tutor-input-hint" id="octa-tutor-keyboard-hint">
                 {isListening ? (
                   <select aria-label="Voice input language" value={speechLang} onChange={(event) => setSpeechLang(event.target.value as typeof speechLang)}>
                     <option value="en-US">English</option><option value="ur-PK">Urdu</option><option value="zh-CN">Chinese</option>
@@ -476,12 +556,15 @@ export const OctaTutor: React.FC = () => {
                 ) : <span>Enter to send · Shift + Enter for a new line</span>}
               </div>
               <div className="tutor-input-actions">
-                {isSpeechSupported && <button type="button" className={`tutor-input-icon-btn ${isListening ? 'listening' : ''}`} onClick={isListening ? stopListening : startListening} aria-label={isListening ? 'Stop voice input' : 'Start voice input'} title={isListening ? 'Stop voice input' : 'Voice input'}><Mic size={17} /></button>}
-                <button type="submit" className="tutor-send-btn" disabled={!inputText.trim() || isLoading} aria-label="Send message" title="Send message"><Send size={16} /></button>
+                {isSpeechSupported && <button type="button" className={`tutor-input-icon-btn ${isListening ? 'listening' : ''}`} onClick={isListening ? stopListening : startListening} aria-label={isListening ? 'Stop voice input' : 'Start voice input'} title={isListening ? 'Stop voice input' : 'Voice input'} disabled={isLoading}><Mic size={17} /></button>}
+                {isLoading
+                  ? <button type="button" className="tutor-stop-btn" onClick={stopGeneration} aria-label="Stop generating" title="Stop generating"><Square size={14} fill="currentColor" /> <span>Stop</span></button>
+                  : <button type="submit" className="tutor-send-btn" disabled={!inputText.trim()} aria-label="Send message" title="Send message"><Send size={16} /><span>Send</span></button>}
               </div>
             </div>
           </form>
         </div>
+        </>}
       </m.div> : <m.button
         key="octa-tutor-fab"
         initial={{ scale: 0.8, opacity: 0 }}
@@ -490,7 +573,7 @@ export const OctaTutor: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         className="octa-tutor-fab"
-        onClick={() => requireAuth(toggleTutor, 'Sign in to chat with Octa AI Tutor and keep your learning context.')}
+        onClick={() => requireAuth(() => { setIsMinimized(false); toggleTutor(); }, 'Sign in to chat with Octa AI Tutor and keep your learning context.')}
         title="Open Octa AI Tutor"
         aria-label="Open Octa AI Tutor"
       >
@@ -498,7 +581,7 @@ export const OctaTutor: React.FC = () => {
           <Octa expression="happy" size={26} interactive={false} />
         </div>
         <span className="fab-text">Octa AI</span>
-        <span className={`octa-tutor-fab-dot tutor-status-${providerStatus}`} title={providerStatusCopy} aria-label={providerStatusCopy} />
+        <span className={`octa-tutor-fab-dot tutor-status-${providerStatus}`} title={providerStatusCopy[providerStatus]} aria-label={providerStatusCopy[providerStatus]} />
       </m.button>}
       </AnimatePresence>
       {learningProfileOpen && <OctaLearningProfile onClose={() => setLearningProfileOpen(false)} />}

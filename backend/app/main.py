@@ -1,6 +1,9 @@
 import os
 import sys
 import logging
+import asyncio
+import time
+import uuid
 from contextlib import asynccontextmanager
 
 # Ensure backend directory is in sys.path
@@ -8,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 try:
@@ -21,6 +25,7 @@ try:
     from backend.app.api.routes.notifications import router as notifications_router
     from backend.app.api.routes.owner import router as owner_router
     from backend.app.api.routes.entitlements import router as entitlements_router
+    from backend.app.api.routes.billing import router as billing_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
@@ -33,6 +38,7 @@ except ModuleNotFoundError:
     from app.api.routes.notifications import router as notifications_router
     from app.api.routes.owner import router as owner_router
     from app.api.routes.entitlements import router as entitlements_router
+    from app.api.routes.billing import router as billing_router
     from app.core.config import get_settings
 
 
@@ -58,38 +64,38 @@ def init_db_tables():
 
         print(f"🗄️ Database engine: {engine.dialect.name}")
 
-        # Step 2: Create tables
-        print("📦 Creating database tables...")
-        Base.metadata.create_all(bind=engine)
+        if settings.AUTO_MIGRATE_ON_STARTUP:
+            # Keep startup migrations for the existing single-service deployment.
+            # Multi-replica deployments should run one migration job, then set
+            # AUTO_MIGRATE_ON_STARTUP=false on every serving API replica.
+            print("📦 Creating missing database tables...")
+            Base.metadata.create_all(bind=engine)
+            from alembic import command
+            from alembic.config import Config
 
-        # create_all creates missing tables, but intentionally does not add
-        # columns to existing tables. Apply the checked-in Alembic revisions
-        # after metadata bootstrap so existing deployments receive additive
-        # schema changes before the API starts serving requests.
-        from alembic import command
-        from alembic.config import Config
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+            alembic_config = Config(os.path.join(repo_root, "backend/alembic.ini"))
+            alembic_config.set_main_option("script_location", os.path.join(repo_root, "backend/migrations"))
+            print("🧭 Applying database migrations...")
+            command.upgrade(alembic_config, "head")
 
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-        alembic_config = Config(os.path.join(repo_root, "backend/alembic.ini"))
-        alembic_config.set_main_option("script_location", os.path.join(repo_root, "backend/migrations"))
-        print("🧭 Applying database migrations...")
-        command.upgrade(alembic_config, "head")
-
-        try:
-            from backend.app.core.feature_access import ensure_feature_catalog
-            from backend.infrastructure.database.database import SessionLocal
-        except ModuleNotFoundError:
-            from app.core.feature_access import ensure_feature_catalog
-            from infrastructure.database.database import SessionLocal
-        with SessionLocal() as feature_db:
-            ensure_feature_catalog(feature_db)
-            feature_db.commit()
+            try:
+                from backend.app.core.feature_access import ensure_feature_catalog
+                from backend.infrastructure.database.database import SessionLocal
+            except ModuleNotFoundError:
+                from app.core.feature_access import ensure_feature_catalog
+                from infrastructure.database.database import SessionLocal
+            with SessionLocal() as feature_db:
+                ensure_feature_catalog(feature_db)
+                feature_db.commit()
+        else:
+            print("🧭 Startup schema changes are disabled; the release migration job owns schema updates.")
 
         # Step 3: Verify tables actually exist
         from sqlalchemy import inspect
         inspector = inspect(engine)
         table_names = inspector.get_table_names()
-        expected = {"users", "user_sessions", "email_verifications", "password_resets",
+        expected = {"users", "user_sessions", "email_verifications", "email_outbox", "password_resets",
                     "roles", "permissions", "user_roles", "role_permissions",
                     "login_attempts", "quiz_attempts", "module_progress",
                     "user_streaks", "saved_sessions", "tutor_learning_profiles", "reviews",
@@ -97,6 +103,9 @@ def init_db_tables():
                     "announcement_reads", "owner_accounts", "owner_mfa_credentials", "owner_session_grants",
                     "admin_audit_events"}
         expected.update({"feature_policies", "user_feature_overrides", "announcement_email_deliveries"})
+        expected.update({"subscription_plans", "plan_features", "subscriptions", "payment_records",
+                         "payment_webhook_events", "manual_payment_methods", "manual_payment_claims",
+                         "billing_notices", "ad_configuration"})
         missing = expected - set(table_names)
         if missing:
             raise RuntimeError(f"Database schema is incomplete ({len(missing)} required tables missing)")
@@ -119,7 +128,19 @@ def init_db_tables():
 async def lifespan(application):
     """Application lifespan handler — runs startup logic."""
     init_db_tables()
-    yield
+    try:
+        from backend.app.core.email_outbox import run_email_outbox_worker
+    except ModuleNotFoundError:
+        from app.core.email_outbox import run_email_outbox_worker
+    email_worker = asyncio.create_task(run_email_outbox_worker(), name="verification-email-outbox")
+    try:
+        yield
+    finally:
+        email_worker.cancel()
+        try:
+            await email_worker
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -141,6 +162,27 @@ app.add_middleware(
     expose_headers=["X-Request-Id"],
     max_age=600,
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
+
+
+@app.middleware("http")
+async def request_timing_middleware(request: Request, call_next):
+    """Expose request latency and a correlation ID without logging request data."""
+    request_id = uuid.uuid4().hex
+    started = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - started) * 1000
+    response.headers["X-Request-Id"] = request_id
+    response.headers["Server-Timing"] = f"app;dur={duration_ms:.1f}"
+    logger.info(
+        "api_request request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
 
 
 # ─── Security Headers Middleware ─────────────────────────────────────
@@ -176,6 +218,7 @@ app.include_router(preferences_router)
 app.include_router(notifications_router)
 app.include_router(owner_router)
 app.include_router(entitlements_router)
+app.include_router(billing_router)
 
 
 

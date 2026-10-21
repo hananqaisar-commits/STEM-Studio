@@ -482,7 +482,7 @@ export const RecursionPage: React.FC = () => {
             spaceComplexity={executionData.spaceComplexity}
             steps={executionData.steps}
             currentStepIndex={currentStepIndex}
-          />
+           onStepSelect={seekTo}/>
           }
         />
       </div>
@@ -493,7 +493,7 @@ export const RecursionPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Recursion | ${selectedAlg.toUpperCase()}`}
         subtitle="Call Tree Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to explore the recursion call tree step by step.', quizSession.phase)} stepNumber={currentStepIndex + 1} totalSteps={totalSteps} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} steps={executionData.steps} currentStepIndex={currentStepIndex} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to explore the recursion call tree step by step.', quizSession.phase)} stepNumber={currentStepIndex + 1} totalSteps={totalSteps} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} steps={executionData.steps} currentStepIndex={currentStepIndex}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

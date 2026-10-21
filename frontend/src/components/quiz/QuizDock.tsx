@@ -190,6 +190,12 @@ export const QuizDock: React.FC<QuizDockProps> = ({
           onAnswer={session.answer}
           onContinue={session.continueExecution}
           continueLabel={continueLabel}
+          focusDescription={session.revisionData?.description || 'Use the current visualizer frame to reason about this decision.'}
+          keyPoints={[
+            ...(session.revisionData?.keyIdea ? [session.revisionData.keyIdea] : []),
+            ...(session.revisionData?.watchFor || []),
+            ...(session.revisionData?.quickTip ? [session.revisionData.quickTip] : []),
+          ]}
         />
       </div>
     );

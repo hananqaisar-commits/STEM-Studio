@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Maximize2 } from 'lucide-react';
-import { CircleNode } from '../../components/primitives/CircleNode';
 import { Line } from '../../components/primitives/Line';
 import { Arrow } from '../../components/primitives/Arrow';
 import type { GraphNode, GraphEdge, GraphStep } from './graphEngine';
@@ -14,46 +13,22 @@ interface GraphRendererProps {
   onToggleFullscreen?: () => void;
 }
 
-/** Map graph-specific node states to the shared ElementState palette. */
-function mapNodeState(state: string): ElementState {
+/** Keep graph state semantics consistent: active is blue, completed is green. */
+function nodeClass(state: string): string {
   switch (state) {
-    case 'current':  return 'comparing';
-    case 'visited':  return 'pivot';
-    case 'queued':   return 'selected';
-    case 'shortest': return 'sorted';
-    case 'mst':      return 'selected';
-    default:         return 'default';
+    case 'current': return 'graph-node-current';
+    case 'visited': return 'graph-node-visited';
+    case 'queued': return 'graph-node-queued';
+    case 'shortest':
+    case 'mst': return 'graph-node-path';
+    default: return 'graph-node-unvisited';
   }
 }
 
-/** Map graph-specific edge states to the shared ElementState palette. */
-function mapEdgeState(state: string): ElementState {
-  switch (state) {
-    case 'traversing': return 'comparing';
-    case 'relaxed':    return 'sorted';
-    case 'mst':        return 'sorted';
-    case 'backtrack':  return 'swapping';
-    case 'visited':    return 'default';
-    default:           return 'default';
-  }
-}
-
-/** Glow-ring colour for active node states (graph-specific overlay). */
-function glowColor(state: string): string {
-  switch (state) {
-    case 'current':  return '#f59e0b';
-    case 'shortest': return '#10b981';
-    case 'mst':      return '#ec4899';
-    case 'visited':  return '#818cf8';
-    case 'queued':   return '#38bdf8';
-    default:         return 'transparent';
-  }
-}
-
-const NODE_SIZE = 38;
-const HALF = NODE_SIZE / 2;
+const NODE_RADIUS = 25;
 
 export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges, onToggleFullscreen }) => {
+  const markerPrefix = useId().replace(/:/g, '');
   const displayNodes = step ? step.nodes : nodes;
   const displayEdges = step ? step.edges : edges;
 
@@ -91,7 +66,9 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
             const toNode = displayNodes.find((n) => n.id === edge.to);
             if (!fromNode || !toNode) return null;
 
-            const mappedState = mapEdgeState(edge.state);
+            const isPathEdge = edge.state === 'mst';
+            const isCurrentEdge = edge.id === step?.currentEdgeId || edge.state === 'traversing';
+            const edgeState: ElementState = isPathEdge ? 'sorted' : isCurrentEdge ? 'current' : 'default';
 
             return edge.directed ? (
               <Arrow
@@ -100,9 +77,10 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
                 y1={fromNode.y}
                 x2={toNode.x}
                 y2={toNode.y}
-                state={mappedState}
+                state={edgeState}
                 strokeWidth={2}
-                markerId={`graph-arrow-${edge.id}`}
+                markerId={`${markerPrefix}-graph-arrow-${edge.id}`}
+                endpointInset={NODE_RADIUS + 2}
                 label={edge.weight !== undefined ? String(edge.weight) : undefined}
               />
             ) : (
@@ -112,8 +90,9 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
                 y1={fromNode.y}
                 x2={toNode.x}
                 y2={toNode.y}
-                state={mappedState}
+                state={edgeState}
                 strokeWidth={2}
+                endpointInset={NODE_RADIUS + 2}
               />
             );
           })}
@@ -154,75 +133,23 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
             );
           })}
 
-          {/* ─── NODES (shared CircleNode via foreignObject) ───────────── */}
+          {/* ─── NODES with in-node distance/state labels ──────────────── */}
           {displayNodes.map((node) => {
-            const mapped = mapNodeState(node.state);
-            const glow = glowColor(node.state);
+            const className = nodeClass(node.state);
+            const sublabel = node.distance !== undefined
+              ? `d=${node.distance === Infinity ? '∞' : node.distance}`
+              : node.inDegree !== undefined ? `degree ${node.inDegree}` : undefined;
 
             return (
-              <g key={node.id}>
-                {/* Outer Glow Ring (graph-specific overlay) */}
-                {glow !== 'transparent' && (
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r="22"
-                    fill="none"
-                    stroke={glow}
-                    strokeWidth="2"
-                    opacity="0.8"
-                  />
-                )}
-
-                {/* Shared CircleNode primitive */}
-                <foreignObject
-                  x={node.x - HALF}
-                  y={node.y - HALF}
-                  width={NODE_SIZE}
-                  height={NODE_SIZE}
-                >
-                  <CircleNode
-                    value={node.label}
-                    state={mapped}
-                    size={NODE_SIZE}
-                  />
-                </foreignObject>
-
-                {/* Distance Badge (graph-specific overlay) */}
-                {node.distance !== undefined && node.distance !== Infinity && (
-                  <g transform={`translate(${node.x}, ${node.y - 28})`}>
-                    <rect
-                      x="-14"
-                      y="-7"
-                      width="28"
-                      height="14"
-                      rx="4"
-                      fill="#10b981"
-                    />
-                    <text
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fill="#0f172a"
-                      fontSize="9"
-                      fontWeight="800"
-                      fontFamily="monospace"
-                    >
-                      d={node.distance}
-                    </text>
-                  </g>
-                )}
-
-                {/* Degree Badge (graph-specific overlay) */}
-                {node.inDegree !== undefined && (
-                  <text
-                    x={node.x}
-                    y={node.y + 28}
-                    textAnchor="middle"
-                    fill="var(--color-text-secondary)"
-                    fontSize="9"
-                    fontFamily="monospace"
-                  >
-                    deg: {node.inDegree}
+              <g key={node.id} className={`graph-node ${className}`} aria-label={`Node ${node.label}${sublabel ? `, ${sublabel}` : ''}`}>
+                <circle className="graph-node-halo" cx={node.x} cy={node.y} r={NODE_RADIUS + 4} />
+                <circle className="graph-node-disc" cx={node.x} cy={node.y} r={NODE_RADIUS} />
+                <text className={`graph-node-label${sublabel ? ' has-sublabel' : ''}`} x={node.x} y={node.y + (sublabel ? -3 : 5)} textAnchor="middle">
+                  {node.label}
+                </text>
+                {sublabel && (
+                  <text className="graph-node-sublabel" x={node.x} y={node.y + 12} textAnchor="middle">
+                    {sublabel}
                   </text>
                 )}
               </g>
@@ -230,28 +157,36 @@ export const GraphRenderer: React.FC<GraphRendererProps> = ({ step, nodes, edges
           })}
         </svg>
 
+        <div className="graph-legend" aria-label="Graph visual legend">
+          <span><i className="graph-legend-dot is-visited" />Visited</span>
+          <span><i className="graph-legend-dot is-current" />Current</span>
+          <span><i className="graph-legend-dot is-unvisited" />Unvisited</span>
+          <span><i className="graph-legend-line is-path" />Selected path / tree</span>
+          <span><i className="graph-legend-line is-edge" />Edge</span>
+        </div>
+
         {/* ─── REAL-TIME GRAPH HUD ──────────────────────────────────────── */}
         <div className="graph-hud-row">
           <div className="graph-hud-badge">
             <span className="graph-hud-badge-title">QUEUE / STACK:</span>
-            <span style={{ color: '#38bdf8' }}>
+            <span className="graph-hud-value is-current">
               [{step?.queueOrStack?.join(', ') || ' '}]
             </span>
           </div>
 
           <div className="graph-hud-badge">
             <span className="graph-hud-badge-title">VISITED:</span>
-            <span style={{ color: '#818cf8' }}>
+            <span className="graph-hud-value is-visited">
               {'{' + (step?.visitedNodeIds?.join(', ') || '') + '}'}
             </span>
           </div>
 
           {step?.mstWeight !== undefined && (
-            <div className="graph-hud-badge" style={{ borderColor: '#ec4899' }}>
-              <span className="graph-hud-badge-title" style={{ color: '#ec4899' }}>
+            <div className="graph-hud-badge is-path">
+              <span className="graph-hud-badge-title">
                 MST COST:
               </span>
-              <span style={{ color: '#f472b6', fontWeight: 'bold' }}>
+              <span className="graph-hud-value is-path">
                 {step.mstWeight}
               </span>
             </div>

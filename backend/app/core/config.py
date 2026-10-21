@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = Field(default=2, ge=0, le=100)
     DB_POOL_TIMEOUT_SECONDS: int = Field(default=10, ge=1, le=120)
     DB_POOL_RECYCLE_SECONDS: int = Field(default=300, ge=30, le=3600)
+    # Use a single deployment/release job for schema changes when running
+    # multiple replicas. Keep enabled by default for the existing one-service setup.
+    AUTO_MIGRATE_ON_STARTUP: bool = True
 
     # Shared rate limits are required when the API runs in multiple processes.
     # Leave REDIS_URL empty for local development; the limiter uses bounded
@@ -70,6 +73,21 @@ class Settings(BaseSettings):
     OWNER_MFA_ENCRYPTION_KEY: str = ""
     EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = Field(default=24, ge=1, le=168)
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = Field(default=20, ge=5, le=120)
+
+    # Safepay recurring subscriptions. Credentials are supplied only through
+    # the backend host's secret environment configuration.
+    SAFEPAY_ENV: str = "sandbox"
+    SAFEPAY_SECRET_KEY: str = ""
+    SAFEPAY_WEBHOOK_SECRET: str = ""
+    SAFEPAY_TIMEOUT_SECONDS: float = Field(default=12, gt=0, le=30)
+
+    @field_validator("SAFEPAY_ENV")
+    @classmethod
+    def validate_safepay_environment(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"sandbox", "production"}:
+            raise ValueError("SAFEPAY_ENV must be sandbox or production")
+        return normalized
 
     # CORS & Frontend
     FRONTEND_URL: str = "http://localhost:5173"
@@ -143,6 +161,7 @@ class Settings(BaseSettings):
 
     # SMTP Email Configuration
     SMTP_TLS: bool = True
+    SMTP_USE_SSL: bool = False
     SMTP_PORT: int = 587
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_USER: str = ""

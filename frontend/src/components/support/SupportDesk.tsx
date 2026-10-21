@@ -105,7 +105,7 @@ export function SupportDesk() {
   };
 
   return (
-    <section className="support-desk" aria-labelledby="support-desk-title">
+    <section id="support" className="support-desk" aria-labelledby="support-desk-title">
       <div className="support-desk-heading">
         <span className="support-desk-icon"><LifeBuoy size={19} aria-hidden="true" /></span>
         <div>

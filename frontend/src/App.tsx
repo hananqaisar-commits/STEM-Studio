@@ -44,6 +44,7 @@ const SignIn = lazy(() => import('./features/auth/SignIn').then(m => ({ default:
 const SignUp = lazy(() => import('./features/auth/SignUp').then(m => ({ default: m.SignUp })));
 const ForgotPassword = lazy(() => import('./features/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('./features/auth/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const PlansPage = lazy(() => import('./features/billing/PlansPage').then(m => ({ default: m.PlansPage })));
 
 
 /**
@@ -130,7 +131,7 @@ const GatedRoute: React.FC<{ children: React.ReactNode; featureKey?: string }> =
   if (!isAuthenticated) return <DashboardHome />;
   if (featureKey && !user?.is_owner_session && (accessState === 'loading' || checkedFeatureKey !== featureKey)) return <LoadingScreen message="Checking module access..." />;
   if (featureKey && !user?.is_owner_session && accessState === 'error') return <section className="feature-access-state"><h1>Access could not be checked</h1><p>Reconnect and retry so STEM Studio can confirm your access to this module.</p><button type="button" onClick={() => window.location.reload()}>Retry</button></section>;
-  if (featureKey && !user?.is_owner_session && accessState === 'denied') return <section className="feature-access-state"><span className="feature-access-kicker">Module access</span><h1>{featureLabel} is currently restricted</h1><p>{featureMessage} Your account and saved progress remain unchanged.</p><button type="button" onClick={() => navigate('/dashboard')}>Back to dashboard</button></section>;
+  if (featureKey && !user?.is_owner_session && accessState === 'denied') return <section className="feature-access-state"><span className="feature-access-kicker">Module access</span><h1>{featureLabel} is currently restricted</h1><p>{featureMessage}</p><button type="button" onClick={() => navigate(`/plans?feature=${encodeURIComponent(featureKey)}`)}>View monthly and yearly plans</button><button type="button" className="feature-access-secondary" onClick={() => navigate('/dashboard')}>Back to dashboard</button></section>;
   return <>{children}</>;
 };
 
@@ -188,8 +189,9 @@ const DashboardLayout = () => {
         <main className="dashboard-main">
           <Suspense fallback={<LoadingScreen message="Loading module..." />}>
             <Routes>
-              <Route index element={<><DashboardHome /><MarketingFooter /></>} />
-              <Route path="owner" element={<OwnerRoute />} />
+          <Route index element={<><DashboardHome /><MarketingFooter /></>} />
+              <Route path="owner/*" element={<OwnerRoute />} />
+              <Route path="billing" element={<PlansPage />} />
               <Route path="dsa" element={<ModuleHub moduleId="dsa" />} />
               <Route path="complexity" element={<GatedRoute featureKey="complexity"><ComplexityPage /></GatedRoute>} />
               <Route path="sorting" element={<GatedRoute featureKey="sorting"><SortingPage /></GatedRoute>} />
@@ -246,6 +248,7 @@ const AppContent = () => {
           <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
           <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
           <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
+          <Route path="/plans" element={<PlansPage />} />
           <Route path="/dashboard/*" element={<DashboardLayout />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

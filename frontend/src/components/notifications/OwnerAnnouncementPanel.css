@@ -203,13 +203,25 @@
   font-size: 11px;
 }
 
-.owner-announcement-history { margin-top: 20px; }
+.owner-announcement-history { max-height: 640px; overflow:auto; margin-top: 20px; padding-right:3px; }
+.owner-announcement-history-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .owner-announcement-history h4 { margin: 0 0 8px; font-size: 12px; }
+.owner-announcement-history-heading label { display:flex; align-items:center; gap:5px; color:var(--color-text-muted); font-size:9px; }
+.owner-announcement-history input[type=checkbox] { accent-color:var(--color-primary); }
+.owner-announcement-delete-tools { display:flex; gap:6px; margin-bottom:9px; }
+.owner-announcement-delete-tools button,.owner-announcement-retry { display:inline-flex; align-items:center; gap:5px; min-height:29px; padding:0 8px; color:var(--color-text-secondary); background:var(--color-surface); border:1px solid var(--color-border); border-radius:7px; font:inherit; font-size:9px; font-weight:750; cursor:pointer; }
+.owner-announcement-delete-tools .danger { color:#b42332; }
+.owner-announcement-delete-tools button:disabled,.owner-announcement-retry:disabled { opacity:.5; cursor:not-allowed; }
 .owner-announcement-empty { margin: 0; color: var(--color-text-muted); font-size: 11px; }
 
 .owner-announcement-history article {
-  padding: 11px 0;
+  position:relative;
+  padding:11px 5px 11px 29px;
   border-top: 1px solid var(--color-border);
+}
+.owner-announcement-select { position:absolute; top:13px; left:4px; }
+.owner-announcement-history article {
+  display:block;
 }
 
 .owner-announcement-history article > div {
@@ -223,6 +235,7 @@
 .owner-announcement-history article > strong { display: block; margin-top: 5px; font-size: 12px; }
 .owner-announcement-history article > p { margin: 4px 0; color: var(--color-text-muted); font-size: 11px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 .owner-announcement-history article > small { color: var(--color-text-muted); font-size: 9px; }
+.owner-announcement-retry { margin-top:7px; color:var(--color-primary); }
 
 .owner-announcement-email-note {
   margin: 15px 0 0;

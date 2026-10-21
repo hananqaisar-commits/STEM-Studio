@@ -586,7 +586,7 @@ export const SortingPage: React.FC = () => {
             timeComplexity={executionData.timeComplexity}
             spaceComplexity={executionData.spaceComplexity}
             isCustomCodeRunning={customSteps !== null && customSteps.length > 0}
-          />
+           onStepSelect={seekTo}/>
           }
         />
       </div>
@@ -599,7 +599,7 @@ export const SortingPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Sorting Algorithms | ${selectedAlg.toUpperCase()} SORT`}
         subtitle="Memory Array Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={customSteps ?? executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.description || 'Click Play to observe step-by-step execution details.', quizSession.phase)} steps={customSteps ?? executionData.steps} currentStepIndex={currentStepIndex} timeComplexity={executionData.timeComplexity} spaceComplexity={executionData.spaceComplexity}  onStepSelect={seekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}

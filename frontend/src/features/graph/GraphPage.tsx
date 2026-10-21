@@ -801,7 +801,7 @@ export const GraphPage: React.FC = () => {
             )}
             steps={isAStarMode ? [] : activeSteps}
             currentStepIndex={isAStarMode ? aStarIndex : currentStepIndex}
-          />
+           onStepSelect={unifiedSeekTo}/>
           }
         />
       </div>
@@ -812,7 +812,7 @@ export const GraphPage: React.FC = () => {
         onClose={() => setIsFullScreenOpen(false)}
         title={`Graph Studio | ${category.toUpperCase()}`}
         subtitle="Interactive Network Inspector"
-        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex} />}
+        explanationPanel={<ExplanationPanel description={maskNarration(currentStep?.explanation || 'Click Play to observe step-by-step execution.', quizSession.phase)} steps={activeSteps} currentStepIndex={currentStepIndex}  onStepSelect={unifiedSeekTo}/>}
         toolbarControls={
           <div className="fs-floating-controls">
             {renderToolbarControls()}
