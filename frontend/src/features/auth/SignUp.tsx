@@ -21,6 +21,7 @@ export const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [marketingEmailOptIn, setMarketingEmailOptIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -91,9 +92,9 @@ export const SignUp: React.FC = () => {
     setExpression('focused');
 
     try {
-      await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim());
+      await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim(), marketingEmailOptIn);
       rememberEmail(email.trim());
-      setSuccess('Account created successfully! Redirecting to login...');
+      setSuccess('Account created. Check your inbox for the verification link. Redirecting to sign in...');
       setExpression('happy', { temporary: true, durationMs: 2000 });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
@@ -295,6 +296,16 @@ export const SignUp: React.FC = () => {
               </button>
             </div>
           </div>
+
+          <label className="signup-email-consent">
+            <input
+              type="checkbox"
+              checked={marketingEmailOptIn}
+              onChange={(event) => setMarketingEmailOptIn(event.target.checked)}
+              disabled={isSubmitting}
+            />
+            <span>Email me product updates and promotions. I can unsubscribe later in account settings.</span>
+          </label>
 
           <button type="submit" className="auth-button" disabled={isSubmitting}>
             {isSubmitting ? <Loader2 size={18} className="spinner" /> : <UserPlus size={18} />}

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 from backend.app.core.config import get_settings
 
 settings = get_settings()
-_PLATFORM_STATS_CACHE_KEY = f"{settings.REDIS_KEY_PREFIX}:platform-stats:v1"
+_PLATFORM_STATS_CACHE_KEY = f"{settings.REDIS_KEY_PREFIX}:platform-stats:v2"
 
 
 def invalidate_platform_stats_cache() -> None:
@@ -36,7 +36,7 @@ def invalidate_platform_stats_cache() -> None:
 
 @router.get("/platform", response_model=PlatformStatsResponse)
 def get_platform_stats(db: Session = Depends(get_db)):
-    """Return public totals; the learner metric is registered accounts, not activity."""
+    """Return public totals; active learners means enabled accounts, not live presence."""
     cache_key = _PLATFORM_STATS_CACHE_KEY
     if settings.REDIS_URL:
         try:
@@ -49,6 +49,7 @@ def get_platform_stats(db: Session = Depends(get_db)):
             logger.warning("Platform stats cache payload was invalid; querying the database")
 
     registered_learners = db.query(func.count(User.user_id)).scalar() or 0
+    active_learners = db.query(func.count(User.user_id)).filter(User.is_active.is_(True)).scalar() or 0
     review_stats = db.query(
         func.count(Review.review_id).label("total"),
         func.coalesce(func.avg(Review.rating), 0).label("average"),
@@ -56,6 +57,7 @@ def get_platform_stats(db: Session = Depends(get_db)):
 
     response = PlatformStatsResponse(
         registered_learners=registered_learners,
+        active_learners=active_learners,
         total_reviews=review_stats.total or 0,
         average_rating=round(float(review_stats.average or 0), 2),
     )

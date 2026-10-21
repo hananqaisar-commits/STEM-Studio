@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { apiClient } from '../../api/apiClient';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ApiError, useAuth } from '../../contexts/AuthContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
@@ -41,6 +42,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [marketingEmailOptIn, setMarketingEmailOptIn] = useState(false);
+  const [emailPreferenceBusy, setEmailPreferenceBusy] = useState(false);
+  const [emailPreferenceMessage, setEmailPreferenceMessage] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated && activeTab === 'account') {
@@ -49,6 +53,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       setDeleteError('');
     }
   }, [activeTab, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'account' || !isAuthenticated) return;
+    let active = true;
+    apiClient<{ marketing_email_opt_in: boolean }>('/api/preferences', { requiresAuth: true })
+      .then((preferences) => { if (active) setMarketingEmailOptIn(preferences.marketing_email_opt_in); })
+      .catch(() => { if (active) setEmailPreferenceMessage('Email preferences could not be loaded.'); });
+    return () => { active = false; };
+  }, [activeTab, isAuthenticated, isOpen]);
+
+  const updateMarketingEmailPreference = async (enabled: boolean) => {
+    setEmailPreferenceBusy(true);
+    setEmailPreferenceMessage('');
+    try {
+      const preferences = await apiClient<{ marketing_email_opt_in: boolean }>('/api/preferences', {
+        method: 'PATCH', body: { marketing_email_opt_in: enabled }, requiresAuth: true,
+      });
+      setMarketingEmailOptIn(preferences.marketing_email_opt_in);
+      setEmailPreferenceMessage(enabled ? 'Promotional email preference saved.' : 'Promotional emails are turned off.');
+    } catch {
+      setEmailPreferenceMessage('Could not save this email preference. Try again.');
+    } finally {
+      setEmailPreferenceBusy(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -250,7 +279,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           )}
 
           {activeTab === 'account' && isAuthenticated && (
-            <section className="settings-danger-zone" aria-labelledby="delete-account-title">
+            <>
+              <section className="settings-email-preference" aria-labelledby="marketing-email-title">
+                <div>
+                  <h4 id="marketing-email-title">Product updates and promotions</h4>
+                  <p>Choose whether STEM Studio may send you promotional email. Essential account and security messages are separate.</p>
+                </div>
+                <label className="settings-email-toggle">
+                  <input
+                    type="checkbox"
+                    checked={marketingEmailOptIn}
+                    disabled={emailPreferenceBusy}
+                    onChange={(event) => void updateMarketingEmailPreference(event.target.checked)}
+                  />
+                  <span>Receive promotional email</span>
+                </label>
+                {emailPreferenceMessage && <p className="settings-email-preference-status" role="status">{emailPreferenceMessage}</p>}
+              </section>
+              <section className="settings-danger-zone" aria-labelledby="delete-account-title">
               <div>
                 <p className="settings-danger-eyebrow">Permanent action</p>
                 <h4 id="delete-account-title">Delete your account</h4>
@@ -289,6 +335,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 For your security, sign in again if this session is more than 10 minutes old.
               </p>
             </section>
+            </>
           )}
         </div>
 

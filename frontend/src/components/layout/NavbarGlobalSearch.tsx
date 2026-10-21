@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useLayoutEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Search, X, Sparkles, ArrowRight } from 'lucide-react';
@@ -34,7 +35,9 @@ export const NavbarGlobalSearch: React.FC = () => {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [resultsPosition, setResultsPosition] = useState<React.CSSProperties>({});
   const navigate = useNavigate();
 
   // Auto focus input when expanding
@@ -44,18 +47,39 @@ export const NavbarGlobalSearch: React.FC = () => {
     }
   }, [isExpanded]);
 
-  // Collapse search when clicking outside if query is empty
+  const positionResults = useCallback(() => {
+    const anchor = searchRef.current?.getBoundingClientRect();
+    if (!anchor) return;
+    const width = Math.min(384, Math.max(1, window.innerWidth - 24));
+    const left = Math.max(12, Math.min(anchor.left, window.innerWidth - width - 12));
+    const top = Math.min(anchor.bottom + 8, Math.max(12, window.innerHeight - 180));
+    setResultsPosition({ position: 'fixed', top, left, width, maxHeight: Math.max(160, window.innerHeight - top - 12), zIndex: 1600 });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isExpanded || !query.trim()) return;
+    positionResults();
+    const reposition = () => positionResults();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [isExpanded, positionResults, query]);
+
+  // Render results in the document layer so the navbar's mobile scroll region cannot clip them.
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        if (!query.trim()) {
-          setIsExpanded(false);
-        }
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!searchRef.current?.contains(target) && !resultsRef.current?.contains(target)) {
+        setIsExpanded(false);
+        setQuery('');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [query]);
+  }, []);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -134,6 +158,8 @@ export const NavbarGlobalSearch: React.FC = () => {
         role={isExpanded ? undefined : 'button'}
         tabIndex={isExpanded ? -1 : 0}
         aria-label="Search all topics. Press Control K or Command K."
+        aria-expanded={isExpanded}
+        aria-controls="global-topic-search-results"
         title="Search topics · Ctrl+K / ⌘K"
         onKeyDown={(event) => {
           if (!isExpanded && (event.key === 'Enter' || event.key === ' ')) {
@@ -164,6 +190,11 @@ export const NavbarGlobalSearch: React.FC = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleInputKeyDown}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={Boolean(query.trim())}
+                aria-controls="global-topic-search-results"
+                aria-activedescendant={searchResults[activeIndex] ? `topic-search-option-${activeIndex}` : undefined}
                 placeholder="Search algorithms..."
                 className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-neutral-100 outline-none border-none placeholder:text-slate-400 dark:placeholder:text-neutral-500"
               />
@@ -182,8 +213,8 @@ export const NavbarGlobalSearch: React.FC = () => {
       </motion.div>
 
       {/* Global Search Results Dropdown */}
-      {isExpanded && query.trim().length > 0 && (
-        <div id="global-topic-search-results" role="group" aria-label="Topic search results" className="absolute top-full left-0 mt-2 z-50 max-h-80 overflow-y-auto rounded-2xl border border-purple-500/40 bg-white text-slate-900 dark:bg-neutral-950 dark:text-neutral-100 p-2 shadow-2xl backdrop-blur-xl animate-fade-in w-72 sm:w-80 md:w-96">
+      {isExpanded && query.trim().length > 0 && createPortal(
+        <div ref={resultsRef} id="global-topic-search-results" role="listbox" aria-label="Topic search results" style={resultsPosition} className="global-topic-search-results max-h-80 overflow-y-auto rounded-2xl border border-purple-500/40 bg-white text-slate-900 dark:bg-neutral-950 dark:text-neutral-100 p-2 shadow-2xl backdrop-blur-xl animate-fade-in">
           <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider border-b border-slate-100 dark:border-neutral-800 mb-1">
             <span className="flex items-center gap-1.5">
               <Sparkles size={12} />
@@ -200,7 +231,10 @@ export const NavbarGlobalSearch: React.FC = () => {
               <button
                 key={`${item.categoryId}-${item.id}`}
                 type="button"
+                id={`topic-search-option-${index}`}
                 onClick={() => handleSelect(item)}
+                role="option"
+                aria-selected={index === activeIndex}
                 aria-current={index === activeIndex ? 'true' : undefined}
                 className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left transition-colors group ${index === activeIndex ? 'bg-purple-500/10 dark:bg-purple-500/20' : 'hover:bg-purple-500/10 dark:hover:bg-purple-500/20'}`}
               >
@@ -220,7 +254,8 @@ export const NavbarGlobalSearch: React.FC = () => {
               </button>
             ))
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

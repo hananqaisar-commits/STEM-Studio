@@ -1,15 +1,20 @@
 .notification-bell-button {
   position: relative;
-  overflow: visible;
+  overflow: visible !important;
+  flex: 0 0 44px;
+  width: 44px;
   min-width: 44px;
   min-height: 44px;
   justify-content: center;
+  padding: 0 !important;
 }
+
+button.expandable-tab-btn.notification-bell-button { overflow: visible !important; }
 
 .notification-unread-badge {
   position: absolute;
-  top: -2px;
-  right: -3px;
+  top: 1px;
+  right: 1px;
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
@@ -29,8 +34,6 @@
 .notification-popover {
   position: fixed;
   z-index: 1400;
-  top: 76px;
-  right: max(14px, calc((100vw - 1440px) / 2 + 22px));
   width: min(410px, calc(100vw - 28px));
   max-height: min(620px, calc(100dvh - 94px));
   display: flex;
@@ -243,10 +246,8 @@
 
 @media (max-width: 600px) {
   .notification-popover {
-    top: 62px;
-    right: 8px;
     width: calc(100vw - 16px);
-    max-height: calc(100dvh - 72px);
+    max-height: calc(100dvh - 16px);
     border-radius: 15px;
   }
   .notification-popover-header { padding: 15px 14px 12px; }

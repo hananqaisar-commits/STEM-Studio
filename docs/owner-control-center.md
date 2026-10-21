@@ -15,7 +15,7 @@ This closes the application level privilege escalation paths that were present i
 
 ## Production setup
 
-1. Set a stable `JWT_SECRET_KEY` on the backend host. Production startup rejects a missing key, the example placeholder, wildcard CORS, and non-HTTPS CORS origins.
+1. Set `DATABASE_URL` to the same durable managed PostgreSQL database used to provision the owner. Production startup rejects SQLite, local database hosts, a missing stable `JWT_SECRET_KEY`, the example placeholder, wildcard CORS, and non-HTTPS CORS origins. The owner row and login request must reach this same database.
 2. Generate a Fernet key once and store it as `OWNER_MFA_ENCRYPTION_KEY` in the backend secret manager:
 
    ```bash
@@ -24,7 +24,7 @@ This closes the application level privilege escalation paths that were present i
 
    Do not regenerate this key during ordinary deploys. Rotating it requires re-enrolling owner MFA credentials.
 3. Configure exact frontend origins in `CORS_ORIGINS`. If the UI and API are on different sites, set `OWNER_COOKIE_SAMESITE=none` and `OWNER_COOKIE_SECURE=true`; both must be served over HTTPS. Prefer custom UI/API subdomains under the same site where possible because browser third-party-cookie restrictions can block cross-site owner cookies.
-4. Ensure the base application tables exist, then run the owner security migration from the repository root:
+4. Apply database migrations from the repository root when preparing a deployment or provisioning an owner:
 
    ```bash
    backend/.venv/bin/alembic -c backend/alembic.ini upgrade head
@@ -36,25 +36,29 @@ This closes the application level privilege escalation paths that were present i
    bash backend/scripts/create_owner.sh
    ```
 
-   It prompts for username, email, a hidden password, and confirmation. It refuses a second owner, checks uniqueness, writes the owner record and encrypted TOTP credential transactionally, and prints the one-time authenticator setup URI to that terminal. Add it to an authenticator app immediately; treat the terminal output as a secret and do not paste it into chat or application logs.
+   It prompts for username, email, a hidden password, and confirmation. It refuses a second owner, checks uniqueness, writes the owner record and encrypted TOTP credential transactionally, and prints the one-time authenticator setup key to that terminal. Add it manually as a time-based code with 6 digits and a 30-second interval; treat the terminal output as a secret and do not paste it into chat or application logs. The API also applies pending additive migrations during startup after creating any missing metadata tables, so existing deployments receive column migrations before serving requests.
 6. Open `/login`, choose **Sign in as Owner**, and enter the provisioned email address, password, and current authenticator code. Owner sessions expire after at most eight hours; sensitive actions require another password + TOTP verification every ten minutes.
 
-The one-time provisioning and MFA recovery commands are intentionally not HTTP endpoints. To recover a lost authenticator while retaining the password, run `backend/.venv/bin/python -m backend.app.cli reset-owner-mfa` on the trusted host; it verifies the owner password, rotates the encrypted TOTP secret, and revokes every owner session. If the owner password is also lost or the recovery record is damaged, use a separately reviewed break-glass procedure with direct deployment/database operator access. There is no public owner signup or public role recovery endpoint.
+The one-time provisioning and recovery commands are intentionally not HTTP endpoints. To diagnose owner login against the backend's currently configured database, run `python -m backend.app.cli diagnose-owner` in that host's Shell; it reports only the database engine and pass/fail checks, never the hash or TOTP secret. If its password check fails, run `python -m backend.app.cli reset-owner-password`; it accepts the new password through hidden prompts, rotates the bcrypt hash, and revokes current owner sessions. To recover a lost authenticator while retaining the password, run `python -m backend.app.cli reset-owner-mfa`; it verifies the owner password, rotates the encrypted TOTP secret, revokes every owner session, and prints a one-time manual authenticator setup key. Run these only in the backend host Shell after confirming it uses the persistent database. There is no public owner signup or public role recovery endpoint.
 
 ## Current owner controls
 
-- User list with pagination, username/email search, enabled/verified status and active session counts.
-- Suspend/restore non-owner accounts; suspension revokes that user's active sessions.
-- Revoke a non-owner account's active sessions.
-- Publish in-app announcements to active verified accounts.
-- View and respond to support tickets and moderate submitted reviews.
-- Review the administrative audit event stream.
+- Search, filter, and paginate accounts; see each user's profile, account status, email verification, sessions, progress, quiz attempts, visualizer saves, support tickets, Octa response preferences, and recent sign-in outcomes.
+- Suspend or restore non-owner accounts. Suspension immediately revokes their active sessions. Owners can also revoke a learner's sessions without suspending the account.
+- Permanently delete a learner after recent MFA, a typed username confirmation, and a second browser confirmation. The deletion cascades through the learner's account data; an audit event remains without retaining the account's credentials.
+- Set each registered module as free, premium, enabled, or disabled. Grant or revoke an individual learner's module access, with an optional expiry. Premium controls are manual entitlements; they do not represent a payment.
+- Publish in-app announcements to active, verified accounts. The navbar badge reads the exact unread count and the inbox refreshes periodically, when opened, and when the window regains focus.
+- Optionally email a general announcement or service notice to active, verified accounts. Product updates and promotions are emailed only to active, verified accounts who opted in. Each email is sent privately to one recipient, and SMTP-accepted/failed counts appear in the broadcast history; SMTP acceptance does not guarantee inbox placement.
+- Learners can change promotional email consent in **Settings → Account**. New accounts default to opted out.
+- View and respond to support tickets, moderate submitted reviews, and review administrative audit events.
 
-User suspension and session revocation are logged with actor, target, action, timestamp, outcome, and non-secret context. Owner accounts cannot be deleted or suspended in user management. Account password hashes use the project's bcrypt configuration; provisioning rejects passwords over bcrypt's 72-byte input limit.
+Sensitive changes, account deletion, feature changes, broadcasts, and session actions require recent owner MFA and are logged with actor, target, action, timestamp, outcome, and non-secret context. Owner accounts cannot be changed through learner management. Password hashes, refresh tokens, MFA secrets, and other authentication credentials are never returned in the user detail view.
 
-## Not implemented in this delivery
+## Boundaries and remaining integration work
 
-The existing product has no subscription/payment model or feature entitlement registry. Plan/pricing/discount management, per-user feature overrides, targeted direct messages, owner MFA enrollment/recovery UI, and payment-provider synchronization are not represented as complete controls. No payment state is fabricated. Bulk email is also separate and remains unavailable without a consent-aware email provider. The current administrative audit log is application-level, not a tamper-proof external log sink; production should export it to a restricted monitoring/logging service.
+There is no subscription/payment provider or plan, pricing, discount, invoice, or refund system. The premium switch and per-user overrides control the learning modules only; they never create a paid subscription or report a payment. Email uses the configured SMTP relay and is sent serially from the API request. Gmail SMTP and other mailbox relays have sending quotas and are not a high-volume marketing platform; use a transactional/bulk email provider and a durable delivery queue before emailing a large audience. The app does not expose recipient email addresses in the broadcast screen. The audit log is application-level, not a tamper-proof external log sink; production should export it to a restricted monitoring service.
+
+Feature policies are checked by the module route, progress-writing endpoints, custom-code execution, and Octa tutor. Some visualizer calculations run entirely in the browser, so client-side content bundles cannot be made secret from a determined browser user. The backend still enforces access on the protected operations listed above. The owner panel does not expose authentication secrets or allow promoting another account to owner.
 
 ## Security checks
 

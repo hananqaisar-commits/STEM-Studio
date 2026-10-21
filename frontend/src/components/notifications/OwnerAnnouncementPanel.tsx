@@ -12,6 +12,17 @@ interface Announcement {
   kind: AnnouncementKind;
   published_at: string;
   audience_size: number;
+  email_requested: boolean;
+  email_audience_size: number;
+  email_status: string;
+  email_sent_count: number;
+  email_failed_count: number;
+}
+
+interface AnnouncementAudience {
+  active_verified_accounts: number;
+  marketing_opt_in_accounts: number;
+  email_configured: boolean;
 }
 
 const kindNames: Record<AnnouncementKind, string> = {
@@ -23,10 +34,13 @@ const kindNames: Record<AnnouncementKind, string> = {
 
 export function OwnerAnnouncementPanel() {
   const [audienceSize, setAudienceSize] = useState<number | null>(null);
+  const [marketingAudienceSize, setMarketingAudienceSize] = useState<number | null>(null);
+  const [emailConfigured, setEmailConfigured] = useState(false);
   const [history, setHistory] = useState<Announcement[]>([]);
   const [kind, setKind] = useState<AnnouncementKind>('announcement');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
+  const [sendEmail, setSendEmail] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
@@ -34,10 +48,12 @@ export function OwnerAnnouncementPanel() {
   const refresh = useCallback(async () => {
     try {
       const [audience, announcements] = await Promise.all([
-        apiClient<{ active_verified_accounts: number }>('/api/notifications/owner/audience-size', { requiresAuth: true }),
+        apiClient<AnnouncementAudience>('/api/notifications/owner/audience-size', { requiresAuth: true }),
         apiClient<Announcement[]>('/api/notifications/owner/announcements', { requiresAuth: true }),
       ]);
       setAudienceSize(audience.active_verified_accounts);
+      setMarketingAudienceSize(audience.marketing_opt_in_accounts);
+      setEmailConfigured(audience.email_configured);
       setHistory(announcements);
     } catch (error) {
       setStatus(error instanceof ApiError ? error.message : 'Could not load announcement details.');
@@ -52,11 +68,13 @@ export function OwnerAnnouncementPanel() {
     setBusy(true);
     setStatus('');
     try {
-      const audience = await apiClient<{ active_verified_accounts: number }>(
+      const audience = await apiClient<AnnouncementAudience>(
         '/api/notifications/owner/audience-size',
         { requiresAuth: true },
       );
       setAudienceSize(audience.active_verified_accounts);
+      setMarketingAudienceSize(audience.marketing_opt_in_accounts);
+      setEmailConfigured(audience.email_configured);
       setConfirming(true);
     } catch (error) {
       setStatus(error instanceof ApiError ? error.message : 'Could not refresh the audience count. Please try again.');
@@ -72,14 +90,16 @@ export function OwnerAnnouncementPanel() {
     try {
       const published = await apiClient<Announcement>('/api/notifications/owner/announcements', {
         method: 'POST',
-        body: { title: title.trim(), message: message.trim(), kind },
+        body: { title: title.trim(), message: message.trim(), kind, send_email: sendEmail },
         requiresAuth: true,
       });
       setTitle('');
       setMessage('');
       setConfirming(false);
       setAudienceSize(published.audience_size);
-      setStatus(`Published to ${published.audience_size.toLocaleString()} active, verified accounts. It is now in their in-app inbox.`);
+      setStatus(sendEmail
+        ? `Published in-app to ${published.audience_size.toLocaleString()} accounts. Email: ${published.email_sent_count.toLocaleString()} of ${published.email_audience_size.toLocaleString()} accepted by SMTP, ${published.email_failed_count.toLocaleString()} failed${published.email_status === 'no_recipients' ? ' (no eligible email recipients)' : ''}.`
+        : `Published to ${published.audience_size.toLocaleString()} active, verified accounts. It is now in their in-app inbox.`);
       await refresh();
     } catch (error) {
       setStatus(error instanceof ApiError ? error.message : 'The announcement could not be published.');
@@ -88,6 +108,9 @@ export function OwnerAnnouncementPanel() {
     }
   };
 
+  const isPromotional = kind === 'promotion' || kind === 'product_update';
+  const eligibleEmailCount = isPromotional ? marketingAudienceSize : audienceSize;
+
   return (
     <section className="owner-announcement-panel" aria-labelledby="owner-announcement-heading">
       <div className="owner-announcement-heading">
@@ -95,12 +118,12 @@ export function OwnerAnnouncementPanel() {
         <div>
           <p className="owner-announcement-eyebrow">Owner tools</p>
           <h3 id="owner-announcement-heading">Broadcast to learners</h3>
-          <p>Publish one in-app announcement to all active, verified accounts.</p>
+          <p>Publish to the in-app inbox, and optionally email eligible accounts.</p>
         </div>
         <div className="owner-announcement-audience">
             <Users size={16} aria-hidden="true" />
           <strong>{audienceSize === null ? '—' : audienceSize.toLocaleString()}</strong>
-          <span>accounts</span>
+          <span>in-app accounts</span>
         </div>
       </div>
 
@@ -118,6 +141,13 @@ export function OwnerAnnouncementPanel() {
         <label>Message
           <textarea value={message} onChange={(event) => setMessage(event.target.value)} minLength={10} maxLength={3000} rows={4} required placeholder="Write a short, useful update for your learners." />
         </label>
+        <label className="owner-announcement-email-toggle">
+          <input type="checkbox" checked={sendEmail} onChange={(event) => setSendEmail(event.target.checked)} disabled={!emailConfigured || busy} />
+          <span><strong>Email this message too</strong><small>{isPromotional
+            ? `${eligibleEmailCount === null ? 'Checking' : eligibleEmailCount.toLocaleString()} active, verified accounts have opted in to product and promotional email.`
+            : `${eligibleEmailCount === null ? 'Checking' : eligibleEmailCount.toLocaleString()} active, verified accounts can receive this service announcement by email.`}</small></span>
+        </label>
+        {!emailConfigured && <p className="owner-announcement-email-warning">Email is unavailable because backend SMTP credentials are not configured. In-app publishing still works.</p>}
         <div className="owner-announcement-footer">
           <span>{message.length}/3000</span>
           <button type="submit" disabled={busy || audienceSize === null || audienceSize === 0 || title.trim().length < 4 || message.trim().length < 10}>
@@ -131,7 +161,9 @@ export function OwnerAnnouncementPanel() {
           <AlertTriangle size={18} aria-hidden="true" />
           <div>
             <strong>Publish to {audienceSize?.toLocaleString()} active, verified accounts?</strong>
-            <p>This message will appear in their in-app notification inbox. New accounts created later are not included.</p>
+            <p>This message will appear in their in-app inbox. {sendEmail
+              ? `It will also be emailed to ${eligibleEmailCount?.toLocaleString() ?? 0} ${isPromotional ? 'opted-in promotional email subscribers' : 'active, verified accounts'}.`
+              : 'No email will be sent.'} New accounts created later are not included.</p>
             <div className="owner-announcement-preview"><span>{kindNames[kind]}</span><b>{title.trim()}</b><p>{message.trim()}</p></div>
             <div className="owner-announcement-confirm-actions">
               <button type="button" className="owner-announcement-cancel" onClick={() => setConfirming(false)} disabled={busy}>Go back</button>
@@ -151,11 +183,13 @@ export function OwnerAnnouncementPanel() {
             <div><span>{kindNames[item.kind]}</span><time dateTime={item.published_at}>{new Date(item.published_at).toLocaleString()}</time></div>
             <strong>{item.title}</strong>
             <p>{item.message}</p>
-            <small>Published to {item.audience_size.toLocaleString()} accounts</small>
+            <small>In-app: {item.audience_size.toLocaleString()} accounts{item.email_requested
+              ? ` · Email accepted by SMTP: ${item.email_sent_count.toLocaleString()} of ${item.email_audience_size.toLocaleString()}, failed: ${item.email_failed_count.toLocaleString()}${item.email_status === 'no_recipients' ? ' · no eligible recipients' : ''}`
+              : ' · no email sent'}</small>
           </article>
         ))}
       </div>
-      <p className="owner-announcement-email-note">This system sends in-app notifications. Bulk email is kept separate: professional promotional email requires a verified sender, subscriber consent, unsubscribe handling, and a bulk email provider.</p>
+      <p className="owner-announcement-email-note">Promotions and product updates go only to active, verified accounts that opted in under Settings → Account. General announcements and service notices can be emailed to all active, verified accounts. The owner never sees recipients’ email list in this screen. SMTP acceptance confirms the provider accepted a message; it does not guarantee inbox placement.</p>
     </section>
   );
 }
