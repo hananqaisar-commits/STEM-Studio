@@ -71,6 +71,21 @@ class Settings(BaseSettings):
     EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = Field(default=24, ge=1, le=168)
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = Field(default=20, ge=5, le=120)
 
+    # Safepay recurring subscriptions. Credentials are supplied only through
+    # the backend host's secret environment configuration.
+    SAFEPAY_ENV: str = "sandbox"
+    SAFEPAY_SECRET_KEY: str = ""
+    SAFEPAY_WEBHOOK_SECRET: str = ""
+    SAFEPAY_TIMEOUT_SECONDS: float = Field(default=12, gt=0, le=30)
+
+    @field_validator("SAFEPAY_ENV")
+    @classmethod
+    def validate_safepay_environment(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"sandbox", "production"}:
+            raise ValueError("SAFEPAY_ENV must be sandbox or production")
+        return normalized
+
     # CORS & Frontend
     FRONTEND_URL: str = "http://localhost:5173"
     TRUST_X_FORWARDED_FOR: bool = False

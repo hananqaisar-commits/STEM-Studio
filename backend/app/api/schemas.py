@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
 # ─── Auth Request Schemas ────────────────────────────────────────────
@@ -59,6 +59,131 @@ class OwnerUserStatusRequest(BaseModel):
 class OwnerFeaturePolicyRequest(BaseModel):
     is_premium: bool
     is_enabled: bool = True
+    is_archived: bool = False
+    disabled_until: Optional[datetime] = None
+
+    @model_validator(mode="after")
+    def validate_pause(self):
+        if self.is_enabled and self.disabled_until is not None:
+            raise ValueError("An enabled feature cannot have a pause expiry")
+        if self.disabled_until is not None:
+            point = self.disabled_until
+            if point.tzinfo is None:
+                point = point.replace(tzinfo=timezone.utc)
+            if point <= datetime.now(timezone.utc):
+                raise ValueError("Pause expiry must be in the future")
+        return self
+
+
+class OwnerFeatureCreateRequest(BaseModel):
+    feature_key: str = Field(..., min_length=2, max_length=80, pattern=r"^[a-z0-9][a-z0-9._-]*$")
+    label: str = Field(..., min_length=2, max_length=120)
+    description: str = Field(default="", max_length=500)
+    is_premium: bool = False
+    is_enabled: bool = True
+
+
+class PlanWriteRequest(BaseModel):
+    code: str = Field(..., min_length=2, max_length=80, pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    name: str = Field(..., min_length=2, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    price_minor: int = Field(..., ge=0, le=100_000_000)
+    list_price_minor: Optional[int] = Field(default=None, ge=0, le=100_000_000)
+    discount_label: Optional[str] = Field(default=None, max_length=80)
+    currency: Literal["PKR", "USD"] = "PKR"
+    billing_interval: Literal["monthly", "yearly"] = "monthly"
+    is_free: bool = False
+    is_active: bool = True
+    is_public: bool = True
+    is_featured: bool = False
+    safepay_plan_id: Optional[str] = Field(default=None, max_length=120)
+    feature_keys: List[str] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_plan(self):
+        if self.is_free and self.price_minor != 0:
+            raise ValueError("Free plans must have a zero price")
+        if not self.is_free and self.price_minor <= 0:
+            raise ValueError("Paid plans must have a positive price")
+        if self.list_price_minor is not None and self.list_price_minor < self.price_minor:
+            raise ValueError("The regular price cannot be lower than the amount charged")
+        if self.is_free and self.list_price_minor not in (None, 0):
+            raise ValueError("Free plans cannot have a regular paid price")
+        if self.is_free and self.billing_interval not in {"monthly", "yearly"}:
+            raise ValueError("Invalid billing interval")
+        if len(set(self.feature_keys)) != len(self.feature_keys):
+            raise ValueError("Feature keys must be unique")
+        return self
+
+
+class ManualPaymentMethodWriteRequest(BaseModel):
+    provider_key: Literal["easypaisa", "jazzcash", "bank_transfer", "other"]
+    label: str = Field(..., min_length=2, max_length=100)
+    account_name: str = Field(..., min_length=2, max_length=120)
+    account_identifier: str = Field(..., min_length=3, max_length=160)
+    instructions: str = Field(default="", max_length=1000)
+    currency: Literal["PKR", "USD"] = "PKR"
+    is_active: bool = True
+
+
+class ManualPaymentClaimRequest(BaseModel):
+    plan_id: int = Field(..., ge=1)
+    payment_method_id: int = Field(..., ge=1)
+    transaction_reference: str = Field(..., min_length=4, max_length=160)
+
+
+class ManualPaymentReviewRequest(BaseModel):
+    approve: bool
+    owner_note: str = Field(default="", max_length=500)
+
+
+class OwnerSubscriptionActionRequest(BaseModel):
+    action: Literal["grant", "suspend", "restore", "end"]
+    plan_id: Optional[int] = Field(default=None, ge=1)
+    duration_days: Optional[int] = Field(default=30, ge=1, le=366)
+
+
+class OwnerAdConfigurationRequest(BaseModel):
+    is_enabled: bool = False
+    publisher_id: str = Field(default="", max_length=40, pattern=r"^(|pub-[0-9]{16})$")
+    landing_slot_id: str = Field(default="", max_length=40, pattern=r"^(|[0-9]{1,40})$")
+    learner_slot_id: str = Field(default="", max_length=40, pattern=r"^(|[0-9]{1,40})$")
+
+
+class AnnouncementDeleteRequest(BaseModel):
+    announcement_ids: List[int] = Field(default_factory=list, max_length=100)
+    delete_all: bool = False
+
+    @model_validator(mode="after")
+    def require_scope(self):
+        if not self.delete_all and not self.announcement_ids:
+            raise ValueError("Select broadcasts to delete or choose delete_all")
+        if len(set(self.announcement_ids)) != len(self.announcement_ids):
+            raise ValueError("Broadcast IDs must be unique")
+        return self
+
+
+class AuditDeleteRequest(BaseModel):
+    event_ids: List[int] = Field(default_factory=list, max_length=200)
+    older_than_days: Optional[int] = Field(default=None, ge=30, le=3650)
+    delete_all: bool = False
+
+    @model_validator(mode="after")
+    def require_scope(self):
+        if not self.event_ids and self.older_than_days is None and not self.delete_all:
+            raise ValueError("Select audit events, specify a retention age, or choose delete_all")
+        if len(set(self.event_ids)) != len(self.event_ids):
+            raise ValueError("Audit event IDs must be unique")
+        return self
+
+
+class BillingCheckoutRequest(BaseModel):
+    plan_id: int = Field(..., ge=1)
+
+
+class BillingCheckoutResponse(BaseModel):
+    checkout_url: str
+    reference: str
 
 
 class OwnerFeatureGrantRequest(BaseModel):
@@ -227,6 +352,8 @@ class AnnouncementResponse(BaseModel):
     kind: str
     published_at: datetime
     is_read: bool = False
+    source: Literal["announcement", "billing"] = "announcement"
+    notification_id: Optional[str] = None
 
 
 class NotificationInboxResponse(BaseModel):

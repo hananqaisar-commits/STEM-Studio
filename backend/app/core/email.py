@@ -14,35 +14,54 @@ from backend.app.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+def smtp_is_configured() -> bool:
+    """Return whether the backend has usable SMTP settings without exposing them."""
+    settings = get_settings()
+    return bool(settings.SMTP_HOST.strip() and settings.SMTP_USER.strip() and "".join(settings.SMTP_PASSWORD.split()))
+
+
+def _smtp_password() -> str:
+    # Google displays App Passwords in groups separated by spaces. Those
+    # spaces are presentation only; remove them before SMTP authentication.
+    return "".join(get_settings().SMTP_PASSWORD.split())
+
+
 def _send_email(to_email: str, subject: str, text_content: str, html_content: str) -> bool:
     """Deliver one transactional email; never log addresses, links, or secrets."""
     settings = get_settings()
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    if not smtp_is_configured():
         logger.error("SMTP delivery skipped: provider credentials are not configured")
         return False
 
-    sender_email = settings.EMAILS_FROM_EMAIL.strip() or settings.SMTP_USER.strip()
+    smtp_host = settings.SMTP_HOST.strip()
+    smtp_user = settings.SMTP_USER.strip()
+    sender_email = settings.EMAILS_FROM_EMAIL.strip() or smtp_user
+    sender_name = " ".join(settings.EMAILS_FROM_NAME.replace("\r", " ").replace("\n", " ").split())
     message = MIMEMultipart("alternative")
     message["Subject"] = subject
-    message["From"] = formataddr((settings.EMAILS_FROM_NAME, sender_email))
+    message["From"] = formataddr((sender_name, sender_email))
     message["To"] = to_email
     message.attach(MIMEText(text_content, "plain", "utf-8"))
     message.attach(MIMEText(html_content, "html", "utf-8"))
 
     try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+        with smtplib.SMTP(smtp_host, settings.SMTP_PORT, timeout=15) as server:
             server.ehlo()
             if settings.SMTP_TLS:
                 server.starttls(context=ssl.create_default_context())
                 server.ehlo()
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.login(smtp_user, _smtp_password())
             refused = server.sendmail(sender_email, [to_email], message.as_string())
             if refused:
                 raise smtplib.SMTPRecipientsRefused(refused)
         logger.info("Transactional email accepted by configured SMTP provider")
         return True
-    except (OSError, smtplib.SMTPException, ssl.SSLError) as exc:
-        logger.error("SMTP delivery failed (%s)", type(exc).__name__)
+    except Exception as exc:
+        # SMTP response codes help an operator distinguish authentication,
+        # sender policy, and transient provider failures without logging an
+        # address, message body, verification URL, or credential.
+        smtp_code = getattr(exc, "smtp_code", None)
+        logger.error("SMTP delivery failed (%s; provider code %s)", type(exc).__name__, smtp_code or "unavailable")
         return False
 
 
@@ -78,6 +97,28 @@ The STEM Studio Team
         f"Reset your password — {settings.APP_NAME}",
         text_content,
         html_content,
+    )
+
+
+def send_billing_notice_email(to_email: str, subject: str, body: str) -> bool:
+    """Deliver a transactional billing notice; no marketing opt-in is needed."""
+    settings = get_settings()
+    safe_subject = " ".join(subject.replace("\r", " ").replace("\n", " ").split())[:140]
+    safe_body = body.strip()[:4000]
+    escaped_subject = html.escape(safe_subject)
+    escaped_body = html.escape(safe_body).replace("\n", "<br>")
+    return _send_email(
+        to_email,
+        f"{safe_subject} — {settings.APP_NAME}",
+        f"{safe_body}\n\nYour account and saved progress remain under your control. Open Billing in STEM Studio to review your plan.",
+        (
+            '<!doctype html><html><body style="font-family:Arial,sans-serif;background:#f4f7fb;color:#172033;margin:0;padding:28px">'
+            '<main style="max-width:560px;margin:auto;background:#fff;border:1px solid #dce4ee;border-radius:14px;padding:28px">'
+            f'<p style="font-size:18px;font-weight:700;color:#176b87">{html.escape(settings.APP_NAME)}</p>'
+            f'<h1 style="font-size:21px">{escaped_subject}</h1><p style="line-height:1.6">{escaped_body}</p>'
+            '<p style="font-size:13px;color:#536277">Your account and saved progress remain under your control. Sign in and open Billing to review your plan.</p>'
+            '</main></body></html>'
+        ),
     )
 
 
@@ -124,12 +165,15 @@ def send_owner_broadcast_emails(
     per-user status and a coarse exception category.
     """
     settings = get_settings()
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    if not smtp_is_configured():
         return {user_id: ("failed", "smtp_not_configured") for user_id, _ in recipients}
     if not recipients:
         return {}
 
-    sender_email = settings.EMAILS_FROM_EMAIL.strip() or settings.SMTP_USER.strip()
+    smtp_host = settings.SMTP_HOST.strip()
+    smtp_user = settings.SMTP_USER.strip()
+    sender_email = settings.EMAILS_FROM_EMAIL.strip() or smtp_user
+    sender_name = " ".join(settings.EMAILS_FROM_NAME.replace("\r", " ").replace("\n", " ").split())
     safe_subject = " ".join(subject.replace("\r", " ").replace("\n", " ").split())[:140]
     safe_body = body.strip()
     manage_note = (
@@ -145,16 +189,16 @@ def send_owner_broadcast_emails(
     statuses: dict[int, tuple[str, str | None]] = {}
     server = None
     try:
-        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
+        server = smtplib.SMTP(smtp_host, settings.SMTP_PORT, timeout=15)
         server.ehlo()
         if settings.SMTP_TLS:
             server.starttls(context=ssl.create_default_context())
             server.ehlo()
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        server.login(smtp_user, _smtp_password())
         for user_id, address in recipients:
             message = EmailMessage()
             message["Subject"] = safe_subject
-            message["From"] = formataddr((settings.EMAILS_FROM_NAME, sender_email))
+            message["From"] = formataddr((sender_name, sender_email))
             message["To"] = address
             message.set_content(
                 f"{safe_body}\n\n{manage_note}Best regards,\n{settings.APP_NAME}\n"

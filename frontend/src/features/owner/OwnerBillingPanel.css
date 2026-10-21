@@ -1,0 +1,51 @@
+.owner-billing-panel { max-width:1440px; }
+.owner-billing-tabs { display:flex; gap:6px; overflow:auto; margin:18px 0; padding-bottom:4px; }
+.owner-billing-tabs button { display:flex; align-items:center; gap:6px; min-height:34px; padding:0 10px; flex:0 0 auto; border:1px solid var(--color-border); border-radius:8px; color:var(--color-text-secondary); background:var(--color-surface); font:inherit; font-size:10px; font-weight:750; cursor:pointer; }
+.owner-billing-tabs button.active { color:var(--color-primary); border-color:color-mix(in srgb,var(--color-primary) 55%,var(--color-border)); background:color-mix(in srgb,var(--color-primary) 7%,var(--color-surface)); }
+.owner-billing-tabs b { display:grid; place-items:center; min-width:17px; height:17px; padding:0 4px; border-radius:99px; color:#fff; background:var(--color-primary); font-size:9px; }
+.owner-billing-columns { display:grid; grid-template-columns:minmax(280px,1.05fr) minmax(280px,.95fr); gap:14px; align-items:start; }
+.owner-billing-form,.owner-billing-list,.owner-ad-settings { min-width:0; padding:15px; border:1px solid var(--color-border); border-radius:11px; background:var(--color-surface); }
+.owner-billing-form h3,.owner-billing-list h3,.owner-grant-plan h3,.owner-ad-settings h3 { margin:0 0 12px; font-size:13px; }
+.owner-billing-form>label { display:grid; gap:5px; margin-top:9px; color:var(--color-text-secondary); font-size:10px; font-weight:700; }
+.owner-billing-form input:not([type=checkbox]),.owner-billing-form select,.owner-billing-form textarea,.owner-plan-features>input { width:100%; min-width:0; min-height:35px; padding:7px 9px; border:1px solid var(--color-border); border-radius:7px; color:var(--color-text); background:var(--color-app-bg); font:inherit; font-size:10px; }
+.owner-billing-form textarea { resize:vertical; }
+.owner-billing-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.owner-billing-form-grid label { display:grid; gap:5px; min-width:0; color:var(--color-text-secondary); font-size:9px; font-weight:700; }
+.owner-billing-check-row { display:flex!important; flex-wrap:wrap; gap:14px!important; align-items:center; margin:11px 0!important; color:var(--color-text-secondary); font-size:10px; }
+.owner-billing-check-row input { accent-color:var(--color-primary); }
+.owner-plan-features { margin:12px 0 0; padding:10px; border:1px solid var(--color-border); border-radius:8px; }
+.owner-plan-features legend { padding:0 4px; color:var(--color-text-secondary); font-size:10px; font-weight:800; }
+.owner-plan-features>input { margin:3px 0 7px; }
+.owner-plan-features>div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 9px; max-height:230px; overflow:auto; padding:4px; }
+.owner-plan-features>div label { display:flex; align-items:flex-start; gap:5px; min-width:0; color:var(--color-text-secondary); font-size:9px; line-height:1.35; cursor:pointer; }
+.owner-plan-features>div input { flex:0 0 auto; margin:0; accent-color:var(--color-primary); }
+.owner-billing-caption { color:var(--color-text-muted); font-size:9px; line-height:1.5; }
+.owner-billing-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.owner-billing-actions button,.owner-billing-list article>button,.owner-billing-table td button { min-height:29px; padding:0 8px; border:1px solid var(--color-border); border-radius:7px; color:var(--color-text-secondary); background:var(--color-surface); font:inherit; font-size:9px; font-weight:750; cursor:pointer; }
+.owner-billing-actions button:hover,.owner-billing-list article>button:hover,.owner-billing-table td button:hover { color:var(--color-primary); border-color:var(--color-primary); }
+.owner-primary { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; padding:0 11px; border:0; border-radius:8px; color:#fff!important; background:var(--color-primary)!important; font:inherit; font-size:10px; font-weight:800; cursor:pointer; }
+.owner-primary:disabled,.owner-secondary:disabled { opacity:.55; cursor:not-allowed; }
+.owner-billing-list article { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-top:1px solid var(--color-border); }
+.owner-billing-list article>div { display:grid; min-width:0; gap:3px; }
+.owner-billing-list article strong { font-size:11px; }
+.owner-billing-list article small,.owner-billing-list article span { color:var(--color-text-muted); font-size:9px; overflow-wrap:anywhere; }
+.owner-billing-alert { display:flex; align-items:flex-start; gap:8px; margin:0 0 13px; padding:10px; color:var(--color-text-secondary); background:color-mix(in srgb,var(--color-primary) 7%,var(--color-surface)); border:1px solid var(--color-border); border-radius:8px; font-size:10px; line-height:1.5; }
+.owner-billing-alert svg { flex:0 0 auto; color:var(--color-primary); }
+.owner-billing-table { width:100%; overflow:auto; border:1px solid var(--color-border); border-radius:10px; }
+.owner-billing-table table { width:100%; min-width:760px; border-collapse:collapse; text-align:left; }
+.owner-billing-table th,.owner-billing-table td { padding:10px; border-bottom:1px solid var(--color-border); vertical-align:top; color:var(--color-text-secondary); font-size:9px; }
+.owner-billing-table th { color:var(--color-text-muted); background:var(--color-surface); font-size:8px; text-transform:uppercase; letter-spacing:.06em; }
+.owner-billing-table td strong,.owner-billing-table td small { display:block; }
+.owner-billing-table td strong { color:var(--color-text); font-size:10px; }
+.owner-billing-table td small { margin-top:3px; color:var(--color-text-muted); overflow-wrap:anywhere; }
+.owner-billing-table td .owner-billing-actions { min-width:125px; }
+.owner-grant-plan { display:grid; grid-template-columns:minmax(200px,1.4fr) minmax(150px,1fr) minmax(130px,.8fr) 70px auto; align-items:center; gap:8px; margin-bottom:13px; padding:13px; border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface); }
+.owner-grant-plan h3 { margin:0 0 3px; font-size:11px; }
+.owner-grant-plan p,.owner-ad-settings p { margin:0; color:var(--color-text-muted); font-size:9px; line-height:1.5; }
+.owner-grant-plan select,.owner-grant-plan input { min-width:0; min-height:34px; padding:0 7px; border:1px solid var(--color-border); border-radius:7px; color:var(--color-text); background:var(--color-app-bg); font:inherit; font-size:9px; }
+.owner-ad-settings>div:first-child p { margin-bottom:12px; }
+.owner-ad-settings>label { display:flex; align-items:center; gap:7px; margin:10px 0; color:var(--color-text-secondary); font-size:10px; }
+.owner-ad-settings input[type=checkbox] { accent-color:var(--color-primary); }
+.owner-ad-settings>.owner-primary { margin-top:12px; }
+@media(max-width:850px) { .owner-billing-columns { grid-template-columns:1fr; }.owner-grant-plan { grid-template-columns:1fr 1fr; }.owner-grant-plan>div:first-child { grid-column:1/-1; } }
+@media(max-width:540px) { .owner-billing-form-grid,.owner-plan-features>div { grid-template-columns:1fr; }.owner-grant-plan { grid-template-columns:1fr; }.owner-grant-plan>div:first-child { grid-column:auto; } }

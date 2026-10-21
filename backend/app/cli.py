@@ -265,6 +265,53 @@ def diagnose_owner() -> int:
         db.close()
 
 
+def process_billing_webhooks() -> int:
+    """Retry payment events whose post-ack processing did not finish."""
+    from backend.app.core.billing_service import retry_queued_webhooks
+
+    try:
+        result = retry_queued_webhooks(limit=250)
+    except Exception as exc:
+        print(f"Billing webhook queue failed ({type(exc).__name__}).", file=sys.stderr)
+        return 1
+    print(f"Payment webhook processing attempts: {result['processed_attempts']}")
+    return 0
+
+
+def run_billing_lifecycle_command() -> int:
+    """Send due renewal notices, apply one-day hold, then expire unpaid plans."""
+    from backend.app.core.billing_service import run_billing_lifecycle
+
+    db = SessionLocal()
+    try:
+        result = run_billing_lifecycle(db)
+        print(
+            "Billing lifecycle complete: "
+            f"notices={result['notices']} held={result['held']} "
+            f"expired={result['expired']} email_sent={result['email_sent']}"
+        )
+        return 0
+    except Exception as exc:
+        db.rollback()
+        print(f"Billing lifecycle failed ({type(exc).__name__}).", file=sys.stderr)
+        return 1
+    finally:
+        db.close()
+
+
+def process_broadcast_email_queue() -> int:
+    """Retry durable announcement email outbox entries from a scheduled worker."""
+    from backend.app.api.routes.notifications import process_queued_announcement_emails
+
+    try:
+        result = process_queued_announcement_emails(limit=100)
+    except Exception as exc:
+        print(f"Broadcast email queue failed ({type(exc).__name__}).", file=sys.stderr)
+        return 1
+    print(f"Broadcast announcements processed: {result['announcements_processed']}")
+    return 0
+
+
 def main() -> int:
     # DEBUG=true enables SQLAlchemy's echo mode elsewhere in the app. Admin
     # commands handle password hashes and MFA credentials, so never emit SQL
@@ -278,6 +325,9 @@ def main() -> int:
     subparsers.add_parser("reset-owner-mfa", help="Re-enroll the provisioned owner after password verification")
     subparsers.add_parser("reset-owner-password", help="Recover the provisioned owner password from this trusted shell")
     subparsers.add_parser("diagnose-owner", help="Check owner login against this configured database")
+    subparsers.add_parser("process-billing-webhooks", help="Retry queued signed payment webhooks")
+    subparsers.add_parser("run-billing-lifecycle", help="Run subscription renewal notices and expiry transitions")
+    subparsers.add_parser("process-broadcast-email-queue", help="Retry queued broadcast email delivery rows")
     args = parser.parse_args()
     if args.command == "create-owner":
         return create_owner()
@@ -287,6 +337,12 @@ def main() -> int:
         return reset_owner_password()
     if args.command == "diagnose-owner":
         return diagnose_owner()
+    if args.command == "process-billing-webhooks":
+        return process_billing_webhooks()
+    if args.command == "run-billing-lifecycle":
+        return run_billing_lifecycle_command()
+    if args.command == "process-broadcast-email-queue":
+        return process_broadcast_email_queue()
     return 2
 
 
