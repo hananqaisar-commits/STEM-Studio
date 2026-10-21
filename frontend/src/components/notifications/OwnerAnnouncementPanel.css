@@ -107,6 +107,13 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 17%, transparent);
 }
 
+.owner-announcement-email-toggle { display:flex!important; grid-template-columns:20px minmax(0,1fr); align-items:flex-start; gap:10px!important; padding:12px; color:var(--color-text)!important; background:color-mix(in srgb,var(--color-primary) 5%,var(--color-surface)); border:1px solid var(--color-border); border-radius:10px; cursor:pointer; }
+.owner-announcement-email-toggle>input { width:16px; height:16px; min-height:16px; margin:2px 0 0; accent-color:var(--color-primary); }
+.owner-announcement-email-toggle>span { display:grid; gap:3px; }
+.owner-announcement-email-toggle strong { font-size:11px; }
+.owner-announcement-email-toggle small { color:var(--color-text-muted); font-size:10px; font-weight:500; line-height:1.45; }
+.owner-announcement-email-warning { margin:0; padding:9px 10px; color:#8a5a12; background:color-mix(in srgb,#f59e0b 9%,var(--color-surface)); border:1px solid color-mix(in srgb,#f59e0b 28%,var(--color-border)); border-radius:8px; font-size:10px; line-height:1.45; }
+
 .owner-announcement-footer {
   display: flex;
   justify-content: space-between;

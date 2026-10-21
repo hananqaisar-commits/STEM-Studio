@@ -1,8 +1,10 @@
 """SMTP delivery for account verification and password recovery."""
 
+import html
 import logging
 import smtplib
 import ssl
+from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
@@ -106,3 +108,86 @@ If you did not create this account, ignore this email.
         text_content,
         html_content,
     )
+
+
+def send_owner_broadcast_emails(
+    recipients: list[tuple[int, str]],
+    *,
+    subject: str,
+    body: str,
+    promotional: bool,
+) -> dict[int, tuple[str, str | None]]:
+    """Send one private message per recipient over a single SMTP connection.
+
+    Recipient addresses are never placed in the same message, exposed in a
+    shared To/Bcc header, or written to logs. The return value contains only
+    per-user status and a coarse exception category.
+    """
+    settings = get_settings()
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        return {user_id: ("failed", "smtp_not_configured") for user_id, _ in recipients}
+    if not recipients:
+        return {}
+
+    sender_email = settings.EMAILS_FROM_EMAIL.strip() or settings.SMTP_USER.strip()
+    safe_subject = " ".join(subject.replace("\r", " ").replace("\n", " ").split())[:140]
+    safe_body = body.strip()
+    manage_note = (
+        "To stop product and promotional email, sign in and turn it off in "
+        "Settings → Account.\n\n"
+        if promotional else ""
+    )
+    promo_html_note = (
+        '<p style="font-size:12px;color:#667085">To stop product and promotional email, '
+        'sign in and turn it off in Settings → Account.</p>'
+        if promotional else ""
+    )
+    statuses: dict[int, tuple[str, str | None]] = {}
+    server = None
+    try:
+        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
+        server.ehlo()
+        if settings.SMTP_TLS:
+            server.starttls(context=ssl.create_default_context())
+            server.ehlo()
+        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        for user_id, address in recipients:
+            message = EmailMessage()
+            message["Subject"] = safe_subject
+            message["From"] = formataddr((settings.EMAILS_FROM_NAME, sender_email))
+            message["To"] = address
+            message.set_content(
+                f"{safe_body}\n\n{manage_note}Best regards,\n{settings.APP_NAME}\n"
+            )
+            message.add_alternative(
+                "<!doctype html><html><body style=\"font-family:Arial,sans-serif;line-height:1.6;"
+                "color:#172033;max-width:640px;margin:24px auto;padding:24px\">"
+                f"<p style=\"font-weight:700;color:#176b87\">{html.escape(settings.APP_NAME)}</p>"
+                f"<h2>{html.escape(safe_subject)}</h2>"
+                f"<p style=\"white-space:pre-wrap\">{html.escape(safe_body)}</p>"
+                f"{promo_html_note}"
+                f"<p>Best regards,<br>{html.escape(settings.APP_NAME)}</p></body></html>",
+                subtype="html",
+            )
+            try:
+                refused = server.send_message(message, from_addr=sender_email, to_addrs=[address])
+                statuses[user_id] = ("failed", "recipient_refused") if refused else ("sent", None)
+            except smtplib.SMTPRecipientsRefused:
+                statuses[user_id] = ("failed", "recipient_refused")
+            except (OSError, smtplib.SMTPException, ssl.SSLError) as exc:
+                statuses[user_id] = ("failed", type(exc).__name__[:64])
+                for pending_id, _ in recipients:
+                    if pending_id not in statuses:
+                        statuses[pending_id] = ("failed", type(exc).__name__[:64])
+                break
+    except (OSError, smtplib.SMTPException, ssl.SSLError) as exc:
+        logger.error("Owner broadcast email delivery failed (%s)", type(exc).__name__)
+        for user_id, _ in recipients:
+            statuses.setdefault(user_id, ("failed", type(exc).__name__[:64]))
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except (OSError, smtplib.SMTPException):
+                pass
+    return statuses

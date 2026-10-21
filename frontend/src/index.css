@@ -302,3 +302,19 @@ img, video, svg, canvas {
     width: 4px;
   }
 }
+/* Entitlement gate for owner-managed premium modules */
+.feature-access-state {
+  width: min(620px, calc(100% - 32px));
+  margin: clamp(64px, 12vh, 120px) auto;
+  padding: clamp(22px, 5vw, 38px);
+  color: var(--color-text);
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-md, 0 18px 50px rgba(15, 23, 42, 0.12));
+}
+.feature-access-kicker { color: var(--color-primary); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.feature-access-state h1 { margin: 8px 0; font-size: clamp(22px, 4vw, 30px); line-height: 1.2; letter-spacing: -.03em; }
+.feature-access-state p { color: var(--color-text-muted); font-size: 14px; line-height: 1.6; }
+.feature-access-state button { min-height: 40px; margin-top: 8px; padding: 0 15px; color: #fff; background: var(--color-primary); border: 0; border-radius: 10px; font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; }

@@ -14,15 +14,20 @@ from backend.app.api.schemas import (
 )
 from backend.app.core.owner_security import record_admin_event
 from backend.app.core.rate_limit import strict
+from backend.app.core.config import get_settings
+from backend.app.core.email import send_owner_broadcast_emails
 from backend.infrastructure.database.database import get_db
 from backend.infrastructure.database.models import (
     Announcement,
+    AnnouncementEmailDelivery,
     AnnouncementRead,
     AnnouncementRecipient,
     User,
+    UserPreference,
 )
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
+settings = get_settings()
 
 
 def _announcement_response(announcement: Announcement, is_read: bool) -> AnnouncementResponse:
@@ -152,7 +157,18 @@ def get_owner_audience_size(
 ):
     eligible = (User.is_active.is_(True), User.is_verified.is_(True))
     count = db.query(func.count(User.user_id)).filter(*eligible).scalar() or 0
-    return {"active_verified_accounts": count}
+    marketing_count = (
+        db.query(func.count(User.user_id))
+        .join(UserPreference, UserPreference.user_id == User.user_id)
+        .filter(*eligible, UserPreference.marketing_email_opt_in.is_(True))
+        .scalar()
+        or 0
+    )
+    return {
+        "active_verified_accounts": count,
+        "marketing_opt_in_accounts": marketing_count,
+        "email_configured": bool(settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD),
+    }
 
 
 @router.get("/owner/announcements", response_model=list[AnnouncementAdminResponse])
@@ -170,6 +186,11 @@ def list_owner_announcements(
         AnnouncementAdminResponse(
             **_announcement_response(announcement, False).model_dump(),
             audience_size=announcement.audience_size,
+            email_requested=announcement.email_requested,
+            email_audience_size=announcement.email_audience_size,
+            email_status=announcement.email_status,
+            email_sent_count=announcement.email_sent_count,
+            email_failed_count=announcement.email_failed_count,
         )
         for announcement in announcements
     ]
@@ -187,11 +208,20 @@ def publish_announcement(
     db: Session = Depends(get_db),
     _rate: None = Depends(strict),
 ):
-    """Publish one in-app announcement to every active, verified account at send time."""
+    """Publish in-app and optionally email a consent-aware account audience."""
+    if payload.send_email and not (settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email delivery is unavailable because the backend SMTP provider is not configured.",
+        )
+
+    promotional = payload.kind in {"promotion", "product_update"}
     announcement = Announcement(
         title=payload.title.strip(),
         message=payload.message.strip(),
         kind=payload.kind,
+        email_requested=payload.send_email,
+        email_status="queued" if payload.send_email else "not_requested",
         created_by_user_id=current_user.user_id,
         published_at=datetime.now(timezone.utc),
     )
@@ -211,16 +241,95 @@ def publish_announcement(
         .scalar()
         or 0
     )
+
+    email_recipients: list[tuple[int, str]] = []
+    if payload.send_email:
+        recipients_query = db.query(User.user_id, User.email).filter(
+            User.is_active.is_(True), User.is_verified.is_(True)
+        )
+        if promotional:
+            recipients_query = recipients_query.join(
+                UserPreference, UserPreference.user_id == User.user_id
+            ).filter(UserPreference.marketing_email_opt_in.is_(True))
+        email_recipients = [(int(user_id), address) for user_id, address in recipients_query.order_by(User.user_id).all()]
+        announcement.email_audience_size = len(email_recipients)
+        db.add_all(
+            AnnouncementEmailDelivery(
+                announcement_id=announcement.announcement_id,
+                user_id=user_id,
+                status="queued",
+            )
+            for user_id, _ in email_recipients
+        )
+    announcement_id = announcement.announcement_id
+    announcement_title = announcement.title
+    announcement_message = announcement.message
+    in_app_audience_size = announcement.audience_size
+    db.commit()
+
     record_admin_event(
         db,
         actor_user_id=current_user.user_id,
         action="announcement.publish",
-        details={"announcement_id": announcement.announcement_id, "audience_size": announcement.audience_size, "kind": announcement.kind},
+        details={
+            "announcement_id": announcement_id,
+            "audience_size": in_app_audience_size,
+            "kind": payload.kind,
+            "email_requested": payload.send_email,
+            "email_audience_size": len(email_recipients),
+        },
         ip_address=request.client.host if request.client else None,
     )
     db.commit()
+
+    if payload.send_email:
+        delivery_results = send_owner_broadcast_emails(
+            email_recipients,
+            subject=announcement_title,
+            body=announcement_message,
+            promotional=promotional,
+        )
+        attempted_at = datetime.now(timezone.utc)
+        sent_count = sum(1 for outcome, _ in delivery_results.values() if outcome == "sent")
+        failed_count = len(email_recipients) - sent_count
+        with db.begin():
+            for user_id, (outcome, error_type) in delivery_results.items():
+                delivery = db.query(AnnouncementEmailDelivery).filter_by(
+                    announcement_id=announcement_id,
+                    user_id=user_id,
+                ).first()
+                if delivery is not None:
+                    delivery.status = outcome
+                    delivery.error_type = error_type
+                    delivery.attempted_at = attempted_at
+            current_announcement = db.query(Announcement).filter_by(announcement_id=announcement_id).one()
+            current_announcement.email_sent_count = sent_count
+            current_announcement.email_failed_count = failed_count
+            current_announcement.email_status = (
+                "no_recipients" if not email_recipients
+                else "sent" if failed_count == 0
+                else "failed" if sent_count == 0
+                else "partial"
+            )
+            record_admin_event(
+                db,
+                actor_user_id=current_user.user_id,
+                action="announcement.email_delivery",
+                details={
+                    "announcement_id": announcement_id,
+                    "audience_size": len(email_recipients),
+                    "sent": sent_count,
+                    "failed": failed_count,
+                },
+                ip_address=request.client.host if request.client else None,
+            )
     db.refresh(announcement)
     return AnnouncementAdminResponse(
         **_announcement_response(announcement, False).model_dump(),
         audience_size=announcement.audience_size,
+        email_requested=announcement.email_requested,
+        email_audience_size=announcement.email_audience_size,
+        email_status=announcement.email_status,
+        email_sent_count=announcement.email_sent_count,
+        email_failed_count=announcement.email_failed_count,
     )

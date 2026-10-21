@@ -20,6 +20,7 @@ try:
         OctaTutorPreferenceRequest,
     )
     from backend.app.core.config import get_settings
+    from backend.app.core.feature_access import FEATURE_LABELS, require_feature_access
     from backend.app.core.rate_limit import RateLimiter
     from backend.infrastructure.database.database import get_db
     from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User
@@ -35,6 +36,7 @@ except ModuleNotFoundError:
         OctaTutorPreferenceRequest,
     )
     from app.core.config import get_settings
+    from app.core.feature_access import FEATURE_LABELS, require_feature_access
     from app.core.rate_limit import RateLimiter
     from infrastructure.database.database import get_db
     from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User
@@ -1646,6 +1648,7 @@ def resolve_llm_config(
     Resolves (endpoint_url, api_key, model_name, provider_type) based on user's BYOK settings or system defaults.
     """
     settings = get_settings()
+
     provider_clean = (provider or "dashscope").lower().strip()
 
     # Determine API key
@@ -1845,6 +1848,9 @@ async def handle_octa_tutor(
     Context-aware AI Tutor. Supports Bring-Your-Own-Key (BYOK) for OpenAI, Qwen, OpenRouter, Anthropic, or Custom LLMs.
     """
     settings = get_settings()
+
+    if req_data.category in FEATURE_LABELS or req_data.category in {"commands", "filesystem"}:
+        require_feature_access(db, current_user, req_data.category)
 
     # Rate limiting: 20 requests per minute per IP
     client_ip = request.client.host if request.client else "unknown"

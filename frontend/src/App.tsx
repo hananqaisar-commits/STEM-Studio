@@ -16,6 +16,7 @@ import { NotFoundPage } from './features/NotFoundPage';
 import { MarketingHome } from './features/marketing/MarketingHome';
 import { MarketingFooter } from './features/marketing/MarketingFooter';
 import { OwnerControlCenter } from './features/owner/OwnerControlCenter';
+import { apiClient } from './api/apiClient';
 
 // Lazy-loaded page components for code-splitting
 const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
@@ -77,11 +78,17 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-const GatedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+type EntitlementsResponse = { features: Array<{ feature_key: string; label: string; has_access: boolean; is_premium: boolean; is_enabled: boolean }> };
+
+const GatedRoute: React.FC<{ children: React.ReactNode; featureKey?: string }> = ({ children, featureKey }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { requireAuth } = useAuthPrompt();
   const navigate = useNavigate();
   const location = useLocation();
+  const [accessState, setAccessState] = useState<'idle' | 'loading' | 'allowed' | 'denied' | 'error'>('idle');
+  const [featureLabel, setFeatureLabel] = useState('This module');
+  const [featureMessage, setFeatureMessage] = useState('This module requires premium access or an owner-granted entitlement.');
+  const [checkedFeatureKey, setCheckedFeatureKey] = useState('');
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -90,8 +97,41 @@ const GatedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   }, [isAuthenticated, isLoading, location.pathname, location.search, navigate, requireAuth]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!isAuthenticated || !featureKey || user?.is_owner_session) {
+      setAccessState('allowed');
+      setCheckedFeatureKey(featureKey ?? '');
+      return () => { cancelled = true; };
+    }
+    setAccessState('loading');
+    setCheckedFeatureKey('');
+    apiClient<EntitlementsResponse>('/api/entitlements/me', { requiresAuth: true })
+      .then((response) => {
+        if (cancelled) return;
+        const feature = response.features.find((item) => item.feature_key === featureKey);
+        if (!feature) {
+          setCheckedFeatureKey(featureKey);
+          setAccessState('error');
+          return;
+        }
+        setFeatureLabel(feature.label);
+        setFeatureMessage(!feature.is_enabled
+          ? 'The owner has disabled this module for learner accounts. It will become available when the module is enabled again.'
+          : 'This module requires premium access or an owner-granted entitlement. Contact the STEM Studio owner to request access.');
+        setCheckedFeatureKey(featureKey);
+        setAccessState(feature.has_access ? 'allowed' : 'denied');
+      })
+      .catch(() => { if (!cancelled) { setCheckedFeatureKey(featureKey); setAccessState('error'); } });
+    return () => { cancelled = true; };
+  }, [featureKey, isAuthenticated, user?.is_owner_session]);
+
   if (isLoading) return <LoadingScreen message="Checking session..." />;
-  return isAuthenticated ? <>{children}</> : <DashboardHome />;
+  if (!isAuthenticated) return <DashboardHome />;
+  if (featureKey && !user?.is_owner_session && (accessState === 'loading' || checkedFeatureKey !== featureKey)) return <LoadingScreen message="Checking module access..." />;
+  if (featureKey && !user?.is_owner_session && accessState === 'error') return <section className="feature-access-state"><h1>Access could not be checked</h1><p>Reconnect and retry so STEM Studio can confirm your access to this module.</p><button type="button" onClick={() => window.location.reload()}>Retry</button></section>;
+  if (featureKey && !user?.is_owner_session && accessState === 'denied') return <section className="feature-access-state"><span className="feature-access-kicker">Module access</span><h1>{featureLabel} is currently restricted</h1><p>{featureMessage} Your account and saved progress remain unchanged.</p><button type="button" onClick={() => navigate('/dashboard')}>Back to dashboard</button></section>;
+  return <>{children}</>;
 };
 
 /** Send signed-in users straight into the interactive studio from the root URL. */
@@ -151,29 +191,29 @@ const DashboardLayout = () => {
               <Route index element={<><DashboardHome /><MarketingFooter /></>} />
               <Route path="owner" element={<OwnerRoute />} />
               <Route path="dsa" element={<ModuleHub moduleId="dsa" />} />
-              <Route path="complexity" element={<GatedRoute><ComplexityPage /></GatedRoute>} />
-              <Route path="sorting" element={<GatedRoute><SortingPage /></GatedRoute>} />
-              <Route path="stackQueue" element={<GatedRoute><StackQueuePage /></GatedRoute>} />
-              <Route path="linkedList" element={<GatedRoute><LinkedListPage /></GatedRoute>} />
-              <Route path="bst" element={<GatedRoute><BSTPage /></GatedRoute>} />
-              <Route path="binarySearch" element={<GatedRoute><BinarySearchPage /></GatedRoute>} />
-              <Route path="graph" element={<GatedRoute><GraphPage /></GatedRoute>} />
-              <Route path="arrays" element={<GatedRoute><ArraysPage /></GatedRoute>} />
-              <Route path="strings" element={<GatedRoute><StringsPage /></GatedRoute>} />
-              <Route path="recursion" element={<GatedRoute><RecursionPage /></GatedRoute>} />
-              <Route path="greedy" element={<GatedRoute><GreedyPage /></GatedRoute>} />
-              <Route path="hashMaps" element={<GatedRoute><HashMapsPage /></GatedRoute>} />
-              <Route path="backtracking" element={<GatedRoute><BacktrackingPage /></GatedRoute>} />
-              <Route path="dp" element={<GatedRoute><DPPage /></GatedRoute>} />
-              <Route path="trie" element={<GatedRoute><TriePage /></GatedRoute>} />
+              <Route path="complexity" element={<GatedRoute featureKey="complexity"><ComplexityPage /></GatedRoute>} />
+              <Route path="sorting" element={<GatedRoute featureKey="sorting"><SortingPage /></GatedRoute>} />
+              <Route path="stackQueue" element={<GatedRoute featureKey="stackQueue"><StackQueuePage /></GatedRoute>} />
+              <Route path="linkedList" element={<GatedRoute featureKey="linkedList"><LinkedListPage /></GatedRoute>} />
+              <Route path="bst" element={<GatedRoute featureKey="bst"><BSTPage /></GatedRoute>} />
+              <Route path="binarySearch" element={<GatedRoute featureKey="binarySearch"><BinarySearchPage /></GatedRoute>} />
+              <Route path="graph" element={<GatedRoute featureKey="graph"><GraphPage /></GatedRoute>} />
+              <Route path="arrays" element={<GatedRoute featureKey="arrays"><ArraysPage /></GatedRoute>} />
+              <Route path="strings" element={<GatedRoute featureKey="strings"><StringsPage /></GatedRoute>} />
+              <Route path="recursion" element={<GatedRoute featureKey="recursion"><RecursionPage /></GatedRoute>} />
+              <Route path="greedy" element={<GatedRoute featureKey="greedy"><GreedyPage /></GatedRoute>} />
+              <Route path="hashMaps" element={<GatedRoute featureKey="hashMaps"><HashMapsPage /></GatedRoute>} />
+              <Route path="backtracking" element={<GatedRoute featureKey="backtracking"><BacktrackingPage /></GatedRoute>} />
+              <Route path="dp" element={<GatedRoute featureKey="dp"><DPPage /></GatedRoute>} />
+              <Route path="trie" element={<GatedRoute featureKey="trie"><TriePage /></GatedRoute>} />
 
               {/* Operating System Module Routes */}
               <Route path="os" element={<OSModuleHub />} />
               <Route path="os/linux" element={<OSCategoriesHub />} />
-              <Route path="os/commands" element={<GatedRoute><LinuxCommandsPage /></GatedRoute>} />
-              <Route path="os/filesystem" element={<GatedRoute><FileSystemPage /></GatedRoute>} />
-              <Route path="commands" element={<GatedRoute><LinuxCommandsPage /></GatedRoute>} />
-              <Route path="filesystem" element={<GatedRoute><FileSystemPage /></GatedRoute>} />
+              <Route path="os/commands" element={<GatedRoute featureKey="os-commands"><LinuxCommandsPage /></GatedRoute>} />
+              <Route path="os/filesystem" element={<GatedRoute featureKey="os-filesystem"><FileSystemPage /></GatedRoute>} />
+              <Route path="commands" element={<GatedRoute featureKey="os-commands"><LinuxCommandsPage /></GatedRoute>} />
+              <Route path="filesystem" element={<GatedRoute featureKey="os-filesystem"><FileSystemPage /></GatedRoute>} />
             </Routes>
           </Suspense>
         </main>

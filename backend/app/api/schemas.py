@@ -12,6 +12,7 @@ class SignUpRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
     first_name: Optional[str] = Field(None, max_length=50)
     last_name: Optional[str] = Field(None, max_length=50)
+    marketing_email_opt_in: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -53,6 +54,22 @@ class OwnerReauthRequest(BaseModel):
 
 class OwnerUserStatusRequest(BaseModel):
     is_active: bool
+
+
+class OwnerFeaturePolicyRequest(BaseModel):
+    is_premium: bool
+    is_enabled: bool = True
+
+
+class OwnerFeatureGrantRequest(BaseModel):
+    feature_key: str = Field(..., min_length=2, max_length=80)
+    granted: bool
+    expires_at: Optional[datetime] = None
+
+
+class OwnerUserDeleteRequest(BaseModel):
+    confirmation: Literal["DELETE"]
+    expected_username: str = Field(..., min_length=1, max_length=50)
 
 
 class DeleteAccountRequest(BaseModel):
@@ -200,6 +217,7 @@ class AnnouncementCreateRequest(BaseModel):
     title: str = Field(..., min_length=4, max_length=140)
     message: str = Field(..., min_length=10, max_length=3000)
     kind: Literal["announcement", "product_update", "promotion", "maintenance"] = "announcement"
+    send_email: bool = False
 
 
 class AnnouncementResponse(BaseModel):
@@ -218,6 +236,11 @@ class NotificationInboxResponse(BaseModel):
 
 class AnnouncementAdminResponse(AnnouncementResponse):
     audience_size: int
+    email_requested: bool = False
+    email_audience_size: int = 0
+    email_status: str = "not_requested"
+    email_sent_count: int = 0
+    email_failed_count: int = 0
 
 
 # ─── Review Schemas ──────────────────────────────────────────────────

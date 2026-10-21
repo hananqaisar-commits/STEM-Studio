@@ -52,6 +52,9 @@
   }
 }
 
+.global-topic-search-results { overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:color-mix(in srgb,var(--color-primary) 45%,transparent) transparent; }
+.global-topic-search-results button:focus-visible { outline:2px solid var(--color-primary); outline-offset:-2px; }
+
 [data-theme='dark'] .expandable-navbar-pill {
   background: rgba(12, 12, 18, 0.92);
   border-color: rgba(255, 255, 255, 0.12);

@@ -20,6 +20,7 @@ try:
     from backend.app.api.routes.preferences import router as preferences_router
     from backend.app.api.routes.notifications import router as notifications_router
     from backend.app.api.routes.owner import router as owner_router
+    from backend.app.api.routes.entitlements import router as entitlements_router
     from backend.app.core.config import get_settings
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
@@ -31,6 +32,7 @@ except ModuleNotFoundError:
     from app.api.routes.preferences import router as preferences_router
     from app.api.routes.notifications import router as notifications_router
     from app.api.routes.owner import router as owner_router
+    from app.api.routes.entitlements import router as entitlements_router
     from app.core.config import get_settings
 
 
@@ -60,6 +62,29 @@ def init_db_tables():
         print("📦 Creating database tables...")
         Base.metadata.create_all(bind=engine)
 
+        # create_all creates missing tables, but intentionally does not add
+        # columns to existing tables. Apply the checked-in Alembic revisions
+        # after metadata bootstrap so existing deployments receive additive
+        # schema changes before the API starts serving requests.
+        from alembic import command
+        from alembic.config import Config
+
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        alembic_config = Config(os.path.join(repo_root, "backend/alembic.ini"))
+        alembic_config.set_main_option("script_location", os.path.join(repo_root, "backend/migrations"))
+        print("🧭 Applying database migrations...")
+        command.upgrade(alembic_config, "head")
+
+        try:
+            from backend.app.core.feature_access import ensure_feature_catalog
+            from backend.infrastructure.database.database import SessionLocal
+        except ModuleNotFoundError:
+            from app.core.feature_access import ensure_feature_catalog
+            from infrastructure.database.database import SessionLocal
+        with SessionLocal() as feature_db:
+            ensure_feature_catalog(feature_db)
+            feature_db.commit()
+
         # Step 3: Verify tables actually exist
         from sqlalchemy import inspect
         inspector = inspect(engine)
@@ -71,6 +96,7 @@ def init_db_tables():
                     "support_tickets", "user_preferences", "announcements", "announcement_recipients",
                     "announcement_reads", "owner_accounts", "owner_mfa_credentials", "owner_session_grants",
                     "admin_audit_events"}
+        expected.update({"feature_policies", "user_feature_overrides", "announcement_email_deliveries"})
         missing = expected - set(table_names)
         if missing:
             raise RuntimeError(f"Database schema is incomplete ({len(missing)} required tables missing)")
@@ -149,6 +175,7 @@ app.include_router(support_router)
 app.include_router(preferences_router)
 app.include_router(notifications_router)
 app.include_router(owner_router)
+app.include_router(entitlements_router)
 
 
 
