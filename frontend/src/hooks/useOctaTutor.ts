@@ -121,7 +121,7 @@ function normalizeTutorAction(call: OctaTutorFunctionCall): OctaTutorFunctionCal
   return null;
 }
 
-const SUPPORTED_VFS_COMMANDS = new Set(['pwd', 'cd', 'ls', 'mkdir', 'touch', 'cat', 'nano', 'vim', 'useradd', 'chmod', 'chown', 'chgrp', 'rm', 'cp', 'mv', 'echo', 'export', 'userdel', 'groupadd', 'usermod', 'whoami', 'id', 'who', 'find', 'grep', 'sed', 'awk', 'wc', 'head', 'tail', 'apt', 'apt-get', 'ssh', 'tree', 'curl', 'ping', 'diff', 'uname']);
+const SUPPORTED_VFS_COMMANDS = new Set(['pwd', 'cd', 'ls', 'mkdir', 'touch', 'cat', 'nano', 'vim', 'bash', 'sh', 'sudo', 'stat', 'umask', 'useradd', 'chmod', 'chown', 'chgrp', 'rm', 'cp', 'mv', 'echo', 'export', 'userdel', 'groupadd', 'usermod', 'whoami', 'id', 'who', 'find', 'grep', 'sed', 'awk', 'wc', 'head', 'tail', 'apt', 'apt-get', 'ssh', 'tree', 'curl', 'ping', 'diff', 'uname']);
 
 function isActionAvailable(call: OctaTutorFunctionCall, context: TutorAlgorithmContext): boolean {
   switch (call.name) {
@@ -206,13 +206,17 @@ export function useOctaTutor(): UseOctaTutorReturn {
         const mentionedLessons = LINUX_CORE_LESSONS.filter((lesson) => {
           const title = lesson.title.toLowerCase().replace(/[^a-z0-9]/g, '');
           const id = lesson.id.toLowerCase().replace(/[^a-z0-9]/g, '');
-          return compact.includes(title) || compact.includes(id) || (lesson.id === 'ufw' && /firewall/.test(prompt.toLowerCase()));
+          const permissionIntent = lesson.id === 'permissions' && /permission|chmod|chown|chgrp|umask|rwx|read|write|execute|sticky|setuid|setgid|ownership|mode bits/i.test(prompt);
+          return compact.includes(title) || compact.includes(id) || permissionIntent || (lesson.id === 'ufw' && /firewall/.test(prompt.toLowerCase()));
         });
         const activeLesson = LINUX_CORE_LESSONS.find((lesson) => lesson.id === contextState.currentStep?.lessonId);
         const selectedLessons = mentionedLessons.length ? mentionedLessons : activeLesson ? [activeLesson] : LINUX_CORE_LESSONS.slice(0, 2);
+        const permissionFocus = activeLesson?.id === 'permissions' || mentionedLessons.some((lesson) => lesson.id === 'permissions');
         return JSON.stringify({
           source: 'STEM Studio Linux Core guided lessons',
-          instruction: 'Explain concepts in a clear tutor voice and ground Linux commands in this lesson. Never claim to run a command on the user\'s computer. Commands are examples the learner reviews and chooses to run.',
+          instruction: permissionFocus
+            ? 'Teach as a patient, technically precise Linux professor. Start from the learner\'s current command and result, explain the mental model (owner, group, other; exactly one class is selected), decode each r/w/x bit and octal digit, then connect the command to the changed state. Explicitly distinguish file read/write/execute from directory read=list names, write=create/remove names, execute=search/traverse. Explain chmod ownership requirements, chown root requirements, chgrp membership, umask applying only to newly created entries, and ./script.sh versus bash script.sh. Use the active VFS facts and never contradict them. Give one practical next command or a short prediction question, then explain its answer. Surface a useful next concept when relevant without overwhelming the learner. Never claim to run a command on the user\'s computer; this terminal is a safe simulator.'
+            : 'Teach as a clear, encouraging Linux professor: explain why the command works, what each step changes, how to verify the result, and one useful next concept. Ground explanations in this lesson. Never claim to run a command on the user\'s computer. Commands are examples the learner reviews and chooses to run.',
           activeLesson: activeLesson ? {
             title: activeLesson.title,
             summary: activeLesson.summary,
@@ -238,7 +242,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
       const activeGroup = hasRouteTutorContext
         ? LINUX_COMMAND_GROUPS.find((group) => group.id === contextState.currentStep?.groupId || group.id === contextState.algorithmId)
         : undefined;
-      const activeCommand = hasRouteTutorContext
+        const activeCommand = hasRouteTutorContext
         ? allCommands.find(({ command }) => command.id === contextState.currentStep?.selectedCommandId)
         : undefined;
       const selectedCommands = mentioned.length ? mentioned
@@ -270,13 +274,38 @@ export function useOctaTutor(): UseOctaTutorReturn {
         return compact.includes(topicName) || (topicId.length >= 6 && compact.includes(topicId));
       }).slice(0, 2);
       const fallbackTopic = topics.find((topic) => topic.id === 'virtual-file-system');
+      const activeFsStep = pageTutorContext.currentStep as Record<string, any> | null;
+      const selectedNode = activeFsStep?.selectedNode as Record<string, any> | undefined;
+      const permissionFocus = /\b(chmod|chown|chgrp|umask|stat|rwx|permission|permissions|owner|ownership|group bits|execute bit|read bit|write bit|sticky bit|setuid|setgid)\b/i.test(prompt)
+        || /\b(chmod|chown|chgrp|umask|stat|sudo)\b/i.test(String(activeFsStep?.command || ''))
+        || (/\bls\s+-\w*l|ls\s+--long\b/i.test(String(activeFsStep?.command || '')) && Boolean(selectedNode?.permissions));
       return JSON.stringify({
         source: 'STEM Studio file-system simulator lesson',
         note: 'This is an in-memory virtual file system. Commands affect only its simulated state, never the host computer.',
+        teachingProtocol: permissionFocus ? [
+          'Mentor the learner: explain the why, not only the command syntax.',
+          'Use the active user, owner, group, mode, command output, and actual before/after diff as the source of truth.',
+          'When a command is denied, identify the exact selected class (owner/group/other), missing permission bit, and path directory that blocked traversal if known.',
+          'Teach directory semantics separately: r lists names, w changes entries, x searches/traverses; file x is for launching, while bash file.sh reads a script and needs read permission.',
+          'Show a safe next action and a verification command (usually ls -l or stat). Mention least privilege; do not recommend chmod 777 as a fix.',
+          'If the learner already knows the basics, deepen with sticky directories, umask, ownership, group membership, or setuid/setgid only when relevant.',
+          'The terminal simulates a limited safe subset; do not claim arbitrary scripts or commands ran on the real device.',
+        ] : [
+          'Teach as a patient professor: connect the command to the visible filesystem change, explain how to verify it, and suggest one appropriate next concept.',
+          'The virtual terminal is a safe in-memory simulator, never the host operating system.',
+        ],
+        permissionsReference: permissionFocus ? {
+          accessClasses: 'Linux checks owner first; if the current UID owns the file it uses owner bits. Otherwise, if the current user belongs to the file group it uses group bits. Otherwise it uses other bits. These classes are not combined.',
+          fileBits: { read: 'Read file contents', write: 'Change file contents', execute: 'Launch the file when it is executable' },
+          directoryBits: { read: 'List names in the directory', write: 'Create or remove directory entries (normally together with execute)', execute: 'Search/traverse the directory and reach known entries' },
+          octal: 'r=4, w=2, x=1; 640 means owner 6=rw-, group 4=r--, other 0=---. 750 means rwx, r-x, --- .',
+          safePatterns: ['chmod u+x script.sh', 'chmod 640 notes.txt', 'stat notes.txt', 'umask 027', 'ls -ld directory'],
+          leastPrivilege: 'Grant only the bit and user class required. Avoid chmod 777. chmod is limited to owner/root; chown requires root; chgrp requires root or file ownership plus group membership.',
+        } : undefined,
         activeContext: pageTutorContext.currentStep ? {
           algorithm: pageTutorContext.algorithmName,
-          currentStep: pageTutorContext.currentStep,
-          currentStepDescription: pageTutorContext.currentStepDescription,
+            currentStep: pageTutorContext.currentStep,
+            currentStepDescription: pageTutorContext.currentStepDescription,
         } : undefined,
         topics: (selectedFilesystemTopics.length ? selectedFilesystemTopics : fallbackTopic ? [fallbackTopic] : []).map((topic) => ({
           id: topic.id,
@@ -491,6 +520,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
   const suggestions = useMemo<TutorSuggestion[]>(() => {
     if (location.pathname.includes('/os/filesystem') || location.pathname === '/dashboard/filesystem') {
       return [
+        { label: 'Permissions', icon: 'shield', text: 'Teach me read, write, and execute permissions with the current virtual files. Give me a safe command to try and explain the result.' },
         { label: 'File system', icon: 'book', text: 'How does the virtual file system work in this simulator?' },
         { label: tutorMode === 'interactive' ? 'Run a task' : 'Learn a task', icon: 'terminal', text: tutorMode === 'interactive'
           ? 'Run `mkdir octa-demo` in the virtual file system.'

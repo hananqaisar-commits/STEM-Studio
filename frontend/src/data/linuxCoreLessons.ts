@@ -11,6 +11,7 @@ export interface LinuxCoreLesson {
   flow: string[];
   steps: LinuxCoreStep[];
   caution?: string;
+  quickChecks?: { question: string; choices: string[]; answer: number; explanation: string }[];
 }
 
 export const LINUX_CORE_LESSONS: LinuxCoreLesson[] = [
@@ -43,15 +44,24 @@ export const LINUX_CORE_LESSONS: LinuxCoreLesson[] = [
   {
     id: 'permissions',
     title: 'Files and permissions',
-    summary: 'Linux permissions control who can read, change, or run a file. Use the smallest permission set that supports the task.',
-    flow: ['User', 'Group', 'Other users'],
+    summary: 'Read the owner, group, and other access bits; practice safe permission changes; then verify what a user can actually do.',
+    flow: ['Choose access class', 'Read / write / execute', 'Apply least access', 'Verify the result'],
     steps: [
-      { title: 'Read the permission bits', explanation: 'The first character in ls -l describes the file type; the next three groups show read, write, and execute access for owner, group, and others.', commands: ['ls -l script.sh', 'id'] },
-      { title: 'Grant a specific permission', explanation: 'Symbolic chmod changes one permission class. For example, u+x gives the owner permission to execute a script without changing other access.', commands: ['chmod u+x script.sh'] },
-      { title: 'Set a precise mode', explanation: 'Numeric modes encode read as 4, write as 2, and execute as 1. Mode 640 gives owner read/write, group read, and no access to others.', commands: ['chmod 640 notes.txt'] },
-      { title: 'Check ownership', explanation: 'Files have an owner and group. chown changes them and usually needs administrator rights when assigning another user.', commands: ['stat notes.txt', 'sudo chown user:group notes.txt'] },
+      { title: 'Read the mode and identity', explanation: 'In ls -l, the first character is the entry type. The next nine positions are three permission triplets in owner, group, other order. Linux chooses one class: owner first, otherwise matching group, otherwise other. id shows the current user and supplementary groups.', commands: ['ls -l ~/permissions-lab.txt', 'stat ~/permissions-lab.txt', 'id'] },
+      { title: 'Read permission: inspect contents', explanation: 'For a regular file, r lets the selected class read its contents. cat needs file read permission plus execute/search permission on every parent directory. For a directory, r has a different job: it lists names inside that directory.', commands: ['cat ~/permissions-lab.txt', 'chmod u-r ~/permissions-lab.txt', 'cat ~/permissions-lab.txt', 'chmod u+r ~/permissions-lab.txt'] },
+      { title: 'Write permission: change data', explanation: 'For a regular file, w allows changing its contents. An editor can open only when the selected class can save. Directory write is different: it allows changing names in that directory, usually together with directory execute. Restore the practice file after the denial demonstration.', commands: ['chmod u-w ~/permissions-lab.txt', 'nano ~/permissions-lab.txt', 'chmod u+w ~/permissions-lab.txt'] },
+      { title: 'Execute permission: launch a file', explanation: 'For a regular executable or script, x allows launching it. A shell script also needs a valid interpreter in its shebang. Compare ./permission-demo.sh with bash permission-demo.sh: the first checks the file execute bit; the second asks bash to read the file, so it needs read access instead.', commands: ['./permission-demo.sh', 'bash ~/permission-demo.sh', 'chmod u+x ~/permission-demo.sh', './permission-demo.sh'] },
+      { title: 'Decode numeric chmod', explanation: 'Each octal digit is one class: owner, group, other. Add r=4, w=2, x=1. So 6 is rw-, 4 is r--, and 0 is ---. Mode 640 means owner can read/write, group can read, and other gets nothing. chmod numeric modes replace the whole permission set.', commands: ['chmod 640 ~/permissions-lab.txt', 'stat ~/permissions-lab.txt', 'ls -l ~/permissions-lab.txt'] },
+      { title: 'Understand directories and execute/search', explanation: 'On a directory, x means search/traverse: you can enter it or reach a known name below it. A directory with 6 (rw-) is not traversable because it lacks x, even for its owner. Use the private-lab directory, then restore 700 so the lesson stays usable.', commands: ['chmod 600 ~/private-lab', 'cd ~/private-lab', 'chmod 700 ~/private-lab', 'cd ~'] },
+      { title: 'Separate permission bits from ownership', explanation: 'chmod changes mode bits. chown changes the user owner and requires root in this simulator. chgrp changes the group; a regular owner may choose only a group they belong to. Ownership changes which triplet applies, but do not rewrite the mode itself. Restore the lab fixture after the demonstration.', commands: ['stat ~/permissions-lab.txt', 'sudo chown root:sudo ~/permissions-lab.txt', 'stat ~/permissions-lab.txt', 'sudo chown octa:octa ~/permissions-lab.txt'] },
+      { title: 'Use umask for safe defaults', explanation: 'umask affects only newly created files and directories. Linux starts regular files at 666 (no execute by default) and directories at 777, then removes masked bits. With umask 027, new files become 640 and directories 750. Existing entries do not change.', commands: ['umask', 'umask 027', 'touch ~/new-report.txt', 'mkdir ~/team-share', 'ls -l ~/new-report.txt', 'ls -ld ~/team-share', 'umask 022'] },
+      { title: 'Inspect shared-directory protection', explanation: 'The sticky bit is the t at the end of /tmp permissions and appears as the leading 1 in 1777. It lets users create files in a shared writable directory while restricting who can remove each entry. Setuid and setgid are advanced mode bits; this simulator can display them but deliberately does not emulate privilege-changing execution.', commands: ['ls -ld /tmp', 'stat /tmp'] },
     ],
-    caution: 'Avoid chmod 777 as a quick fix: it grants every local user broad access and can expose or alter files.',
+    caution: 'Practice only on permissions-lab.txt, permission-demo.sh, and private-lab in the virtual filesystem. Avoid chmod 777 as a fix: it grants all three classes broad access. The terminal is a safe simulator, and arbitrary host commands or scripts do not run.',
+    quickChecks: [
+      { question: 'A file is mode 640. A user belongs to its group but does not own it. What can that user do?', choices: ['Read only', 'Read and write', 'No access'], answer: 0, explanation: 'The group digit is 4, which is r--. The user can read the file, but cannot write or execute it.' },
+      { question: 'You own a directory with mode 640. Can you cd into it?', choices: ['Yes, owner write is enough', 'No, it has no execute/search bit', 'Only if the directory is empty'], answer: 1, explanation: 'A directory needs x for search/traversal. Its owner triplet is rw-, so cd fails until execute is granted, for example chmod u+x directory.' },
+    ],
   },
   {
     id: 'processes-services',

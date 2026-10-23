@@ -1,4 +1,8 @@
-import { type VFSSnapshot, type VFSNode, getAbsolutePath, resolveNodeId, modeToSymbolic } from './vfs';
+import {
+  type VFSSnapshot, type VFSNode, type VFSProcess, getAbsolutePath, resolveNodeId,
+  modeToSymbolic, applySymbolicMode, applyUmask, findTraversalPermissionFailure,
+  getPermissionClass, hasVfsPermission, type VFSPermission,
+} from './vfs';
 
 
 export interface CommandExecutionResult {
@@ -17,10 +21,125 @@ export interface CommandExecutionResult {
     fileNodeId: string;
     filePath: string;
     initialContent: string;
+    readOnly?: boolean;
   };
 }
 
 const isDirectoryNode = (node?: VFSNode) => node?.type === 'directory' || node?.type === 'mount-point';
+
+function userBelongsToGroup(snapshot: VFSSnapshot, groupName: string): boolean {
+  if (snapshot.currentGroup === groupName || snapshot.currentUser === 'root') return true;
+  const groupFile = Object.values(snapshot.nodes).find((node) => node.name === 'group' && node.parentId === 'etc');
+  const members = (groupFile?.content || '').split('\n')
+    .find((entry) => entry.startsWith(`${groupName}:`))?.split(':')[3]?.split(',') || [];
+  return members.includes(snapshot.currentUser);
+}
+
+function permissionDetail(snapshot: VFSSnapshot, node: VFSNode, permission: VFSPermission): string {
+  const permissionClass = getPermissionClass(snapshot, node);
+  const classStart = permissionClass === 'owner' ? 0 : permissionClass === 'group' ? 3 : 6;
+  const triplet = node.permissions.slice(classStart, classStart + 3);
+  const label = permission === 'execute' ? 'execute/search' : permission;
+  return `${snapshot.currentUser} lacks ${label} access through the ${permissionClass} bits (${triplet}, mode ${node.octalPermissions}) on ${getAbsolutePath(snapshot.nodes, node.id)}`;
+}
+
+function permissionDenied(
+  snapshot: VFSSnapshot,
+  command: string,
+  node: VFSNode,
+  permission: VFSPermission,
+  explanationPrefix = '',
+): CommandExecutionResult {
+  const detail = permissionDetail(snapshot, node, permission);
+  const executable = command.trim().match(/^[^\s]+/)?.[0] || 'bash';
+  return {
+    output: `${executable}: ${getAbsolutePath(snapshot.nodes, node.id)}: Permission denied`,
+    newSnapshot: snapshot,
+    stepRecord: {
+      command,
+      diff: 'Permission denied',
+      explanation: `${explanationPrefix}${detail}. Linux selects exactly one permission class for this user; it does not combine owner, group, and other bits.`,
+      targetNodeId: node.id,
+    },
+  };
+}
+
+function pathTraversalFailure(snapshot: VFSSnapshot, nodeId: string, includeTarget = false): VFSNode | undefined {
+  return findTraversalPermissionFailure(snapshot, nodeId, includeTarget);
+}
+
+function directoryWriteFailure(snapshot: VFSSnapshot, directory: VFSNode): VFSNode | undefined {
+  const traversalFailure = pathTraversalFailure(snapshot, directory.id, true);
+  if (traversalFailure) return traversalFailure;
+  return hasVfsPermission(snapshot, directory, 'write') ? undefined : directory;
+}
+
+function findSubtreeAccessFailure(
+  snapshot: VFSSnapshot,
+  nodeId: string,
+  readFiles: boolean,
+  visited = new Set<string>(),
+): { node: VFSNode; permission: VFSPermission } | undefined {
+  if (visited.has(nodeId)) return undefined;
+  visited.add(nodeId);
+  const node = snapshot.nodes[nodeId];
+  if (!node) return undefined;
+  if (isDirectoryNode(node)) {
+    if (!hasVfsPermission(snapshot, node, 'read')) return { node, permission: 'read' };
+    if (!hasVfsPermission(snapshot, node, 'execute')) return { node, permission: 'execute' };
+    for (const childId of node.childrenIds || []) {
+      const failure = findSubtreeAccessFailure(snapshot, childId, readFiles, visited);
+      if (failure) return failure;
+    }
+  } else if (readFiles && !hasVfsPermission(snapshot, node, 'read')) {
+    return { node, permission: 'read' };
+  }
+  return undefined;
+}
+
+function findSubtreeRemovalFailure(
+  snapshot: VFSSnapshot,
+  nodeId: string,
+  visited = new Set<string>(),
+): { node: VFSNode; permission: VFSPermission } | undefined {
+  if (visited.has(nodeId)) return undefined;
+  visited.add(nodeId);
+  const node = snapshot.nodes[nodeId];
+  if (!node || !isDirectoryNode(node)) return undefined;
+  for (const permission of ['read', 'execute', 'write'] as VFSPermission[]) {
+    if (!hasVfsPermission(snapshot, node, permission)) return { node, permission };
+  }
+  for (const childId of node.childrenIds || []) {
+    const child = snapshot.nodes[childId];
+    if (node.stickyBit && child && snapshot.currentUser !== 'root' && child.owner !== snapshot.currentUser && node.owner !== snapshot.currentUser) {
+      return { node: child, permission: 'write' };
+    }
+    const failure = findSubtreeRemovalFailure(snapshot, childId, visited);
+    if (failure) return failure;
+  }
+  return undefined;
+}
+
+function makeNewFilePermissions(snapshot: VFSSnapshot) {
+  return applyUmask('666', snapshot.umask);
+}
+
+function makeNewDirectoryPermissions(snapshot: VFSSnapshot) {
+  return applyUmask('777', snapshot.umask);
+}
+
+function simulateLiteralEchoScript(content = ''): { output: string; skipped: string[] } {
+  const output: string[] = [];
+  const skipped: string[] = [];
+  content.split('\n').forEach((rawLine, index) => {
+    const scriptLine = rawLine.trim();
+    if (!scriptLine || scriptLine.startsWith('#')) return;
+    const echo = scriptLine.match(/^echo\s+(?:"([^"]*)"|'([^']*)'|(.*))$/);
+    if (echo) output.push(echo[1] ?? echo[2] ?? echo[3] ?? '');
+    else skipped.push(`line ${index + 1}`);
+  });
+  return { output: output.join('\n'), skipped };
+}
 
 function uniqueNodeId(prefix: string, nodes: Record<string, VFSNode>): string {
   let id = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -80,6 +199,68 @@ function removeSubtree(nodes: Record<string, VFSNode>, nodeId: string, visited =
   delete nodes[nodeId];
 }
 
+function parseShellWords(line: string): { words: string[]; error?: string } {
+  const words: string[] = [];
+  let word = '';
+  let quote: "'" | '"' | null = null;
+  let escaped = false;
+  let started = false;
+
+  for (const char of line) {
+    if (escaped) {
+      word += char;
+      escaped = false;
+      started = true;
+      continue;
+    }
+    if (char === '\\' && quote !== "'") {
+      escaped = true;
+      started = true;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = null;
+      else word += char;
+      started = true;
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      started = true;
+    } else if (/\s/.test(char)) {
+      if (started) words.push(word);
+      word = '';
+      started = false;
+    } else {
+      word += char;
+      started = true;
+    }
+  }
+
+  if (escaped) word += '\\';
+  if (quote) return { words: [], error: 'unexpected end of command while looking for a matching quote' };
+  if (started) words.push(word);
+  return { words };
+}
+
+function processTable(processes: VFSProcess[], columns?: string[]): string {
+  const rows = processes.map((process) => ({
+    pid: String(process.pid),
+    ppid: String(process.ppid),
+    user: process.user,
+    ni: String(process.nice),
+    stat: process.state,
+    comm: process.command,
+    args: process.args,
+  }));
+  const selected = columns?.length ? columns : ['pid', 'user', 'ni', 'stat', 'comm'];
+  const widths = selected.map((column) => Math.max(column.toUpperCase().length, ...rows.map((row) => row[column as keyof typeof row].length)));
+  const header = selected.map((column, index) => column.toUpperCase().padEnd(widths[index])).join('  ');
+  const separator = widths.map((width) => '-'.repeat(width)).join('  ');
+  const body = rows.map((row) => selected.map((column, index) => row[column as keyof typeof row].padEnd(widths[index])).join('  '));
+  return [header, separator, ...body].join('\n');
+}
+
 /**
  * Main VFS Command Interpreter Engine
  */
@@ -100,10 +281,45 @@ export function executeVFSCommand(
     };
   }
 
-  // Parse arguments
-  const parts = line.split(/\s+/);
-  const cmd = parts[0];
-  const args = parts.slice(1);
+  // Parse shell quoting and escaped spaces without evaluating substitutions,
+  // pipelines, or host commands. This is a deterministic virtual shell.
+  const parsed = parseShellWords(line);
+  if (parsed.error) {
+    return {
+      output: `bash: ${parsed.error}`,
+      newSnapshot: snapshot,
+      stepRecord: { command: line, diff: 'Command syntax error', explanation: parsed.error },
+    };
+  }
+  const [cmd, ...args] = parsed.words;
+
+  if (cmd === 'sudo') {
+    const nestedArgs = args.filter((arg) => arg !== '--');
+    const nestedCommand = nestedArgs[0];
+    if (!nestedCommand) {
+      return { output: 'usage: sudo <chmod|chown|chgrp|stat|ls|cat> ...', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'In this learning simulator, sudo elevates one supported permissions or inspection command for the current command only.' } };
+    }
+    if (!userBelongsToGroup(snapshot, 'sudo')) {
+      return { output: `sudo: ${snapshot.currentUser} is not allowed to run commands as root`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: 'The virtual account is not in the sudo group, so the simulator refuses privilege elevation.' } };
+    }
+    if (!['chmod', 'chown', 'chgrp', 'stat', 'ls', 'cat'].includes(nestedCommand)) {
+      return { output: `sudo: command '${nestedCommand}' is outside the simulator's limited elevation set`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported sudo command', explanation: 'For safety, this virtual environment allows sudo only for chmod, chown, chgrp, stat, ls, and cat.' } };
+    }
+    const quote = (word: string) => /\s|["'\\]/.test(word) ? `'${word.replace(/'/g, "'\\''")}'` : word;
+    const elevatedSnapshot: VFSSnapshot = { ...snapshot, currentUser: 'root', currentGroup: 'root' };
+    const nestedResult = executeVFSCommand(elevatedSnapshot, nestedArgs.map(quote).join(' '));
+    const restoredSnapshot = { ...nestedResult.newSnapshot, currentUser: snapshot.currentUser, currentGroup: snapshot.currentGroup };
+    return {
+      ...nestedResult,
+      newSnapshot: restoredSnapshot,
+      stepRecord: {
+        ...nestedResult.stepRecord,
+        command: line,
+        diff: `sudo elevation: ${nestedResult.stepRecord.diff}`,
+        explanation: `The sudo group allowed one command to run with simulated root privileges. The effective identity is restored to ${snapshot.currentUser} immediately afterward. ${nestedResult.stepRecord.explanation}`,
+      },
+    };
+  }
 
   // Deep clone current snapshot for mutation safety
   const nextSnapshot: VFSSnapshot = JSON.parse(JSON.stringify(snapshot));
@@ -128,7 +344,8 @@ export function executeVFSCommand(
 
   // --- 2. cd ---
   if (cmd === 'cd') {
-    const targetArg = args[0] || '~';
+    const cdArgs = args[0] === '--' ? args.slice(1) : args.filter((arg) => arg !== '-L' && arg !== '-P');
+    const targetArg = cdArgs[0] || '~';
     let targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, targetArg);
 
     if (targetArg === '-') {
@@ -162,6 +379,11 @@ export function executeVFSCommand(
           explanation: `"${targetArg}" is a file, not a directory.`,
         },
       };
+    }
+
+    const blockedDirectory = pathTraversalFailure(nextSnapshot, targetId, true);
+    if (blockedDirectory) {
+      return permissionDenied(snapshot, line, blockedDirectory, 'execute', 'A directory needs execute permission to be entered; execute here means search/traverse the directory entries. ');
     }
 
     // Trace the actual route: walk from the current directory to the lowest
@@ -206,9 +428,39 @@ export function executeVFSCommand(
 
   // --- 3. ls ---
   if (cmd === 'ls') {
-    const showLong = args.some(a => a.includes('l'));
-    const showAll = args.some(a => a.includes('a'));
-    const pathArg = args.find(a => !a.startsWith('-')) || '.';
+    const flags = new Set<string>();
+    const pathArgs: string[] = [];
+    let optionsEnded = false;
+    for (const arg of args) {
+      if (!optionsEnded && arg === '--') { optionsEnded = true; continue; }
+      if (!optionsEnded && arg.startsWith('--')) {
+        const longFlag: Record<string, string> = {
+          '--all': 'a', '--almost-all': 'A', '--human-readable': 'h', '--recursive': 'R', '--directory': 'd', '--long': 'l',
+        };
+        if (!longFlag[arg]) {
+          return { output: `ls: unrecognized option '${arg}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported ls option', explanation: `The virtual ls supports -a/--all, -A/--almost-all, -l/--long, -h/--human-readable, -R/--recursive, and -d/--directory.` } };
+        }
+        flags.add(longFlag[arg]);
+      } else if (!optionsEnded && arg.startsWith('-') && arg.length > 1) {
+        const shortFlags = arg.slice(1);
+        if ([...shortFlags].some((flag) => !'laAhRd'.includes(flag))) {
+          const invalid = [...shortFlags].find((flag) => !'laAhRd'.includes(flag));
+          return { output: `ls: invalid option -- '${invalid}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported ls option', explanation: `The virtual ls supports -a, -A, -l, -h, -R, and -d.` } };
+        }
+        [...shortFlags].forEach((flag) => flags.add(flag));
+      } else {
+        pathArgs.push(arg);
+      }
+    }
+    const showLong = flags.has('l');
+    const showAll = flags.has('a') || flags.has('A');
+    const humanReadable = flags.has('h');
+    const recursive = flags.has('R');
+    const listDirectory = flags.has('d');
+    const pathArg = pathArgs[0] || '.';
+    if (pathArgs.length > 1) {
+      return { output: 'ls: this learning shell accepts one path at a time', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported ls operands', explanation: 'List each path with a separate command in this virtual terminal.' } };
+    }
 
     const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, pathArg);
     if (!targetId || !nodes[targetId]) {
@@ -220,25 +472,45 @@ export function executeVFSCommand(
     }
 
     const targetNode = nodes[targetId];
-    const childIds = isDirectoryNode(targetNode) ? (targetNode.childrenIds || []) : [targetNode.id];
-    let childNodes = childIds.map(id => nodes[id]).filter(Boolean);
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId, isDirectoryNode(targetNode) && !listDirectory);
+    if (blockedPath) {
+      return permissionDenied(snapshot, line, blockedPath, 'execute', 'Linux must traverse every directory in the path before ls can reach the requested entry. ');
+    }
+    if (isDirectoryNode(targetNode) && !listDirectory && !hasVfsPermission(nextSnapshot, targetNode, 'read')) {
+      return permissionDenied(snapshot, line, targetNode, 'read', 'Listing a directory requires read permission to enumerate its names. Execute permission is separately needed to traverse to known entries. ');
+    }
+    if (recursive && isDirectoryNode(targetNode) && !listDirectory) {
+      const inaccessible = findSubtreeAccessFailure(nextSnapshot, targetId, false);
+      if (inaccessible) return permissionDenied(snapshot, line, inaccessible.node, inaccessible.permission, 'Recursive listing reached a directory that the current user cannot enumerate or traverse. ');
+    }
+    const childIds = isDirectoryNode(targetNode) && !listDirectory ? (targetNode.childrenIds || []) : [targetNode.id];
+    let childNodes = childIds.map(id => nodes[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
 
     if (!showAll) {
       childNodes = childNodes.filter(n => !n.name.startsWith('.'));
     }
 
-    let outputStr = '';
-    if (showLong) {
-      const lines = childNodes.map(n => {
-        const typeChar = n.type === 'directory' ? 'd' : '-';
-        const perms = `${typeChar}${n.permissions}`;
-        const size = n.type === 'directory' ? '4096' : (n.content?.length || 0);
-        return `${perms} 1 ${n.owner} ${n.group} ${String(size).padStart(6, ' ')} ${n.modifiedAt} ${n.name}`;
-      });
-      outputStr = `total ${childNodes.length * 4}\n` + lines.join('\n');
-    } else {
-      outputStr = childNodes.map(n => n.name).join('  ');
+    const formatNode = (node: VFSNode) => {
+      if (!showLong) return node.name;
+      const typeChar = node.type === 'directory' ? 'd' : node.type === 'symlink' ? 'l' : '-';
+      const size = node.type === 'directory' ? 4096 : (node.content?.length || 0);
+      const displaySize = humanReadable && size >= 1024 ? `${(size / 1024).toFixed(1)}K` : String(size);
+      return `${typeChar}${node.permissions} 1 ${node.owner} ${node.group} ${displaySize.padStart(6, ' ')} ${node.modifiedAt} ${node.name}${node.type === 'directory' ? '/' : ''}`;
+    };
+    const lines: string[] = [];
+    const visit = (directory: VFSNode, depth = 0, isRoot = false) => {
+      const entries = isRoot ? childNodes : (directory.childrenIds || []).map((id) => nodes[id]).filter((node): node is VFSNode => Boolean(node)).sort((a, b) => a.name.localeCompare(b.name)).filter((node) => showAll || !node.name.startsWith('.'));
+      if (recursive) lines.push(`${directory === targetNode ? pathArg : getAbsolutePath(nodes, directory.id)}:`);
+      if (showLong && isDirectoryNode(directory) && !listDirectory) lines.push(`total ${entries.length * 4}`);
+      lines.push(...entries.map((node) => `${recursive && !showLong ? '  '.repeat(depth) : ''}${formatNode(node)}`));
+      if (recursive) entries.filter(isDirectoryNode).forEach((child) => visit(child, depth + 1));
+    };
+    if (recursive && isDirectoryNode(targetNode) && !listDirectory) visit(targetNode, 0, true);
+    else {
+      if (showLong && isDirectoryNode(targetNode) && !listDirectory) lines.push(`total ${childNodes.length * 4}`);
+      lines.push(...childNodes.map(formatNode));
     }
+    const outputStr = lines.join('\n');
 
     return {
       output: outputStr,
@@ -246,10 +518,35 @@ export function executeVFSCommand(
       stepRecord: {
         command: line,
         diff: `Listed ${childNodes.length} entries`,
-        explanation: `Directory listing for "${targetNode.name}" (${showLong ? 'long format' : 'short format'}).`,
+        explanation: `Listed "${targetNode.name}"${showAll ? ' including hidden entries' : ''}${showLong ? ' in long format' : ''}${recursive ? ' recursively' : ''}${humanReadable ? ' with human-readable sizes' : ''}.`,
         targetNodeId: targetId,
       },
     };
+  }
+
+  if (cmd === 'rmdir') {
+    const directoryArg = args.find((arg) => !arg.startsWith('-'));
+    if (!directoryArg) return { output: 'rmdir: missing operand', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'rmdir removes an empty directory. Supply one directory path.' } };
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, directoryArg);
+    if (!targetId || !nodes[targetId]) return { output: `rmdir: failed to remove '${directoryArg}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Directory not found', explanation: `No entry exists at ${directoryArg}.` } };
+    const target = nodes[targetId];
+    if (!isDirectoryNode(target)) return { output: `rmdir: failed to remove '${directoryArg}': Not a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Not a directory', explanation: 'rmdir only removes directories.' } };
+    if (targetId === nextSnapshot.rootId || targetId === nextSnapshot.currentDirId) return { output: `rmdir: failed to remove '${directoryArg}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Protected directory', explanation: 'The root and current working directories cannot be removed.' } };
+    if ((target.childrenIds || []).length) return { output: `rmdir: failed to remove '${directoryArg}': Directory not empty`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Directory not empty', explanation: 'rmdir only removes an empty directory; use rm -r for a non-empty subtree.' } };
+    const parentId = target.parentId;
+    const parent = parentId ? nodes[parentId] : undefined;
+    const blockedParent = parent && directoryWriteFailure(nextSnapshot, parent);
+    if (blockedParent) {
+      const missing: VFSPermission = hasVfsPermission(nextSnapshot, blockedParent, 'execute') ? 'write' : 'execute';
+      return permissionDenied(snapshot, line, blockedParent, missing, 'Removing a directory entry requires write and execute access on its parent. ');
+    }
+    if (parent?.stickyBit && nextSnapshot.currentUser !== 'root' && target.owner !== nextSnapshot.currentUser && parent.owner !== nextSnapshot.currentUser) {
+      return { output: `rmdir: failed to remove '${directoryArg}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Sticky-bit protection', explanation: `The parent directory has the sticky bit. Only ${target.owner}, ${parent.owner}, or root may remove this entry. The sticky bit protects each user's files in shared directories such as /tmp.`, targetNodeId: targetId } };
+    }
+    if (parentId && nodes[parentId]) nodes[parentId].childrenIds = (nodes[parentId].childrenIds || []).filter((id) => id !== targetId);
+    const removedPath = getAbsolutePath(nodes, targetId);
+    delete nodes[targetId];
+    return { output: '', newSnapshot: nextSnapshot, stepRecord: { command: line, diff: `- Removed empty directory ${removedPath}`, explanation: `Detached the empty directory from its parent and removed it from the virtual filesystem.`, targetNodeId: parentId || undefined, mutationType: 'delete' } };
   }
 
   // --- 4. mkdir ---
@@ -297,7 +594,13 @@ export function executeVFSCommand(
       if (!createParents && index < segments.length - 1) {
         return { output: `mkdir: cannot create directory '${dirPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Missing parent directory', explanation: `Use mkdir -p to create the missing parent directories in "${dirPath}".` } };
       }
+      const failedParent = directoryWriteFailure(nextSnapshot, parent);
+      if (failedParent) {
+        const missing: VFSPermission = hasVfsPermission(nextSnapshot, failedParent, 'execute') ? 'write' : 'execute';
+        return permissionDenied(snapshot, line, failedParent, missing, 'Creating a directory entry needs write and execute permission on its parent. ');
+      }
       const newId = uniqueNodeId('dir', nodes);
+      const newMode = makeNewDirectoryPermissions(nextSnapshot);
       nodes[newId] = {
         id: newId,
         name: segment,
@@ -306,8 +609,8 @@ export function executeVFSCommand(
         childrenIds: [],
         owner: nextSnapshot.currentUser,
         group: nextSnapshot.currentGroup,
-        permissions: 'rwxr-xr-x',
-        octalPermissions: '755',
+        permissions: newMode.symbolic,
+        octalPermissions: newMode.octal,
         createdAt: now,
         modifiedAt: now,
       };
@@ -354,7 +657,13 @@ export function executeVFSCommand(
 
     const existingId = resolveNodeId(nodes, nextSnapshot.currentDirId, filePath);
     if (existingId && nodes[existingId]) {
-      nodes[existingId].modifiedAt = now;
+      const target = nodes[existingId];
+      const blockedPath = pathTraversalFailure(nextSnapshot, existingId);
+      if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Path traversal requires execute/search permission on each parent directory. ');
+      if (target.owner !== nextSnapshot.currentUser && !hasVfsPermission(nextSnapshot, target, 'write')) {
+        return permissionDenied(snapshot, line, target, 'write', 'Updating an existing file timestamp requires ownership or write access in this simulator. ');
+      }
+      target.modifiedAt = now;
       return {
         output: '',
         newSnapshot: nextSnapshot,
@@ -370,7 +679,14 @@ export function executeVFSCommand(
     if (!destination) {
       return { output: `touch: cannot touch '${filePath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Parent directory not found', explanation: `The parent directory for "${filePath}" does not exist. Create it first, then touch the file.` } };
     }
+    const parent = nodes[destination.parentId];
+    const failedParent = directoryWriteFailure(nextSnapshot, parent);
+    if (failedParent) {
+      const missing: VFSPermission = hasVfsPermission(nextSnapshot, failedParent, 'execute') ? 'write' : 'execute';
+      return permissionDenied(snapshot, line, failedParent, missing, 'Creating a file needs write and execute permission on its parent directory. ');
+    }
     const newId = uniqueNodeId('file', nodes);
+    const newMode = makeNewFilePermissions(nextSnapshot);
     const newFileNode: VFSNode = {
       id: newId,
       name: destination.name,
@@ -378,15 +694,14 @@ export function executeVFSCommand(
       parentId: destination.parentId,
       owner: nextSnapshot.currentUser,
       group: nextSnapshot.currentGroup,
-      permissions: 'rw-r--r--',
-      octalPermissions: '644',
+      permissions: newMode.symbolic,
+      octalPermissions: newMode.octal,
       content: '',
       createdAt: now,
       modifiedAt: now,
     };
 
     nodes[newId] = newFileNode;
-    const parent = nodes[destination.parentId];
     parent.childrenIds = [...(parent.childrenIds || []), newId];
     parent.modifiedAt = now;
     const fileAbsolutePath = getAbsolutePath(nodes, newId);
@@ -396,8 +711,8 @@ export function executeVFSCommand(
       newSnapshot: nextSnapshot,
       stepRecord: {
           command: line,
-          diff: `+ Created empty file: ${fileAbsolutePath} (644)`,
-          explanation: `Created a new empty file and linked it to ${getAbsolutePath(nodes, destination.parentId)}.`,
+          diff: `+ Created empty file: ${fileAbsolutePath} (${newMode.octal})`,
+          explanation: `Created a new empty file with mode ${newMode.octal} after applying umask ${nextSnapshot.umask || '0022'}, then linked it to ${getAbsolutePath(nodes, destination.parentId)}.`,
           targetNodeId: newId,
           animatedPathIds: [destination.parentId, newId],
           mutationType: 'create',
@@ -421,6 +736,11 @@ export function executeVFSCommand(
     if (targetNode.type === 'directory') {
       return { output: `cat: ${fileName}: Is a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Type error', explanation: `Cannot cat a directory.` } };
     }
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Linux must search each parent directory before it can read this file. ');
+    if (!hasVfsPermission(nextSnapshot, targetNode, 'read')) {
+      return permissionDenied(snapshot, line, targetNode, 'read', 'cat reads file contents, so the selected user class must include r. ');
+    }
 
     return {
       output: targetNode.content || '',
@@ -443,37 +763,57 @@ export function executeVFSCommand(
 
     let targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileName);
     let initialContent = '';
+    let readOnly = false;
 
     if (!targetId || !nodes[targetId]) {
-      // Create new file node for editor
+      const destination = resolveParentAndName(nodes, nextSnapshot.currentDirId, fileName);
+      if (!destination) {
+        return { output: `${cmd}: ${fileName}: No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Editor path not found', explanation: `The parent directory for "${fileName}" does not exist. Create it first, then open the file.` } };
+      }
+      const parent = nodes[destination.parentId];
+      const failedParent = directoryWriteFailure(nextSnapshot, parent);
+      if (failedParent) {
+        const missing: VFSPermission = hasVfsPermission(nextSnapshot, failedParent, 'execute') ? 'write' : 'execute';
+        return permissionDenied(snapshot, line, failedParent, missing, 'Creating a new editor file needs write and execute permission on its parent directory. ');
+      }
       const now = new Date().toISOString().split('T')[0];
-      targetId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+      targetId = uniqueNodeId('file', nodes);
+      const newMode = makeNewFilePermissions(nextSnapshot);
       const newFileNode: VFSNode = {
         id: targetId,
-        name: fileName,
+        name: destination.name,
         type: 'file',
-        parentId: currentDir.id,
+        parentId: destination.parentId,
         owner: nextSnapshot.currentUser,
         group: nextSnapshot.currentGroup,
-        permissions: 'rw-r--r--',
-        octalPermissions: '644',
+        permissions: newMode.symbolic,
+        octalPermissions: newMode.octal,
         content: '',
         createdAt: now,
         modifiedAt: now,
       };
       nodes[targetId] = newFileNode;
-      currentDir.childrenIds = [...(currentDir.childrenIds || []), targetId];
+      nodes[destination.parentId].childrenIds = [...(nodes[destination.parentId].childrenIds || []), targetId];
     } else {
+      if (isDirectoryNode(nodes[targetId])) {
+        return { output: `${cmd}: ${fileName}: Is a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Editor target is a directory', explanation: 'Text editors open files; choose a file path instead of a directory.' } };
+      }
+      const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+      if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Linux must search every parent directory before opening this path. ');
+      if (!hasVfsPermission(nextSnapshot, nodes[targetId], 'read')) return permissionDenied(snapshot, line, nodes[targetId], 'read', 'An editor needs read permission to load this file into its buffer. ');
+      readOnly = !hasVfsPermission(nextSnapshot, nodes[targetId], 'write');
       initialContent = nodes[targetId].content || '';
     }
 
     return {
-      output: `[Opened ${cmd.toUpperCase()} Editor for ${fileName}]`,
+      output: `[Opened ${cmd.toUpperCase()} Editor for ${fileName}${readOnly ? ' in read-only mode; saving requires write permission' : ''}]`,
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `Opened ${cmd} editor for ${fileName}`,
-        explanation: `Launched interactive ${cmd} text editor modal. Written edits will mutate VFS node state.`,
+        diff: `Opened ${cmd} editor for ${fileName}${readOnly ? ' (read-only)' : ''}`,
+        explanation: readOnly
+          ? `Opened the readable file ${getAbsolutePath(nodes, targetId)} in a read-only save state. Linux editors can show the buffer without file write permission; edits cannot be committed until the owner/root grants w. The mode is ${nodes[targetId].octalPermissions} (${nodes[targetId].permissions}).`
+          : `Launched interactive ${cmd} text editor modal. Written edits will mutate VFS node state.`,
         targetNodeId: targetId,
         mutationType: 'editor',
       },
@@ -482,6 +822,7 @@ export function executeVFSCommand(
         fileNodeId: targetId,
         filePath: fileName,
         initialContent,
+        readOnly,
       },
     };
   }
@@ -550,17 +891,28 @@ export function executeVFSCommand(
     }
 
     const targetNode = nodes[targetId];
-    const perms = modeToSymbolic(modeArg);
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Linux must be able to traverse the path before chmod can reach its target. ');
+    if (nextSnapshot.currentUser !== 'root' && nextSnapshot.currentUser !== targetNode.owner) {
+      return { output: `chmod: changing permissions of '${fileArg}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: `chmod is governed by ownership: ${nextSnapshot.currentUser} is neither root nor the owner (${targetNode.owner}) of ${getAbsolutePath(nodes, targetId)}. File read/write bits do not grant permission to change its mode.`, targetNodeId: targetId } };
+    }
+    const perms = /^[0-7]{3,4}$/.test(modeArg) ? modeToSymbolic(modeArg) : applySymbolicMode(targetNode, modeArg);
+    if (!perms) {
+      return { output: `chmod: invalid mode: '${modeArg}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid chmod mode', explanation: 'Use three or four octal digits (for example 640 or 4755) or common symbolic clauses such as u+x, go-w, or a=rw.' } };
+    }
+    const beforeMode = targetNode.octalPermissions;
+    const beforeSymbolic = targetNode.permissions;
     targetNode.permissions = perms.symbolic;
     targetNode.octalPermissions = perms.octal;
+    targetNode.stickyBit = perms.octal.length === 4 && (Number(perms.octal[0]) & 1) === 1;
 
     return {
       output: '',
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `Permissions updated: ${fileArg} -> ${perms.octal} (${perms.symbolic})`,
-        explanation: `Updated permission mask on "${fileArg}" to octal ${perms.octal} (${perms.symbolic}). Flash pulse triggered.`,
+        diff: `Permissions updated: ${fileArg} ${beforeMode} (${beforeSymbolic}) -> ${perms.octal} (${perms.symbolic})`,
+        explanation: `chmod changed ${getAbsolutePath(nodes, targetId)} from ${beforeMode} (${beforeSymbolic}) to ${perms.octal} (${perms.symbolic}). The three octal digits map to owner, group, and other; each digit adds read=4, write=2, and execute=1. The operation changes access bits, not file ownership.`,
         targetNodeId: targetId,
         mutationType: 'permission',
       },
@@ -582,15 +934,40 @@ export function executeVFSCommand(
     }
 
     const targetNode = nodes[targetId];
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Linux must traverse the path before an ownership command can reach its target. ');
+    if (cmd === 'chown' && nextSnapshot.currentUser !== 'root') {
+      return { output: `chown: changing ownership of '${fileArg}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: 'Changing a file owner requires root privileges in this simulator. Being the file owner or having write permission is not enough; use the restricted sudo chown command in this lab.', targetNodeId: targetId } };
+    }
+    if (cmd === 'chgrp' && nextSnapshot.currentUser !== 'root' && nextSnapshot.currentUser !== targetNode.owner) {
+      return { output: `chgrp: changing group of '${fileArg}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: `A regular user can change a file's group only when they own it and belong to the destination group. ${nextSnapshot.currentUser} does not own ${getAbsolutePath(nodes, targetId)}.`, targetNodeId: targetId } };
+    }
+    const beforeOwnership = `${targetNode.owner}:${targetNode.group}`;
     if (cmd === 'chown') {
       if (ownerArg.includes(':')) {
         const [u, g] = ownerArg.split(':');
+        const passwdFile = Object.values(nodes).find((node) => node.name === 'passwd' && node.parentId === 'etc');
+        const groupFile = Object.values(nodes).find((node) => node.name === 'group' && node.parentId === 'etc');
+        const knownUsers = (passwdFile?.content || '').split('\n').map((entry) => entry.split(':')[0]);
+        const knownGroups = (groupFile?.content || '').split('\n').map((entry) => entry.split(':')[0]);
+        if ((u && !knownUsers.includes(u)) || (g && !knownGroups.includes(g))) {
+          return { output: `chown: invalid user or group: '${ownerArg}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unknown owner or group', explanation: 'The virtual account or group must exist in /etc/passwd or /etc/group before ownership can be assigned.' } };
+        }
         if (u) targetNode.owner = u;
         if (g) targetNode.group = g;
       } else {
+        const passwdFile = Object.values(nodes).find((node) => node.name === 'passwd' && node.parentId === 'etc');
+        const knownUsers = (passwdFile?.content || '').split('\n').map((entry) => entry.split(':')[0]);
+        if (!knownUsers.includes(ownerArg)) return { output: `chown: invalid user: '${ownerArg}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unknown owner', explanation: 'The user must exist in /etc/passwd before chown can assign the file to them.' } };
         targetNode.owner = ownerArg;
       }
     } else {
+      const groupFile = Object.values(nodes).find((node) => node.name === 'group' && node.parentId === 'etc');
+      const knownGroups = (groupFile?.content || '').split('\n').map((entry) => entry.split(':')[0]);
+      if (!knownGroups.includes(ownerArg)) return { output: `chgrp: invalid group: '${ownerArg}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unknown group', explanation: 'The destination group must exist in /etc/group before chgrp can assign it.' } };
+      if (nextSnapshot.currentUser !== 'root' && !userBelongsToGroup(nextSnapshot, ownerArg)) {
+        return { output: `chgrp: invalid group: '${ownerArg}'`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: `The file owner must also belong to destination group ${ownerArg}. Inspect group membership with id or /etc/group.`, targetNodeId: targetId } };
+      }
       targetNode.group = ownerArg;
     }
 
@@ -599,8 +976,8 @@ export function executeVFSCommand(
       newSnapshot: nextSnapshot,
       stepRecord: {
         command: line,
-        diff: `Ownership updated: ${fileArg} -> ${targetNode.owner}:${targetNode.group}`,
-        explanation: `Changed ownership of "${fileArg}" to ${targetNode.owner}:${targetNode.group}.`,
+        diff: `Ownership updated: ${fileArg} ${beforeOwnership} -> ${targetNode.owner}:${targetNode.group}`,
+        explanation: `Changed ownership of ${getAbsolutePath(nodes, targetId)} from ${beforeOwnership} to ${targetNode.owner}:${targetNode.group}. The permission string and mode remain ${targetNode.octalPermissions} (${targetNode.permissions}); changing ownership changes which permission class applies to a user.`,
         targetNodeId: targetId,
         mutationType: 'permission',
       },
@@ -610,6 +987,7 @@ export function executeVFSCommand(
   // --- 11. rm ---
   if (cmd === 'rm') {
     const recursive = args.some(arg => arg.startsWith('-') && arg.includes('r'));
+    const force = args.some((arg) => arg.startsWith('-') && arg.includes('f'));
     const fileArg = args.find(a => !a.startsWith('-'));
     if (!fileArg) {
       return { output: 'rm: missing operand', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'rm requires a file path.' } };
@@ -617,6 +995,7 @@ export function executeVFSCommand(
 
     const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
     if (!targetId || !nodes[targetId]) {
+      if (force) return { output: '', newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'Ignored missing path (-f)', explanation: `rm -f suppresses the missing-path error for "${fileArg}".` } };
       return { output: `rm: cannot remove '${fileArg}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'File not found', explanation: `File ${fileArg} not found.` } };
     }
 
@@ -631,6 +1010,28 @@ export function executeVFSCommand(
     }
     if (isDirectoryNode(targetNode) && (targetNode.childrenIds?.length || 0) > 0 && !recursive) {
       return { output: `rm: cannot remove '${fileArg}': Is a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Recursive flag required', explanation: `"${getAbsolutePath(nodes, targetId)}" contains children. Use rm -r to remove the directory and its descendants.` } };
+    }
+
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Linux must traverse the target path before rm can reach the entry. ');
+    const parent = parentId ? nodes[parentId] : undefined;
+    const blockedParent = parent && directoryWriteFailure(nextSnapshot, parent);
+    if (blockedParent) {
+      const missing: VFSPermission = hasVfsPermission(nextSnapshot, blockedParent, 'execute') ? 'write' : 'execute';
+      return permissionDenied(snapshot, line, blockedParent, missing, 'Removing a name from a directory requires write and execute access on its parent; write permission on the file alone does not control unlinking. ');
+    }
+    if (parent?.stickyBit && nextSnapshot.currentUser !== 'root' && targetNode.owner !== nextSnapshot.currentUser && parent.owner !== nextSnapshot.currentUser) {
+      return { output: `rm: cannot remove '${fileArg}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Sticky-bit protection', explanation: `The parent directory has the sticky bit. Only ${targetNode.owner}, ${parent.owner}, or root may remove this entry, even though the directory is writable.`, targetNodeId: targetId } };
+    }
+    if (recursive && isDirectoryNode(targetNode)) {
+      const blockedDescendant = findSubtreeRemovalFailure(nextSnapshot, targetId);
+      if (blockedDescendant) {
+        const blockedParent = blockedDescendant.node.parentId ? nodes[blockedDescendant.node.parentId] : undefined;
+        if (blockedParent?.stickyBit && nextSnapshot.currentUser !== 'root' && blockedDescendant.node.owner !== nextSnapshot.currentUser && blockedParent.owner !== nextSnapshot.currentUser) {
+          return { output: `rm: cannot remove '${getAbsolutePath(nodes, blockedDescendant.node.id)}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Sticky-bit protection', explanation: `A nested entry is protected by the sticky bit on ${getAbsolutePath(nodes, blockedParent.id)}. Only its owner, the directory owner, or root may remove it.`, targetNodeId: blockedDescendant.node.id } };
+        }
+        return permissionDenied(snapshot, line, blockedDescendant.node, blockedDescendant.permission, 'Recursive removal must enumerate each directory and remove its child entries; inspect the first inaccessible directory and grant only the required bit. ');
+      }
     }
 
     if (parentId && nodes[parentId]) {
@@ -671,6 +1072,14 @@ export function executeVFSCommand(
     }
 
     const srcNode = nodes[srcId];
+    const blockedSourcePath = pathTraversalFailure(nextSnapshot, srcId);
+    if (blockedSourcePath) return permissionDenied(snapshot, line, blockedSourcePath, 'execute', 'Linux must traverse source parents before cp can reach the file. ');
+    if (isDirectoryNode(srcNode)) {
+      const inaccessible = findSubtreeAccessFailure(nextSnapshot, srcId, true);
+      if (inaccessible) return permissionDenied(snapshot, line, inaccessible.node, inaccessible.permission, 'Recursive directory copying needs read and execute on each directory plus read permission on every copied file. ');
+    } else if (!hasVfsPermission(nextSnapshot, srcNode, 'read')) {
+      return permissionDenied(snapshot, line, srcNode, 'read', 'Copying a regular file requires reading its contents. ');
+    }
     if (!hasConsistentSubtree(nodes, srcId)) {
       return { output: `cp: cannot copy '${srcPath}': inconsistent directory entries`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Source tree is inconsistent', explanation: 'A child link does not point back to its directory, so copying was stopped without changing the filesystem.' } };
     }
@@ -698,6 +1107,11 @@ export function executeVFSCommand(
     const destinationParent = nodes[destinationParentId];
     if (!destinationParent) {
       return { output: `cp: cannot create '${dstPath}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Destination parent not found', explanation: `Parent directory for "${dstPath}" no longer exists.` } };
+    }
+    const blockedDestination = directoryWriteFailure(nextSnapshot, destinationParent);
+    if (blockedDestination) {
+      const missing: VFSPermission = hasVfsPermission(nextSnapshot, blockedDestination, 'execute') ? 'write' : 'execute';
+      return permissionDenied(snapshot, line, blockedDestination, missing, 'Copying creates a directory entry, which needs write and execute access on the destination parent. ');
     }
     const collisionId = destinationParent.childrenIds?.find(id => nodes[id]?.name === destinationName);
     if (collisionId) {
@@ -748,6 +1162,8 @@ export function executeVFSCommand(
     }
 
     const srcNode = nodes[srcId];
+    const blockedSourcePath = pathTraversalFailure(nextSnapshot, srcId);
+    if (blockedSourcePath) return permissionDenied(snapshot, line, blockedSourcePath, 'execute', 'Linux must traverse source parents before mv can reach the entry. ');
     if (!hasConsistentSubtree(nodes, srcId)) {
       return { output: `mv: cannot move '${srcPath}': inconsistent directory entries`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Source tree is inconsistent', explanation: 'A child link does not point back to its directory, so moving was stopped without changing the filesystem.' } };
     }
@@ -771,6 +1187,20 @@ export function executeVFSCommand(
     }
     const oldParentId = srcNode.parentId;
     const destinationParent = nodes[destinationParentId];
+    const sourceParent = srcNode.parentId ? nodes[srcNode.parentId] : undefined;
+    const blockedSourceParent = sourceParent ? directoryWriteFailure(nextSnapshot, sourceParent) : undefined;
+    const blockedDestinationParent = destinationParent ? directoryWriteFailure(nextSnapshot, destinationParent) : undefined;
+    const blockedMoveParent = blockedSourceParent || blockedDestinationParent;
+    if (blockedMoveParent) {
+      const missing: VFSPermission = hasVfsPermission(nextSnapshot, blockedMoveParent, 'execute') ? 'write' : 'execute';
+      return permissionDenied(snapshot, line, blockedMoveParent, missing, 'Moving an entry needs write and execute access on both its old and new parent directories. ');
+    }
+    if (sourceParent?.stickyBit && nextSnapshot.currentUser !== 'root' && srcNode.owner !== nextSnapshot.currentUser && sourceParent.owner !== nextSnapshot.currentUser) {
+      return { output: `mv: cannot move '${srcPath}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Sticky-bit protection', explanation: `The source parent has the sticky bit. Only ${srcNode.owner}, ${sourceParent.owner}, or root may move this entry.`, targetNodeId: srcId } };
+    }
+    if (destinationParent?.stickyBit && nextSnapshot.currentUser !== 'root' && srcNode.owner !== nextSnapshot.currentUser && destinationParent.owner !== nextSnapshot.currentUser) {
+      return { output: `mv: cannot move '${srcPath}': Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Sticky-bit protection', explanation: `The destination parent has the sticky bit. Only ${srcNode.owner}, ${destinationParent.owner}, or root may create this entry there.`, targetNodeId: srcId } };
+    }
     const collisionId = destinationParent?.childrenIds?.find(id => id !== srcId && nodes[id]?.name === newName);
     if (collisionId) {
       return { output: `mv: cannot move '${srcPath}' to '${dstPath}': File exists`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Destination already exists', explanation: `An entry named "${newName}" already exists in ${getAbsolutePath(nodes, destinationParentId)}.` } };
@@ -815,7 +1245,13 @@ export function executeVFSCommand(
       let targetId = existingId;
 
       if (!existingId || !nodes[existingId]) {
+        const failedParent = directoryWriteFailure(nextSnapshot, currentDir);
+        if (failedParent) {
+          const missing: VFSPermission = hasVfsPermission(nextSnapshot, failedParent, 'execute') ? 'write' : 'execute';
+          return permissionDenied(snapshot, line, failedParent, missing, 'Creating a file with redirection needs write and execute permission on the current directory. ');
+        }
         targetId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+        const newMode = makeNewFilePermissions(nextSnapshot);
         const newFileNode: VFSNode = {
           id: targetId,
           name: targetFileName,
@@ -823,8 +1259,8 @@ export function executeVFSCommand(
           parentId: currentDir.id,
           owner: nextSnapshot.currentUser,
           group: nextSnapshot.currentGroup,
-          permissions: 'rw-r--r--',
-          octalPermissions: '644',
+          permissions: newMode.symbolic,
+          octalPermissions: newMode.octal,
           content: textToWrite,
           createdAt: now,
           modifiedAt: now,
@@ -833,6 +1269,9 @@ export function executeVFSCommand(
         currentDir.childrenIds = [...(currentDir.childrenIds || []), targetId];
       } else {
         const fileNode = nodes[existingId];
+        if (!hasVfsPermission(nextSnapshot, fileNode, 'write')) {
+          return permissionDenied(snapshot, line, fileNode, 'write', 'Shell redirection opens an existing file for writing; the selected user class must include w. ');
+        }
         fileNode.content = isAppend ? `${fileNode.content || ''}\n${textToWrite}` : textToWrite;
         fileNode.modifiedAt = now;
       }
@@ -885,6 +1324,9 @@ export function executeVFSCommand(
       // Update ~/.bashrc content
       const bashrcNode = nodes['bashrc-file'];
       if (bashrcNode) {
+        const blockedPath = pathTraversalFailure(nextSnapshot, bashrcNode.id);
+        if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Persisting a shell environment value must traverse the user home path. ');
+        if (!hasVfsPermission(nextSnapshot, bashrcNode, 'write')) return permissionDenied(snapshot, line, bashrcNode, 'write', 'This simulator persists export values in ~/.bashrc, so it needs write permission on that file. ');
         bashrcNode.content = (bashrcNode.content || '') + `\nexport ${k}="${val}"`;
       }
 
@@ -1007,6 +1449,70 @@ export function executeVFSCommand(
   }
 
   // --- 17. whoami & who & id ---
+  if (cmd === 'umask') {
+    const requestedMask = args.find((arg) => !arg.startsWith('-'));
+    if (requestedMask && !/^[0-7]{3,4}$/.test(requestedMask)) {
+      return { output: `umask: '${requestedMask}' is not a valid octal mask`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid umask', explanation: 'A umask is three or four octal digits from 000 to 7777. For example, 027 removes group write and all permissions for others from newly created entries.' } };
+    }
+    const previousMask = nextSnapshot.umask || '0022';
+    if (requestedMask) nextSnapshot.umask = requestedMask.padStart(4, '0');
+    const currentMask = nextSnapshot.umask || '0022';
+    if (args.includes('-S')) {
+      const mask = Number.parseInt(currentMask.slice(-3), 8);
+      const allowed = 0o777 & ~mask;
+      const triplet = (shift: number) => {
+        const bits = (allowed >> shift) & 7;
+        return `${bits & 4 ? 'r' : '-'}${bits & 2 ? 'w' : '-'}${bits & 1 ? 'x' : '-'}`;
+      };
+      return { output: `u=${triplet(6)},g=${triplet(3)},o=${triplet(0)}`, newSnapshot: nextSnapshot, stepRecord: { command: line, diff: `Displayed symbolic umask ${currentMask}`, explanation: `The symbolic umask view shows which permissions remain allowed on a new directory after the mask is applied. For regular files, Linux starts from 666 (no execute bit by default); for directories, it starts from 777. Current mask: ${currentMask}.` } };
+    }
+    return {
+      output: currentMask,
+      newSnapshot: nextSnapshot,
+      stepRecord: {
+        command: line,
+        diff: requestedMask ? `Default creation mask: ${previousMask} -> ${currentMask}` : `Read default creation mask: ${previousMask}`,
+        explanation: requestedMask
+          ? `Set the shell's umask from ${previousMask} to ${currentMask}. The mask removes bits from future creations; it does not change existing entries. With ${currentMask}, a new regular file starts at 666 masked to ${makeNewFilePermissions(nextSnapshot).octal}, and a directory starts at 777 masked to ${makeNewDirectoryPermissions(nextSnapshot).octal}.`
+          : `Displayed the current mask ${previousMask}. A mask removes permissions from creation defaults: files start from 666 and directories from 777. Inspect it with umask, then create a fresh practice file to see the effect.`,
+      },
+    };
+  }
+
+  if (cmd === 'stat') {
+    const pathArg = args.find((arg) => !arg.startsWith('-'));
+    if (!pathArg) return { output: 'stat: missing operand', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'stat requires a path. In this simulator, stat prints file type, mode, owner, group, and timestamps.' } };
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, pathArg);
+    if (!targetId || !nodes[targetId]) return { output: `stat: cannot stat '${pathArg}': No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'File not found', explanation: `No filesystem entry exists at ${pathArg}.` } };
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Metadata inspection still needs search permission on each parent directory. ');
+    const target = nodes[targetId];
+    const size = target.type === 'directory' ? 4096 : (target.content || '').length;
+    return {
+      output: `  File: ${getAbsolutePath(nodes, targetId)}\n  Type: ${target.type}\n  Size: ${size} bytes\n  Access: (${target.octalPermissions}/${target.permissions})\n  Owner: ${target.owner}\n  Group: ${target.group}\n  Modified: ${target.modifiedAt}`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Inspected ${target.owner}:${target.group} ${target.octalPermissions} (${target.permissions})`, explanation: `stat reports metadata without reading file contents. Read the mode as three permission classes in owner/group/other order; its numeric digits add r=4, w=2, x=1.`, targetNodeId: targetId },
+    };
+  }
+
+  if (cmd === 'bash' || cmd === 'sh') {
+    const fileArg = args.find((arg) => !arg.startsWith('-'));
+    if (!fileArg) return { output: `${cmd}: missing script operand`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: `${cmd} needs a script path. The shell reads a script, so the file needs read permission; it does not need its own execute bit for this form.` } };
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, fileArg);
+    if (!targetId || !nodes[targetId]) return { output: `${cmd}: ${fileArg}: No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Script not found', explanation: `No file exists at ${fileArg}.` } };
+    const target = nodes[targetId];
+    if (isDirectoryNode(target)) return { output: `${cmd}: ${fileArg}: Is a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Not a script file', explanation: `${cmd} expects a readable script file.` } };
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'The shell must traverse parent directories to open the script path. ');
+    if (!hasVfsPermission(nextSnapshot, target, 'read')) return permissionDenied(snapshot, line, target, 'read', `With ${cmd} script.sh, the shell interpreter reads the file as data; the script's own execute bit is not required. `);
+    const simulated = simulateLiteralEchoScript(target.content);
+    return {
+      output: [simulated.output, simulated.skipped.length ? `Skipped unsupported script statements (${simulated.skipped.join(', ')}); only literal echo lines run in this learning simulator.` : ''].filter(Boolean).join('\n'),
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Read script via ${cmd} without requiring its execute bit`, explanation: `${cmd} reads ${getAbsolutePath(nodes, targetId)} using the shell's own execute permission. This differs from ./script.sh, where the kernel checks the file's execute bit before launching its interpreter. Only literal echo statements are simulated; arbitrary script commands never run on the host.`, targetNodeId: targetId },
+    };
+  }
+
   if (cmd === 'whoami') {
     return {
       output: nextSnapshot.currentUser,
@@ -1016,10 +1522,16 @@ export function executeVFSCommand(
   }
 
   if (cmd === 'id') {
+    const groups = new Set([nextSnapshot.currentGroup]);
+    const groupFile = nodes['group-file'];
+    (groupFile?.content || '').split('\n').forEach((entry) => {
+      const [name, , , memberList = ''] = entry.split(':');
+      if (memberList.split(',').includes(nextSnapshot.currentUser)) groups.add(name);
+    });
     return {
-      output: `uid=1000(${nextSnapshot.currentUser}) gid=1000(${nextSnapshot.currentGroup}) groups=1000(${nextSnapshot.currentGroup}),27(sudo)`,
+      output: `uid=1000(${nextSnapshot.currentUser}) gid=1000(${nextSnapshot.currentGroup}) groups=${[...groups].map((group, index) => `${index ? 27 : 1000}(${group})`).join(',')}`,
       newSnapshot: nextSnapshot,
-      stepRecord: { command: line, diff: 'ID query', explanation: `Prints UID, GID, and supplemental group IDs for active user.` },
+      stepRecord: { command: line, diff: 'ID query', explanation: `Prints the active UID, primary GID, and supplementary groups. Group membership matters because Linux checks group permission bits when the file's group is one of these groups.` },
     };
   }
 
@@ -1058,6 +1570,12 @@ export function executeVFSCommand(
         newSnapshot: snapshot,
         stepRecord: { command: line, diff: 'Find failed', explanation: `Path "${startPath}" does not exist in VFS.` },
       };
+    }
+    const blockedPath = pathTraversalFailure(nextSnapshot, startId, isDirectoryNode(nodes[startId]));
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'find must search through each directory on the requested path. ');
+    if (isDirectoryNode(nodes[startId])) {
+      const inaccessible = findSubtreeAccessFailure(nextSnapshot, startId, false);
+      if (inaccessible) return permissionDenied(snapshot, line, inaccessible.node, inaccessible.permission, 'find cannot enumerate this part of the tree without directory read and execute/search access. ');
     }
 
     // Helper to collect paths recursively
@@ -1125,6 +1643,9 @@ export function executeVFSCommand(
         stepRecord: { command: line, diff: 'Grep error', explanation: `Cannot grep "${fileArg}".` },
       };
     }
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId!);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'grep must traverse parent directories before opening the file. ');
+    if (!hasVfsPermission(nextSnapshot, targetNode, 'read')) return permissionDenied(snapshot, line, targetNode, 'read', 'grep reads file contents, so the selected class needs r. ');
 
     const fileLines = (targetNode.content || '').split('\n');
     const matched: string[] = [];
@@ -1177,6 +1698,10 @@ export function executeVFSCommand(
         stepRecord: { command: line, diff: 'File error', explanation: `File ${fileArg} not found.` },
       };
     }
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId!);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'sed must traverse parent directories before opening the file. ');
+    if (!hasVfsPermission(nextSnapshot, targetNode, 'read')) return permissionDenied(snapshot, line, targetNode, 'read', 'sed reads the source stream, so the selected class needs r. ');
+    if (isInPlace && !hasVfsPermission(nextSnapshot, targetNode, 'write')) return permissionDenied(snapshot, line, targetNode, 'write', 'sed -i writes the transformed contents back to the file; the selected class needs w. ');
 
     let modifiedContent = targetNode.content || '';
     const match = expr.match(/^s\/(.*?)\/(.*?)\/([g]?)$/);
@@ -1223,6 +1748,9 @@ export function executeVFSCommand(
         stepRecord: { command: line, diff: 'File error', explanation: `File ${fileArg} not found.` },
       };
     }
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId!);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'awk must traverse parent directories before opening the file. ');
+    if (!hasVfsPermission(nextSnapshot, targetNode, 'read')) return permissionDenied(snapshot, line, targetNode, 'read', 'awk reads file records, so the selected class needs r. ');
 
     const lines = (targetNode.content || '').split('\n');
     const resultLines: string[] = [];
@@ -1283,6 +1811,10 @@ export function executeVFSCommand(
       };
     }
 
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId!);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'wc must traverse parent directories before opening the file. ');
+    if (!hasVfsPermission(nextSnapshot, targetNode, 'read')) return permissionDenied(snapshot, line, targetNode, 'read', 'wc reads file contents to count lines, words, or bytes. ');
+
     const text = targetNode.content || '';
     const linesCount = text ? text.split('\n').length : 0;
     const wordsCount = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -1330,6 +1862,10 @@ export function executeVFSCommand(
         stepRecord: { command: line, diff: 'File error', explanation: `File ${fileArg} not found.` },
       };
     }
+
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId!);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', `${cmd} must traverse parent directories before opening the file. `);
+    if (!hasVfsPermission(nextSnapshot, targetNode, 'read')) return permissionDenied(snapshot, line, targetNode, 'read', `${cmd} reads file contents, so the selected class needs r. `);
 
     const lines = (targetNode.content || '').split('\n');
     const sliced = cmd === 'head' ? lines.slice(0, numLines) : lines.slice(-numLines);
@@ -1409,6 +1945,10 @@ export function executeVFSCommand(
 
   // --- 26. tree ---
   if (cmd === 'tree') {
+    const blockedPath = pathTraversalFailure(nextSnapshot, nextSnapshot.currentDirId, true);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'tree must traverse the current directory before listing descendants. ');
+    const inaccessible = findSubtreeAccessFailure(nextSnapshot, nextSnapshot.currentDirId, false);
+    if (inaccessible) return permissionDenied(snapshot, line, inaccessible.node, inaccessible.permission, 'tree needs directory read and execute/search access to enumerate this branch. ');
     const renderTreeAscii = (nodeId: string, indent: string = ''): string[] => {
       const node = nodes[nodeId];
       if (!node) return [];
@@ -1474,6 +2014,12 @@ export function executeVFSCommand(
       return { output: `diff: ${!n1 ? f1 : f2}: No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'File error', explanation: 'File not found.' } };
     }
 
+    for (const fileNode of [n1, n2]) {
+      const blockedPath = pathTraversalFailure(nextSnapshot, fileNode.id);
+      if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'diff must traverse each file path before opening its inputs. ');
+      if (!hasVfsPermission(nextSnapshot, fileNode, 'read')) return permissionDenied(snapshot, line, fileNode, 'read', 'diff reads both files to compare their contents. ');
+    }
+
     if (n1.content === n2.content) {
       return { output: '', newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'Files identical', explanation: `Files ${f1} and ${f2} are identical.` } };
     }
@@ -1490,6 +2036,184 @@ export function executeVFSCommand(
       output: 'Linux stem-studio 5.15.0-88-generic #98-Ubuntu SMP x86_64 x86_64 x86_64 GNU/Linux',
       newSnapshot: nextSnapshot,
       stepRecord: { command: line, diff: 'Kernel query', explanation: 'Printed Linux kernel release details.' },
+    };
+  }
+
+  // --- Virtual process and scheduler controls ---
+  if (cmd === 'ps' || cmd === 'top' || cmd === 'htop' || cmd === 'jobs') {
+    const processes = nextSnapshot.processes || [];
+    if (cmd === 'jobs') {
+      const jobs = processes.filter((process) => process.ppid === 1082 && process.command !== 'octa-shell');
+      return {
+        output: jobs.length
+          ? jobs.map((process, index) => `[${index + 1}]  ${process.state === 'T' ? 'Stopped' : 'Running'}                 ${process.command} ${process.args}`).join('\n')
+          : 'No jobs',
+        newSnapshot: nextSnapshot,
+        stepRecord: { command: line, diff: `Listed ${jobs.length} virtual jobs`, explanation: 'jobs shows the processes started by this simulated shell. They are teaching fixtures and do not run on your computer.' },
+      };
+    }
+
+    let columns: string[] | undefined;
+    if (args.some((arg) => ['-ef', '-eF', '-f', '-A', '--all'].includes(arg))) {
+      columns = ['pid', 'ppid', 'user', 'stat', 'args'];
+    } else if (args.some((arg) => ['aux', '-aux', '-au', '-u'].includes(arg))) {
+      columns = ['user', 'pid', 'ni', 'stat', 'comm', 'args'];
+    }
+    const outputIndex = args.findIndex((arg) => arg === '-o' || arg === '--format');
+    const outputInline = args.find((arg) => arg.startsWith('-o') && arg.length > 2);
+    if (outputIndex >= 0 || outputInline) {
+      const rawColumns = outputInline?.slice(2) || args[outputIndex + 1] || '';
+      columns = rawColumns.split(',').map((column) => column.trim().toLowerCase()).filter((column) => ['pid', 'ppid', 'user', 'ni', 'stat', 'comm', 'args'].includes(column));
+      if (!columns.length) {
+        return { output: 'ps: unsupported output format; try -o pid,ppid,user,ni,stat,comm,args', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported ps format', explanation: 'The simulator supports these ps columns: pid, ppid, user, ni, stat, comm, args.' } };
+      }
+    }
+    if (cmd === 'top' || cmd === 'htop') {
+      const rows = processes.map((process) => `${String(process.pid).padStart(5)} ${process.user.padEnd(8)} ${String(process.nice).padStart(3)} ${process.state} ${process.pid === 1116 ? '2.4' : process.state === 'R' ? '0.8' : '0.0'} ${process.command} ${process.args}`);
+      return {
+        output: `top - virtual process view · no host processes\nTasks: ${processes.length} total, ${processes.filter((process) => process.state === 'R').length} running, ${processes.filter((process) => process.state === 'S').length} sleeping, ${processes.filter((process) => process.state === 'T').length} stopped\n  PID USER      NI S  %CPU COMMAND ARGS\n${rows.join('\n')}`,
+        newSnapshot: nextSnapshot,
+        stepRecord: { command: line, diff: `Viewed ${processes.length} simulated processes`, explanation: 'top/htop display a stable educational process table. CPU values are illustrative; nothing is read from the host operating system.' },
+      };
+    }
+    if (args.some((arg) => ['aux', '-aux', '-au', '-u'].includes(arg))) {
+      const rows = processes.map((process) => `${process.user.padEnd(8)} ${String(process.pid).padStart(5)} ${(process.pid === 1116 ? '2.4' : process.state === 'R' ? '0.8' : '0.0').padStart(5)} ${(process.pid === 1116 ? '0.2' : '0.0').padStart(5)} ${String(process.nice).padStart(3)} ${process.state.padEnd(4)} 00:00 ${process.command} ${process.args}`);
+      return {
+        output: `USER     PID  %CPU %MEM  NI STAT TIME COMMAND\n${rows.join('\n')}`,
+        newSnapshot: nextSnapshot,
+        stepRecord: { command: line, diff: `Listed ${processes.length} simulated processes`, explanation: 'ps aux uses the common BSD-style process listing. CPU and memory readings are illustrative values from the virtual process table, not measurements from the host.' },
+      };
+    }
+    return {
+      output: processTable(processes, columns),
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Listed ${processes.length} simulated processes`, explanation: 'ps reads the virtual process table. Use ps -ef or ps aux, and ps -o pid,ppid,user,ni,stat,comm,args for selected columns.' },
+    };
+  }
+
+  if (cmd === 'nice') {
+    let nice = 10;
+    let commandIndex = 0;
+    if (args[0] === '-n' || args[0] === '--adjustment') {
+      nice = Number(args[1]);
+      commandIndex = 2;
+    } else if (args[0]?.startsWith('--adjustment=')) {
+      nice = Number(args[0].split('=')[1]);
+      commandIndex = 1;
+    } else if (/^-[0-9]+$/.test(args[0] || '')) {
+      nice = Number(args[0].slice(1));
+      commandIndex = 1;
+    }
+    nice = Number.isFinite(nice) ? Math.trunc(nice) : NaN;
+    const commandArgs = args.slice(commandIndex);
+    if (!commandArgs.length || !Number.isFinite(nice)) {
+      return { output: 'usage: nice [-n adjustment] command [argument ...]\nnice: adjustment must be an integer from -20 to 19', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid nice syntax', explanation: 'nice starts a simulated process with a priority adjustment from -20 (highest priority) to 19 (lowest). This simulator never launches a real process.' } };
+    }
+    if (nice < -20 || nice > 19) {
+      return { output: `nice: invalid adjustment '${nice}': expected a value from -20 to 19`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid nice adjustment', explanation: 'Linux niceness values range from -20 (highest priority) to 19 (lowest priority).' } };
+    }
+    const pid = nextSnapshot.nextPid || 1200;
+    const process: VFSProcess = { pid, ppid: 1082, user: nextSnapshot.currentUser, nice, state: 'S', command: commandArgs[0], args: commandArgs.slice(1).join(' ') };
+    nextSnapshot.processes = [...(nextSnapshot.processes || []), process];
+    nextSnapshot.nextPid = pid + 1;
+    return {
+      output: `${commandArgs.join(' ')}: simulated process started with PID ${pid} and nice value ${nice}. No host process was executed.`,
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Started virtual PID ${pid} with nice ${nice}`, explanation: `Added ${commandArgs[0]} to the virtual process table with niceness ${nice}. Linux uses -20 for the highest scheduling priority and 19 for the lowest.`, targetNodeId: nextSnapshot.currentDirId },
+    };
+  }
+
+  if (cmd === 'renice') {
+    const processFlagIndex = args.indexOf('-p');
+    const niceIndex = args.indexOf('-n');
+    const priorityToken = niceIndex >= 0
+      ? args[niceIndex + 1]
+      : args.slice(0, processFlagIndex >= 0 ? processFlagIndex : undefined).find((arg) => /^[+-]?\d+$/.test(arg));
+    const priority = Number(priorityToken);
+    const pidArg = processFlagIndex >= 0
+      ? args[processFlagIndex + 1]
+      : args.find((arg) => /^\d+$/.test(arg) && arg !== priorityToken);
+    const pid = Number(pidArg);
+    if (!Number.isInteger(priority) || priority < -20 || priority > 19 || !Number.isInteger(pid)) {
+      return { output: 'usage: renice [-n] priority -p pid\npriority must be an integer from -20 to 19', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid renice syntax', explanation: 'renice updates the priority of a simulated process by PID.' } };
+    }
+    const process = (nextSnapshot.processes || []).find((entry) => entry.pid === pid);
+    if (!process) return { output: `renice: ${pid}: no such process`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Process not found', explanation: `PID ${pid} is not present in the virtual process table.` } };
+    if (process.user !== nextSnapshot.currentUser && nextSnapshot.currentUser !== 'root') {
+      return { output: `renice: failed to set priority for ${pid} (permission denied)`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: 'A simulated user may only change the priority of their own processes; root may change any process.' } };
+    }
+    const previousNice = process.nice;
+    process.nice = priority;
+    return { output: `${pid} (process ID) old priority ${previousNice}, new priority ${priority}`, newSnapshot: nextSnapshot, stepRecord: { command: line, diff: `PID ${pid}: nice ${previousNice} -> ${priority}`, explanation: `Changed the virtual process scheduling priority from ${previousNice} to ${priority}. Lower nice values mean higher priority.` } };
+  }
+
+  if (cmd === 'kill') {
+    const signalIndex = args.findIndex((arg) => arg === '-s' || arg === '--signal');
+    const signalArg = signalIndex >= 0 ? args[signalIndex + 1] : (args.find((arg) => arg.startsWith('-')) || '-TERM');
+    if (signalArg === '-l' || signalArg === '--list') {
+      return { output: 'HUP INT QUIT ILL ABRT FPE KILL SEGV PIPE ALRM TERM STOP TSTP CONT', newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'Listed supported simulated signals', explanation: 'The virtual process table supports TERM/KILL to end a process and STOP/CONT to pause or resume one.' } };
+    }
+    const signal = signalArg.replace(/^-/, '').toUpperCase();
+    const signalNames: Record<string, string> = { '9': 'KILL', '15': 'TERM', '19': 'STOP', '18': 'CONT', 'SIGTERM': 'TERM', 'SIGKILL': 'KILL', 'SIGSTOP': 'STOP', 'SIGCONT': 'CONT' };
+    const normalizedSignal = signalNames[signal] || signal;
+    const pidArgs = args.filter((arg, index) => !arg.startsWith('-') && !(signalIndex >= 0 && index === signalIndex + 1));
+    if (!['TERM', 'KILL', 'STOP', 'CONT'].includes(normalizedSignal) || !pidArgs.length || pidArgs.some((pid) => !/^\d+$/.test(pid))) {
+      return { output: 'usage: kill [-s TERM|KILL|STOP|CONT] pid\n       kill -9 pid', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Invalid kill syntax', explanation: 'kill operates only on virtual PIDs. Supported signals are TERM, KILL, STOP, and CONT.' } };
+    }
+    const updated: string[] = [];
+    for (const rawPid of pidArgs) {
+      const pid = Number(rawPid);
+      const index = (nextSnapshot.processes || []).findIndex((entry) => entry.pid === pid);
+      if (index < 0) return { output: `bash: kill: (${pid}) - No such process`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Process not found', explanation: `PID ${pid} does not exist in the simulated process table.` } };
+      const process = nextSnapshot.processes![index];
+      if (pid === 1 || (process.user !== nextSnapshot.currentUser && nextSnapshot.currentUser !== 'root')) {
+        return { output: `bash: kill: (${pid}) - Operation not permitted`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: 'The virtual init process is protected, and users may only signal processes they own unless running as root.' } };
+      }
+      if (normalizedSignal === 'STOP') process.state = 'T';
+      else if (normalizedSignal === 'CONT') process.state = 'S';
+      else nextSnapshot.processes!.splice(index, 1);
+      updated.push(`${pid} ${normalizedSignal === 'STOP' ? 'stopped' : normalizedSignal === 'CONT' ? 'continued' : 'terminated'}`);
+    }
+    return { output: updated.join('\n'), newSnapshot: nextSnapshot, stepRecord: { command: line, diff: updated.join('; '), explanation: `Applied ${normalizedSignal} to the matching virtual process${pidArgs.length === 1 ? '' : 'es'}. The simulator does not send signals to operating-system processes.` } };
+  }
+
+  if (cmd === 'help') {
+    return {
+      output: [
+        'Octa Linux virtual shell · supported command families',
+        'Navigation: pwd, cd [-L|-P] [path], ls [-lahARd] [path], tree [-L depth] [path], rmdir empty-dir',
+        'Files: mkdir [-p] path, touch path, cat path, cp [-r] source destination, mv source destination, rm [-rf] path',
+        'Editors: nano file, vim file (changes save into the virtual filesystem); bash script.sh reads a virtual script',
+        'Text & search: echo, grep, find, sed, awk, wc, head, tail, diff',
+        'Permissions & users: ls -l, stat, chmod, chown, chgrp, umask, sudo (limited), useradd, userdel, groupadd, usermod, whoami, id, who',
+        'Processes: ps [-ef|aux|-o columns], top, htop, jobs, nice -n value command, renice value -p PID, kill [-TERM|-9|-STOP|-CONT] PID',
+        'System/network demos: uname, apt, ssh, curl, ping',
+        'Input: ↑/↓ history · Tab completion · Ctrl+L clear',
+        'Scope: this is an isolated teaching simulator; unsupported commands do not execute on your device or a server.',
+      ].join('\n'),
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: 'Displayed virtual-shell help', explanation: 'The help output lists the implemented command families and their common flags. This is a simulator, not a full Linux distribution.' },
+    };
+  }
+
+  if (cmd.startsWith('./') || cmd.startsWith('../') || cmd.startsWith('/')) {
+    const targetId = resolveNodeId(nodes, nextSnapshot.currentDirId, cmd);
+    if (!targetId || !nodes[targetId]) {
+      return { output: `bash: ${cmd}: No such file or directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Executable not found', explanation: `No filesystem entry exists at ${cmd}.` } };
+    }
+    const target = nodes[targetId];
+    if (isDirectoryNode(target)) return { output: `bash: ${cmd}: Is a directory`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Not an executable file', explanation: 'A directory is entered with cd; it is not launched as a program.' } };
+    const blockedPath = pathTraversalFailure(nextSnapshot, targetId);
+    if (blockedPath) return permissionDenied(snapshot, line, blockedPath, 'execute', 'Linux needs execute/search permission on each parent directory before reaching a program. ');
+    if (!hasVfsPermission(nextSnapshot, target, 'execute')) {
+      return permissionDenied(snapshot, line, target, 'execute', 'Launching ./file asks the operating system to execute this file. For a shell script, use chmod u+x only when you intend to grant that permission. ');
+    }
+    const simulated = simulateLiteralEchoScript(target.content);
+    const isScript = (target.content || '').startsWith('#!');
+    return {
+      output: [simulated.output, simulated.skipped.length ? `Skipped unsupported script statements (${simulated.skipped.join(', ')}); only literal echo lines run in this learning simulator.` : '', !isScript ? 'Execute permission check passed; binary contents are not run by this simulator.' : ''].filter(Boolean).join('\n'),
+      newSnapshot: nextSnapshot,
+      stepRecord: { command: line, diff: `Execute permission granted by ${target.permissions} (${target.octalPermissions})`, explanation: `The current user passed the execute-bit check for ${getAbsolutePath(nodes, targetId)}. For a script, Linux also uses its shebang to choose an interpreter. This virtual shell simulates only literal echo lines and never executes arbitrary host code.`, targetNodeId: targetId },
     };
   }
 

@@ -83,12 +83,14 @@ export const FileSystemPage: React.FC = () => {
     fileNodeId: string;
     filePath: string;
     initialContent: string;
+    readOnly: boolean;
   }>({
     isOpen: false,
     type: 'vim',
     fileNodeId: '',
     filePath: '',
     initialContent: '',
+    readOnly: false,
   });
 
   // Every way of moving through the trace restores the same snapshot, focus and
@@ -186,7 +188,8 @@ export const FileSystemPage: React.FC = () => {
         prompt: promptStr,
         command: commandLine,
         output: result.output,
-        isError: result.output.includes('bash:') || result.output.includes('error'),
+        isError: /error|failed|not found|permission denied|syntax error|unsupported/i.test(result.stepRecord.diff)
+          || /^(?:bash:|usage:)/i.test(result.output),
       },
     ]);
 
@@ -198,6 +201,7 @@ export const FileSystemPage: React.FC = () => {
         fileNodeId: result.editorTrigger.fileNodeId,
         filePath: result.editorTrigger.filePath,
         initialContent: result.editorTrigger.initialContent,
+        readOnly: Boolean(result.editorTrigger.readOnly),
       });
     }
 
@@ -223,7 +227,7 @@ export const FileSystemPage: React.FC = () => {
   }, [currentStepIndex, snapshot, snapshotHistory, stepHistory]);
 
   // --- Editor Save Handler ---
-  const handleSaveEditorContent = (savedContent: string) => {
+  const handleSaveEditorContent = (savedContent: string, closeEditor = true) => {
     const { fileNodeId, filePath } = editorState;
     if (fileNodeId && snapshot.nodes[fileNodeId]) {
       const nextSnap: VFSSnapshot = JSON.parse(JSON.stringify(snapshot));
@@ -244,7 +248,9 @@ export const FileSystemPage: React.FC = () => {
       setStepHistory(newStepHistory);
       setCurrentStepIndex(newStepHistory.length - 1);
     }
-    setEditorState(prev => ({ ...prev, isOpen: false }));
+    setEditorState(prev => closeEditor
+      ? { ...prev, isOpen: false }
+      : { ...prev, initialContent: savedContent });
   };
 
   const activeStepRecord = stepHistory[currentStepIndex] || stepHistory[0];
@@ -266,6 +272,7 @@ export const FileSystemPage: React.FC = () => {
         currentPath,
         currentUser: snapshot.currentUser,
         currentGroup: snapshot.currentGroup,
+        umask: snapshot.umask || '0022',
         selectedNode: selectedNode ? {
           name: selectedNode.name,
           type: selectedNode.type,
@@ -273,6 +280,8 @@ export const FileSystemPage: React.FC = () => {
           owner: selectedNode.owner,
           group: selectedNode.group,
           permissions: selectedNode.permissions,
+          octalPermissions: selectedNode.octalPermissions,
+          stickyBit: Boolean(selectedNode.stickyBit),
         } : undefined,
       },
       steps: stepHistory,
@@ -513,6 +522,8 @@ export const FileSystemPage: React.FC = () => {
         type={editorState.type}
         filePath={editorState.filePath}
         initialContent={editorState.initialContent}
+        readOnly={editorState.readOnly}
+        onSave={(content) => handleSaveEditorContent(content, false)}
         onSaveAndExit={handleSaveEditorContent}
         onCancel={() => setEditorState(prev => ({ ...prev, isOpen: false }))}
       />
