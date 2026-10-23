@@ -38,6 +38,9 @@ export interface VFSSnapshot {
   /** Simulated process table. These are teaching fixtures, never host processes. */
   processes?: VFSProcess[];
   nextPid?: number;
+  /** Installed entries from the small, deterministic virtual APT catalogue. */
+  installedPackages?: string[];
+  packageIndexUpdated?: boolean;
 }
 
 /**
@@ -303,8 +306,15 @@ export function createInitialVFS(): VFSSnapshot {
     },
     'sess-file': { id: 'sess-file', name: 'sess_temp', type: 'file', parentId: 'tmp', owner: 'octa', group: 'octa', permissions: 'rw-------', octalPermissions: '600', content: 'temporary session token', createdAt: now, modifiedAt: now },
 
-    'usr': { id: 'usr', name: 'usr', type: 'directory', parentId: 'root', childrenIds: [], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
-    'var': { id: 'var', name: 'var', type: 'directory', parentId: 'root', childrenIds: ['log-dir'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'usr': { id: 'usr', name: 'usr', type: 'directory', parentId: 'root', childrenIds: ['usr-bin-dir', 'usr-sbin-dir', 'usr-share-dir'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'usr-bin-dir': { id: 'usr-bin-dir', name: 'bin', type: 'directory', parentId: 'usr', childrenIds: [], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'usr-sbin-dir': { id: 'usr-sbin-dir', name: 'sbin', type: 'directory', parentId: 'usr', childrenIds: [], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'usr-share-dir': { id: 'usr-share-dir', name: 'share', type: 'directory', parentId: 'usr', childrenIds: ['usr-doc-dir'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'usr-doc-dir': { id: 'usr-doc-dir', name: 'doc', type: 'directory', parentId: 'usr-share-dir', childrenIds: [], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'var': { id: 'var', name: 'var', type: 'directory', parentId: 'root', childrenIds: ['log-dir', 'lib-var-dir'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'lib-var-dir': { id: 'lib-var-dir', name: 'lib', type: 'directory', parentId: 'var', childrenIds: ['dpkg-dir'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'dpkg-dir': { id: 'dpkg-dir', name: 'dpkg', type: 'directory', parentId: 'lib-var-dir', childrenIds: ['dpkg-status-file'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
+    'dpkg-status-file': { id: 'dpkg-status-file', name: 'status', type: 'file', parentId: 'dpkg-dir', owner: 'root', group: 'root', permissions: 'rw-r--r--', octalPermissions: '644', content: 'Package: bash\nStatus: install ok installed\n\nPackage: coreutils\nStatus: install ok installed\n\nPackage: nano\nStatus: install ok installed\n\nPackage: python3\nStatus: install ok installed\n\nPackage: vim\nStatus: install ok installed\n', createdAt: now, modifiedAt: now },
     'log-dir': { id: 'log-dir', name: 'log', type: 'directory', parentId: 'var', childrenIds: ['syslog-file'], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
     'syslog-file': { id: 'syslog-file', name: 'syslog', type: 'file', parentId: 'log-dir', owner: 'syslog', group: 'adm', permissions: 'rw-r-----', octalPermissions: '640', content: 'systemd[1]: Started Network Service.\nsystemd[1]: Reached target Network.', createdAt: now, modifiedAt: now },
   };
@@ -331,6 +341,8 @@ export function createInitialVFS(): VFSSnapshot {
       { pid: 1140, ppid: 1082, user: 'octa', nice: 5, state: 'S', command: 'learning-demo', args: 'background process fixture' },
     ],
     nextPid: 1200,
+    installedPackages: ['bash', 'coreutils', 'nano', 'python3', 'vim'],
+    packageIndexUpdated: true,
   };
 }
 

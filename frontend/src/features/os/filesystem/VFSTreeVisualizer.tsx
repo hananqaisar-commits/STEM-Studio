@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ChevronDown, ChevronRight, FileText, Filter, Folder, FolderOpen,
-  FolderTree, HardDrive, Search, ShieldCheck, Sliders, Terminal,
+  ChevronDown, ChevronRight, FileText, Folder, FolderOpen, FolderTree,
+  HardDrive, Search, ShieldCheck, Terminal,
 } from 'lucide-react';
 import { type VFSNode, type VFSSnapshot, getAbsolutePath } from './vfs';
 
@@ -13,24 +13,13 @@ interface VFSTreeVisualizerProps {
   isFullscreen?: boolean;
 }
 
-type FHSCategoryGroup = 'all' | 'binaries' | 'config' | 'user' | 'runtime';
+type NodeKind = 'directory' | 'mount' | 'config' | 'script' | 'file';
 
-const GROUPS: { id: FHSCategoryGroup; label: string }[] = [
-  { id: 'all', label: 'All paths' },
-  { id: 'binaries', label: 'Programs & libraries' },
-  { id: 'config', label: 'Configuration' },
-  { id: 'user', label: 'Home & storage' },
-  { id: 'runtime', label: 'Runtime & system' },
-];
+const isDirectory = (node: VFSNode) => node.type === 'directory' || node.type === 'mount-point';
+const directChildIds = (node: VFSNode, nodes: Record<string, VFSNode>) =>
+  [...new Set(node.childrenIds || [])].filter((childId) => nodes[childId]?.parentId === node.id);
 
-function groupForTopLevel(name: string): FHSCategoryGroup {
-  if (['bin', 'sbin', 'lib', 'lib64', 'usr'].includes(name)) return 'binaries';
-  if (['etc', 'opt'].includes(name)) return 'config';
-  if (['home', 'root', 'mnt', 'media', 'srv'].includes(name)) return 'user';
-  return 'runtime';
-}
-
-function nodeKind(node: VFSNode): 'directory' | 'mount' | 'config' | 'script' | 'file' {
+function getNodeKind(node: VFSNode): NodeKind {
   if (node.type === 'directory') return 'directory';
   if (node.type === 'mount-point') return 'mount';
   const name = node.name.toLowerCase();
@@ -40,9 +29,19 @@ function nodeKind(node: VFSNode): 'directory' | 'mount' | 'config' | 'script' | 
   return 'file';
 }
 
-const isDirectory = (node: VFSNode) => node.type === 'directory' || node.type === 'mount-point';
-const directChildIds = (node: VFSNode, nodes: Record<string, VFSNode>) =>
-  [...new Set(node.childrenIds || [])].filter(childId => nodes[childId]?.parentId === node.id);
+function initialCollapsedNodes(snapshot: VFSSnapshot): Set<string> {
+  const expanded = new Set<string>([snapshot.rootId]);
+  let current: VFSNode | undefined = snapshot.nodes[snapshot.currentDirId];
+  // Reveal the path to the current working directory, while leaving that
+  // directory's own contents folded so the first frame stays readable.
+  while (current?.parentId) {
+    if (current.id !== snapshot.currentDirId) expanded.add(current.id);
+    current = snapshot.nodes[current.parentId];
+  }
+  return new Set(Object.values(snapshot.nodes)
+    .filter((node) => isDirectory(node) && !expanded.has(node.id))
+    .map((node) => node.id));
+}
 
 export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   snapshot,
@@ -52,14 +51,53 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
   isFullscreen = false,
 }) => {
   const { nodes, rootId, currentDirId } = snapshot;
-  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(() => new Set());
-  const [selectedGroup, setSelectedGroup] = useState<FHSCategoryGroup>('all');
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(() => initialCollapsedNodes(snapshot));
   const [search, setSearch] = useState('');
-  const root = nodes[rootId];
   const query = search.trim().toLocaleLowerCase();
+  const root = nodes[rootId];
+  const currentPath = getAbsolutePath(nodes, currentDirId);
+  const activePath = activeNodeId && nodes[activeNodeId]
+    ? getAbsolutePath(nodes, activeNodeId)
+    : '';
   const selectedNode = activeNodeId && nodes[activeNodeId]
     ? nodes[activeNodeId]
     : nodes[currentDirId] || root;
+
+  // When `cd` changes the working directory, reveal its path in the tree but
+  // keep that directory's children folded until the learner opens it.
+  useEffect(() => {
+    setCollapsedNodes((previous) => {
+      const next = new Set(previous);
+      let current: VFSNode | undefined = nodes[currentDirId];
+      if (current && isDirectory(current)) next.add(current.id);
+      while (current?.parentId) {
+        next.delete(current.parentId);
+        current = nodes[current.parentId];
+      }
+      next.delete(rootId);
+      return next;
+    });
+  // Re-run when the current directory's actual parent path changes, not for
+  // every snapshot clone produced by an ordinary file edit.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDirId, currentPath, rootId]);
+
+  // A command target (such as a newly installed /usr/bin program) must be
+  // brought into view by expanding its actual parent chain in the tree.
+  useEffect(() => {
+    if (!activeNodeId || !nodes[activeNodeId]) return;
+    setCollapsedNodes((previous) => {
+      const next = new Set(previous);
+      let current: VFSNode | undefined = nodes[activeNodeId];
+      while (current?.parentId) {
+        next.delete(current.parentId);
+        current = nodes[current.parentId];
+      }
+      next.delete(rootId);
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNodeId, activePath, rootId]);
 
   const matchingDescendant = useMemo(() => {
     const cache = new Map<string, boolean>();
@@ -71,7 +109,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       if (!node) return false;
       visiting.add(nodeId);
       const ownMatch = !query || `${node.name} ${getAbsolutePath(nodes, nodeId)}`.toLocaleLowerCase().includes(query);
-      const hasMatchingChild = directChildIds(node, nodes).some(childId => visit(childId));
+      const hasMatchingChild = directChildIds(node, nodes).some((childId) => visit(childId));
       const result = ownMatch || hasMatchingChild;
       visiting.delete(nodeId);
       cache.set(nodeId, result);
@@ -81,15 +119,11 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     return cache;
   }, [nodes, query, root]);
 
+  const visibleChildIds = (node: VFSNode) => directChildIds(node, nodes)
+    .filter((childId) => matchingDescendant.get(childId));
   const isCollapsed = (nodeId: string) => !query && collapsedNodes.has(nodeId);
 
-  const visibleChildIds = (node: VFSNode) => directChildIds(node, nodes).filter(childId => {
-    const child = nodes[childId];
-    if (!child || !matchingDescendant.get(childId)) return false;
-    if (node.id === rootId && selectedGroup !== 'all' && groupForTopLevel(child.name) !== selectedGroup) return false;
-    return true;
-  });
-
+  const directoryIds = useMemo(() => Object.values(nodes).filter(isDirectory).map((node) => node.id), [nodes]);
   const visibleStats = useMemo(() => {
     let directories = 0;
     let files = 0;
@@ -101,15 +135,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       if (!node || !matchingDescendant.get(nodeId)) return;
       if (isDirectory(node)) directories += 1;
       else files += 1;
-      visibleChildIds(node).forEach(visit);
+      if (!isCollapsed(nodeId)) visibleChildIds(node).forEach(visit);
     };
     if (root) visit(root.id);
     return { directories, files, total: directories + files };
-  // visibleChildIds is derived from the stable state above.
+  // The tree is small and this memo keeps the initial filesystem frame tidy.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, matchingDescendant, selectedGroup, root, rootId]);
+  }, [nodes, matchingDescendant, collapsedNodes, query, root]);
 
-  const directoryIds = useMemo(() => Object.values(nodes).filter(isDirectory).map(node => node.id), [nodes]);
   const unreachableCount = useMemo(() => {
     const reached = new Set<string>();
     const visit = (nodeId: string) => {
@@ -120,11 +153,12 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     if (root) visit(root.id);
     return Math.max(0, Object.keys(nodes).length - reached.size);
   }, [nodes, root]);
+
   const expandAll = () => setCollapsedNodes(new Set());
-  const collapseAll = () => setCollapsedNodes(new Set(directoryIds.filter(id => id !== rootId)));
+  const collapseAll = () => setCollapsedNodes(new Set(directoryIds.filter((id) => id !== rootId)));
 
   const toggleCollapsed = (nodeId: string) => {
-    setCollapsedNodes(previous => {
+    setCollapsedNodes((previous) => {
       const next = new Set(previous);
       if (next.has(nodeId)) next.delete(nodeId);
       else next.add(nodeId);
@@ -139,9 +173,9 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     const node = nodes[nodeId];
     if (!node || !matchingDescendant.get(nodeId)) return null;
     const children = visibleChildIds(node);
-    const hasVisibleChildren = children.length > 0;
+    const hasChildren = children.length > 0;
     const collapsed = isCollapsed(nodeId);
-    const kind = nodeKind(node);
+    const kind = getNodeKind(node);
     const active = node.id === activeNodeId;
     const workingDirectory = node.id === currentDirId;
     const inOperationPath = animatedPathIds.includes(nodeId);
@@ -149,56 +183,53 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     const Icon = kind === 'directory'
       ? (collapsed ? Folder : FolderOpen)
       : kind === 'mount' ? HardDrive
-      : kind === 'config' ? Sliders
       : kind === 'script' ? Terminal
       : FileText;
+    const visibleName = node.id === rootId ? '/' : node.name;
+    const absolutePath = getAbsolutePath(nodes, node.id);
 
     return (
       <li
         key={nodeId}
         className={`linux-tree__branch ${isLast ? 'is-last' : ''} ${inOperationPath ? 'is-path' : ''}`}
       >
-        {node.id !== rootId && (
-          <span className="linux-tree__branch-symbol" aria-hidden="true">{isLast ? '└─' : '├─'}</span>
-        )}
         <div className={`linux-tree__row-wrap ${workingDirectory || active ? 'has-path-hint' : ''}`}>
           <div className="linux-tree__entry">
-            {isDirectory(node) && hasVisibleChildren ? (
+            {isDirectory(node) && hasChildren ? (
               <button
                 type="button"
-                aria-label={collapsed ? `Expand ${node.name}` : `Collapse ${node.name}`}
+                aria-label={collapsed ? `Expand ${absolutePath}` : `Collapse ${absolutePath}`}
                 aria-expanded={!collapsed}
                 className="linux-tree__toggle"
-                onClick={event => { event.stopPropagation(); toggleCollapsed(node.id); }}
+                onClick={(event) => { event.stopPropagation(); toggleCollapsed(node.id); }}
               >
-                {collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+                {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
               </button>
             ) : <span className="linux-tree__toggle-placeholder" aria-hidden="true" />}
             <button
               type="button"
               onClick={() => onSelectNode?.(node.id)}
-              aria-label={`Select ${getAbsolutePath(nodes, node.id)}`}
+              aria-label={`Select ${absolutePath}, ${kind}, owned by ${node.owner}:${node.group}, permissions ${node.octalPermissions} ${node.permissions}`}
               aria-current={workingDirectory ? 'location' : undefined}
               aria-pressed={active || workingDirectory}
-              className={`linux-tree__node ${inOperationPath ? 'is-operation-node' : ''} linux-node--${workingDirectory ? 'current' : active ? 'active' : inOperationPath ? 'path' : 'default'}`}
+              title={`${absolutePath}\n${node.owner}:${node.group} · ${node.octalPermissions} ${node.permissions}`}
+              className={`linux-tree__node kind-${kind} ${inOperationPath ? 'is-operation-node' : ''} ${workingDirectory ? 'is-current' : active ? 'is-active' : ''}`}
             >
-              <span className={`linux-tree__icon kind-${kind}`}><Icon size={16} /></span>
-              <span className="linux-tree__name" title={node.name}>{node.name}</span>
-              <span className="linux-tree__type">{kind === 'directory' ? 'DIR' : kind === 'mount' ? 'MOUNT' : kind.toUpperCase()}</span>
-              {isDirectory(node) && (
-                <span className="linux-tree__children-count">{(node.childrenIds || []).length}</span>
+              <span className={`linux-tree__icon kind-${kind}`}><Icon size={15} aria-hidden="true" /></span>
+              <span className="linux-tree__name">{visibleName}</span>
+              <span className="linux-tree__permissions" aria-hidden="true">{node.octalPermissions}</span>
+              {isDirectory(node) && hasChildren && (
+                <span className="linux-tree__children-count" aria-hidden="true">{directChildIds(node, nodes).length}</span>
               )}
-              <span className="linux-tree__permissions" title={`${node.octalPermissions} · ${node.permissions}`} aria-label={`Permissions ${node.octalPermissions}, ${node.permissions}`}>{node.octalPermissions}</span>
               {workingDirectory && <span className="linux-tree__state is-pwd">PWD</span>}
               {!workingDirectory && active && <span className="linux-tree__state is-selected">FOCUS</span>}
-              {inOperationPath && !active && !workingDirectory && <span className="linux-tree__state is-traversed">PATH</span>}
             </button>
           </div>
-          <div className="linux-tree__path-hint">{getAbsolutePath(nodes, node.id)}</div>
+          {(workingDirectory || active) && <div className="linux-tree__path-hint">{absolutePath}</div>}
         </div>
 
-        {hasVisibleChildren && !collapsed && (
-          <ul className="linux-tree__list">
+        {hasChildren && !collapsed && (
+          <ul className="linux-tree__list" aria-label={`Children of ${absolutePath}`}>
             {children.map((childId, index) => renderNode(childId, index === children.length - 1, nextAncestors))}
           </ul>
         )}
@@ -212,14 +243,14 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
     <section className="linux-vfs" aria-label="Linux virtual filesystem tree">
       <header className="linux-vfs__toolbar">
         <div className="linux-vfs__heading">
-          <span className="linux-vfs__heading-icon"><FolderTree size={19} /></span>
+          <span className="linux-vfs__heading-icon"><FolderTree size={18} aria-hidden="true" /></span>
           <div>
-            <h2>Filesystem tree</h2>
-            <p>Each connector follows a real parent → child relationship in the current snapshot.</p>
+            <h2>Filesystem</h2>
+            <p>Live view of the virtual files and folders changed by terminal commands.</p>
           </div>
         </div>
         <div className="linux-vfs__summary" aria-live="polite">
-          <span><strong>{visibleStats.total}</strong> nodes</span>
+          <span><strong>{visibleStats.total}</strong> visible</span>
           <span><strong>{visibleStats.directories}</strong> folders</span>
           <span><strong>{visibleStats.files}</strong> files</span>
         </div>
@@ -228,15 +259,8 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
       <div className="linux-vfs__controls">
         <label className="linux-vfs__search">
           <Search size={15} aria-hidden="true" />
-          <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Find a file or path" aria-label="Find a file or path" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a file or path" aria-label="Find a file or path" />
           {search && <button type="button" onClick={() => setSearch('')} aria-label="Clear search">Clear</button>}
-        </label>
-        <label className="linux-vfs__filter">
-          <Filter size={14} aria-hidden="true" />
-          <span className="sr-only">Filter top-level directories</span>
-          <select value={selectedGroup} onChange={event => setSelectedGroup(event.target.value as FHSCategoryGroup)}>
-            {GROUPS.map(group => <option value={group.id} key={group.id}>{group.label}</option>)}
-          </select>
         </label>
         <div className="linux-vfs__tree-actions">
           <button type="button" onClick={expandAll}>Expand all</button>
@@ -246,26 +270,28 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
 
       <div className={`linux-vfs__canvas ${isFullscreen ? 'is-fullscreen' : ''}`}>
         <div className="linux-vfs__context">
-          <span className="linux-vfs__context-label">Working directory</span>
-          <code>{getAbsolutePath(nodes, currentDirId)}</code>
-          <span className="linux-vfs__legend"><i className="legend-parent" /> Parent/child link</span>
-          <span className="linux-vfs__legend"><i className="legend-operation" /> Current operation path</span>
+          <span className="linux-vfs__context-label">PWD</span>
+          <code>{currentPath}</code>
+          <span className="linux-vfs__legend"><i className="legend-parent" /> Parent / child</span>
+          {animatedPathIds.length > 0 && <span className="linux-vfs__legend"><i className="legend-operation" /> Command path</span>}
         </div>
         {unreachableCount > 0 && (
           <div className="linux-vfs__integrity-warning" role="status">
-            {unreachableCount} disconnected {unreachableCount === 1 ? 'entry is' : 'entries are'} not drawn because its parent link does not point back to it.
+            {unreachableCount} {unreachableCount === 1 ? 'entry is' : 'entries are'} disconnected from `/` because its parent-child links do not agree.
           </div>
         )}
         {visibleStats.total === 0 ? (
-          <div className="linux-vfs__no-results">No paths match “{search}”. Clear the search to see the tree.</div>
+          <div className="linux-vfs__no-results">No paths match “{search}”. Clear the search to see the filesystem.</div>
         ) : (
-          <ul className="linux-tree__root-list">{renderNode(rootId, true)}</ul>
+          <ul className="linux-tree__root-list" aria-label="Filesystem hierarchy">
+            {renderNode(rootId, true)}
+          </ul>
         )}
       </div>
 
       {selectedNode && (
         <footer className="linux-vfs__inspector" aria-live="polite">
-          <span className="linux-vfs__inspector-icon"><ShieldCheck size={17} /></span>
+          <span className="linux-vfs__inspector-icon"><ShieldCheck size={16} aria-hidden="true" /></span>
           <div className="linux-vfs__inspector-main">
             <div className="linux-vfs__inspector-title">
               <strong>{getAbsolutePath(nodes, selectedNode.id)}</strong>
@@ -273,7 +299,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
             </div>
             <div className="linux-vfs__inspector-meta">
               <span>{selectedNode.type}</span>
-              <span>Owner {selectedNode.owner}:{selectedNode.group}</span>
+              <span>{selectedNode.owner}:{selectedNode.group}</span>
               <span>Modified {selectedNode.modifiedAt}</span>
               {selectedNode.content !== undefined && <span>{selectedNode.content.length} bytes</span>}
             </div>
