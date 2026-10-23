@@ -3,15 +3,15 @@
   --linux-accent: var(--color-primary);
   --linux-accent-hover: var(--color-primary-hover);
   --linux-accent-soft: color-mix(in srgb, var(--color-primary) 10%, transparent);
-  --linux-terminal-bg: #111722;
-  --linux-terminal-panel: #171f2d;
-  --linux-terminal-border: #2a3547;
-  --linux-terminal-text: #e7edf7;
-  --linux-terminal-muted: #9aa7ba;
-  --linux-terminal-purple: #c4b5fd;
-  --linux-terminal-green: #86efac;
-  --linux-terminal-blue: #7dd3fc;
-  --linux-terminal-red: #fca5a5;
+  --linux-terminal-bg: var(--color-surface);
+  --linux-terminal-panel: var(--color-surface-elevated);
+  --linux-terminal-border: var(--color-border);
+  --linux-terminal-text: var(--color-text);
+  --linux-terminal-muted: var(--color-text-muted);
+  --linux-terminal-accent: var(--color-primary);
+  --linux-terminal-green: color-mix(in srgb, #087a55 88%, var(--color-text));
+  --linux-terminal-blue: color-mix(in srgb, #2466b0 88%, var(--color-text));
+  --linux-terminal-red: color-mix(in srgb, #b42332 88%, var(--color-text));
   color: var(--color-text);
 }
 
@@ -181,51 +181,67 @@
 .linux-vfs__empty { padding:2rem; }
 @keyframes linux-vfs-path-pulse { 50% { box-shadow:0 0 0 3px color-mix(in srgb,#15966c 19%,transparent); } }
 
-/* Interactive shell: intentionally dark for familiar terminal contrast, with the app accent. */
+/* The virtual shell follows the active app theme; no separate terminal theme is imposed. */
 .linux-terminal {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   width: 100%;
   height: 100%;
-  min-height: 420px;
+  min-height: 460px;
+  min-width: 0;
   overflow: hidden;
-  position: relative;
-  padding: 1rem;
+  padding: 0;
   color: var(--linux-terminal-text);
   background: var(--linux-terminal-bg);
   border: 1px solid var(--linux-terminal-border);
   border-radius: 16px;
   box-shadow: var(--shadow-md);
-  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   cursor: text;
 }
-.linux-terminal__header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding-bottom:.75rem; margin-bottom:.75rem; border-bottom:1px solid var(--linux-terminal-border); font-family:inherit; }
-.linux-terminal__identity,
-.linux-terminal__path { display:inline-flex; align-items:center; gap:.5rem; min-height:34px; padding:.35rem .7rem; border-radius:9px; border:1px solid var(--linux-terminal-border); background:var(--linux-terminal-panel); }
-.linux-terminal__identity { color:var(--linux-terminal-text); font-weight:650; }
-.linux-terminal__identity svg { color:var(--linux-terminal-purple); }
-.linux-terminal__path { max-width: min(35vw, 280px); overflow:hidden; color:var(--linux-terminal-blue); text-overflow:ellipsis; white-space:nowrap; }
-.linux-terminal__output { flex:1; min-height:220px; overflow:auto; padding-right:.25rem; overscroll-behavior:contain; }
-.linux-terminal__welcome { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.7rem .8rem; margin-bottom:.85rem; color:#ddd6fe; background:rgba(124,58,237,.12); border:1px solid rgba(167,139,250,.24); border-radius:10px; font-size:11px; }
-.linux-terminal__welcome-main { display:flex; align-items:center; gap:.55rem; }
-.linux-terminal__prompt { display:flex; align-items:baseline; gap:.45rem; min-width:0; color:var(--linux-terminal-text); }
-.linux-terminal__user { color:var(--linux-terminal-green); font-weight:700; }
-.linux-terminal__separator { color:var(--linux-terminal-muted); }
-.linux-terminal__cwd { max-width:45%; overflow:hidden; color:var(--linux-terminal-blue); font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
-.linux-terminal__symbol { color:var(--linux-terminal-purple); font-weight:800; }
-.linux-terminal__command { overflow-wrap:anywhere; }
-.linux-terminal__entry { display:flex; align-items:baseline; gap:.45rem; min-width:0; padding:.35rem 0; }
-.linux-terminal__entry input { min-width:0; color:var(--linux-terminal-text); font:inherit; font-weight:650; caret-color:var(--linux-terminal-purple); }
-.linux-terminal__entry input::placeholder { color:var(--linux-terminal-muted); }
-.linux-terminal__output-line { padding:.4rem .6rem; border-left:2px solid rgba(167,139,250,.55); color:#cbd5e1; background:rgba(23,31,45,.72); border-radius:0 8px 8px 0; white-space:pre-wrap; overflow-wrap:anywhere; }
-.linux-terminal__output-line.is-error { color:var(--linux-terminal-red); border-left-color:#f87171; background:rgba(127,29,29,.16); }
-.linux-terminal__shortcuts { display:flex; align-items:center; gap:.45rem; overflow-x:auto; padding-top:.75rem; margin-top:.6rem; border-top:1px solid var(--linux-terminal-border); white-space:nowrap; }
-.linux-terminal__shortcut-label { display:flex; align-items:center; gap:.35rem; margin-right:.15rem; color:var(--linux-terminal-muted); font:600 11px/1.3 system-ui,sans-serif; }
-.linux-terminal__shortcut-label svg { color:var(--linux-terminal-purple); }
-.linux-terminal__shortcut { min-height:34px; padding:.35rem .6rem; border:1px solid var(--linux-terminal-border); border-radius:8px; background:var(--linux-terminal-panel); color:#ddd6fe; font:600 11px/1.3 ui-monospace,monospace; transition:border-color 150ms ease, background-color 150ms ease; }
-.linux-terminal__shortcut:hover { border-color:var(--linux-terminal-purple); background:#202a3b; }
-.linux-terminal :is(button,input):focus-visible { outline:2px solid var(--linux-terminal-purple); outline-offset:2px; }
+.linux-terminal__header { display:flex; align-items:center; justify-content:space-between; gap:.85rem; min-height:68px; padding:.8rem 1rem; border-bottom:1px solid var(--linux-terminal-border); background:var(--linux-terminal-panel); font-family:inherit; }
+.linux-terminal__brand, .linux-terminal__header-actions { display:flex; align-items:center; gap:.7rem; min-width:0; }
+.linux-terminal__brand-icon, .linux-terminal__welcome-icon { display:grid; place-items:center; flex:none; width:36px; height:36px; color:var(--linux-terminal-accent); background:color-mix(in srgb,var(--linux-terminal-accent) 10%,var(--linux-terminal-bg)); border:1px solid color-mix(in srgb,var(--linux-terminal-accent) 20%,var(--linux-terminal-border)); border-radius:11px; }
+.linux-terminal__identity-copy { display:grid; gap:.13rem; min-width:0; }
+.linux-terminal__identity-copy strong { color:var(--linux-terminal-text); font:700 13px/1.3 system-ui,sans-serif; }
+.linux-terminal__identity-copy > span { color:var(--linux-terminal-muted); font:11px/1.3 system-ui,sans-serif; }
+.linux-terminal__sandbox { display:inline-flex; align-items:center; gap:.35rem; min-height:32px; padding:.3rem .55rem; color:var(--linux-terminal-green); border:1px solid color-mix(in srgb,#087a55 24%,var(--linux-terminal-border)); border-radius:999px; background:color-mix(in srgb,#087a55 6%,var(--linux-terminal-bg)); font:600 10px/1.2 system-ui,sans-serif; white-space:nowrap; }
+.linux-terminal__path { display:inline-flex; align-items:center; max-width:min(24vw,240px); min-height:34px; overflow:hidden; padding:.35rem .65rem; color:var(--linux-terminal-blue); border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-bg); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.linux-terminal__clear { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; min-width:72px; min-height:36px; padding:.35rem .65rem; color:var(--color-text-secondary); border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-bg); font:600 11px/1.2 system-ui,sans-serif; cursor:pointer; transition:border-color 140ms ease,color 140ms ease,background-color 140ms ease; }
+.linux-terminal__clear:hover { color:var(--linux-terminal-accent); border-color:var(--linux-terminal-accent); }
+.linux-terminal__output { flex:1 1 auto; min-height:0; overflow:auto; padding:1rem; overscroll-behavior:contain; scroll-behavior:smooth; }
+.linux-terminal__welcome { max-width:880px; padding:1rem; margin:0 auto; color:var(--linux-terminal-text); border:1px solid var(--linux-terminal-border); border-radius:14px; background:var(--linux-terminal-bg); box-shadow:var(--shadow-sm); font-size:12px; }
+.linux-terminal__welcome-title { display:flex; align-items:center; gap:.75rem; }
+.linux-terminal__welcome-title strong { font:700 14px/1.35 system-ui,sans-serif; }
+.linux-terminal__welcome-title p { margin:.2rem 0 0; color:var(--color-text-secondary); font:12px/1.45 system-ui,sans-serif; }
+.linux-terminal__scope-note { margin:.85rem 0; padding:.6rem .7rem; color:var(--color-text-secondary); border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-panel); font:11px/1.5 system-ui,sans-serif; }
+.linux-terminal__examples { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+.linux-terminal__examples button { display:flex; flex-direction:column; align-items:flex-start; gap:.25rem; min-width:0; min-height:50px; padding:.55rem .65rem; color:var(--linux-terminal-text); text-align:left; border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-panel); cursor:pointer; transition:border-color 140ms ease,background-color 140ms ease; }
+.linux-terminal__examples button:hover { border-color:var(--linux-terminal-accent); background:color-mix(in srgb,var(--linux-terminal-accent) 6%,var(--linux-terminal-panel)); }
+.linux-terminal__examples code { color:var(--linux-terminal-accent); font:650 12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.linux-terminal__examples button span { color:var(--linux-terminal-muted); font:11px/1.3 system-ui,sans-serif; }
+.linux-terminal__help-link { display:inline-flex; align-items:center; gap:.4rem; min-height:40px; padding:.55rem 0 0; color:var(--linux-terminal-accent); border:0; background:transparent; font:650 11px/1.3 system-ui,sans-serif; cursor:pointer; }
+.linux-terminal__record { margin:0 0 .8rem; }
+.linux-terminal__prompt { display:flex; align-items:baseline; gap:.45rem; min-width:0; color:var(--linux-terminal-text); white-space:pre-wrap; overflow-wrap:anywhere; }
+.linux-terminal__prompt--history { margin-bottom:.3rem; }
+.linux-terminal__prompt--history span { color:var(--linux-terminal-green); }
+.linux-terminal__prompt--history b { color:var(--linux-terminal-text); font-weight:600; }
+.linux-terminal__output-line { margin:0; padding:.55rem .7rem; color:var(--color-text-secondary); border-left:2px solid color-mix(in srgb,var(--linux-terminal-accent) 52%,var(--linux-terminal-border)); border-radius:0 8px 8px 0; background:var(--linux-terminal-panel); font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+.linux-terminal__output-line.is-error { color:var(--linux-terminal-red); border-left-color:var(--linux-terminal-red); background:color-mix(in srgb,#b42332 6%,var(--linux-terminal-panel)); }
+.linux-terminal__footer { flex:none; padding:.65rem 1rem .75rem; border-top:1px solid var(--linux-terminal-border); background:var(--linux-terminal-panel); }
+.linux-terminal__entry { display:flex; align-items:center; gap:.4rem; min-width:0; min-height:42px; padding:.45rem .6rem; border:1px solid var(--linux-terminal-border); border-radius:10px; background:var(--linux-terminal-bg); }
+.linux-terminal__prompt-user { flex:none; color:var(--linux-terminal-green); font-weight:700; }
+.linux-terminal__prompt-separator { flex:none; color:var(--linux-terminal-muted); }
+.linux-terminal__cwd { flex:none; max-width:25%; overflow:hidden; color:var(--linux-terminal-blue); font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+.linux-terminal__prompt-symbol { flex:none; color:var(--linux-terminal-accent); font-weight:800; }
+.linux-terminal__input { flex:1; width:100%; min-width:0; padding:0; margin:0; color:var(--linux-terminal-text); border:0; outline:0; background:transparent; font:inherit; font-weight:600; caret-color:var(--linux-terminal-accent); }
+.linux-terminal__input::placeholder { color:var(--linux-terminal-muted); font-weight:400; }
+.linux-terminal__completion { overflow:hidden; padding:.35rem .6rem 0; color:var(--linux-terminal-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.linux-terminal__footer-meta { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.55rem .15rem 0; color:var(--linux-terminal-muted); font:10px/1.4 system-ui,sans-serif; }
+.linux-terminal__footer-meta > span { display:inline-flex; align-items:center; gap:.35rem; }
+.linux-terminal__footer-meta i { color:var(--linux-terminal-border); font-style:normal; }
+.linux-terminal__ready-dot { width:7px; height:7px; border-radius:50%; background:var(--linux-terminal-green); box-shadow:0 0 0 3px color-mix(in srgb,#087a55 12%,transparent); }
+.linux-terminal :is(button,input):focus-visible { outline:2px solid var(--linux-terminal-accent); outline-offset:2px; }
 
 /* Editor shell follows the same theme while keeping a readable writing surface. */
 .linux-editor { background:rgba(13,18,29,.64); backdrop-filter:blur(8px); }
@@ -276,9 +292,14 @@
   .linux-vfs__legend { margin-left:0; }
   .linux-tree__type { display:none; }
   .linux-vfs__preview { max-width:100%; flex-basis:100%; }
-  .linux-terminal { min-height:360px; padding:.75rem; }
-  .linux-terminal__path { display:none; }
-  .linux-terminal__welcome { align-items:flex-start; }
+  .linux-terminal { min-height:360px; }
+  .linux-terminal__header { align-items:flex-start; flex-direction:column; padding:.75rem; }
+  .linux-terminal__header-actions { width:100%; justify-content:space-between; }
+  .linux-terminal__path { max-width:34vw; }
+  .linux-terminal__output { padding:.75rem; }
+  .linux-terminal__footer { padding:.6rem .75rem .7rem; }
+  .linux-terminal__welcome { padding:.75rem; }
+  .linux-terminal__footer-meta { align-items:flex-start; flex-direction:column; gap:.3rem; }
   .linux-editor__header { padding:.7rem .8rem; }
   .linux-editor__body { padding:.75rem; }
   .linux-editor__status > div { padding-left:.8rem; padding-right:.8rem; }
@@ -289,9 +310,20 @@
   .linux-vfs__toolbar, .linux-vfs__controls { padding-left:.7rem; padding-right:.7rem; }
   .linux-vfs__canvas { padding-left:.55rem; padding-right:.55rem; }
   .linux-vfs__heading p { max-width:230px; }
-  .linux-tree__permissions { display:none; }
+  .linux-tree__permissions { padding:.12rem .25rem; font-size:8px; }
   .linux-tree__node { gap:.3rem; padding:.35rem .4rem; }
   .linux-vfs__filter select { max-width:150px; }
+  .linux-terminal__header-actions { gap:.4rem; }
+  .linux-terminal__sandbox { font-size:0; gap:0; width:34px; justify-content:center; }
+  .linux-terminal__sandbox svg { flex:none; }
+  .linux-terminal__path { display:none; }
+  .linux-terminal__clear { min-width:42px; width:42px; padding:.35rem; }
+  .linux-terminal__clear span { display:none; }
+  .linux-terminal__examples { grid-template-columns:minmax(0,1fr); }
+  .linux-terminal__entry { gap:.3rem; }
+  .linux-terminal__prompt-user { max-width:92px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .linux-terminal__cwd { max-width:22%; }
+  .linux-terminal__input { font-size:12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -16,6 +16,7 @@ import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorks
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -51,6 +52,7 @@ const ALGORITHMS: AlgMeta[] = [
 import { useTutorContext } from '../../contexts/TutorContext';
 
 export const BacktrackingPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('subsets');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -236,6 +238,7 @@ export const BacktrackingPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}

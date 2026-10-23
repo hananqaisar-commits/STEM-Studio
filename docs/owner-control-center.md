@@ -43,12 +43,12 @@ The one-time provisioning and recovery commands are intentionally not HTTP endpo
 
 ## Current owner controls
 
-- Search, filter, and paginate accounts; see each user's profile, account status, email verification, sessions, progress, quiz attempts, visualizer saves, support tickets, Octa response preferences, and recent sign-in outcomes.
+- Search, filter, and paginate accounts; see each user's profile, account status, owner email-verification state (learner verification is not required), sessions, progress, quiz attempts, visualizer saves, support tickets, Octa response preferences, and recent sign-in outcomes.
 - Suspend or restore non-owner accounts. Suspension immediately revokes their active sessions. Owners can also revoke a learner's sessions without suspending the account.
 - Permanently delete a learner after recent MFA, a typed username confirmation, and a second browser confirmation. The deletion cascades through the learner's account data; an audit event remains without retaining the account's credentials.
 - Set each registered module as free, premium, enabled, or disabled. Grant or revoke an individual learner's module access, with an optional expiry. Premium controls are manual entitlements; they do not represent a payment.
-- Publish in-app announcements to active, verified accounts. The navbar badge reads the exact unread count and the inbox refreshes periodically, when opened, and when the window regains focus.
-- Optionally email a general announcement or service notice to active, verified accounts. Product updates and promotions are emailed only to active, verified accounts who opted in. Each email is sent privately to one recipient, and SMTP-accepted/failed counts appear in the broadcast history; SMTP acceptance does not guarantee inbox placement.
+- Publish in-app announcements to active accounts. The navbar badge reads the exact unread count and the inbox refreshes periodically, when opened, and when the window regains focus.
+- Optionally email a general announcement or service notice to active accounts. Product updates and promotions are emailed only to active accounts who opted in. Each email is sent privately to one recipient, and provider-accepted/failed counts appear in the broadcast history; provider acceptance does not guarantee inbox placement. The shared delivery provider and sender are configured in the backend; see [email setup](email-delivery-setup.md).
 - Learners can change promotional email consent in **Settings → Account**. New accounts default to opted out.
 - View and respond to support tickets, moderate submitted reviews, and review administrative audit events.
 
@@ -56,7 +56,7 @@ Sensitive changes, account deletion, feature changes, broadcasts, and session ac
 
 ## Boundaries and remaining integration work
 
-There is no subscription/payment provider or plan, pricing, discount, invoice, or refund system. The premium switch and per-user overrides control the learning modules only; they never create a paid subscription or report a payment. Email uses the configured SMTP relay and is sent serially from the API request. Gmail SMTP and other mailbox relays have sending quotas and are not a high-volume marketing platform; use a transactional/bulk email provider and a durable delivery queue before emailing a large audience. The app does not expose recipient email addresses in the broadcast screen. The audit log is application-level, not a tamper-proof external log sink; production should export it to a restricted monitoring service.
+There is no subscription/payment provider or plan, pricing, discount, invoice, or refund system. The premium switch and per-user overrides control the learning modules only; they never create a paid subscription or report a payment. Optional owner email is queued durably and sent through the configured email provider, one recipient per message. It is not a high-volume marketing platform; a large campaign needs a contracted provider plan, bounce/complaint webhooks, unsubscribe handling, and suppression management. The app does not expose recipient email addresses in the broadcast screen. The audit log is application-level, not a tamper-proof external log sink; production should export it to a restricted monitoring service.
 
 Feature policies are checked by the module route, progress-writing endpoints, custom-code execution, and Octa tutor. Some visualizer calculations run entirely in the browser, so client-side content bundles cannot be made secret from a determined browser user. The backend still enforces access on the protected operations listed above. The owner panel does not expose authentication secrets or allow promoting another account to owner.
 

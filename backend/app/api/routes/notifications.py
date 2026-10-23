@@ -17,7 +17,7 @@ from backend.app.api.schemas import (
 from backend.app.core.owner_security import record_admin_event
 from backend.app.core.rate_limit import strict
 from backend.app.core.config import get_settings
-from backend.app.core.email import send_owner_broadcast_emails, smtp_is_configured
+from backend.app.core.email import email_delivery_is_configured, send_owner_broadcast_emails
 from backend.infrastructure.database.database import SessionLocal, get_db
 from backend.infrastructure.database.models import (
     Announcement,
@@ -60,7 +60,7 @@ def deliver_announcement_emails(announcement_id: int, actor_user_id: int | None 
             delivery.status = "sending"
             delivery.attempted_at = now
             user = db.get(User, delivery.user_id)
-            if user is None or not user.is_active or not user.is_verified:
+            if user is None or not user.is_active:
                 delivery.status = "skipped"
                 delivery.error_type = "account_not_eligible"
                 continue
@@ -78,6 +78,7 @@ def deliver_announcement_emails(announcement_id: int, actor_user_id: int | None 
             subject=announcement.title,
             body=announcement.message,
             promotional=announcement.kind in {"promotion", "product_update"},
+            idempotency_prefix=f"stemstudio-announcement:{announcement_id}",
         )
         for user_id, (outcome, error_type) in results.items():
             delivery = db.query(AnnouncementEmailDelivery).filter_by(
@@ -330,8 +331,11 @@ def get_owner_audience_size(
     current_user: User = Depends(require_owner),
     db: Session = Depends(get_db),
 ):
-    eligible = (User.is_active.is_(True), User.is_verified.is_(True))
+    eligible = (User.is_active.is_(True),)
     count = db.query(func.count(User.user_id)).filter(*eligible).scalar() or 0
+    verified_count = db.query(func.count(User.user_id)).filter(
+        User.is_active.is_(True), User.is_verified.is_(True)
+    ).scalar() or 0
     marketing_count = (
         db.query(func.count(User.user_id))
         .join(UserPreference, UserPreference.user_id == User.user_id)
@@ -340,9 +344,11 @@ def get_owner_audience_size(
         or 0
     )
     return {
-        "active_verified_accounts": count,
+        "active_accounts": count,
+        # Retain the previous key for older browser bundles during rollout.
+        "active_verified_accounts": verified_count,
         "marketing_opt_in_accounts": marketing_count,
-        "email_configured": smtp_is_configured(),
+        "email_configured": email_delivery_is_configured(),
     }
 
 
@@ -385,10 +391,10 @@ def publish_announcement(
     _rate: None = Depends(strict),
 ):
     """Publish in-app and optionally email a consent-aware account audience."""
-    if payload.send_email and not smtp_is_configured():
+    if payload.send_email and not email_delivery_is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Email delivery is unavailable because the backend SMTP provider is not configured.",
+            detail="Email delivery is unavailable because the backend email provider credentials or sender address are not configured.",
         )
 
     promotional = payload.kind in {"promotion", "product_update"}
@@ -404,7 +410,7 @@ def publish_announcement(
     db.add(announcement)
     db.flush()
     audience_query = select(literal(announcement.announcement_id), User.user_id).where(
-        User.is_active.is_(True), User.is_verified.is_(True)
+        User.is_active.is_(True)
     )
     db.execute(
         insert(AnnouncementRecipient).from_select(
@@ -420,9 +426,7 @@ def publish_announcement(
 
     email_audience_size = 0
     if payload.send_email:
-        recipients_query = db.query(User.user_id).filter(
-            User.is_active.is_(True), User.is_verified.is_(True)
-        )
+        recipients_query = db.query(User.user_id).filter(User.is_active.is_(True))
         if promotional:
             recipients_query = recipients_query.join(
                 UserPreference, UserPreference.user_id == User.user_id
@@ -434,7 +438,7 @@ def publish_announcement(
         else:
             delivery_query = select(
                 literal(announcement.announcement_id), User.user_id, literal("queued")
-            ).select_from(User).where(User.is_active.is_(True), User.is_verified.is_(True))
+            ).select_from(User).where(User.is_active.is_(True))
             if promotional:
                 delivery_query = delivery_query.join(
                     UserPreference, UserPreference.user_id == User.user_id
@@ -489,8 +493,8 @@ def retry_announcement_email(
         raise HTTPException(status_code=404, detail="Broadcast not found")
     if not announcement.email_requested:
         raise HTTPException(status_code=409, detail="Email delivery was not requested for this broadcast")
-    if not smtp_is_configured():
-        raise HTTPException(status_code=503, detail="Email delivery is unavailable because SMTP is not configured on the backend")
+    if not email_delivery_is_configured():
+        raise HTTPException(status_code=503, detail="Email delivery is unavailable because the backend email provider credentials or sender address are not configured")
     failed_deliveries = db.query(AnnouncementEmailDelivery).filter(
         AnnouncementEmailDelivery.announcement_id == announcement_id,
         AnnouncementEmailDelivery.status == "failed",

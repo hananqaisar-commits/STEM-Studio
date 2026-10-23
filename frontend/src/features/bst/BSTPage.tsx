@@ -15,6 +15,7 @@ import { ExplanationPanel } from '../../components/layout/ExplanationPanel';
 import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -102,6 +103,7 @@ const SAMPLE_TRIE_WORDS = ['cat', 'car', 'card', 'dog', 'dot'];
 const RANDOM_WORD_POOL = ['apple', 'app', 'code', 'coder', 'tree', 'trie', 'data', 'algo', 'node', 'heap'];
 
 export const BSTPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const { setTutorContext } = useTutorContext();
   const [treeCategory, setTreeCategory] = useState<TreeCategory>('bst');
   // Tracks the last-run operation so the quiz revision card matches what is visualized.
@@ -934,6 +936,7 @@ export const BSTPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}

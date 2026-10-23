@@ -18,15 +18,16 @@ from backend.app.api.schemas import (
     ResendVerificationRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
+    SignUpResponse,
     SignUpRequest,
     TokenResponse,
     UserResponse,
 )
 from backend.app.core.config import get_settings
 from backend.app.core.email import (
+    email_delivery_is_configured,
     encrypt_verification_token,
     send_password_reset_email,
-    smtp_is_configured,
 )
 from backend.app.core.rate_limit import rate_limit, standard, strict
 from backend.app.core.owner_security import (
@@ -140,13 +141,13 @@ def _validate_password_strength(password: str) -> None:
 
 # ─── POST /api/auth/signup ───────────────────────────────────────────
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=SignUpResponse, status_code=status.HTTP_201_CREATED)
 def signup(
     payload: SignUpRequest,
     request: Request,
     db: Session = Depends(get_db),
     _rate: None = Depends(strict),
-):
+) -> SignUpResponse:
     """Register a new user account."""
 
     # Enforce password complexity before any DB work
@@ -181,11 +182,15 @@ def signup(
             detail="This username is already taken. Sign in to the existing account or choose a different username.",
         )
 
-    smtp_enabled = smtp_is_configured()
+    email_enabled = email_delivery_is_configured()
+    verification_required = settings.EMAIL_VERIFICATION_REQUIRED
     dev_unverified_signup = (
-        not smtp_enabled and settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP
+        verification_required
+        and not email_enabled
+        and settings.DEBUG
+        and settings.ALLOW_UNVERIFIED_SIGNUP
     )
-    if not smtp_enabled and not dev_unverified_signup:
+    if verification_required and not email_enabled and not dev_unverified_signup:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Email verification is not configured. Please try again later.",
@@ -199,7 +204,7 @@ def signup(
         is_verified=dev_unverified_signup,
     )
     from backend.infrastructure.database.models import EmailVerification
-    raw_token = generate_secure_token()
+    raw_token = generate_secure_token() if verification_required else None
     now = datetime.now(timezone.utc)
     try:
         db.add(new_user)
@@ -208,16 +213,17 @@ def signup(
             user_id=new_user.user_id,
             marketing_email_opt_in=payload.marketing_email_opt_in,
         ))
-        verification = EmailVerification(
-            user_id=new_user.user_id,
-            token_hash=hash_token(raw_token),
-            expires_at=now + timedelta(
-                hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS
-            ),
-        )
-        db.add(verification)
-        db.flush()
-        if smtp_enabled:
+        if raw_token is not None:
+            verification = EmailVerification(
+                user_id=new_user.user_id,
+                token_hash=hash_token(raw_token),
+                expires_at=now + timedelta(
+                    hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS
+                ),
+            )
+            db.add(verification)
+            db.flush()
+        if raw_token is not None and email_enabled:
             db.add(EmailOutbox(
                 user_id=new_user.user_id,
                 verification_id=verification.verification_id,
@@ -236,7 +242,9 @@ def signup(
 
     invalidate_platform_stats_cache()
 
-    return new_user
+    return SignUpResponse.model_validate(new_user).model_copy(
+        update={"email_verification_required": verification_required}
+    )
 
 
 # ─── GET /api/auth/verify-email ─────────────────────────────────────
@@ -287,7 +295,9 @@ def resend_verification_email(
     _rate: None = Depends(strict),
 ):
     """Issue a fresh verification link without revealing whether an email exists."""
-    if not smtp_is_configured():
+    if not settings.EMAIL_VERIFICATION_REQUIRED:
+        return MessageResponse(message="Email verification is not required. You can sign in normally.")
+    if not email_delivery_is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Email delivery is not configured right now. Please try again later.",
@@ -394,15 +404,21 @@ def login(
         )
 
     if not user.is_verified:
-        if settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP and not smtp_is_configured():
-            # Explicit development-only escape hatch.
-            user.is_verified = True
-            db.commit()
-        else:
+        if is_owner_identity(db, user):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Please verify your email address before signing in. Check your inbox for the verification link.",
+                detail="Owner account verification is required before owner sign-in.",
             )
+        if settings.EMAIL_VERIFICATION_REQUIRED:
+            if settings.DEBUG and settings.ALLOW_UNVERIFIED_SIGNUP and not email_delivery_is_configured():
+                # Explicit development-only escape hatch for installations that opt back in.
+                user.is_verified = True
+                db.commit()
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Please verify your email address before signing in. Check your inbox for the verification link.",
+                )
 
     # Owner mode is a separate authentication path. The client selection does
     # not grant a role: both the provisioned database role and a fresh TOTP are
@@ -997,7 +1013,7 @@ def forgot_password(
     db: Session = Depends(get_db),
     _rate: None = Depends(strict),
 ):
-    """Generate a password reset token and dispatch email via SMTP."""
+    """Generate a password reset token and dispatch through the configured email provider."""
 
     user = db.query(User).filter(func.lower(User.email) == str(payload.email).strip().lower()).first()
 
@@ -1020,12 +1036,16 @@ def forgot_password(
     db.commit()
 
     reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
-    sent = send_password_reset_email(to_email=payload.email, reset_url=reset_url)
+    sent = send_password_reset_email(
+        to_email=payload.email,
+        reset_url=reset_url,
+        idempotency_key=f"stemstudio-password-reset:{reset.reset_id}",
+    )
 
     # Surface delivery failures instead of silently pretending success.
     # Previously the return value was ignored, so users saw "reset link
-    # sent" while no email was ever dispatched (missing SMTP credentials,
-    # SMTP outage, etc.) — making this bug invisible.
+    # sent" while no email was ever dispatched (missing provider credentials,
+    # a provider outage, etc.) — making this bug invisible.
     if not sent:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

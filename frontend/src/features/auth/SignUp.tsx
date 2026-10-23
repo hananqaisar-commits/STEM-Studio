@@ -26,6 +26,7 @@ export const SignUp: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [signupComplete, setSignupComplete] = useState(false);
   const [verificationRetryRequired, setVerificationRetryRequired] = useState(false);
   const [verificationDeliveryFailed, setVerificationDeliveryFailed] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
@@ -98,11 +99,16 @@ export const SignUp: React.FC = () => {
     setExpression('focused');
 
     try {
-      await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim(), marketingEmailOptIn);
+      const createdUser = await signup(username.trim(), email.trim(), password, firstName.trim(), lastName.trim(), marketingEmailOptIn);
       rememberEmail(email.trim());
-      setSuccess('Account created. A verification email is queued. Check your inbox and spam folder; you can resend it below if it does not arrive.');
-      setVerificationRetryRequired(true);
-      setVerificationDeliveryFailed(false);
+      if (!createdUser.email_verification_required || createdUser.is_verified) {
+        setSuccess('Your account is ready. You can sign in now.');
+        setSignupComplete(true);
+      } else {
+        setSuccess('Account created. Check your inbox for the verification link.');
+        setVerificationRetryRequired(true);
+        setVerificationDeliveryFailed(false);
+      }
       setExpression('happy', { temporary: true, durationMs: 2000 });
     } catch (err: any) {
       const message = typeof err?.message === 'string' ? err.message : 'Something went wrong. Please try again.';
@@ -185,7 +191,7 @@ export const SignUp: React.FC = () => {
             {isResendingVerification ? 'Retrying email delivery…' : 'Resend verification email'}
           </button>
         )}
-        {!verificationRetryRequired && <form className="auth-form" onSubmit={handleSubmit}>
+        {!verificationRetryRequired && !signupComplete && <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-row">
             <div className="input-group">
               <label htmlFor="firstName">First Name</label>
@@ -351,7 +357,8 @@ export const SignUp: React.FC = () => {
         </form>}
 
         <div className="auth-footer">
-          Already have an account? <Link to="/login" className="auth-link">Sign in here</Link>
+          {signupComplete ? 'Continue to ' : 'Already have an account? '}
+          <Link to="/login" className="auth-link">Sign in here</Link>
         </div>
       </div>
     </div>

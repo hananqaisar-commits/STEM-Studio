@@ -188,7 +188,7 @@ export const VFSTreeVisualizer: React.FC<VFSTreeVisualizerProps> = ({
               {isDirectory(node) && (
                 <span className="linux-tree__children-count">{(node.childrenIds || []).length}</span>
               )}
-              <span className="linux-tree__permissions">{node.octalPermissions}</span>
+              <span className="linux-tree__permissions" title={`${node.octalPermissions} · ${node.permissions}`} aria-label={`Permissions ${node.octalPermissions}, ${node.permissions}`}>{node.octalPermissions}</span>
               {workingDirectory && <span className="linux-tree__state is-pwd">PWD</span>}
               {!workingDirectory && active && <span className="linux-tree__state is-selected">FOCUS</span>}
               {inOperationPath && !active && !workingDirectory && <span className="linux-tree__state is-traversed">PATH</span>}

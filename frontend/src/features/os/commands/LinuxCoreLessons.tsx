@@ -18,6 +18,7 @@ export const LinuxCoreLessons: React.FC<LinuxCoreLessonsProps> = ({ onStepChange
   const [stepIndex, setStepIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState('');
+  const [quickCheckAnswers, setQuickCheckAnswers] = useState<Record<number, number>>({});
   const lesson = LINUX_CORE_LESSONS.find((item) => item.id === lessonId) ?? LINUX_CORE_LESSONS[0];
   const step = lesson.steps[stepIndex];
 
@@ -29,6 +30,7 @@ export const LinuxCoreLessons: React.FC<LinuxCoreLessonsProps> = ({ onStepChange
     setLessonId(nextId);
     setStepIndex(0);
     setCopyMessage('');
+    setQuickCheckAnswers({});
   };
 
   const copyCommand = async (command: string) => {
@@ -121,6 +123,66 @@ export const LinuxCoreLessons: React.FC<LinuxCoreLessonsProps> = ({ onStepChange
           </div>
           {copyMessage && <p className="linux-core__copy-status" role="status">{copyMessage}</p>}
         </div>
+
+        {lesson.id === 'permissions' && (
+          <section className="linux-permission-lab" aria-label="Permission bits learning lab">
+            <div className="linux-permission-lab__heading">
+              <div>
+                <p className="linux-core__eyebrow">See the permission model</p>
+                <h4>One mode, three access classes</h4>
+              </div>
+              <code>chmod 640 file</code>
+            </div>
+            <div className="linux-permission-lab__bits" role="table" aria-label="Mode 640 decoded">
+              <div className="linux-permission-lab__bit-row is-header" role="row">
+                <span role="columnheader">Class</span><span role="columnheader">Digit</span><span role="columnheader">Bits</span><span role="columnheader">Meaning</span>
+              </div>
+              {[
+                { name: 'Owner', digit: '6', bits: 'rw-', meaning: 'Read and change this file' },
+                { name: 'Group', digit: '4', bits: 'r--', meaning: 'Read only' },
+                { name: 'Other', digit: '0', bits: '---', meaning: 'No access' },
+              ].map((row) => (
+                <div className="linux-permission-lab__bit-row" role="row" key={row.name}>
+                  <strong role="cell">{row.name}</strong><code role="cell">{row.digit}</code><code className="linux-permission-lab__triplet" role="cell">{row.bits}</code><span role="cell">{row.meaning}</span>
+                </div>
+              ))}
+            </div>
+            <div className="linux-permission-lab__rwx">
+              <p><code>r = 4</code><span>read</span><code> w = 2</code><span>write</span><code> x = 1</code><span>execute</span></p>
+              <p><strong>Files:</strong> r reads contents; w changes contents; x launches an executable.</p>
+              <p><strong>Directories:</strong> r lists names; w changes entries; x searches or traverses the path.</p>
+            </div>
+            {lesson.quickChecks?.length ? (
+              <div className="linux-permission-lab__checks">
+                <p className="linux-core__eyebrow">Check your mental model</p>
+                {lesson.quickChecks.map((check, checkIndex) => {
+                  const answer = quickCheckAnswers[checkIndex];
+                  const answered = answer !== undefined;
+                  const isCorrect = answer === check.answer;
+                  return (
+                    <fieldset className="linux-permission-lab__check" key={check.question}>
+                      <legend>{check.question}</legend>
+                      <div className="linux-permission-lab__choices">
+                        {check.choices.map((choice, choiceIndex) => (
+                          <button
+                            type="button"
+                            key={choice}
+                            className={answered && answer === choiceIndex ? (isCorrect ? 'is-correct' : 'is-incorrect') : ''}
+                            aria-pressed={answer === choiceIndex}
+                            onClick={() => setQuickCheckAnswers((previous) => ({ ...previous, [checkIndex]: choiceIndex }))}
+                          >
+                            <span>{String.fromCharCode(65 + choiceIndex)}</span>{choice}
+                          </button>
+                        ))}
+                      </div>
+                      {answered && <p className={`linux-permission-lab__feedback ${isCorrect ? 'is-correct' : 'is-incorrect'}`} role="status">{isCorrect ? 'Correct. ' : 'Try that again after reading the class bits. '}{check.explanation}</p>}
+                    </fieldset>
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
+        )}
 
         <div className="linux-core__step-controls">
           <div className="linux-core__progress" role="progressbar" aria-label="Lesson progress" aria-valuemin={1} aria-valuemax={lesson.steps.length} aria-valuenow={stepIndex + 1}>

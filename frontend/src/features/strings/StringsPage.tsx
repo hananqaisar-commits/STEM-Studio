@@ -16,6 +16,7 @@ import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorks
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -55,6 +56,7 @@ const SAMPLE_STRINGS: Record<StringAlgorithmKey, { primary: string; secondary: s
 };
 
 export const StringsPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<StringAlgorithmKey>('palindrome');
   const [searchParams] = useSearchParams();
@@ -244,6 +246,7 @@ export const StringsPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}
