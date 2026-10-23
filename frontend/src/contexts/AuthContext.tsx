@@ -12,6 +12,7 @@ interface UserData {
   last_name: string | null;
   is_active: boolean;
   is_verified: boolean;
+  email_verification_required?: boolean;
   is_owner?: boolean;
   is_owner_session?: boolean;
 }
@@ -30,7 +31,7 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
     marketingEmailOptIn?: boolean
-  ) => Promise<void>;
+  ) => Promise<UserData & { email_verification_required: boolean }>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
@@ -155,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     lastName: string,
     marketingEmailOptIn = false
   ) => {
-    await apiClient('/api/auth/signup', {
+    return apiClient<UserData & { email_verification_required: boolean }>('/api/auth/signup', {
       method: 'POST',
       body: {
         username,

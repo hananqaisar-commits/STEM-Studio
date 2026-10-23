@@ -17,6 +17,7 @@ import { MarketingHome } from './features/marketing/MarketingHome';
 import { MarketingFooter } from './features/marketing/MarketingFooter';
 import { OwnerControlCenter } from './features/owner/OwnerControlCenter';
 import { apiClient } from './api/apiClient';
+import { resetVisualizerControls, trackVisualizerIntent } from './hooks/visualizerControls';
 
 // Lazy-loaded page components for code-splitting
 const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
@@ -152,6 +153,11 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(340);
+
+  useEffect(() => trackVisualizerIntent(), []);
+  useEffect(() => {
+    resetVisualizerControls();
+  }, [location.pathname]);
 
   const pathSegment = location.pathname.split('/')[2] || '';
 

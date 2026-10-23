@@ -17,6 +17,7 @@ import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorks
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -103,6 +104,7 @@ const ALGORITHMS: AlgMeta[] = [
 import { useTutorContext } from '../../contexts/TutorContext';
 
 export const DPPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const [selectedAlg, setSelectedAlg] = useState<DPAlgorithmKey>('fibonacciDP');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -335,6 +337,7 @@ export const DPPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}
@@ -563,7 +566,7 @@ export const DPPage: React.FC = () => {
 
       <div className="dp-playback-strip" aria-label="DP trace timeline and speed">
         <span className="dp-playback-count">Step {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}</span>
-        <button type="button" onClick={stepBack} disabled={currentStepIndex <= 0} aria-label="Previous step"><SkipBack size={15} /></button>
+        <button type="button" onClick={stepBack} disabled={!controlsEnabled || currentStepIndex <= 0} aria-label="Previous step"><SkipBack size={15} /></button>
         <input
           type="range"
           min={0}
@@ -571,13 +574,14 @@ export const DPPage: React.FC = () => {
           value={Math.min(currentStepIndex, Math.max(0, totalSteps - 1))}
           onChange={(event) => seekTo(Number(event.target.value))}
           aria-label="Choose current DP step"
+          disabled={!controlsEnabled}
           aria-valuetext={`Step ${totalSteps > 0 ? currentStepIndex + 1 : 0} of ${totalSteps}`}
         />
-        <button type="button" onClick={stepForward} disabled={currentStepIndex >= totalSteps - 1} aria-label="Next step"><SkipForward size={15} /></button>
+        <button type="button" onClick={stepForward} disabled={!controlsEnabled || currentStepIndex >= totalSteps - 1} aria-label="Next step"><SkipForward size={15} /></button>
         <label className="dp-speed-control">
           <Gauge size={14} aria-hidden="true" />
           <span>Speed</span>
-          <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed">
+          <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Playback speed" disabled={!controlsEnabled}>
             {[0.5, 1, 2, 4].map((rate) => <option key={rate} value={rate}>{rate}×</option>)}
           </select>
         </label>

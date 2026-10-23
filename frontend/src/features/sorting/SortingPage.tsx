@@ -18,7 +18,10 @@ import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
+import { SaveVisualizerSnapshot } from '../../components/layout/SaveVisualizerSnapshot';
+import '../../components/layout/SaveVisualizerSnapshot.css';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -37,6 +40,7 @@ import { generateRadixSortSteps } from './algorithms/radixSort';
 import { generateBucketSortSteps } from './algorithms/bucketSort';
 
 import { useTutorContext } from '../../contexts/TutorContext';
+import { apiClient } from '../../api/apiClient';
 
 import './Sorting.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
@@ -93,9 +97,12 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 }
 
 export const SortingPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('bubble');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [pendingRestoreStep, setPendingRestoreStep] = useState<number | null>(null);
+  const [restoreMessage, setRestoreMessage] = useState('');
   useEffect(() => {
     const topic = searchParams.get('topic');
     if (topic && ALGORITHMS.some((a) => a.key === topic)) {
@@ -163,6 +170,50 @@ export const SortingPage: React.FC = () => {
     seekTo,
     setSpeed,
   } = useStepPlayer({ steps: customSteps ?? executionData.steps });
+
+  const resumeSessionId = searchParams.get('resumeSession');
+  useEffect(() => {
+    if (!resumeSessionId) return;
+    let active = true;
+    apiClient<{ session_id: number; module_name: string; algorithm_id: string; dataset_json: string }>(
+      `/api/progress/sessions/${encodeURIComponent(resumeSessionId)}`,
+      { requiresAuth: true },
+    ).then((session) => {
+      if (!active) return;
+      if (session.module_name !== 'sorting' || !ALGORITHMS.some((item) => item.key === session.algorithm_id)) {
+        throw new Error('This saved snapshot does not belong to Sorting.');
+      }
+      const snapshot = JSON.parse(session.dataset_json) as { values?: unknown; currentStepIndex?: unknown };
+      const values = snapshot.values;
+      if (!Array.isArray(values) || values.length < 2 || values.length > 30 || !values.every((value) => Number.isFinite(value))) {
+        throw new Error('The saved array is invalid or no longer supported.');
+      }
+      setSelectedAlg(session.algorithm_id as AlgorithmKey);
+      setInitialArray(values as number[]);
+      setRawArrayInput((values as number[]).join(', '));
+      setArraySize(values.length);
+      setCustomSteps(null);
+      setPendingRestoreStep(typeof snapshot.currentStepIndex === 'number' ? snapshot.currentStepIndex : 0);
+      setRestoreMessage('Saved sorting snapshot restored.');
+      const next = new URLSearchParams(searchParams);
+      next.set('topic', session.algorithm_id);
+      next.delete('resumeSession');
+      setSearchParams(next, { replace: true });
+    }).catch((error: unknown) => {
+      if (!active) return;
+      setRestoreMessage(error instanceof Error ? error.message : 'Unable to restore this saved snapshot.');
+      const next = new URLSearchParams(searchParams);
+      next.delete('resumeSession');
+      setSearchParams(next, { replace: true });
+    });
+    return () => { active = false; };
+  }, [resumeSessionId]);
+
+  useEffect(() => {
+    if (pendingRestoreStep === null || totalSteps === 0) return;
+    seekTo(Math.max(0, Math.min(totalSteps - 1, pendingRestoreStep)));
+    setPendingRestoreStep(null);
+  }, [pendingRestoreStep, totalSteps, seekTo]);
 
   // Publish active algorithm context to Octa AI Tutor dynamically
   useEffect(() => {
@@ -366,6 +417,7 @@ export const SortingPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}
@@ -499,11 +551,16 @@ export const SortingPage: React.FC = () => {
               <Maximize2 size={14} />
               <span>Fullscreen</span>
             </button>
+            <SaveVisualizerSnapshot
+              moduleName="sorting"
+              algorithmId={selectedAlg}
+              title={`${ALGORITHMS.find((item) => item.key === selectedAlg)?.name ?? 'Sorting'} · ${initialArray.length} values`}
+              snapshot={{ values: initialArray, currentStepIndex }}
+            />
           </VisualizerActions>
         }
       />
-
-
+      {restoreMessage && <p className="saved-snapshot-page-status" role="status">{restoreMessage}</p>}
 
       {/* Operations Toolbar Matching BST */}
       <div className="bst-toolbar animate-fade-in">

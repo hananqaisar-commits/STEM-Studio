@@ -5,7 +5,7 @@ This Compose stack is a self-hosted starting point for horizontal API scaling. I
 ## Start a local or staging stack
 
 1. Copy `deploy/scalability/.env.example` to `deploy/scalability/.env`.
-2. Set a persistent PostgreSQL URL, a long random JWT secret, a Redis password, the exact HTTPS frontend origin, and SMTP credentials. Keep `.env` private.
+2. Set a persistent PostgreSQL URL, a long random JWT secret, a Redis password, the exact HTTPS frontend origin, and transactional email provider credentials. Keep `.env` private.
 3. From the repository root, run:
 
    ```bash
@@ -35,14 +35,16 @@ For large production traffic, run multiple API and load-balancer instances acros
 
 The current Vercel + Render deployment does not automatically use this Compose stack. Deploying this template requires a server/container platform and the environment values above. Keep all production secrets in the host's secret manager, not in this repository.
 
-## SMTP troubleshooting
+## Email provider troubleshooting
 
-Verification mail is queued after account creation and retried automatically. Render/container logs now record a safe failure category without the recipient address, message, token, or SMTP password:
+Verification mail is queued after account creation and retried automatically. The default provider is Resend over HTTPS. Render/container logs record a safe failure category without the recipient address, message, token, or provider secret:
 
-- `authentication_rejected`: check `SMTP_USER` and the provider app password.
-- `sender_rejected`: make `EMAILS_FROM_EMAIL` an address the authenticated sender is allowed to use.
-- `tls_error`, `connection_timeout`, `host_resolution_error`, or `connection_error`: check the host, port, TLS mode, and whether the deployment host permits SMTP egress.
-- `provider_temporary_rejection`: the provider asked the service to retry; the outbox backs off and tries again.
-- `provider_rejection` or `recipient_rejected`: check the provider's sender policy and the destination address.
+- `provider_timeout` or `provider_connection_error`: check backend network access to `api.resend.com` over HTTPS and retry after a transient outage.
+- `provider_temporary_rejection`: the provider requested a retry, commonly due to a rate or temporary service limit; the outbox backs off and tries again.
+- `provider_rejection`: check that the key is valid, the sending domain is verified, and `EMAILS_FROM_EMAIL` uses that verified domain.
+- `authentication_rejected`: for the optional SMTP path, check `SMTP_USER` and the provider password.
+- `sender_rejected`: for SMTP, make `EMAILS_FROM_EMAIL` an address the authenticated sender may use.
+- `tls_error`, `connection_timeout`, `host_resolution_error`, or `connection_error`: for SMTP, check the host, port, TLS mode, and whether the deployment host permits SMTP egress.
+- `recipient_rejected`: for SMTP, check the destination address and provider response.
 
-For Gmail, use `smtp.gmail.com`, port 587 with STARTTLS (`SMTP_TLS=true`, `SMTP_USE_SSL=false`) or port 465 with implicit TLS (`SMTP_USE_SSL=true`). Use a Google App Password, not the normal account password. The backend strips display spaces from the App Password. Gmail is suitable for low-volume testing; production transactional or broadcast traffic needs a provider and plan whose sending limits match demand.
+On Render Free, use the HTTPS API path: `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, and a verified `EMAILS_FROM_EMAIL`. Render Free blocks outbound SMTP ports 25, 465, and 587. On another host that permits SMTP, select `EMAIL_PROVIDER=smtp`; Gmail requires an App Password rather than the account password. See [the full email setup guide](../../docs/email-delivery-setup.md).

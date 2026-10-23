@@ -45,6 +45,8 @@ jobs:
         continue-on-error: true
 
       - name: Run Tests
+        env:
+          PYTHONPATH: ..
         run: |
           if pip show pytest > /dev/null 2>&1; then
             pytest

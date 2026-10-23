@@ -118,7 +118,7 @@ Set `VITE_API_BASE_URL=http://localhost:8000` in `frontend/.env`, then run:
 npm run dev
 ```
 
-Open [`http://localhost:5173`](http://localhost:5173). Google sign-in requires a Google OAuth client ID in `VITE_GOOGLE_CLIENT_ID`. Email delivery for password reset requires SMTP settings. Octa's model-generated answers require either a server-side DashScope key or a provider configured in the tutor settings; built-in offline guidance remains available for supported lessons.
+Open [`http://localhost:5173`](http://localhost:5173). Google sign-in requires a Google OAuth client ID in `VITE_GOOGLE_CLIENT_ID`. Verification, password-reset, billing, and optional owner broadcast email use the configured email provider; see [`docs/email-delivery-setup.md`](docs/email-delivery-setup.md). Octa's model-generated answers require either a server-side DashScope key or a provider configured in the tutor settings; built-in offline guidance remains available for supported lessons.
 
 ### Production build
 

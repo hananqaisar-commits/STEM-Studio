@@ -16,13 +16,28 @@ export interface VFSNode {
   modifiedAt: string;
 }
 
+export interface VFSProcess {
+  pid: number;
+  ppid: number;
+  user: string;
+  nice: number;
+  state: 'R' | 'S' | 'T';
+  command: string;
+  args: string;
+}
+
 export interface VFSSnapshot {
   nodes: Record<string, VFSNode>;
   rootId: string;
   currentDirId: string;
   currentUser: string;
   currentGroup: string;
+  /** Default permission mask used when the virtual shell creates files/folders. */
+  umask?: string;
   envVars: Record<string, string>;
+  /** Simulated process table. These are teaching fixtures, never host processes. */
+  processes?: VFSProcess[];
+  nextPid?: number;
 }
 
 /**
@@ -147,7 +162,7 @@ export function createInitialVFS(): VFSSnapshot {
       name: 'octa',
       type: 'directory',
       parentId: 'home',
-      childrenIds: ['projects-dir', 'bashrc-file', 'welcome-txt'],
+      childrenIds: ['projects-dir', 'bashrc-file', 'welcome-txt', 'permissions-lab-file', 'permission-demo-script', 'private-lab-dir'],
       owner: 'octa',
       group: 'octa',
       permissions: 'rwxr-xr-x',
@@ -207,6 +222,58 @@ export function createInitialVFS(): VFSSnapshot {
       createdAt: now,
       modifiedAt: now,
     },
+    'permissions-lab-file': {
+      id: 'permissions-lab-file',
+      name: 'permissions-lab.txt',
+      type: 'file',
+      parentId: 'octa-home',
+      owner: 'octa',
+      group: 'octa',
+      permissions: 'rw-r--r--',
+      octalPermissions: '644',
+      content: 'This file is a safe practice target for chmod, stat, cat, and editor permission checks.\n',
+      createdAt: now,
+      modifiedAt: now,
+    },
+    'permission-demo-script': {
+      id: 'permission-demo-script',
+      name: 'permission-demo.sh',
+      type: 'file',
+      parentId: 'octa-home',
+      owner: 'octa',
+      group: 'octa',
+      permissions: 'rw-r--r--',
+      octalPermissions: '644',
+      content: '#!/bin/sh\necho "The execute bit allows this script to be launched."\n',
+      createdAt: now,
+      modifiedAt: now,
+    },
+    'private-lab-dir': {
+      id: 'private-lab-dir',
+      name: 'private-lab',
+      type: 'directory',
+      parentId: 'octa-home',
+      childrenIds: ['private-lab-note'],
+      owner: 'octa',
+      group: 'octa',
+      permissions: 'rwx------',
+      octalPermissions: '700',
+      createdAt: now,
+      modifiedAt: now,
+    },
+    'private-lab-note': {
+      id: 'private-lab-note',
+      name: 'note.txt',
+      type: 'file',
+      parentId: 'private-lab-dir',
+      owner: 'octa',
+      group: 'octa',
+      permissions: 'rw-------',
+      octalPermissions: '600',
+      content: 'Private directory practice file.\n',
+      createdAt: now,
+      modifiedAt: now,
+    },
 
     'lib': { id: 'lib', name: 'lib', type: 'directory', parentId: 'root', childrenIds: [], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
     'lib64': { id: 'lib64', name: 'lib64', type: 'directory', parentId: 'root', childrenIds: [], owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', createdAt: now, modifiedAt: now },
@@ -248,6 +315,7 @@ export function createInitialVFS(): VFSSnapshot {
     currentDirId: 'octa-home',
     currentUser: 'octa',
     currentGroup: 'octa',
+    umask: '0022',
     envVars: {
       USER: 'octa',
       HOME: '/home/octa',
@@ -255,6 +323,14 @@ export function createInitialVFS(): VFSSnapshot {
       PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
       PWD: '/home/octa',
     },
+    processes: [
+      { pid: 1, ppid: 0, user: 'root', nice: 0, state: 'S', command: 'systemd', args: '/sbin/init' },
+      { pid: 624, ppid: 1, user: 'root', nice: 0, state: 'S', command: 'systemd-journald', args: '/lib/systemd/systemd-journald' },
+      { pid: 1082, ppid: 1, user: 'octa', nice: 0, state: 'S', command: 'bash', args: '-bash' },
+      { pid: 1116, ppid: 1082, user: 'octa', nice: 0, state: 'R', command: 'octa-shell', args: 'virtual terminal session' },
+      { pid: 1140, ppid: 1082, user: 'octa', nice: 5, state: 'S', command: 'learning-demo', args: 'background process fixture' },
+    ],
+    nextPid: 1200,
   };
 }
 
@@ -336,13 +412,101 @@ export function resolveNodeId(
  * Format permissions from mode string (e.g. 755 -> rwxr-xr-x)
  */
 export function modeToSymbolic(mode: string): { symbolic: string; octal: string } {
-  if (mode.length === 3) {
-    const map: Record<string, string> = {
-      '0': '---', '1': '--x', '2': '-w-', '3': '-wx',
-      '4': 'r--', '5': 'r-x', '6': 'rw-', '7': 'rwx'
-    };
-    const symbolic = (map[mode[0]] || 'rwx') + (map[mode[1]] || 'r-x') + (map[mode[2]] || 'r-x');
-    return { symbolic, octal: mode };
+  if (!/^[0-7]{3,4}$/.test(mode)) return { symbolic: '---------', octal: '000' };
+  const special = mode.length === 4 ? Number(mode[0]) : 0;
+  const digits = mode.slice(-3);
+  const map: Record<string, string> = {
+    '0': '---', '1': '--x', '2': '-w-', '3': '-wx',
+    '4': 'r--', '5': 'r-x', '6': 'rw-', '7': 'rwx',
+  };
+  const chars = [...(map[digits[0]] || '---') + (map[digits[1]] || '---') + (map[digits[2]] || '---')];
+  if (special & 4) chars[2] = chars[2] === 'x' ? 's' : 'S';
+  if (special & 2) chars[5] = chars[5] === 'x' ? 's' : 'S';
+  if (special & 1) chars[8] = chars[8] === 'x' ? 't' : 'T';
+  return { symbolic: chars.join(''), octal: special ? `${special}${digits}` : digits };
+}
+
+export type VFSPermission = 'read' | 'write' | 'execute';
+export type VFSPermissionClass = 'owner' | 'group' | 'other';
+
+export function getPermissionClass(snapshot: VFSSnapshot, node: VFSNode): VFSPermissionClass {
+  if (snapshot.currentUser === node.owner) return 'owner';
+  const groupFile = Object.values(snapshot.nodes).find((entry) => entry.name === 'group' && entry.parentId === 'etc');
+  const groupMembers = (groupFile?.content || '').split('\n').find((line) => line.startsWith(`${node.group}:`))?.split(':')[3]?.split(',') || [];
+  if (snapshot.currentGroup === node.group || groupMembers.includes(snapshot.currentUser)) return 'group';
+  return 'other';
+}
+
+export function hasVfsPermission(snapshot: VFSSnapshot, node: VFSNode, permission: VFSPermission): boolean {
+  if (snapshot.currentUser === 'root') return true;
+  const permissionClass = getPermissionClass(snapshot, node);
+  const start = permissionClass === 'owner' ? 0 : permissionClass === 'group' ? 3 : 6;
+  const charIndex = start + (permission === 'read' ? 0 : permission === 'write' ? 1 : 2);
+  const bit = node.permissions[charIndex] || '-';
+  if (permission === 'read') return bit === 'r';
+  if (permission === 'write') return bit === 'w';
+  return bit.toLowerCase() === 'x' || bit === 's' || bit === 't';
+}
+
+/** Returns the first directory on a resolved path that lacks search/execute access. */
+export function findTraversalPermissionFailure(
+  snapshot: VFSSnapshot,
+  nodeId: string,
+  includeTarget = false,
+): VFSNode | undefined {
+  const chain: VFSNode[] = [];
+  let node: VFSNode | undefined = snapshot.nodes[nodeId];
+  while (node) {
+    chain.push(node);
+    node = node.parentId ? snapshot.nodes[node.parentId] : undefined;
   }
-  return { symbolic: mode, octal: '755' };
+  chain.reverse();
+  const directories = chain.filter((entry, index) => {
+    const isDirectory = entry.type === 'directory' || entry.type === 'mount-point';
+    return isDirectory && (includeTarget || index < chain.length - 1);
+  });
+  return directories.find((directory) => !hasVfsPermission(snapshot, directory, 'execute'));
+}
+
+export function applyUmask(mode: '666' | '777', umask = '0022'): { symbolic: string; octal: string } {
+  const safeMask = /^[0-7]{3,4}$/.test(umask) ? Number.parseInt(umask.slice(-3), 8) : 0o022;
+  const permissions = Number.parseInt(mode, 8) & ~safeMask;
+  return modeToSymbolic(permissions.toString(8).padStart(3, '0'));
+}
+
+/** Apply chmod's common symbolic grammar (for example u+x, go-w, or a=rw). */
+export function applySymbolicMode(current: VFSNode, expression: string): { symbolic: string; octal: string } | null {
+  if (!/^(?:[ugoa]*[+=-][rwx]+)(?:,[ugoa]*[+=-][rwx]+)*$/.test(expression)) return null;
+  const permissions = [...current.permissions.slice(0, 9)];
+  const octal = current.octalPermissions;
+  let special = octal.length === 4 ? Number(octal[0]) : current.stickyBit ? 1 : 0;
+  const classOffsets: Record<string, number> = { u: 0, g: 3, o: 6 };
+
+  for (const clause of expression.split(',')) {
+    const match = clause.match(/^([ugoa]*)([+=-])([rwx]+)$/);
+    if (!match) return null;
+    const [, classText, operator, requested] = match;
+    const classes = classText.includes('a') || !classText ? ['u', 'g', 'o'] : [...new Set(classText.split(''))];
+    for (const className of classes) {
+      const offset = classOffsets[className];
+      if (offset === undefined) return null;
+      const positions = [offset, offset + 1, offset + 2];
+      const symbols = ['r', 'w', 'x'];
+      if (operator === '=') positions.forEach((position, index) => { permissions[position] = '-'; });
+      symbols.forEach((symbol, index) => {
+        if (!requested.includes(symbol)) return;
+        const position = positions[index];
+        if (operator === '-') permissions[position] = '-';
+        else permissions[position] = symbol;
+      });
+    }
+  }
+
+  // Symbolic permission clauses preserve existing special bits, just as chmod u+x does.
+  const digitFor = (start: number) => (permissions[start] === 'r' ? 4 : 0)
+    + (permissions[start + 1] === 'w' ? 2 : 0)
+    + (['x', 's', 't'].includes(permissions[start + 2]) ? 1 : 0);
+  const digits = `${digitFor(0)}${digitFor(3)}${digitFor(6)}`;
+  const result = modeToSymbolic(`${special ? special : ''}${digits}`);
+  return { ...result, symbolic: result.symbolic };
 }

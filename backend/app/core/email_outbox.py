@@ -41,7 +41,8 @@ def process_one_verification_email() -> bool:
 
         job, user, verification = row
         if (
-            user.is_verified
+            not get_settings().EMAIL_VERIFICATION_REQUIRED
+            or user.is_verified
             or not user.is_active
             or verification.verified_at is not None
             or _as_utc(verification.expires_at) <= now
@@ -62,8 +63,12 @@ def process_one_verification_email() -> bool:
         token = decrypt_verification_token(encrypted_token)
         settings = get_settings()
         verify_url = f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={token}"
-        sent = send_verification_email(recipient, verify_url)
-        error_category = None if sent else "smtp_delivery_failed"
+        sent = send_verification_email(
+            recipient,
+            verify_url,
+            idempotency_key=f"stemstudio-verification:{job_id}",
+        )
+        error_category = None if sent else "email_delivery_failed"
     except Exception as exc:
         # Never log or persist verification tokens, URLs, inboxes, or secrets.
         logger.error("Verification email job failed during preparation (%s)", type(exc).__name__)

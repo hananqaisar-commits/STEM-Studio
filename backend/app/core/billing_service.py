@@ -483,17 +483,22 @@ def run_billing_lifecycle(db: Session, now: datetime | None = None) -> dict[str,
     db.commit()
 
     # Failed email attempts remain durable and are retried on the next
-    # lifecycle run. In-app notices remain available regardless of SMTP.
+    # lifecycle run. In-app notices remain available regardless of email delivery.
     pending_email_notices = db.query(BillingNotice).filter(
         BillingNotice.email_status.in_(("pending", "failed")),
     ).order_by(BillingNotice.created_at.asc(), BillingNotice.notice_id.asc()).limit(500).all()
     for row in pending_email_notices:
         user = db.get(User, row.user_id)
-        if user is None or not user.is_active or not user.is_verified:
+        if user is None or not user.is_active:
             row.email_status = "skipped"
             db.commit()
             continue
-        ok = send_billing_notice_email(user.email, row.title, row.message)
+        ok = send_billing_notice_email(
+            user.email,
+            row.title,
+            row.message,
+            idempotency_key=f"stemstudio-billing-notice:{row.notice_id}",
+        )
         row.email_status = "sent" if ok else "failed"
         row.sent_at = now if ok else None
         db.commit()

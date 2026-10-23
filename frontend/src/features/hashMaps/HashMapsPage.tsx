@@ -16,6 +16,7 @@ import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorks
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -58,6 +59,7 @@ const DEFAULT_INPUTS: Record<HashMapsAlgorithmKey, { arr: number[]; target?: num
 };
 
 export const HashMapsPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const [activeView, setActiveView] = useState<'table' | 'algorithms'>('table');
   const [selectedAlg, setSelectedAlg] = useState<HashMapsAlgorithmKey>('twoSum');
   const [searchParams] = useSearchParams();
@@ -243,6 +245,7 @@ export const HashMapsPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}

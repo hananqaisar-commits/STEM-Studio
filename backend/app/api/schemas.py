@@ -230,6 +230,10 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SignUpResponse(UserResponse):
+    email_verification_required: bool = False
+
+
 class MessageResponse(BaseModel):
     message: str
     success: bool = True

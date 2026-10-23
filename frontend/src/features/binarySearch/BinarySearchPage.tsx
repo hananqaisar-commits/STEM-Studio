@@ -15,6 +15,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -81,6 +82,7 @@ function isValidRotatedSortedArray(values: number[]): boolean {
 }
 
 export const BinarySearchPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<BinarySearchCategory>('binarySearch');
   const [searchParams] = useSearchParams();
@@ -380,6 +382,7 @@ export const BinarySearchPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}
