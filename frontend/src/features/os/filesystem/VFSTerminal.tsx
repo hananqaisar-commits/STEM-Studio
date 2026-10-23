@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Terminal as TerminalIcon, Trash2, Command, ShieldCheck, Keyboard, CircleHelp } from 'lucide-react';
 import { type VFSSnapshot, getAbsolutePath, resolveNodeId } from './vfs';
 
 interface HistoryItem {
@@ -21,15 +20,7 @@ const COMMAND_LIST = [
   'nano', 'vim', 'bash', 'sh', 'sudo', 'stat', 'umask', 'useradd', 'userdel', 'groupadd', 'usermod', 'chmod',
   'chown', 'chgrp', 'export', 'whoami', 'id', 'grep', 'find', 'uname',
   'clear', 'ps', 'top', 'htop', 'jobs', 'nice', 'renice', 'kill', 'help',
-];
-
-const QUICK_COMMANDS = [
-  { command: 'pwd', label: 'Show current directory' },
-  { command: 'ls -lah', label: 'List files, including hidden' },
-  { command: 'ls -l ~/permission-demo.sh', label: 'Read owner, group, and mode bits' },
-  { command: './permission-demo.sh', label: 'Observe execute permission in action' },
-  { command: 'ps -ef', label: 'Inspect simulated processes' },
-  { command: 'nice -n 5 sleep 30', label: 'Start a low-priority demo process' },
+  'apt', 'apt-get', 'tree', 'echo', 'head', 'tail', 'wc', 'sed', 'awk', 'diff', 'curl', 'ping', 'ssh',
 ];
 
 export const VFSTerminal: React.FC<VFSTerminalProps> = ({
@@ -61,6 +52,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
     setHistoryIdx(-1);
     setCompletionHint('');
     onClearTerminal();
+    focusInput();
   };
 
   const getPathCompletions = (targetPath: string) => {
@@ -159,60 +151,7 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
 
   return (
     <section className="linux-terminal" aria-label="Octa virtual Linux terminal" onClick={focusInput}>
-      <header className="linux-terminal__header">
-        <div className="linux-terminal__brand">
-          <span className="linux-terminal__brand-icon"><TerminalIcon size={17} aria-hidden="true" /></span>
-          <div className="linux-terminal__identity-copy">
-            <strong>Octa Linux Terminal</strong>
-            <span>Powered by Octa · virtual Linux environment</span>
-          </div>
-        </div>
-        <div className="linux-terminal__header-actions">
-          <span className="linux-terminal__sandbox"><ShieldCheck size={14} aria-hidden="true" /> Sandboxed simulator</span>
-          <span className="linux-terminal__path" title={currentPath}>{displayPath}</span>
-          <button
-            type="button"
-            onClick={(event) => { event.stopPropagation(); clearTerminal(); }}
-            className="linux-terminal__clear"
-            title="Clear terminal screen (Ctrl+L)"
-            aria-label="Clear terminal output"
-          >
-            <Trash2 size={14} aria-hidden="true" /> <span>Clear</span>
-          </button>
-        </div>
-      </header>
-
       <div ref={outputRef} className="linux-terminal__output" aria-live="polite" aria-relevant="additions text">
-        {!history.length && (
-          <div className="linux-terminal__welcome">
-            <div className="linux-terminal__welcome-title">
-              <span className="linux-terminal__welcome-icon"><Command size={16} aria-hidden="true" /></span>
-              <div>
-                <strong>Ready when you are.</strong>
-                <p>Explore directories, edit virtual files, or inspect simulated processes.</p>
-              </div>
-            </div>
-            <div className="linux-terminal__scope-note">
-              Commands change only this learning environment. They never run on your device or a live server.
-            </div>
-            <div className="linux-terminal__examples" aria-label="Example commands">
-              {QUICK_COMMANDS.map(({ command, label }) => (
-                <button
-                  type="button"
-                  key={command}
-                  title={label}
-                  onClick={(event) => { event.stopPropagation(); onExecuteCommand(command); focusInput(); }}
-                >
-                  <code>{command}</code><span>{label}</span>
-                </button>
-              ))}
-            </div>
-            <button className="linux-terminal__help-link" type="button" onClick={(event) => { event.stopPropagation(); onExecuteCommand('help'); focusInput(); }}>
-              <CircleHelp size={14} aria-hidden="true" /> View supported commands
-            </button>
-          </div>
-        )}
-
         {history.map((item, index) => (
           <div key={`${item.command}-${index}`} className="linux-terminal__record">
             <div className="linux-terminal__prompt linux-terminal__prompt--history">
@@ -222,9 +161,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
             {item.output && <pre className={`linux-terminal__output-line${item.isError ? ' is-error' : ''}`}>{item.output}</pre>}
           </div>
         ))}
-      </div>
-
-      <div className="linux-terminal__footer" onClick={(event) => event.stopPropagation()}>
         <div className="linux-terminal__entry">
           <span className="linux-terminal__prompt-user">{snapshot.currentUser}@stem-studio</span>
           <span className="linux-terminal__prompt-separator">:</span>
@@ -237,8 +173,8 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
             onChange={(event) => { setLineText(event.target.value); setCompletionHint(''); }}
             onKeyDown={handleKeyDown}
             className="linux-terminal__input"
-            placeholder="Type a command and press Enter"
             aria-label="Linux terminal command"
+            aria-keyshortcuts="Control+L ArrowUp ArrowDown Tab Enter"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
@@ -246,10 +182,6 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
           />
         </div>
         {completionHint && <div className="linux-terminal__completion" role="status">{completionHint}</div>}
-        <div className="linux-terminal__footer-meta">
-          <span><Keyboard size={13} aria-hidden="true" /> ↑/↓ history <i>·</i> Tab complete <i>·</i> Ctrl+L clear</span>
-          <span><span className="linux-terminal__ready-dot" /> Session ready</span>
-        </div>
       </div>
     </section>
   );
