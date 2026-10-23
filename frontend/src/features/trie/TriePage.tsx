@@ -16,6 +16,7 @@ import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageC
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -73,6 +74,7 @@ function pickRandomWords(count: number): string[] {
 }
 
 export const TriePage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const [selectedAlg, setSelectedAlg] = useState<TrieAlgorithmKey>('trieInsert');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -229,6 +231,7 @@ export const TriePage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}

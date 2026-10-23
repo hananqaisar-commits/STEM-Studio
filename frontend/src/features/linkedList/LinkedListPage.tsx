@@ -16,6 +16,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -138,6 +139,7 @@ const getStructureType = (category: LinkedListCategory): LinkedListStructureType
 };
 
 export const LinkedListPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const { setTutorContext } = useTutorContext();
   const positionControlsRef = useRef<HTMLDetailsElement>(null);
   const [category, setCategory] = useState<LinkedListCategory>('singly');
@@ -1053,6 +1055,7 @@ export const LinkedListPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}

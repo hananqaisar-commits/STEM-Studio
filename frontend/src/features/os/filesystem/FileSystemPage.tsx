@@ -486,6 +486,7 @@ export const FileSystemPage: React.FC = () => {
         }
         floatingControls={
           <FloatingController
+            controlsEnabled={stepHistory.length > 1}
             isPlaying={isPlaying}
             canStepBack={currentStepIndex > 0}
             canStepForward={currentStepIndex < stepHistory.length - 1}

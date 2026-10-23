@@ -16,7 +16,10 @@ import { ResizablePanelRow } from '../../components/layout/ResizablePanelRow';
 import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorkspaceHandle';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
+import { SaveVisualizerSnapshot } from '../../components/layout/SaveVisualizerSnapshot';
+import '../../components/layout/SaveVisualizerSnapshot.css';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -35,6 +38,7 @@ import './Arrays.css';
 import { TheoryPanel } from '../../components/layout/TheoryPanel';
 import { parseNumberList } from '../../utils/batchInputParser';
 import { useTutorContext } from '../../contexts/TutorContext';
+import { apiClient } from '../../api/apiClient';
 
 
 type AlgorithmKey = 'linearSearch' | 'kadane' | 'twoPointer' | 'slidingWindow' | 'rotation' | 'prefixSum';
@@ -72,9 +76,12 @@ function generateArray(size: number, pattern: ArrayPattern): number[] {
 }
 
 export const ArraysPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const { setTutorContext } = useTutorContext();
   const [selectedAlg, setSelectedAlg] = useState<AlgorithmKey>('linearSearch');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [pendingRestoreStep, setPendingRestoreStep] = useState<number | null>(null);
+  const [restoreMessage, setRestoreMessage] = useState('');
   useEffect(() => {
     const topic = searchParams.get('topic');
     if (topic && ALGORITHMS.some((a) => a.key === topic)) {
@@ -146,7 +153,56 @@ export const ArraysPage: React.FC = () => {
     stepBack,
     reset,
     seekTo,
-    } = useStepPlayer({ steps: executionData.steps });
+  } = useStepPlayer({ steps: executionData.steps });
+
+  const resumeSessionId = searchParams.get('resumeSession');
+  useEffect(() => {
+    if (!resumeSessionId) return;
+    let active = true;
+    apiClient<{ session_id: number; module_name: string; algorithm_id: string; dataset_json: string }>(
+      `/api/progress/sessions/${encodeURIComponent(resumeSessionId)}`,
+      { requiresAuth: true },
+    ).then((session) => {
+      if (!active) return;
+      if (session.module_name !== 'arrays' || !ALGORITHMS.some((item) => item.key === session.algorithm_id)) {
+        throw new Error('This saved snapshot does not belong to Arrays.');
+      }
+      const snapshot = JSON.parse(session.dataset_json) as {
+        values?: unknown; target?: unknown; windowSize?: unknown; rotations?: unknown; targetSum?: unknown; currentStepIndex?: unknown;
+      };
+      const values = snapshot.values;
+      if (!Array.isArray(values) || values.length < 1 || values.length > 30 || !values.every((value) => Number.isFinite(value))) {
+        throw new Error('The saved array is invalid or no longer supported.');
+      }
+      setSelectedAlg(session.algorithm_id as AlgorithmKey);
+      setInitialArray(values as number[]);
+      setRawArrayInput((values as number[]).join(', '));
+      setArraySize(values.length);
+      if (typeof snapshot.target === 'number' && Number.isFinite(snapshot.target)) setTarget(snapshot.target);
+      if (typeof snapshot.windowSize === 'number' && Number.isFinite(snapshot.windowSize)) setWindowSize(Math.max(1, Math.min(values.length, snapshot.windowSize)));
+      if (typeof snapshot.rotations === 'number' && Number.isFinite(snapshot.rotations)) setRotations(snapshot.rotations);
+      if (typeof snapshot.targetSum === 'number' && Number.isFinite(snapshot.targetSum)) setTargetSum(snapshot.targetSum);
+      setPendingRestoreStep(typeof snapshot.currentStepIndex === 'number' ? snapshot.currentStepIndex : 0);
+      setRestoreMessage('Saved array snapshot restored.');
+      const next = new URLSearchParams(searchParams);
+      next.set('topic', session.algorithm_id);
+      next.delete('resumeSession');
+      setSearchParams(next, { replace: true });
+    }).catch((error: unknown) => {
+      if (!active) return;
+      setRestoreMessage(error instanceof Error ? error.message : 'Unable to restore this saved snapshot.');
+      const next = new URLSearchParams(searchParams);
+      next.delete('resumeSession');
+      setSearchParams(next, { replace: true });
+    });
+    return () => { active = false; };
+  }, [resumeSessionId]);
+
+  useEffect(() => {
+    if (pendingRestoreStep === null || totalSteps === 0) return;
+    seekTo(Math.max(0, Math.min(totalSteps - 1, pendingRestoreStep)));
+    setPendingRestoreStep(null);
+  }, [pendingRestoreStep, totalSteps, seekTo]);
 
   // Publish active context to Octa AI Tutor
   useEffect(() => {
@@ -292,6 +348,7 @@ export const ArraysPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}
@@ -514,11 +571,16 @@ export const ArraysPage: React.FC = () => {
               <Maximize2 size={14} />
               <span>Fullscreen</span>
             </button>
+            <SaveVisualizerSnapshot
+              moduleName="arrays"
+              algorithmId={selectedAlg}
+              title={`${ALGORITHMS.find((item) => item.key === selectedAlg)?.name ?? 'Array'} · ${initialArray.length} values`}
+              snapshot={{ values: initialArray, target, windowSize, rotations, targetSum, currentStepIndex }}
+            />
           </VisualizerActions>
         }
       />
-
-
+      {restoreMessage && <p className="saved-snapshot-page-status" role="status">{restoreMessage}</p>}
 
       {/* Operations Toolbar */}
       <div className="bst-toolbar animate-fade-in">

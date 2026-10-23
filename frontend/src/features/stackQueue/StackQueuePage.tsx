@@ -6,6 +6,7 @@ import {
   Layers, Plus, Trash2, CheckCircle2, Maximize2, Sparkles
 } from 'lucide-react';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -149,6 +150,7 @@ function resizeRing(
 }
 
 export const StackQueuePage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const { setTutorContext } = useTutorContext();
   const [category, setCategory] = useState<StackQueueCategory>('stack');
   const [searchParams] = useSearchParams();
@@ -1486,6 +1488,7 @@ export const StackQueuePage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}
