@@ -63,7 +63,7 @@
   border-radius: 12px;
   background: var(--color-surface-elevated);
 }
-.linux-filesystem-page .scene-workspace { gap: 1rem; }
+.linux-filesystem-page .scene-workspace { grid-template-columns:minmax(0,1fr); gap:1rem; }
 
 /* Filesystem canvas */
 .linux-vfs {
@@ -120,14 +120,12 @@
 .linux-vfs__summary span { padding:.35rem .55rem; border:1px solid var(--color-border); border-radius:999px; background:var(--color-surface); }
 .linux-vfs__summary strong { color:var(--color-text); }
 .linux-vfs__controls { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; padding:.75rem 1rem; border-bottom:1px solid var(--color-border); background:var(--color-surface); }
-.linux-vfs__search, .linux-vfs__filter { display:flex; align-items:center; gap:.45rem; min-height:38px; padding:0 .65rem; color:var(--color-text-muted); border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface); }
+.linux-vfs__search { display:flex; align-items:center; gap:.45rem; min-height:38px; padding:0 .65rem; color:var(--color-text-muted); border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface); }
 .linux-vfs__search { flex:1 1 220px; max-width:420px; }
 .linux-vfs__search input { width:100%; min-width:80px; color:var(--color-text); outline:0; background:transparent; font-size:12px; }
 .linux-vfs__search input::placeholder { color:var(--color-text-muted); }
 .linux-vfs__search button, .linux-vfs__tree-actions button { min-height:30px; padding:.3rem .55rem; color:var(--color-text-secondary); border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface-elevated); font-size:11px; font-weight:650; white-space:nowrap; }
 .linux-vfs__search button:hover, .linux-vfs__tree-actions button:hover { color:var(--color-primary); border-color:var(--color-primary); }
-.linux-vfs__filter { flex:none; }
-.linux-vfs__filter select { max-width:220px; color:var(--color-text); outline:0; background:transparent; font-size:12px; }
 .linux-vfs__tree-actions { display:flex; gap:.4rem; margin-left:auto; }
 .linux-vfs__canvas { height:480px; overflow:auto; padding:.85rem 1rem 1.2rem; overscroll-behavior:contain; background:radial-gradient(ellipse at 18% 0%,var(--linux-accent-soft),var(--color-surface) 54%); }
 .linux-vfs__canvas.is-fullscreen { height:min(75vh,900px); min-height:550px; }
@@ -139,33 +137,44 @@
 .linux-vfs__legend i { width:10px; height:3px; border-radius:3px; background:color-mix(in srgb,var(--color-primary) 65%,var(--color-border)); }
 .linux-vfs__legend .legend-operation { background:#15966c; }
 .linux-tree__root-list, .linux-tree__list { list-style:none; margin:0; padding:0; }
+.linux-tree__root-list { display:flex; align-items:flex-start; justify-content:center; width:max-content; min-width:100%; padding:1.35rem 1.5rem 2rem; }
+.linux-tree__branch { position:relative; display:flex; flex:0 0 auto; flex-direction:column; align-items:center; padding:1.15rem .55rem 0; }
 .linux-tree__root-list > .linux-tree__branch { padding:0; }
-.linux-tree__list { margin-left:15px; padding-left:18px; }
-.linux-tree__branch { position:relative; padding:5px 0 0 18px; }
-.linux-tree__branch-symbol { position:absolute; top:21px; left:0; width:19px; color:color-mix(in srgb,var(--color-primary) 68%,var(--color-text-muted)); font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace; }
-.linux-tree__branch.is-path > .linux-tree__branch-symbol { color:#15966c; }
-.linux-tree__row-wrap { min-width:0; }
-.linux-tree__entry { display:flex; align-items:center; gap:3px; min-width:0; }
-.linux-tree__node { display:flex; align-items:center; gap:.45rem; width:100%; min-height:44px; padding:.42rem .55rem; text-align:left; color:var(--color-text); border:1px solid var(--color-border); border-radius:10px; background:var(--color-surface-elevated); transition:border-color 140ms ease,background-color 140ms ease,box-shadow 140ms ease; }
-.linux-tree__node:hover { border-color:color-mix(in srgb,var(--color-primary) 55%,var(--color-border)); box-shadow:var(--shadow-sm); }
+.linux-tree__list { position:relative; display:flex; align-items:flex-start; justify-content:center; width:max-content; margin:.5rem 0 0; padding-top:1.15rem; }
+.linux-tree__list::before { position:absolute; top:-.5rem; left:50%; height:1.65rem; border-left:1.5px solid color-mix(in srgb,var(--color-primary) 42%,var(--color-border)); content:""; }
+.linux-tree__branch::before { position:absolute; top:0; left:50%; height:1.15rem; border-left:1.5px solid color-mix(in srgb,var(--color-primary) 42%,var(--color-border)); content:""; }
+.linux-tree__branch::after { position:absolute; top:0; right:0; left:0; border-top:1.5px solid color-mix(in srgb,var(--color-primary) 42%,var(--color-border)); content:""; }
+.linux-tree__branch:first-child::after { left:50%; }
+.linux-tree__branch:last-child::after { right:50%; }
+.linux-tree__branch:only-child::after, .linux-tree__root-list > .linux-tree__branch::before, .linux-tree__root-list > .linux-tree__branch::after { display:none; }
+.linux-tree__branch.is-path::before, .linux-tree__branch.is-path::after { border-color:color-mix(in srgb,#15966c 74%,var(--color-border)); }
+.linux-tree__row-wrap { position:relative; z-index:1; min-width:0; }
+.linux-tree__entry { display:flex; align-items:center; gap:.2rem; min-width:0; }
+.linux-tree__node { display:inline-flex; align-items:center; gap:.42rem; width:max-content; min-width:7rem; max-width:13rem; min-height:42px; padding:.42rem .55rem; color:var(--color-text); text-align:left; border:1px solid var(--color-border); border-radius:12px; background:var(--color-surface-elevated); box-shadow:var(--shadow-sm); transition:border-color 140ms ease,background-color 140ms ease,box-shadow 140ms ease; cursor:pointer; }
+.linux-tree__node:hover { border-color:color-mix(in srgb,var(--color-primary) 55%,var(--color-border)); box-shadow:var(--shadow-md); }
 .linux-tree__node:focus-visible { outline:3px solid color-mix(in srgb,var(--color-primary) 45%,transparent); outline-offset:2px; }
+.linux-tree__node.kind-directory { background:color-mix(in srgb,var(--linux-accent) 10%,var(--color-surface)); border-color:color-mix(in srgb,var(--linux-accent) 28%,var(--color-border)); }
+.linux-tree__node.kind-config { background:color-mix(in srgb,#d69e2e 11%,var(--color-surface)); border-color:color-mix(in srgb,#d69e2e 35%,var(--color-border)); }
+.linux-tree__node.kind-script { background:color-mix(in srgb,#15966c 10%,var(--color-surface)); border-color:color-mix(in srgb,#15966c 30%,var(--color-border)); }
+.linux-tree__node.kind-mount { background:color-mix(in srgb,#527fbd 10%,var(--color-surface)); border-color:color-mix(in srgb,#527fbd 30%,var(--color-border)); }
+.linux-tree__node.kind-file { background:var(--color-surface-elevated); }
+.linux-tree__node.is-current { border-color:var(--linux-accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--linux-accent) 18%,transparent),var(--shadow-sm); }
+.linux-tree__node.is-active, .linux-tree__node.is-operation-node { border-color:color-mix(in srgb,#15966c 65%,var(--color-border)); box-shadow:0 0 0 2px color-mix(in srgb,#15966c 16%,transparent); }
 .linux-tree__toggle, .linux-tree__toggle-placeholder { display:grid; place-items:center; width:24px; height:24px; flex:none; color:var(--color-text-muted); border-radius:6px; }
 .linux-tree__toggle { cursor:pointer; border:1px solid transparent; background:transparent; }
 .linux-tree__toggle:hover { color:var(--color-primary); background:var(--linux-accent-soft); }
-.linux-tree__icon { display:grid; place-items:center; width:24px; height:24px; flex:none; color:var(--color-primary); }
-.linux-tree__icon.kind-config { color:#bd8521; }
-.linux-tree__icon.kind-script { color:#128361; }
-.linux-tree__icon.kind-mount { color:#527fbd; }
+.linux-tree__icon { display:grid; place-items:center; width:20px; height:20px; flex:none; color:var(--color-primary); }
+.linux-tree__icon.kind-config { color:color-mix(in srgb,#a76a08 85%,var(--color-text)); }
+.linux-tree__icon.kind-script { color:color-mix(in srgb,#087a55 85%,var(--color-text)); }
+.linux-tree__icon.kind-mount { color:color-mix(in srgb,#316ab0 82%,var(--color-text)); }
 .linux-tree__icon.kind-file { color:var(--color-text-secondary); }
 .linux-tree__name { min-width:0; overflow:hidden; color:var(--color-text); font:650 12px ui-monospace,SFMono-Regular,Menlo,monospace; text-overflow:ellipsis; white-space:nowrap; }
-.linux-tree__type, .linux-tree__permissions, .linux-tree__children-count, .linux-tree__state { flex:none; padding:.19rem .38rem; color:var(--color-text-muted); border:1px solid var(--color-border); border-radius:6px; background:var(--color-surface); font:700 9px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.02em; }
-.linux-tree__children-count { min-width:23px; text-align:center; }
-.linux-tree__permissions { margin-left:auto; color:var(--color-text-secondary); }
+.linux-tree__permissions, .linux-tree__children-count, .linux-tree__state { flex:none; padding:.15rem .3rem; color:var(--color-text-muted); border:1px solid var(--color-border); border-radius:6px; background:var(--color-surface); font:700 9px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.01em; }
+.linux-tree__permissions { color:var(--color-text-secondary); }
+.linux-tree__children-count { min-width:20px; text-align:center; }
 .linux-tree__state.is-pwd { color:var(--color-primary); border-color:color-mix(in srgb,var(--color-primary) 35%,var(--color-border)); background:var(--linux-accent-soft); }
-.linux-tree__state.is-selected { color:#117958; border-color:color-mix(in srgb,#15966c 35%,var(--color-border)); background:color-mix(in srgb,#15966c 10%,var(--color-surface)); }
-.linux-tree__state.is-traversed { color:#117958; border-color:color-mix(in srgb,#15966c 30%,var(--color-border)); background:color-mix(in srgb,#15966c 8%,var(--color-surface)); }
-.linux-tree__path-hint { display:none; padding:.15rem .4rem 0 3.05rem; color:var(--color-text-muted); font:10px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
-.linux-tree__row-wrap.has-path-hint .linux-tree__path-hint { display:block; }
+.linux-tree__state.is-selected { color:color-mix(in srgb,#087a55 85%,var(--color-text)); border-color:color-mix(in srgb,#15966c 35%,var(--color-border)); background:color-mix(in srgb,#15966c 10%,var(--color-surface)); }
+.linux-tree__path-hint { padding:.15rem .2rem 0; color:var(--color-text-muted); font:10px ui-monospace,SFMono-Regular,Menlo,monospace; text-align:center; overflow-wrap:anywhere; }
 .linux-tree__node.is-operation-node { animation:linux-vfs-path-pulse 750ms ease-in-out 2; }
 .linux-vfs__no-results { padding:2rem 1rem; color:var(--color-text-muted); text-align:center; border:1px dashed var(--color-border); border-radius:12px; }
 .linux-vfs__integrity-warning, .linux-tree__integrity-error { padding:.55rem .7rem; color:color-mix(in srgb,#9b5d0b 82%,var(--color-text)); border:1px solid color-mix(in srgb,#c18b31 35%,var(--color-border)); border-radius:9px; background:color-mix(in srgb,#d69e2e 9%,var(--color-surface)); font-size:11px; }
@@ -181,66 +190,23 @@
 .linux-vfs__empty { padding:2rem; }
 @keyframes linux-vfs-path-pulse { 50% { box-shadow:0 0 0 3px color-mix(in srgb,#15966c 19%,transparent); } }
 
-/* The virtual shell follows the active app theme; no separate terminal theme is imposed. */
-.linux-terminal {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  min-height: 460px;
-  min-width: 0;
-  overflow: hidden;
-  padding: 0;
-  color: var(--linux-terminal-text);
-  background: var(--linux-terminal-bg);
-  border: 1px solid var(--linux-terminal-border);
-  border-radius: 16px;
-  box-shadow: var(--shadow-md);
-  font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  cursor: text;
-}
-.linux-terminal__header { display:flex; align-items:center; justify-content:space-between; gap:.85rem; min-height:68px; padding:.8rem 1rem; border-bottom:1px solid var(--linux-terminal-border); background:var(--linux-terminal-panel); font-family:inherit; }
-.linux-terminal__brand, .linux-terminal__header-actions { display:flex; align-items:center; gap:.7rem; min-width:0; }
-.linux-terminal__brand-icon, .linux-terminal__welcome-icon { display:grid; place-items:center; flex:none; width:36px; height:36px; color:var(--linux-terminal-accent); background:color-mix(in srgb,var(--linux-terminal-accent) 10%,var(--linux-terminal-bg)); border:1px solid color-mix(in srgb,var(--linux-terminal-accent) 20%,var(--linux-terminal-border)); border-radius:11px; }
-.linux-terminal__identity-copy { display:grid; gap:.13rem; min-width:0; }
-.linux-terminal__identity-copy strong { color:var(--linux-terminal-text); font:700 13px/1.3 system-ui,sans-serif; }
-.linux-terminal__identity-copy > span { color:var(--linux-terminal-muted); font:11px/1.3 system-ui,sans-serif; }
-.linux-terminal__sandbox { display:inline-flex; align-items:center; gap:.35rem; min-height:32px; padding:.3rem .55rem; color:var(--linux-terminal-green); border:1px solid color-mix(in srgb,#087a55 24%,var(--linux-terminal-border)); border-radius:999px; background:color-mix(in srgb,#087a55 6%,var(--linux-terminal-bg)); font:600 10px/1.2 system-ui,sans-serif; white-space:nowrap; }
-.linux-terminal__path { display:inline-flex; align-items:center; max-width:min(24vw,240px); min-height:34px; overflow:hidden; padding:.35rem .65rem; color:var(--linux-terminal-blue); border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-bg); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-.linux-terminal__clear { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; min-width:72px; min-height:36px; padding:.35rem .65rem; color:var(--color-text-secondary); border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-bg); font:600 11px/1.2 system-ui,sans-serif; cursor:pointer; transition:border-color 140ms ease,color 140ms ease,background-color 140ms ease; }
-.linux-terminal__clear:hover { color:var(--linux-terminal-accent); border-color:var(--linux-terminal-accent); }
-.linux-terminal__output { flex:1 1 auto; min-height:0; overflow:auto; padding:1rem; overscroll-behavior:contain; scroll-behavior:smooth; }
-.linux-terminal__welcome { max-width:880px; padding:1rem; margin:0 auto; color:var(--linux-terminal-text); border:1px solid var(--linux-terminal-border); border-radius:14px; background:var(--linux-terminal-bg); box-shadow:var(--shadow-sm); font-size:12px; }
-.linux-terminal__welcome-title { display:flex; align-items:center; gap:.75rem; }
-.linux-terminal__welcome-title strong { font:700 14px/1.35 system-ui,sans-serif; }
-.linux-terminal__welcome-title p { margin:.2rem 0 0; color:var(--color-text-secondary); font:12px/1.45 system-ui,sans-serif; }
-.linux-terminal__scope-note { margin:.85rem 0; padding:.6rem .7rem; color:var(--color-text-secondary); border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-panel); font:11px/1.5 system-ui,sans-serif; }
-.linux-terminal__examples { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
-.linux-terminal__examples button { display:flex; flex-direction:column; align-items:flex-start; gap:.25rem; min-width:0; min-height:50px; padding:.55rem .65rem; color:var(--linux-terminal-text); text-align:left; border:1px solid var(--linux-terminal-border); border-radius:9px; background:var(--linux-terminal-panel); cursor:pointer; transition:border-color 140ms ease,background-color 140ms ease; }
-.linux-terminal__examples button:hover { border-color:var(--linux-terminal-accent); background:color-mix(in srgb,var(--linux-terminal-accent) 6%,var(--linux-terminal-panel)); }
-.linux-terminal__examples code { color:var(--linux-terminal-accent); font:650 12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; }
-.linux-terminal__examples button span { color:var(--linux-terminal-muted); font:11px/1.3 system-ui,sans-serif; }
-.linux-terminal__help-link { display:inline-flex; align-items:center; gap:.4rem; min-height:40px; padding:.55rem 0 0; color:var(--linux-terminal-accent); border:0; background:transparent; font:650 11px/1.3 system-ui,sans-serif; cursor:pointer; }
-.linux-terminal__record { margin:0 0 .8rem; }
+/* Minimal shell surface; it follows the selected STEM Studio theme. */
+.linux-terminal { display:flex; flex-direction:column; width:100%; height:100%; min-height:260px; min-width:0; overflow:hidden; color:var(--linux-terminal-text); background:var(--linux-terminal-bg); border:1px solid var(--linux-terminal-border); border-radius:14px; box-shadow:var(--shadow-sm); font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; cursor:text; }
+.linux-terminal__output { flex:1 1 auto; min-height:0; overflow:auto; padding:.9rem 1rem; overscroll-behavior:contain; scroll-behavior:smooth; }
+.linux-terminal__record { margin:0 0 .7rem; }
 .linux-terminal__prompt { display:flex; align-items:baseline; gap:.45rem; min-width:0; color:var(--linux-terminal-text); white-space:pre-wrap; overflow-wrap:anywhere; }
-.linux-terminal__prompt--history { margin-bottom:.3rem; }
+.linux-terminal__prompt--history { margin-bottom:.1rem; }
 .linux-terminal__prompt--history span { color:var(--linux-terminal-green); }
 .linux-terminal__prompt--history b { color:var(--linux-terminal-text); font-weight:600; }
-.linux-terminal__output-line { margin:0; padding:.55rem .7rem; color:var(--color-text-secondary); border-left:2px solid color-mix(in srgb,var(--linux-terminal-accent) 52%,var(--linux-terminal-border)); border-radius:0 8px 8px 0; background:var(--linux-terminal-panel); font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
-.linux-terminal__output-line.is-error { color:var(--linux-terminal-red); border-left-color:var(--linux-terminal-red); background:color-mix(in srgb,#b42332 6%,var(--linux-terminal-panel)); }
-.linux-terminal__footer { flex:none; padding:.65rem 1rem .75rem; border-top:1px solid var(--linux-terminal-border); background:var(--linux-terminal-panel); }
-.linux-terminal__entry { display:flex; align-items:center; gap:.4rem; min-width:0; min-height:42px; padding:.45rem .6rem; border:1px solid var(--linux-terminal-border); border-radius:10px; background:var(--linux-terminal-bg); }
+.linux-terminal__output-line { margin:0; color:var(--linux-terminal-text); font:inherit; white-space:pre-wrap; overflow-wrap:anywhere; }
+.linux-terminal__output-line.is-error { color:var(--linux-terminal-red); }
+.linux-terminal__entry { display:flex; align-items:baseline; gap:.38rem; flex:none; min-width:0; min-height:46px; padding:.68rem 1rem; color:var(--linux-terminal-text); border-top:1px solid var(--linux-terminal-border); background:var(--linux-terminal-panel); }
 .linux-terminal__prompt-user { flex:none; color:var(--linux-terminal-green); font-weight:700; }
 .linux-terminal__prompt-separator { flex:none; color:var(--linux-terminal-muted); }
-.linux-terminal__cwd { flex:none; max-width:25%; overflow:hidden; color:var(--linux-terminal-blue); font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+.linux-terminal__cwd { flex:none; max-width:30%; overflow:hidden; color:var(--linux-terminal-blue); text-overflow:ellipsis; white-space:nowrap; }
 .linux-terminal__prompt-symbol { flex:none; color:var(--linux-terminal-accent); font-weight:800; }
-.linux-terminal__input { flex:1; width:100%; min-width:0; padding:0; margin:0; color:var(--linux-terminal-text); border:0; outline:0; background:transparent; font:inherit; font-weight:600; caret-color:var(--linux-terminal-accent); }
-.linux-terminal__input::placeholder { color:var(--linux-terminal-muted); font-weight:400; }
-.linux-terminal__completion { overflow:hidden; padding:.35rem .6rem 0; color:var(--linux-terminal-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-.linux-terminal__footer-meta { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.55rem .15rem 0; color:var(--linux-terminal-muted); font:10px/1.4 system-ui,sans-serif; }
-.linux-terminal__footer-meta > span { display:inline-flex; align-items:center; gap:.35rem; }
-.linux-terminal__footer-meta i { color:var(--linux-terminal-border); font-style:normal; }
-.linux-terminal__ready-dot { width:7px; height:7px; border-radius:50%; background:var(--linux-terminal-green); box-shadow:0 0 0 3px color-mix(in srgb,#087a55 12%,transparent); }
+.linux-terminal__input { flex:1; width:100%; min-width:0; padding:0; margin:0; color:var(--linux-terminal-text); border:0; outline:0; background:transparent; font:inherit; caret-color:var(--linux-terminal-accent); }
+.linux-terminal__completion { flex:none; overflow:auto; padding:.35rem 1rem .55rem; color:var(--linux-terminal-muted); border-top:1px solid var(--linux-terminal-border); background:var(--linux-terminal-panel); font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:nowrap; }
 .linux-terminal :is(button,input):focus-visible { outline:2px solid var(--linux-terminal-accent); outline-offset:2px; }
 
 /* Editor shell follows the same theme while keeping a readable writing surface. */
@@ -279,6 +245,10 @@
 .linux-os-hub .module-page-header { padding:1.25rem; border:1px solid var(--color-border); border-radius:18px; background:var(--color-surface); box-shadow:var(--shadow-sm); }
 
 @media (max-width: 760px) {
+  .linux-tree__root-list { justify-content:flex-start; }
+  .linux-tree__root-list > .linux-tree__branch { align-items:flex-start; }
+  .linux-tree__root-list > .linux-tree__branch > .linux-tree__list { justify-content:flex-start; }
+  .linux-tree__root-list > .linux-tree__branch > .linux-tree__list::before { left:5.65rem; }
   .linux-filesystem-page .bst-toolbar { align-items:stretch; }
   .linux-filesystem-page .bst-toolbar-left { align-items:stretch; }
   .linux-vfs__toolbar { align-items:flex-start; }
@@ -290,16 +260,10 @@
   .linux-vfs__tree-actions { margin-left:0; }
   .linux-vfs__context { position:static; }
   .linux-vfs__legend { margin-left:0; }
-  .linux-tree__type { display:none; }
   .linux-vfs__preview { max-width:100%; flex-basis:100%; }
-  .linux-terminal { min-height:360px; }
-  .linux-terminal__header { align-items:flex-start; flex-direction:column; padding:.75rem; }
-  .linux-terminal__header-actions { width:100%; justify-content:space-between; }
-  .linux-terminal__path { max-width:34vw; }
+  .linux-terminal { min-height:260px; }
   .linux-terminal__output { padding:.75rem; }
-  .linux-terminal__footer { padding:.6rem .75rem .7rem; }
-  .linux-terminal__welcome { padding:.75rem; }
-  .linux-terminal__footer-meta { align-items:flex-start; flex-direction:column; gap:.3rem; }
+  .linux-terminal__entry { padding:.65rem .75rem; }
   .linux-editor__header { padding:.7rem .8rem; }
   .linux-editor__body { padding:.75rem; }
   .linux-editor__status > div { padding-left:.8rem; padding-right:.8rem; }
@@ -311,18 +275,14 @@
   .linux-vfs__canvas { padding-left:.55rem; padding-right:.55rem; }
   .linux-vfs__heading p { max-width:230px; }
   .linux-tree__permissions { padding:.12rem .25rem; font-size:8px; }
-  .linux-tree__node { gap:.3rem; padding:.35rem .4rem; }
-  .linux-vfs__filter select { max-width:150px; }
-  .linux-terminal__header-actions { gap:.4rem; }
-  .linux-terminal__sandbox { font-size:0; gap:0; width:34px; justify-content:center; }
-  .linux-terminal__sandbox svg { flex:none; }
-  .linux-terminal__path { display:none; }
-  .linux-terminal__clear { min-width:42px; width:42px; padding:.35rem; }
-  .linux-terminal__clear span { display:none; }
-  .linux-terminal__examples { grid-template-columns:minmax(0,1fr); }
+  .linux-tree__root-list { padding:.85rem 1rem 1.25rem; }
+  .linux-tree__branch { padding-inline:.35rem; }
+  .linux-tree__node { gap:.28rem; min-width:6.25rem; min-height:40px; padding:.32rem .38rem; }
+  .linux-tree__name { font-size:11px; }
+  .linux-tree__toggle, .linux-tree__toggle-placeholder { width:20px; }
   .linux-terminal__entry { gap:.3rem; }
-  .linux-terminal__prompt-user { max-width:92px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .linux-terminal__cwd { max-width:22%; }
+  .linux-terminal__prompt-user { max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .linux-terminal__cwd { max-width:24%; }
   .linux-terminal__input { font-size:12px; }
 }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   FolderTree, RotateCcw, ChevronLeft, ChevronRight, Maximize2, Minimize2,
-  BookOpen, Terminal as TerminalIcon, Sparkles, ArrowLeft, Info, HelpCircle,
+  BookOpen, Sparkles, ArrowLeft, Info, HelpCircle,
   MessageSquare
 } from 'lucide-react';
 import { VFSTreeVisualizer } from './VFSTreeVisualizer';
@@ -408,12 +408,6 @@ export const FileSystemPage: React.FC = () => {
             <span>FHS Concepts</span>
           </button>
         </div>
-
-        {/* Quick Shell Indicator */}
-        <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono">
-          <TerminalIcon size={14} className="text-[var(--color-primary)]" />
-          <span>Prompt: octa@stem-studio:~</span>
-        </div>
       </div>
 
       {/* FHS Key Concepts Drawer (Collapsible) */}
@@ -436,12 +430,16 @@ export const FileSystemPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main Learning Workspace */}
+      {/* Live VFS tree: every terminal command renders from the same snapshot. */}
       <div className="sorting-workspace scene-workspace">
-        {/* Quiz Dock */}
+        <VFSTreeVisualizer
+          snapshot={snapshot}
+          activeNodeId={activeNodeId}
+          animatedPathIds={animatedPathIds}
+          onSelectNode={(id) => setActiveNodeId(id)}
+        />
 
-
-        {/* Resizable Panel Row for Visualizer, Terminal & Explanation */}
+        {/* Terminal and execution trace remain paired beneath the live tree. */}
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}

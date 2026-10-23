@@ -25,6 +25,28 @@ export interface CommandExecutionResult {
   };
 }
 
+type VirtualPackage = {
+  version: string;
+  description: string;
+  executable?: string;
+  sizeKiB: number;
+};
+
+// This deliberately small, local catalogue gives apt commands persistent
+// virtual effects without contacting repositories or changing the host OS.
+const VIRTUAL_APT_CATALOG: Record<string, VirtualPackage> = {
+  bash: { version: '5.1-6ubuntu1', description: 'GNU Bourne Again SHell', executable: 'bash', sizeKiB: 720, },
+  coreutils: { version: '8.32-4.1ubuntu1', description: 'GNU core utilities', sizeKiB: 5400 },
+  nano: { version: '6.2-1ubuntu0.1', description: 'Small, friendly text editor', executable: 'nano', sizeKiB: 2800 },
+  python3: { version: '3.10.6-1~22.04', description: 'Interactive high-level object-oriented language', executable: 'python3', sizeKiB: 6200 },
+  vim: { version: '2:8.2.3995-1ubuntu2.24', description: 'Vi IMproved, a highly configurable text editor', executable: 'vim', sizeKiB: 3600 },
+  tree: { version: '2.0.2-1', description: 'Display directories as trees', executable: 'tree', sizeKiB: 42 },
+  htop: { version: '3.0.5-7build2', description: 'Interactive process viewer', executable: 'htop', sizeKiB: 100 },
+  curl: { version: '7.81.0-1ubuntu1.20', description: 'Command line tool for transferring data', executable: 'curl', sizeKiB: 410 },
+  git: { version: '1:2.34.1-1ubuntu1.15', description: 'Distributed version control system', executable: 'git', sizeKiB: 3800 },
+  jq: { version: '1.6-2.1ubuntu3', description: 'Lightweight JSON processor', executable: 'jq', sizeKiB: 116 },
+};
+
 const isDirectoryNode = (node?: VFSNode) => node?.type === 'directory' || node?.type === 'mount-point';
 
 function userBelongsToGroup(snapshot: VFSSnapshot, groupName: string): boolean {
@@ -297,13 +319,13 @@ export function executeVFSCommand(
     const nestedArgs = args.filter((arg) => arg !== '--');
     const nestedCommand = nestedArgs[0];
     if (!nestedCommand) {
-      return { output: 'usage: sudo <chmod|chown|chgrp|stat|ls|cat> ...', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'In this learning simulator, sudo elevates one supported permissions or inspection command for the current command only.' } };
+      return { output: 'usage: sudo <chmod|chown|chgrp|apt|apt-get|stat|ls|cat> ...', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: 'In this learning simulator, sudo elevates one supported permissions, package-management, or inspection command for the current command only.' } };
     }
     if (!userBelongsToGroup(snapshot, 'sudo')) {
       return { output: `sudo: ${snapshot.currentUser} is not allowed to run commands as root`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: 'The virtual account is not in the sudo group, so the simulator refuses privilege elevation.' } };
     }
-    if (!['chmod', 'chown', 'chgrp', 'stat', 'ls', 'cat'].includes(nestedCommand)) {
-      return { output: `sudo: command '${nestedCommand}' is outside the simulator's limited elevation set`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported sudo command', explanation: 'For safety, this virtual environment allows sudo only for chmod, chown, chgrp, stat, ls, and cat.' } };
+    if (!['chmod', 'chown', 'chgrp', 'apt', 'apt-get', 'stat', 'ls', 'cat'].includes(nestedCommand)) {
+      return { output: `sudo: command '${nestedCommand}' is outside the simulator's limited elevation set`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported sudo command', explanation: 'For safety, this virtual environment allows sudo only for chmod, chown, chgrp, apt, apt-get, stat, ls, and cat.' } };
     }
     const quote = (word: string) => /\s|["'\\]/.test(word) ? `'${word.replace(/'/g, "'\\''")}'` : word;
     const elevatedSnapshot: VFSSnapshot = { ...snapshot, currentUser: 'root', currentGroup: 'root' };
@@ -1884,49 +1906,142 @@ export function executeVFSCommand(
 
   // --- 24. apt & apt-get (Package Manager) ---
   if (cmd === 'apt' || cmd === 'apt-get') {
-    const subCmd = args[0] || 'help';
-    const pkgName = args[1] || '';
+    const supportedOptions = new Set(['-y', '--yes', '--assume-yes', '-q', '-qq', '--quiet', '-s', '--simulate', '--reinstall', '--no-install-recommends', '--purge', '--installed']);
+    const badOption = args.find((arg) => arg.startsWith('-') && !supportedOptions.has(arg));
+    if (badOption) {
+      return { output: `${cmd}: unrecognized option '${badOption}'\nRun 'apt help' to see the supported simulator options.`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported APT option', explanation: `The virtual APT interpreter does not implement ${badOption}; it refuses unknown flags rather than silently pretending they worked.` } };
+    }
+
+    const operationIndex = args.findIndex((arg) => !arg.startsWith('-'));
+    const subCmd = operationIndex >= 0 ? args[operationIndex] : 'help';
+    const operands = operationIndex >= 0 ? args.slice(operationIndex + 1).filter((arg) => !arg.startsWith('-')) : [];
+    const simulateOnly = args.includes('-s') || args.includes('--simulate');
+    const supportedOperations = ['update', 'install', 'reinstall', 'remove', 'purge', 'autoremove', 'list', 'search', 'show', 'help'];
+    if (!supportedOperations.includes(subCmd)) {
+      return { output: `E: Invalid operation ${subCmd}`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Unsupported APT operation', explanation: `This virtual package manager implements ${supportedOperations.join(', ')}. Other APT operations are not simulated.` } };
+    }
+
+    const changesSystem = ['update', 'install', 'reinstall', 'remove', 'purge', 'autoremove'].includes(subCmd) && !simulateOnly;
+    if (changesSystem && nextSnapshot.currentUser !== 'root') {
+      return { output: 'E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)\nE: Are you root?', newSnapshot: snapshot, stepRecord: { command: line, diff: 'Permission denied', explanation: 'Package installation changes system-wide files and the dpkg database. Run the virtual package operation through sudo; sudo will grant root identity for this command only.' } };
+    }
+
+    const packageStatus = nodes['dpkg-status-file'];
+    const writePackageStatus = () => {
+      if (packageStatus) {
+        packageStatus.content = (nextSnapshot.installedPackages || []).sort().map((name) => `Package: ${name}\nStatus: install ok installed\nVersion: ${VIRTUAL_APT_CATALOG[name]?.version || 'virtual'}`).join('\n\n') + '\n';
+        packageStatus.modifiedAt = new Date().toISOString().slice(0, 10);
+      }
+    };
+    const pathToPackageBinary = (name: string) => Object.values(nodes).find((node) => node.parentId === 'usr-bin-dir' && node.name === VIRTUAL_APT_CATALOG[name]?.executable);
 
     if (subCmd === 'update') {
+      nextSnapshot.packageIndexUpdated = true;
       return {
-        output: `Hit:1 http://archive.ubuntu.com/ubuntu jammy InRelease\nGet:2 http://archive.ubuntu.com/ubuntu jammy-updates InRelease [119 kB]\nGet:3 http://security.ubuntu.com/ubuntu jammy-security InRelease [110 kB]\nFetched 229 kB in 1s (230 kB/s)\nReading package lists... Done\nBuilding dependency tree... Done\nAll packages are up to date.`,
+        output: '[virtual] Package lists refreshed from the built-in Ubuntu teaching catalogue. No network request was made.\nReading package lists... Done\nBuilding dependency tree... Done',
         newSnapshot: nextSnapshot,
-        stepRecord: { command: line, diff: 'Package index updated', explanation: 'Updated package lists from simulated Ubuntu repositories.' },
+        stepRecord: { command: line, diff: 'Virtual APT index refreshed', explanation: 'Refreshed the in-memory package catalogue used by this simulator. This does not contact real repositories or modify the host system.' },
       };
     }
 
-    if (subCmd === 'install') {
-      if (!pkgName) {
-        return {
-          output: `${cmd}: missing package name argument`,
-          newSnapshot: snapshot,
-          stepRecord: { command: line, diff: 'Syntax error', explanation: 'apt install requires a package name.' },
-        };
+    if (subCmd === 'install' || subCmd === 'reinstall') {
+      const packageNames = operands;
+      if (!packageNames.length) return { output: `${cmd}: missing package name argument`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: `${subCmd} requires one or more package names.` } };
+      const unknown = packageNames.find((name) => !VIRTUAL_APT_CATALOG[name]);
+      if (unknown) return { output: `E: Unable to locate package ${unknown}`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Package not found', explanation: `The deterministic teaching catalogue has no package named ${unknown}. Run apt search <term> to inspect the packages this simulator supports.` } };
+      if (!nextSnapshot.packageIndexUpdated) return { output: 'E: Package lists are stale. Run sudo apt update first.', newSnapshot: snapshot, stepRecord: { command: line, diff: 'APT index is stale', explanation: 'Refresh the package catalogue with sudo apt update before installing packages.' } };
+
+      const installedNow: string[] = [];
+      const alreadyPresent: string[] = [];
+      const plannedChanges: string[] = [];
+      const reinstalled: string[] = [];
+      const reinstallRequested = subCmd === 'reinstall' || args.includes('--reinstall');
+      const pathIds = ['root', 'usr', 'usr-bin-dir'];
+      for (const name of packageNames) {
+        const metadata = VIRTUAL_APT_CATALOG[name];
+        const isInstalled = (nextSnapshot.installedPackages || []).includes(name);
+        if (isInstalled && !reinstallRequested) {
+          alreadyPresent.push(name);
+          continue;
+        }
+        plannedChanges.push(name);
+        if (simulateOnly) continue;
+        if (isInstalled && reinstallRequested) reinstalled.push(name);
+        if (!isInstalled) nextSnapshot.installedPackages = [...(nextSnapshot.installedPackages || []), name];
+        if (metadata.executable && !pathToPackageBinary(name)) {
+          const id = `apt-package-${name}`;
+          if (nodes[id]) return { output: `dpkg: error: refusing to overwrite existing virtual file /usr/bin/${metadata.executable}`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Package file conflict', explanation: 'A package binary cannot overwrite an unrelated VFS entry. Rename or remove the existing virtual file before installing this package.' } };
+          const today = new Date().toISOString().slice(0, 10);
+          nodes[id] = { id, name: metadata.executable, type: 'file', parentId: 'usr-bin-dir', owner: 'root', group: 'root', permissions: 'rwxr-xr-x', octalPermissions: '755', content: `Virtual executable installed by package ${name} (${metadata.version}).`, createdAt: today, modifiedAt: today };
+          nodes['usr-bin-dir'].childrenIds = [...(nodes['usr-bin-dir'].childrenIds || []), id];
+          pathIds.push(id);
+          installedNow.push(name);
+        } else if (isInstalled && reinstallRequested) {
+          const binary = pathToPackageBinary(name);
+          if (binary) binary.modifiedAt = new Date().toISOString().slice(0, 10);
+        } else if (!isInstalled) installedNow.push(name);
       }
-      return {
-        output: `Reading package lists... Done\nBuilding dependency tree... Done\nThe following NEW packages will be installed: ${pkgName}\n0 upgraded, 1 newly installed, 0 to remove.\nNeed to get 1,420 kB of archives.\nUnpacking ${pkgName}...\nSetting up ${pkgName} (1.2.0-1)... Done.`,
-        newSnapshot: nextSnapshot,
-        stepRecord: {
-          command: line,
-          diff: `+ Installed package: ${pkgName}`,
-          explanation: `Simulated installation of system package "${pkgName}".`,
-        },
-      };
+      if (!simulateOnly) writePackageStatus();
+      const changedPackages = simulateOnly ? plannedChanges : [...installedNow, ...reinstalled];
+      const lines = [
+        'Reading package lists... Done',
+        'Building dependency tree... Done',
+        changedPackages.length ? `${reinstallRequested ? 'The following packages will be reinstalled:' : 'The following NEW packages will be installed:'} ${changedPackages.join(' ')}` : `The requested packages are already installed: ${alreadyPresent.join(' ')}`,
+        simulateOnly ? '[virtual] Simulation only; no filesystem or package database changes were made.' : `[virtual] ${installedNow.length} package(s) installed, ${reinstalled.length} reinstalled; package binaries and /var/lib/dpkg/status updated.`,
+      ];
+      return { output: lines.join('\n'), newSnapshot: simulateOnly ? snapshot : nextSnapshot, stepRecord: { command: line, diff: simulateOnly ? `Plan: ${changedPackages.length ? changedPackages.join(', ') : 'no changes'}` : installedNow.length || reinstalled.length ? `Package transaction: ${[...installedNow, ...reinstalled].join(', ')}` : `No package changes (${alreadyPresent.join(', ')})`, explanation: simulateOnly ? `APT displayed the proposed transaction only; the VFS remains unchanged.` : `APT applied the package transaction to the virtual system: installed package state is recorded in /var/lib/dpkg/status, and any catalogue executable is added under /usr/bin. No network request or host command was used.`, targetNodeId: simulateOnly ? undefined : pathIds[pathIds.length - 1], animatedPathIds: simulateOnly ? [] : pathIds, mutationType: !simulateOnly && installedNow.length ? 'create' : undefined } };
     }
 
-    if (subCmd === 'list' || subCmd === 'search') {
-      return {
-        output: `vim/jammy,now 2:8.2.3995-1ubuntu2.1 amd64 [installed]\nnano/jammy,now 6.2-1 amd64 [installed]\ntree/jammy 2.0.2-1 amd64\nhtop/jammy 3.0.5-1 amd64\npython3/jammy,now 3.10.6-1 amd64 [installed]\ngcc/jammy,now 4:11.2.0-1ubuntu1 amd64 [installed]\ncurl/jammy,now 7.81.0-1ubuntu1 amd64 [installed]`,
-        newSnapshot: nextSnapshot,
-        stepRecord: { command: line, diff: 'Package list queried', explanation: 'Queried APT package repository database.' },
-      };
+    if (subCmd === 'remove' || subCmd === 'purge') {
+      if (!operands.length) return { output: `${cmd}: missing package name argument`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Syntax error', explanation: `${subCmd} requires one or more package names.` } };
+      const unknown = operands.find((name) => !VIRTUAL_APT_CATALOG[name]);
+      if (unknown) return { output: `E: Unable to locate package ${unknown}`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Package not found', explanation: `The teaching catalogue has no package named ${unknown}.` } };
+      const protectedPackage = operands.find((name) => ['bash', 'coreutils'].includes(name));
+      if (protectedPackage) return { output: `E: Refusing to remove required base package '${protectedPackage}' in this learning environment.`, newSnapshot: snapshot, stepRecord: { command: line, diff: 'Protected base package', explanation: 'The simulator keeps its shell and core command package installed so the teaching environment remains usable.' } };
+      if (simulateOnly) {
+        const plannedRemoval = operands.filter((name) => (nextSnapshot.installedPackages || []).includes(name));
+        return { output: plannedRemoval.length ? `[virtual] The following packages would be removed: ${plannedRemoval.join(' ')}` : 'No installed packages matched the requested names.', newSnapshot: snapshot, stepRecord: { command: line, diff: `Plan: remove ${plannedRemoval.join(', ') || 'no packages'}`, explanation: 'Simulation mode (`-s`) prints the proposed package transaction; it does not change the virtual filesystem or package database.' } };
+      }
+      const removed: string[] = [];
+      const pathIds = ['root', 'usr', 'usr-bin-dir'];
+      for (const name of operands) {
+        if (!(nextSnapshot.installedPackages || []).includes(name)) continue;
+        nextSnapshot.installedPackages = (nextSnapshot.installedPackages || []).filter((installed) => installed !== name);
+        const executable = VIRTUAL_APT_CATALOG[name].executable;
+        const binary = executable ? pathToPackageBinary(name) : undefined;
+        if (binary) {
+          nodes['usr-bin-dir'].childrenIds = (nodes['usr-bin-dir'].childrenIds || []).filter((childId) => childId !== binary.id);
+          delete nodes[binary.id];
+          pathIds.push('usr-bin-dir');
+        }
+        removed.push(name);
+      }
+      writePackageStatus();
+      const message = removed.length ? `[virtual] Removed ${removed.join(', ')} and updated /var/lib/dpkg/status.` : 'No installed packages matched the requested names.';
+      return { output: message, newSnapshot: nextSnapshot, stepRecord: { command: line, diff: removed.length ? `Removed ${removed.join(', ')}` : 'No package changes', explanation: `APT removed only package-owned virtual binaries and updated the simulated package database. ${subCmd === 'purge' ? 'This catalogue does not model package configuration files, so purge has the same visible effect as remove.' : ''}`, targetNodeId: 'usr-bin-dir', animatedPathIds: pathIds, mutationType: removed.length ? 'delete' : undefined } };
     }
 
-    return {
-      output: `apt 2.4.8 (amd64)\nUsage: apt [options] command\nCommands: update, install, remove, list, search`,
-      newSnapshot: nextSnapshot,
-      stepRecord: { command: line, diff: 'APT Help', explanation: 'Displayed APT package manager usage.' },
-    };
+    if (subCmd === 'autoremove') {
+      return { output: '[virtual] No automatically installed, unused dependencies are registered.', newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'No orphaned virtual dependencies', explanation: 'The simulator records explicit catalogue packages but does not create dependency packages, so there is nothing eligible for autoremove.' } };
+    }
+
+    if (subCmd === 'list') {
+      const names = args.includes('--installed') ? (nextSnapshot.installedPackages || []) : Object.keys(VIRTUAL_APT_CATALOG).sort();
+      const output = names.map((name) => `${name}/${VIRTUAL_APT_CATALOG[name]?.version || 'virtual'} ${nextSnapshot.installedPackages?.includes(name) ? '[installed]' : '[available]'} ${VIRTUAL_APT_CATALOG[name]?.description || ''}`).join('\n') || 'Listing... Done';
+      return { output, newSnapshot: nextSnapshot, stepRecord: { command: line, diff: `Listed ${names.length} catalogue package(s)`, explanation: 'Listed packages from the local virtual catalogue. No external repository was queried.' } };
+    }
+
+    if (subCmd === 'search' || subCmd === 'show') {
+      const term = operands.join(' ').toLocaleLowerCase();
+      const matches = Object.entries(VIRTUAL_APT_CATALOG).filter(([name, metadata]) => subCmd === 'show' ? name === term : `${name} ${metadata.description}`.toLocaleLowerCase().includes(term));
+      if (!matches.length) return { output: `N: No packages found matching '${term}'.`, newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'No package match', explanation: `The local virtual catalogue has no ${subCmd === 'show' ? 'package with that exact name' : 'matching package'}.` } };
+      const output = matches.map(([name, metadata]) => subCmd === 'show'
+        ? `Package: ${name}\nVersion: ${metadata.version}\nInstalled: ${nextSnapshot.installedPackages?.includes(name) ? 'yes' : 'no'}\nSize: ${metadata.sizeKiB} kB\nDescription: ${metadata.description}`
+        : `${name} - ${metadata.description} ${nextSnapshot.installedPackages?.includes(name) ? '[installed]' : '[available]'}`).join('\n\n');
+      return { output, newSnapshot: nextSnapshot, stepRecord: { command: line, diff: `${matches.length} package match(es)`, explanation: `Read package metadata from the local virtual catalogue; no system files changed.` } };
+    }
+
+    return { output: `apt 2.4 (virtual)\nUsage: sudo apt <operation> [options] [package...]\nOperations: update, install, reinstall, remove, purge, autoremove, list, search, show\nOptions: -y, -qq, -s, --reinstall, --no-install-recommends, --purge, --installed\nCatalogue: bash, coreutils, nano, python3, vim, tree, htop, curl, git, jq\nOnly this built-in catalogue is simulated; no real package download occurs.`, newSnapshot: nextSnapshot, stepRecord: { command: line, diff: 'Displayed virtual APT help', explanation: 'The listed operations and flags are the supported subset for this simulator. Unknown options and packages are rejected instead of being presented as successful.' } };
   }
 
   // --- 25. ssh (Secure Shell) ---
@@ -2187,7 +2302,8 @@ export function executeVFSCommand(
         'Text & search: echo, grep, find, sed, awk, wc, head, tail, diff',
         'Permissions & users: ls -l, stat, chmod, chown, chgrp, umask, sudo (limited), useradd, userdel, groupadd, usermod, whoami, id, who',
         'Processes: ps [-ef|aux|-o columns], top, htop, jobs, nice -n value command, renice value -p PID, kill [-TERM|-9|-STOP|-CONT] PID',
-        'System/network demos: uname, apt, ssh, curl, ping',
+        'Packages: sudo apt update|install|remove|purge|list|search|show; 10 local packages, no real downloads',
+        'System/network demos: uname, ssh, curl, ping',
         'Input: ↑/↓ history · Tab completion · Ctrl+L clear',
         'Scope: this is an isolated teaching simulator; unsupported commands do not execute on your device or a server.',
       ].join('\n'),
