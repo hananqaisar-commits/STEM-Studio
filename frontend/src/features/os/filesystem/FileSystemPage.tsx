@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   FolderTree, RotateCcw, ChevronLeft, ChevronRight, Maximize2, Minimize2,
-  BookOpen, Terminal as TerminalIcon, Sparkles, ArrowLeft, Info, HelpCircle,
+  BookOpen, Sparkles, ArrowLeft, Info, HelpCircle,
   MessageSquare
 } from 'lucide-react';
 import { VFSTreeVisualizer } from './VFSTreeVisualizer';
@@ -83,12 +83,14 @@ export const FileSystemPage: React.FC = () => {
     fileNodeId: string;
     filePath: string;
     initialContent: string;
+    readOnly: boolean;
   }>({
     isOpen: false,
     type: 'vim',
     fileNodeId: '',
     filePath: '',
     initialContent: '',
+    readOnly: false,
   });
 
   // Every way of moving through the trace restores the same snapshot, focus and
@@ -186,7 +188,8 @@ export const FileSystemPage: React.FC = () => {
         prompt: promptStr,
         command: commandLine,
         output: result.output,
-        isError: result.output.includes('bash:') || result.output.includes('error'),
+        isError: /error|failed|not found|permission denied|syntax error|unsupported/i.test(result.stepRecord.diff)
+          || /^(?:bash:|usage:)/i.test(result.output),
       },
     ]);
 
@@ -198,6 +201,7 @@ export const FileSystemPage: React.FC = () => {
         fileNodeId: result.editorTrigger.fileNodeId,
         filePath: result.editorTrigger.filePath,
         initialContent: result.editorTrigger.initialContent,
+        readOnly: Boolean(result.editorTrigger.readOnly),
       });
     }
 
@@ -223,7 +227,7 @@ export const FileSystemPage: React.FC = () => {
   }, [currentStepIndex, snapshot, snapshotHistory, stepHistory]);
 
   // --- Editor Save Handler ---
-  const handleSaveEditorContent = (savedContent: string) => {
+  const handleSaveEditorContent = (savedContent: string, closeEditor = true) => {
     const { fileNodeId, filePath } = editorState;
     if (fileNodeId && snapshot.nodes[fileNodeId]) {
       const nextSnap: VFSSnapshot = JSON.parse(JSON.stringify(snapshot));
@@ -244,7 +248,9 @@ export const FileSystemPage: React.FC = () => {
       setStepHistory(newStepHistory);
       setCurrentStepIndex(newStepHistory.length - 1);
     }
-    setEditorState(prev => ({ ...prev, isOpen: false }));
+    setEditorState(prev => closeEditor
+      ? { ...prev, isOpen: false }
+      : { ...prev, initialContent: savedContent });
   };
 
   const activeStepRecord = stepHistory[currentStepIndex] || stepHistory[0];
@@ -266,6 +272,7 @@ export const FileSystemPage: React.FC = () => {
         currentPath,
         currentUser: snapshot.currentUser,
         currentGroup: snapshot.currentGroup,
+        umask: snapshot.umask || '0022',
         selectedNode: selectedNode ? {
           name: selectedNode.name,
           type: selectedNode.type,
@@ -273,6 +280,8 @@ export const FileSystemPage: React.FC = () => {
           owner: selectedNode.owner,
           group: selectedNode.group,
           permissions: selectedNode.permissions,
+          octalPermissions: selectedNode.octalPermissions,
+          stickyBit: Boolean(selectedNode.stickyBit),
         } : undefined,
       },
       steps: stepHistory,
@@ -399,12 +408,6 @@ export const FileSystemPage: React.FC = () => {
             <span>FHS Concepts</span>
           </button>
         </div>
-
-        {/* Quick Shell Indicator */}
-        <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono">
-          <TerminalIcon size={14} className="text-[var(--color-primary)]" />
-          <span>Prompt: octa@stem-studio:~</span>
-        </div>
       </div>
 
       {/* FHS Key Concepts Drawer (Collapsible) */}
@@ -427,12 +430,16 @@ export const FileSystemPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main Learning Workspace */}
+      {/* Live VFS tree: every terminal command renders from the same snapshot. */}
       <div className="sorting-workspace scene-workspace">
-        {/* Quiz Dock */}
+        <VFSTreeVisualizer
+          snapshot={snapshot}
+          activeNodeId={activeNodeId}
+          animatedPathIds={animatedPathIds}
+          onSelectNode={(id) => setActiveNodeId(id)}
+        />
 
-
-        {/* Resizable Panel Row for Visualizer, Terminal & Explanation */}
+        {/* Terminal and execution trace remain paired beneath the live tree. */}
         <div className="quiz-rail">
           <QuizDock
             session={quizSession}
@@ -486,6 +493,7 @@ export const FileSystemPage: React.FC = () => {
         }
         floatingControls={
           <FloatingController
+            controlsEnabled={stepHistory.length > 1}
             isPlaying={isPlaying}
             canStepBack={currentStepIndex > 0}
             canStepForward={currentStepIndex < stepHistory.length - 1}
@@ -512,6 +520,8 @@ export const FileSystemPage: React.FC = () => {
         type={editorState.type}
         filePath={editorState.filePath}
         initialContent={editorState.initialContent}
+        readOnly={editorState.readOnly}
+        onSave={(content) => handleSaveEditorContent(content, false)}
         onSaveAndExit={handleSaveEditorContent}
         onCancel={() => setEditorState(prev => ({ ...prev, isOpen: false }))}
       />

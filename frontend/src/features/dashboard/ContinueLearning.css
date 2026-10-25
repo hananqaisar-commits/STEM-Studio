@@ -10,3 +10,15 @@
 .continue-learning-card-copy strong { overflow-wrap: anywhere; font-size: 14px; }
 .continue-learning-card-copy span { color: var(--color-text-secondary); font-size: 12px; line-height: 1.45; }
 .continue-learning-primary { border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border)); }
+.review-queue-card { grid-column: span 2; align-items: flex-start; }
+.review-queue-card .continue-learning-card-icon { margin-top: 2px; }
+.review-queue-copy { gap: 7px; }
+.review-queue-list { display: grid; gap: 6px; margin: 2px 0 0; padding: 0; list-style: none; }
+.review-queue-list li { min-width: 0; }
+.review-queue-list a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 10px; border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-text); text-decoration: none; background: color-mix(in srgb, var(--color-surface) 78%, var(--color-primary) 3%); }
+.review-queue-list a:hover { border-color: var(--color-primary); }
+.review-queue-list a > span { display: grid; min-width: 0; gap: 3px; }
+.review-queue-list b { overflow-wrap: anywhere; font-size: 12px; }
+.review-queue-list small, .review-queue-more { color: var(--color-text-muted); font-size: 11px; }
+.review-queue-more { margin-top: 1px; }
+@media (max-width: 640px) { .review-queue-card { grid-column: auto; } }

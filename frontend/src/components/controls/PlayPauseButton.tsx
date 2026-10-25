@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Pause } from 'lucide-react';
 import './Controls.css';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 
 interface PlayPauseButtonProps {
   isPlaying: boolean;
@@ -17,7 +18,10 @@ export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
   onPause,
   disabled = false,
 }) => {
+  const controlsEnabled = useVisualizerControlsEnabled();
+  const isDisabled = disabled || !controlsEnabled;
   const handleClick = () => {
+    if (isDisabled) return;
     if (onToggle) {
       onToggle();
     } else if (isPlaying && onPause) {
@@ -31,8 +35,8 @@ export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
     <button
       className={`control-btn play-pause-btn ${isPlaying ? 'is-playing' : ''}`}
       onClick={handleClick}
-      disabled={disabled}
-      title={isPlaying ? 'Pause execution (Space)' : 'Play execution (Space)'}
+      disabled={isDisabled}
+      title={isDisabled ? 'Run or build an algorithm trace to enable playback controls.' : isPlaying ? 'Pause execution (Space)' : 'Play execution (Space)'}
       aria-label={isPlaying ? 'Pause execution (Space)' : 'Play execution (Space)'}
     >
       {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: 2 }} />}

@@ -17,6 +17,7 @@ import { ResizableWorkspaceHandle } from '../../components/layout/ResizableWorks
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
 import { VisualizerActions } from '../../components/layout/VisualizerActions';
 import { useStepPlayer } from '../../hooks/useStepPlayer';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 import { QuizDock } from '../../components/quiz/QuizDock';
 import { useQuizSession } from '../../hooks/useQuizSession';
 import { maskNarration } from '../../components/quiz/quizMask';
@@ -54,6 +55,7 @@ const ALGORITHMS: AlgMeta[] = [
 ];
 
 export const RecursionPage: React.FC = () => {
+  const controlsEnabled = useVisualizerControlsEnabled();
   const [selectedAlg, setSelectedAlg] = useState<RecursionAlgorithmKey>('fibonacci');
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -278,6 +280,7 @@ export const RecursionPage: React.FC = () => {
               value={currentStepIndex}
               onChange={(e) => seekTo(parseInt(e.target.value))}
               className="timeline-scrubber"
+              disabled={!controlsEnabled}
               title="Scrub timeline"
             />
           )}

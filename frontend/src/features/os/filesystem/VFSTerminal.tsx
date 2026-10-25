@@ -1,6 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Terminal as TerminalIcon, Trash2, Command, CheckCircle2 } from 'lucide-react';
-import { type VFSSnapshot, getAbsolutePath } from './vfs';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { type VFSSnapshot, getAbsolutePath, resolveNodeId } from './vfs';
 
 interface HistoryItem {
   prompt: string;
@@ -18,9 +17,10 @@ interface VFSTerminalProps {
 
 const COMMAND_LIST = [
   'pwd', 'ls', 'cd', 'mkdir', 'rmdir', 'touch', 'rm', 'cp', 'mv', 'cat',
-  'nano', 'vim', 'useradd', 'userdel', 'groupadd', 'usermod', 'chmod',
+  'nano', 'vim', 'bash', 'sh', 'sudo', 'stat', 'umask', 'useradd', 'userdel', 'groupadd', 'usermod', 'chmod',
   'chown', 'chgrp', 'export', 'whoami', 'id', 'grep', 'find', 'uname',
-  'clear', 'history'
+  'clear', 'ps', 'top', 'htop', 'jobs', 'nice', 'renice', 'kill', 'help',
+  'apt', 'apt-get', 'tree', 'echo', 'head', 'tail', 'wc', 'sed', 'awk', 'diff', 'curl', 'ping', 'ssh',
 ];
 
 export const VFSTerminal: React.FC<VFSTerminalProps> = ({
@@ -29,270 +29,160 @@ export const VFSTerminal: React.FC<VFSTerminalProps> = ({
   onExecuteCommand,
   onClearTerminal,
 }) => {
-  const [lineText, setLineText] = useState<string>('');
-  const [historyIdx, setHistoryIdx] = useState<number>(-1);
-
+  const [lineText, setLineText] = useState('');
+  const [historyIdx, setHistoryIdx] = useState(-1);
+  const [completionHint, setCompletionHint] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const outputRef = useRef<HTMLDivElement>(null);
 
   const currentPath = getAbsolutePath(snapshot.nodes, snapshot.currentDirId);
   const displayPath = currentPath.startsWith('/home/octa')
     ? currentPath.replace('/home/octa', '~')
     : currentPath;
 
-  const focusInput = useCallback(() => {
-    inputRef.current?.focus();
-  }, []);
+  const focusInput = useCallback(() => inputRef.current?.focus(), []);
+
+  useEffect(() => {
+    const output = outputRef.current;
+    if (output) output.scrollTop = output.scrollHeight;
+  }, [history.length]);
 
   const clearTerminal = () => {
     setLineText('');
     setHistoryIdx(-1);
+    setCompletionHint('');
     onClearTerminal();
+    focusInput();
   };
 
-  // Tab completion helper
   const getPathCompletions = (targetPath: string) => {
-    let parentPath = '';
-    let filterPrefix = targetPath;
-
-    if (targetPath.includes('/')) {
-      const lastSlashIdx = targetPath.lastIndexOf('/');
-      parentPath = targetPath.slice(0, lastSlashIdx);
-      filterPrefix = targetPath.slice(lastSlashIdx + 1);
-    }
-
-    let targetDirId = snapshot.currentDirId;
-    if (parentPath === '' && targetPath.startsWith('/')) {
-      targetDirId = 'root';
-    } else if (parentPath === '/') {
-      targetDirId = 'root';
-    } else if (parentPath) {
-      const matchingNode = Object.values(snapshot.nodes).find(n => {
-        if (n.type !== 'directory' && n.type !== 'mount-point') return false;
-        return getAbsolutePath(snapshot.nodes, n.id) === parentPath;
-      });
-      if (matchingNode) targetDirId = matchingNode.id;
-    }
-
+    const slashIndex = targetPath.lastIndexOf('/');
+    const hasParentPath = slashIndex >= 0;
+    const parentPath = hasParentPath ? (targetPath.slice(0, slashIndex) || '/') : '';
+    const filterPrefix = hasParentPath ? targetPath.slice(slashIndex + 1) : targetPath;
+    const targetDirId = hasParentPath
+      ? resolveNodeId(snapshot.nodes, snapshot.currentDirId, parentPath)
+      : snapshot.currentDirId;
+    if (!targetDirId) return { dirPath: parentPath, matches: [] as string[] };
     const currentDir = snapshot.nodes[targetDirId];
-    if (!currentDir || !currentDir.childrenIds) return { dirPath: parentPath, filter: filterPrefix, matches: [] };
-
-    const childNames = currentDir.childrenIds
-      .map(id => {
-        const node = snapshot.nodes[id];
-        if (!node) return null;
-        return node.type === 'directory' || node.type === 'mount-point' ? `${node.name}/` : node.name;
-      })
-      .filter(Boolean) as string[];
-
-    const matches = childNames.filter(name => name.toLowerCase().startsWith(filterPrefix.toLowerCase()));
-    return { dirPath: parentPath, filter: filterPrefix, matches };
+    if (!currentDir?.childrenIds) return { dirPath: parentPath, matches: [] as string[] };
+    const childNames = currentDir.childrenIds.map((id) => {
+      const node = snapshot.nodes[id];
+      if (!node) return null;
+      return node.type === 'directory' || node.type === 'mount-point' ? `${node.name}/` : node.name;
+    }).filter((name): name is string => Boolean(name));
+    return {
+      dirPath: parentPath,
+      matches: childNames.filter((name) => name.toLowerCase().startsWith(filterPrefix.toLowerCase())),
+    };
   };
 
   const handleTabCompletion = () => {
     const trimmed = lineText.trimStart();
     if (!trimmed) return;
-
     const parts = trimmed.split(/\s+/);
     if (parts.length === 1) {
-      const prefix = parts[0].toLowerCase();
-      const matches = COMMAND_LIST.filter(c => c.startsWith(prefix));
+      const matches = COMMAND_LIST.filter((command) => command.startsWith(parts[0].toLowerCase()));
       if (matches.length === 1) {
-        setLineText(matches[0] + ' ');
+        setLineText(`${matches[0]} `);
+        setCompletionHint('');
+      } else if (matches.length > 1) {
+        setCompletionHint(matches.join('   '));
       }
-    } else {
-      const targetArg = parts[parts.length - 1];
-      const { dirPath, matches } = getPathCompletions(targetArg);
-      if (matches.length === 1) {
-        const completedSegment = matches[0];
-        let replacement = completedSegment;
-        if (dirPath) {
-          replacement = dirPath.endsWith('/') ? `${dirPath}${completedSegment}` : `${dirPath}/${completedSegment}`;
-        }
-        parts[parts.length - 1] = replacement;
-        setLineText(parts.join(' '));
-      }
+      return;
+    }
+
+    const { dirPath, matches } = getPathCompletions(parts[parts.length - 1]);
+    if (matches.length === 1) {
+      const completedPath = dirPath
+        ? `${dirPath.endsWith('/') ? dirPath : `${dirPath}/`}${matches[0]}`
+        : matches[0];
+      parts[parts.length - 1] = completedPath;
+      setLineText(parts.join(' '));
+      setCompletionHint('');
+    } else if (matches.length > 1) {
+      setCompletionHint(matches.join('   '));
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.ctrlKey && (event.key === 'l' || event.key === 'L')) {
+      event.preventDefault();
       clearTerminal();
       return;
     }
-
-    if (e.key === 'Tab') {
-      e.preventDefault();
+    if (event.key === 'Tab') {
+      event.preventDefault();
       handleTabCompletion();
       return;
     }
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const cmdToRun = lineText.trim();
-      if (cmdToRun === 'clear') {
-        clearTerminal();
-      } else if (cmdToRun) {
-        onExecuteCommand(cmdToRun);
-      }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const command = lineText.trim();
+      if (command === 'clear') clearTerminal();
+      else if (command) onExecuteCommand(command);
       setLineText('');
       setHistoryIdx(-1);
+      setCompletionHint('');
       return;
     }
-
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (history.length === 0) return;
-      const nextIdx = historyIdx + 1 < history.length ? historyIdx + 1 : historyIdx;
-      setHistoryIdx(nextIdx);
-      const histCmd = history[history.length - 1 - nextIdx]?.command || '';
-      setLineText(histCmd);
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!history.length) return;
+      const nextIndex = Math.min(historyIdx + 1, history.length - 1);
+      setHistoryIdx(nextIndex);
+      setLineText(history[history.length - 1 - nextIndex]?.command || '');
+      setCompletionHint('');
       return;
     }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
       if (historyIdx > 0) {
-        const nextIdx = historyIdx - 1;
-        setHistoryIdx(nextIdx);
-        const histCmd = history[history.length - 1 - nextIdx]?.command || '';
-        setLineText(histCmd);
+        const nextIndex = historyIdx - 1;
+        setHistoryIdx(nextIndex);
+        setLineText(history[history.length - 1 - nextIndex]?.command || '');
       } else if (historyIdx === 0) {
         setHistoryIdx(-1);
         setLineText('');
       }
-      return;
+      setCompletionHint('');
     }
   };
 
-  const quickCommands = [
-    'pwd',
-    'ls -la',
-    'cd /home/octa',
-    'touch notes.txt',
-    'useradd Alice',
-    'chmod 755 notes.txt',
-    'vim main.py',
-    'cat /etc/passwd',
-  ];
-
   return (
-    <div
-      onClick={focusInput}
-      className="linux-terminal"
-    >
-      {/* Authentic Linux Window Header Bar */}
-      <div className="linux-terminal__header shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" />
-            <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-amber-300 inline-block" />
-            <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
-          </div>
-          <div className="linux-terminal__identity">
-            <TerminalIcon size={14} aria-hidden="true" />
-            <span>octa@stem-studio · VFS shell</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="linux-terminal__path font-mono text-[11px]" title={displayPath}>
-            {displayPath}
-          </span>
-          <button
-            type="button"
-            onClick={clearTerminal}
-            className="bst-btn bst-btn-danger text-xs py-1 px-3"
-            title="Clear terminal screen (Ctrl+L)"
-            aria-label="Clear terminal output"
-          >
-            <Trash2 size={13} /> Clear
-          </button>
-        </div>
-      </div>
-
-      {/* Terminal Output Log Area */}
-      <div className="linux-terminal__output space-y-2.5 text-xs">
-        {/* Welcome Banner */}
-        <div className="linux-terminal__welcome">
-          <div className="linux-terminal__welcome-main">
-            <TerminalIcon size={15} className="shrink-0" aria-hidden="true" />
-            <span className="font-semibold">Interactive Linux shell with tab completion.</span>
-          </div>
-          <span className="hidden md:flex items-center gap-1 text-[10px] font-mono">
-            <CheckCircle2 size={12} className="text-emerald-300" aria-hidden="true" /> Tab autocomplete
-          </span>
-        </div>
-
-        {/* Command History Output */}
-        {history.map((item, idx) => (
-          <div key={`${item.command}-${idx}`} className="space-y-1.5">
-            <div className="linux-terminal__prompt">
-              <span className="linux-terminal__user">octa@stem-studio</span>
-              <span className="linux-terminal__separator">:</span>
-              <span className="linux-terminal__cwd">
-                {item.prompt ? item.prompt.split(':')[1]?.replace('$', '') : displayPath}
-              </span>
-              <span className="linux-terminal__symbol">$</span>
-              <span className="linux-terminal__command">{item.command}</span>
+    <section className="linux-terminal" aria-label="Octa virtual Linux terminal" onClick={focusInput}>
+      <div ref={outputRef} className="linux-terminal__output" aria-live="polite" aria-relevant="additions text">
+        {history.map((item, index) => (
+          <div key={`${item.command}-${index}`} className="linux-terminal__record">
+            <div className="linux-terminal__prompt linux-terminal__prompt--history">
+              <span>{item.prompt || `${snapshot.currentUser}@stem-studio:${displayPath}$`}</span>
+              <b>{item.command}</b>
             </div>
-
-            {item.output && (
-              <div
-                className={`linux-terminal__output-line ${item.isError ? 'is-error' : ''}`}
-              >
-                {item.output}
-              </div>
-            )}
+            {item.output && <pre className={`linux-terminal__output-line${item.isError ? ' is-error' : ''}`}>{item.output}</pre>}
           </div>
         ))}
-
-        {/* LIVE PROMPT & REAL NATIVE INPUT LINE */}
         <div className="linux-terminal__entry">
-          <span className="linux-terminal__user shrink-0">octa@stem-studio</span>
-          <span className="linux-terminal__separator shrink-0">:</span>
-          <span className="linux-terminal__cwd">{displayPath}</span>
-          <span className="linux-terminal__symbol shrink-0">$</span>
-
+          <span className="linux-terminal__prompt-user">{snapshot.currentUser}@stem-studio</span>
+          <span className="linux-terminal__prompt-separator">:</span>
+          <span className="linux-terminal__cwd" title={currentPath}>{displayPath}</span>
+          <span className="linux-terminal__prompt-symbol">$</span>
           <input
             ref={inputRef}
             type="text"
             value={lineText}
-            onChange={(e) => setLineText(e.target.value)}
+            onChange={(event) => { setLineText(event.target.value); setCompletionHint(''); }}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent border-none outline-none p-0 m-0 focus:ring-0"
-            placeholder="Type a command…"
+            className="linux-terminal__input"
             aria-label="Linux terminal command"
+            aria-keyshortcuts="Control+L ArrowUp ArrowDown Tab Enter"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck="false"
           />
         </div>
-
+        {completionHint && <div className="linux-terminal__completion" role="status">{completionHint}</div>}
       </div>
-
-      {/* Quick Execution Shortcuts Strip */}
-      <div className="linux-terminal__shortcuts shrink-0 scrollbar-none" aria-label="Quick command shortcuts">
-        <div className="linux-terminal__shortcut-label shrink-0">
-          <Command size={12} aria-hidden="true" />
-          <span>Try:</span>
-        </div>
-        {quickCommands.map((qCmd, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onExecuteCommand(qCmd);
-              focusInput();
-            }}
-            className="linux-terminal__shortcut shrink-0 cursor-pointer"
-          >
-            $ {qCmd}
-          </button>
-        ))}
-      </div>
-    </div>
+    </section>
   );
 };

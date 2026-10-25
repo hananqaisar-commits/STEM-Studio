@@ -7,6 +7,8 @@ interface VimNanoModalProps {
   type: 'nano' | 'vim';
   filePath: string;
   initialContent: string;
+  readOnly?: boolean;
+  onSave: (content: string) => void;
   onSaveAndExit: (content: string) => void;
   onCancel: () => void;
 }
@@ -16,6 +18,8 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
   type,
   filePath,
   initialContent,
+  readOnly = false,
+  onSave,
   onSaveAndExit,
   onCancel,
 }) => {
@@ -38,6 +42,15 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
   const commandInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(isOpen, onCancel, dialogRef, { closeOnEscape: false });
+
+  const attemptSave = (nextContent: string, exit = false) => {
+    if (readOnly) {
+      setStatusMessage(`E45: Permission denied. ${filePath} is not writable by the current user.`);
+      return;
+    }
+    if (exit) onSaveAndExit(nextContent);
+    else onSave(nextContent);
+  };
 
   useEffect(() => {
     setContent(initialContent);
@@ -86,9 +99,9 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
       if (nanoPrompt === 'WRITE_CONFIRM') {
         if (e.key === 'Enter') {
           e.preventDefault();
-          onSaveAndExit(content);
+          attemptSave(content);
           setNanoPrompt('NONE');
-          setStatusMessage(`[ Wrote ${content.split('\n').length} lines to ${filePath} ]`);
+          if (!readOnly) setStatusMessage(`[ Wrote ${content.split('\n').length} lines to ${filePath} ]`);
           return;
         } else if (e.key === 'Escape' || (isCtrl && key === 'c')) {
           e.preventDefault();
@@ -101,7 +114,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
       if (nanoPrompt === 'EXIT_CONFIRM') {
         if (key === 'y') {
           e.preventDefault();
-          onSaveAndExit(content);
+          attemptSave(content, true);
           return;
         } else if (key === 'n') {
           e.preventDefault();
@@ -186,8 +199,8 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
         } else if (key === 's') {
           // ^S Save file directly
           e.preventDefault();
-          onSaveAndExit(content);
-          setStatusMessage(`[ Wrote ${content.split('\n').length} lines ]`);
+          attemptSave(content);
+          if (!readOnly) setStatusMessage(`[ Wrote ${content.split('\n').length} lines ]`);
         } else if (key === 'c') {
           // ^C Show position & status
           e.preventDefault();
@@ -310,7 +323,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
         else if (key === 'Z') {
           e.preventDefault();
           if (pendingKey === 'Z') {
-            onSaveAndExit(content);
+            attemptSave(content, true);
             setPendingKey('');
           } else {
             setPendingKey('Z');
@@ -341,7 +354,8 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
     e.preventDefault();
     const cmd = commandInput.trim();
     if (cmd === ':w') {
-      setStatusMessage(`"${filePath}" written, ${content.split('\n').length}L`);
+      attemptSave(content);
+      if (!readOnly) setStatusMessage(`"${filePath}" written, ${content.split('\n').length}L`);
       setVimMode('NORMAL');
     } else if (cmd === ':q') {
       if (content !== initialContent) {
@@ -351,7 +365,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
         onCancel();
       }
     } else if (cmd === ':wq' || cmd === ':x') {
-      onSaveAndExit(content);
+      attemptSave(content, true);
     } else if (cmd === ':q!') {
       onCancel();
     } else {
@@ -419,6 +433,12 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
             </button>
           </div>
         </div>
+
+        {readOnly && (
+          <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs font-medium text-amber-900" role="status">
+            <AlertCircle size={14} aria-hidden="true" /> Read-only access: you can inspect this buffer, but saving requires write permission.
+          </div>
+        )}
 
         {/* Real-time Shortcut Help Drawer */}
         {showHelp && (
@@ -575,7 +595,7 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
                   <span className="bg-slate-800 text-emerald-400 font-bold px-1 rounded">^X</span> Exit
                 </button>
                 <button
-                  onClick={() => onSaveAndExit(content)}
+                  onClick={() => attemptSave(content)}
                   className="flex items-center gap-1.5 hover:text-white transition-colors"
                 >
                   <span className="bg-slate-800 text-emerald-400 font-bold px-1 rounded">^S</span> Save

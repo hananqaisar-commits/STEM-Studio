@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     OWNER_COOKIE_SAMESITE: str = "lax"
     # Required in production to encrypt owner TOTP secrets independently of JWT signing.
     OWNER_MFA_ENCRYPTION_KEY: str = ""
+    # Regular learner accounts do not require inbox verification by default.
+    # Owner sign-in always keeps its separate verified-account requirement.
+    EMAIL_VERIFICATION_REQUIRED: bool = False
     EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = Field(default=24, ge=1, le=168)
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = Field(default=20, ge=5, le=120)
 
@@ -159,19 +162,32 @@ class Settings(BaseSettings):
         return self
 
 
-    # SMTP Email Configuration
+    # Prefer the provider HTTPS API (works on Render Free, where SMTP egress is
+    # blocked). SMTP remains available on hosts that permit authenticated SMTP.
+    EMAIL_PROVIDER: str = "resend"
+    RESEND_API_KEY: str = ""
+    # Keep provider credentials in the backend secret store, never in the frontend.
     SMTP_TLS: bool = True
     SMTP_USE_SSL: bool = False
     SMTP_PORT: int = 587
-    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_HOST: str = ""
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     # This escape hatch is honored only when DEBUG is also enabled.
     ALLOW_UNVERIFIED_SIGNUP: bool = False
     EMAILS_FROM_EMAIL: str = ""
-    EMAILS_FROM_NAME: str = "STEM Studio Support"
+    EMAILS_FROM_NAME: str = "STEM Studio"
+    EMAILS_REPLY_TO: str = ""
     # Deprecated: owner access is granted only by the provisioned database role.
     SUPPORT_OWNER_EMAILS: str = ""
+
+    @field_validator("EMAIL_PROVIDER")
+    @classmethod
+    def validate_email_provider(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"resend", "smtp"}:
+            raise ValueError("EMAIL_PROVIDER must be 'resend' or 'smtp'")
+        return normalized
 
     # Judge0 (server-to-server sandbox integration for custom code)
     # Keep these values only on the backend host; never expose them to Vite.

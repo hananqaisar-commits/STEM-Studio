@@ -256,6 +256,12 @@ def get_review_schedule(
     now = datetime.now(timezone.utc)
     due_topics = []
     for (module_name, algorithm_id), rows in grouped.items():
+        try:
+            require_algorithm_access(db, current_user, module_name, algorithm_id)
+        except HTTPException as error:
+            if error.status_code in (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND):
+                continue
+            raise
         recent = rows[-5:]
         accuracy = sum(1 for row in recent if row.is_correct) / len(recent)
         interval_days = 1 if accuracy < 0.6 else 3 if accuracy < 0.8 else 7
@@ -272,7 +278,7 @@ def get_review_schedule(
                 "last_attempt_at": last_attempt,
                 "due_at": due_at,
             })
-    due_topics.sort(key=lambda item: item["due_at"])
+    due_topics.sort(key=lambda item: (item["accuracy_percentage"], item["due_at"]))
     return {"due_count": len(due_topics), "due_topics": due_topics[:20]}
 
 
@@ -286,6 +292,7 @@ def save_session(
 ):
     """Save a user visualization state or custom dataset."""
     require_feature_access(db, current_user, payload.module_name)
+    require_algorithm_access(db, current_user, payload.module_name, payload.algorithm_id)
     new_session = SavedSession(
         user_id=current_user.user_id,
         title=payload.title,
@@ -314,6 +321,28 @@ def get_user_sessions(
         .all()
     )
     return sessions
+
+
+@router.get("/sessions/{session_id}", response_model=SavedSessionResponse)
+def get_user_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Load one of the signed-in learner's saved visualizer snapshots."""
+    session = (
+        db.query(SavedSession)
+        .filter(
+            SavedSession.session_id == session_id,
+            SavedSession.user_id == current_user.user_id,
+        )
+        .first()
+    )
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved session not found")
+    require_feature_access(db, current_user, session.module_name)
+    require_algorithm_access(db, current_user, session.module_name, session.algorithm_id)
+    return session
 
 
 @router.delete("/sessions/{session_id}", response_model=MessageResponse)

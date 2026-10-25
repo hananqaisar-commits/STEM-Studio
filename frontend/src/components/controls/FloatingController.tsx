@@ -1,4 +1,4 @@
-import React, { useRef, useState, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useState, useLayoutEffect, useCallback, useEffect, useId } from 'react';
 import {
   Play,
   Pause,
@@ -9,6 +9,12 @@ import {
   PlayCircle,
 } from 'lucide-react';
 import './Controls.css';
+import {
+  claimControllerGuide,
+  releaseControllerGuide,
+  useIsControllerGuideOwner,
+  useVisualizerControlsEnabled,
+} from '../../hooks/visualizerControls';
 
 export interface FloatingControllerProps {
   isPlaying: boolean;
@@ -25,6 +31,8 @@ export interface FloatingControllerProps {
   quizMode?: boolean;
   /** Optional className for additional positioning overrides. */
   className?: string;
+  /** Override shared readiness for standalone visualizers such as the file-system lab. */
+  controlsEnabled?: boolean;
 }
 
 interface Position {
@@ -98,7 +106,23 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
   onResume,
   quizMode = false,
   className = '',
+  controlsEnabled: controlsEnabledOverride,
 }) => {
+  const generatedId = useId();
+  const sharedControlsEnabled = useVisualizerControlsEnabled();
+  const controlsEnabled = controlsEnabledOverride ?? sharedControlsEnabled;
+  const isGuideOwner = useIsControllerGuideOwner(generatedId);
+  const [guideStep, setGuideStep] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('stem-studio-controller-guide-v1');
+      const savedStep = Number(saved ?? 0);
+      return saved === 'done' || saved === '-1'
+        ? -1
+        : Number.isFinite(savedStep) ? Math.max(0, Math.min(2, savedStep)) : 0;
+    } catch {
+      return 0;
+    }
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({
     isDragging: false,
@@ -112,6 +136,24 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [isPositioned, setIsPositioned] = useState(false);
+
+  useEffect(() => {
+    if (quizMode) return;
+    claimControllerGuide(generatedId);
+    return () => releaseControllerGuide(generatedId);
+  }, [generatedId, quizMode]);
+
+  useEffect(() => {
+    if (!controlsEnabled || guideStep < 0 || guideStep >= 2) return;
+    try { window.localStorage.setItem('stem-studio-controller-guide-v1', '2'); } catch { /* Storage is optional. */ }
+  }, [controlsEnabled, guideStep]);
+
+  const visibleGuideStep = controlsEnabled ? 2 : guideStep >= 2 ? 1 : guideStep;
+
+  const advanceGuide = useCallback((nextStep: number) => {
+    setGuideStep(nextStep);
+    try { window.localStorage.setItem('stem-studio-controller-guide-v1', nextStep < 0 ? 'done' : String(nextStep)); } catch { /* Storage is optional. */ }
+  }, []);
 
   const updatePosition = useCallback((next: Position) => {
     positionRef.current = next;
@@ -163,16 +205,19 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
   }, [updatePosition]);
 
   const handleTogglePlay = useCallback(() => {
+    if (!controlsEnabled) return;
     if (isPlaying) onPause();
     else onPlay();
-  }, [isPlaying, onPause, onPlay]);
+  }, [controlsEnabled, isPlaying, onPause, onPlay]);
 
   const handleStop = useCallback(() => {
-    onStop ? onStop() : onReset();
+    if (onStop) onStop();
+    else onReset();
   }, [onStop, onReset]);
 
   const handleResume = useCallback(() => {
-    onResume ? onResume() : onPlay();
+    if (onResume) onResume();
+    else onPlay();
   }, [onResume, onPlay]);
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -249,6 +294,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           shortcut={SHORTCUTS.play}
           onClick={handleTogglePlay}
           variant="primary"
+          disabled={!controlsEnabled}
           aria-pressed={isPlaying}
         >
           {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
@@ -258,7 +304,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           label="Reset"
           shortcut={SHORTCUTS.reset}
           onClick={onReset}
-          disabled={false}
+          disabled={!controlsEnabled}
         >
           <RotateCcw size={16} />
         </ControlButton>
@@ -267,7 +313,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           label="Back"
           shortcut={SHORTCUTS.back}
           onClick={onStepBack}
-          disabled={!canStepBack}
+          disabled={!controlsEnabled || !canStepBack}
         >
           <SkipBack size={16} />
         </ControlButton>
@@ -276,7 +322,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           label="Next"
           shortcut={SHORTCUTS.forward}
           onClick={onStepForward}
-          disabled={!canStepForward}
+          disabled={!controlsEnabled || !canStepForward}
         >
           <SkipForward size={16} />
         </ControlButton>
@@ -285,7 +331,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           label="Resume"
           shortcut={SHORTCUTS.resume}
           onClick={handleResume}
-          disabled={isPlaying}
+          disabled={!controlsEnabled || isPlaying}
         >
           <PlayCircle size={16} />
         </ControlButton>
@@ -294,11 +340,39 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           label="Stop"
           shortcut={SHORTCUTS.stop}
           onClick={handleStop}
-          disabled={!isPlaying && canStepBack === false && canStepForward === false}
+          disabled={!controlsEnabled || (!isPlaying && canStepBack === false && canStepForward === false)}
         >
           <Square size={14} />
         </ControlButton>
       </div>
+      {isGuideOwner && guideStep >= 0 && visibleGuideStep >= 0 && (
+        <section className="controller-first-use-guide" aria-live="polite" aria-labelledby="controller-guide-title">
+          <div className="controller-guide-topline">
+            <span>PLAYBACK GUIDE · {visibleGuideStep + 1} / 3</span>
+            <button type="button" className="controller-guide-dismiss" onClick={() => advanceGuide(-1)} aria-label="Close playback guide">×</button>
+          </div>
+          <h3 id="controller-guide-title">
+            {visibleGuideStep === 0 ? '1. Choose a topic and input' : visibleGuideStep === 1 ? '2. Build or run a trace' : '3. Control the walkthrough'}
+          </h3>
+          <p>
+            {visibleGuideStep === 0
+              ? 'Pick an algorithm, then enter data or keep the sample. The visualizer prepares the steps from that input.'
+              : visibleGuideStep === 1
+                ? 'Use the page’s Run, Build, or operation button. Playback stays locked until the visualizer has a step trace.'
+                : 'Play runs the trace. Back and Next move one step, Reset returns to the start, and Stop pauses the run.'}
+          </p>
+          <div className="controller-guide-footer">
+            <span className="controller-guide-status">{controlsEnabled ? 'Trace ready' : 'Waiting for a trace'}</span>
+            {visibleGuideStep === 0 ? (
+              <button type="button" onClick={() => advanceGuide(1)}>Next</button>
+            ) : visibleGuideStep === 1 ? (
+              <button type="button" onClick={() => advanceGuide(-1)}>I’ll run it</button>
+            ) : (
+              <button type="button" onClick={() => advanceGuide(-1)}>Finish</button>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
@@ -329,8 +403,8 @@ const ControlButton: React.FC<ControlButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       aria-label={`${label} (${shortcut})`}
+      title={disabled ? 'Run or build an algorithm trace to enable playback controls.' : `${label} (${shortcut})`}
       aria-pressed={ariaPressed}
-      title={`${label} (${shortcut})`}
     >
       {children}
     </button>

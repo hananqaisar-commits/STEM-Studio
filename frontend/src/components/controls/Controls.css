@@ -90,6 +90,19 @@
   cursor: pointer;
 }
 
+.speed-slider-wrapper.is-disabled {
+  opacity: 0.52;
+}
+
+.speed-range-input:disabled {
+  cursor: not-allowed;
+}
+
+.timeline-scrubber:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 /* ─── Floating Controller ───────────────────────────────────────── */
 
 .floating-controller {
@@ -112,6 +125,115 @@
   touch-action: none;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
   visibility: hidden;
+}
+
+.controller-first-use-guide {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  width: min(340px, calc(100vw - 40px));
+  padding: 14px 16px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(15, 23, 42, 0.16));
+  transform: translateX(-50%);
+  white-space: normal;
+  user-select: text;
+  touch-action: auto;
+  animation: controller-guide-in 180ms ease-out both;
+}
+
+.controller-guide-topline,
+.controller-guide-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.controller-guide-topline {
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.075em;
+}
+
+.controller-guide-dismiss {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  background: var(--color-app-bg);
+  cursor: pointer;
+  font-size: 1.15rem;
+}
+
+.controller-first-use-guide h3 {
+  margin: 6px 0 4px;
+  color: var(--color-text);
+  font-size: 0.93rem;
+  font-weight: 700;
+}
+
+.controller-first-use-guide p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.controller-guide-footer {
+  margin-top: 12px;
+}
+
+.controller-guide-status {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.controller-guide-footer > button {
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--color-on-primary, #fff);
+  background: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.controller-guide-footer > button:hover {
+  background: var(--color-primary-hover);
+}
+
+@keyframes controller-guide-in {
+  from { opacity: 0; transform: translate(-50%, 6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 520px) {
+  .controller-first-use-guide {
+    left: auto;
+    right: -5px;
+    width: min(310px, calc(100vw - 28px));
+    transform-origin: bottom right;
+    transform: none;
+  }
+
+  @keyframes controller-guide-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controller-first-use-guide { animation: none; }
 }
 
 [data-theme='dark'] .floating-controller {

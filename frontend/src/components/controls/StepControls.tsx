@@ -1,6 +1,7 @@
 import React from 'react';
 import { SkipBack, SkipForward, RotateCcw } from 'lucide-react';
 import './Controls.css';
+import { useVisualizerControlsEnabled } from '../../hooks/visualizerControls';
 
 interface StepControlsProps {
   onStepBack: () => void;
@@ -19,12 +20,14 @@ export const StepControls: React.FC<StepControlsProps> = ({
   canStepForward,
   disabled = false,
 }) => {
+  const controlsEnabled = useVisualizerControlsEnabled();
+  const isDisabled = disabled || !controlsEnabled;
   return (
     <div className="step-controls-group">
       <button
         className="control-btn"
         onClick={onReset}
-        disabled={disabled}
+        disabled={isDisabled}
         title="Reset algorithm (R)"
         aria-label="Reset algorithm (R)"
       >
@@ -34,7 +37,7 @@ export const StepControls: React.FC<StepControlsProps> = ({
       <button
         className="control-btn"
         onClick={onStepBack}
-        disabled={disabled || !canStepBack}
+        disabled={isDisabled || !canStepBack}
         title="Step Backward (←)"
         aria-label="Step Backward (←)"
       >
@@ -44,7 +47,7 @@ export const StepControls: React.FC<StepControlsProps> = ({
       <button
         className="control-btn"
         onClick={onStepForward}
-        disabled={disabled || !canStepForward}
+        disabled={isDisabled || !canStepForward}
         title="Step Forward (→)"
         aria-label="Step Forward (→)"
       >
