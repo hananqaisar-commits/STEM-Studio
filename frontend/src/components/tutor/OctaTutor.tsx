@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
+import { LazyMotion, domAnimation, m, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   BrainCircuit,
   Check,
@@ -253,6 +253,7 @@ function renderFormattedMessage(text: string) {
 }
 
 export const OctaTutor: React.FC = () => {
+  const prefersReducedMotion = useReducedMotion();
   const { isTutorOpen, toggleTutor } = useTutorContext();
   const { requireAuth } = useAuthPrompt();
   const {
@@ -412,10 +413,10 @@ export const OctaTutor: React.FC = () => {
       <AnimatePresence mode="wait" initial={false}>
       {isTutorOpen ? <m.div
         key="octa-tutor-panel"
-        initial={{ opacity: 0, x: 16 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, x: 16 }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 12 }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
+        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 12 }}
+        transition={{ duration: prefersReducedMotion ? 0.1 : 0.18, ease: 'easeOut' }}
         className={`octa-tutor-window${isExpanded ? ' is-expanded' : ''}${isMinimized ? ' is-minimized' : ''}`}
         role="region"
         aria-label="Octa AI Tutor"
@@ -567,11 +568,11 @@ export const OctaTutor: React.FC = () => {
         </>}
       </m.div> : <m.button
         key="octa-tutor-fab"
-        initial={{ scale: 0.8, opacity: 0 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0 }}
+        whileHover={prefersReducedMotion ? undefined : { scale: 1.03 }}
+        whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
         className="octa-tutor-fab"
         onClick={() => requireAuth(() => { setIsMinimized(false); toggleTutor(); }, 'Sign in to chat with Octa AI Tutor and keep your learning context.')}
         title="Open Octa AI Tutor"

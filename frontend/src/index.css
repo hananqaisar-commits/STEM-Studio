@@ -170,8 +170,10 @@ button:not(:disabled) {
   transition: filter 160ms ease-out;
 }
 
-button:not(:disabled):hover {
-  filter: brightness(0.97);
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover {
+    filter: brightness(0.97);
+  }
 }
 
 button:not(:disabled):active {
@@ -203,6 +205,7 @@ html {
   font-size: 16px;
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -211,10 +214,21 @@ body {
   color: var(--color-text);
   transition: background-color 180ms ease, color 180ms ease;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
+}
+
+a,
+button,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+a:active {
+  opacity: 0.82;
 }
 
 

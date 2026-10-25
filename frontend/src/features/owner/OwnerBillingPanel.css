@@ -49,3 +49,34 @@
 .owner-ad-settings>.owner-primary { margin-top:12px; }
 @media(max-width:850px) { .owner-billing-columns { grid-template-columns:1fr; }.owner-grant-plan { grid-template-columns:1fr 1fr; }.owner-grant-plan>div:first-child { grid-column:1/-1; } }
 @media(max-width:540px) { .owner-billing-form-grid,.owner-plan-features>div { grid-template-columns:1fr; }.owner-grant-plan { grid-template-columns:1fr; }.owner-grant-plan>div:first-child { grid-column:auto; } }
+
+/* Owner billing contains account and payment details, so keep all copy legible. */
+.owner-billing-tabs button { min-height:40px; font-size:12px; }
+.owner-billing-tabs b { font-size:10px; }
+.owner-billing-form>label,
+.owner-billing-form-grid label,
+.owner-billing-check-row,
+.owner-plan-features legend,
+.owner-plan-features>div label,
+.owner-ad-settings>label { font-size:12px; }
+.owner-billing-form input:not([type=checkbox]),
+.owner-billing-form select,
+.owner-billing-form textarea,
+.owner-plan-features>input,
+.owner-grant-plan select,
+.owner-grant-plan input { font-size:16px; }
+.owner-billing-caption,
+.owner-billing-list article small,
+.owner-billing-list article span,
+.owner-billing-alert,
+.owner-grant-plan p,
+.owner-ad-settings p { font-size:12px; }
+.owner-billing-actions button,
+.owner-billing-list article>button,
+.owner-billing-table td button,
+.owner-primary { min-height:36px; font-size:12px; }
+.owner-billing-table th { font-size:11px; }
+.owner-billing-table td { font-size:12px; }
+.owner-billing-table td strong { font-size:13px; }
+.owner-billing-table td small { font-size:12px; }
+.owner-grant-plan h3 { font-size:14px; }

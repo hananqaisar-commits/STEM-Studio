@@ -110,10 +110,14 @@ export function NotificationCenter() {
 
   const markRead = async (item: Announcement) => {
     const current = inbox;
-    const wasUnread = current.items.some((candidate) => candidate.announcement_id === item.announcement_id && candidate.source === item.source && !candidate.is_read);
-    setInbox({
-      unread_count: Math.max(0, current.unread_count - (wasUnread ? 1 : 0)),
-      items: current.items.map((candidate) => candidate.announcement_id === item.announcement_id && candidate.source === item.source ? { ...candidate, is_read: true } : candidate),
+    const matchesItem = (candidate: Announcement) => candidate.announcement_id === item.announcement_id && candidate.source === item.source;
+    const previousItem = current.items.find(matchesItem);
+    setInbox((latest) => {
+      const wasUnread = latest.items.some((candidate) => matchesItem(candidate) && !candidate.is_read);
+      return {
+        unread_count: Math.max(0, latest.unread_count - (wasUnread ? 1 : 0)),
+        items: latest.items.map((candidate) => matchesItem(candidate) ? { ...candidate, is_read: true } : candidate),
+      };
     });
     try {
       const endpoint = item.source === 'billing'
@@ -122,7 +126,17 @@ export function NotificationCenter() {
       await apiClient(endpoint, { method: 'POST', requiresAuth: true });
       void refresh();
     } catch {
-      setInbox(current);
+      setInbox((latest) => {
+        const latestItem = latest.items.find(matchesItem);
+        if (!previousItem || !latestItem) return latest;
+        const restoreUnread = !previousItem.is_read && latestItem.is_read;
+        return {
+          unread_count: latest.unread_count + (restoreUnread ? 1 : 0),
+          items: latest.items.map((candidate) => matchesItem(candidate)
+            ? { ...candidate, is_read: previousItem.is_read }
+            : candidate),
+        };
+      });
       setError('Could not mark this message as read.');
     }
   };

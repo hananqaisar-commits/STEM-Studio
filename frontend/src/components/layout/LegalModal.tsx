@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { X, ShieldCheck, FileText, Cookie, Mail } from 'lucide-react';
 import './LegalModal.css';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 export type LegalDocType = 'privacy' | 'terms' | 'cookies' | null;
 
@@ -10,11 +11,13 @@ interface LegalModalProps {
 }
 
 export const LegalModal: React.FC<LegalModalProps> = ({ docType, onClose }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(Boolean(docType), onClose, dialogRef);
   if (!docType) return null;
 
   return (
-    <div className="legal-modal-overlay animate-fade-in" onClick={onClose}>
-      <div className="legal-modal-container" onClick={(e) => e.stopPropagation()}>
+    <div className="legal-modal-overlay animate-fade-in" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={dialogRef} className="legal-modal-container" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title" tabIndex={-1}>
         {/* Header */}
         <div className="legal-modal-header">
           <div className="legal-modal-title-row">
@@ -22,7 +25,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ docType, onClose }) => {
             {docType === 'terms' && <FileText className="legal-modal-icon" size={22} />}
             {docType === 'cookies' && <Cookie className="legal-modal-icon" size={22} />}
             <div>
-              <h2 className="legal-modal-title">
+              <h2 id="legal-modal-title" className="legal-modal-title">
                 {docType === 'privacy' && 'Privacy Policy'}
                 {docType === 'terms' && 'Terms of Service'}
                 {docType === 'cookies' && 'Cookie & Storage Policy'}
@@ -30,7 +33,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ docType, onClose }) => {
               <span className="legal-modal-subtitle">Effective Date: September 2026 • STEM Studio</span>
             </div>
           </div>
-          <button className="legal-modal-close-btn" onClick={onClose} title="Close">
+          <button className="legal-modal-close-btn" onClick={onClose} title="Close" aria-label="Close legal information">
             <X size={18} />
           </button>
         </div>

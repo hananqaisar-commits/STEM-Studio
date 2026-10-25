@@ -6,6 +6,7 @@
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
+  height: 100dvh !important;
   z-index: 10000 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -243,7 +244,7 @@
   flex-direction: row !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 0.75rem 1.5rem !important;
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) 1.5rem 0.75rem !important;
   backdrop-filter: blur(16px);
   gap: 1.5rem !important;
   z-index: 100;
@@ -474,7 +475,7 @@
 
 /* Footer Player Bar */
 .fs-modal-footer {
-  padding: 0.6rem 1.25rem;
+  padding: 0.6rem 1.25rem max(0.6rem, env(safe-area-inset-bottom, 0px));
   backdrop-filter: blur(12px);
   z-index: 100;
 }

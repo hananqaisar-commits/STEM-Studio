@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 180ms ease-out, box-shadow 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out, border-color 180ms ease-out;
 }
 
 [data-theme='dark'] .scroll-to-top-fab {
@@ -26,9 +26,11 @@
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
-.scroll-to-top-fab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(147, 51, 234, 0.35);
+@media (hover: hover) and (pointer: fine) {
+  .scroll-to-top-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(147, 51, 234, 0.35);
+  }
 }
 
 @media (max-width: 768px) {

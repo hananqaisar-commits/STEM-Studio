@@ -17,7 +17,7 @@
   border: 1px solid var(--color-border);
   color: var(--color-text);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
   box-shadow: var(--shadow-sm);
 }
 
@@ -298,15 +298,17 @@
   background: transparent;
   color: var(--color-text-secondary, #475569);
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
   padding: 0;
 }
 
-.fc-icon-btn:hover:not(:disabled),
-.fc-btn:hover:not(:disabled) {
-  color: var(--purple-600, #9333ea);
-  background: rgba(147, 51, 234, 0.12);
-  transform: scale(1.15);
+@media (hover: hover) and (pointer: fine) {
+  .fc-icon-btn:hover:not(:disabled),
+  .fc-btn:hover:not(:disabled) {
+    color: var(--purple-600, #9333ea);
+    background: rgba(147, 51, 234, 0.12);
+    transform: scale(1.05);
+  }
 }
 
 .fc-icon-btn:disabled,

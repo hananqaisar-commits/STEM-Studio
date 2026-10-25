@@ -58,16 +58,39 @@ export const LinuxCoreLessons: React.FC<LinuxCoreLessonsProps> = ({ onStepChange
       </div>
 
       <div className="linux-core__lesson-tabs" role="tablist" aria-label="Linux Core lessons">
-        {LINUX_CORE_LESSONS.map((item) => {
+        {LINUX_CORE_LESSONS.map((item, index) => {
           const Icon = LESSON_ICONS[item.id as keyof typeof LESSON_ICONS] ?? Terminal;
+          const focusLesson = (nextIndex: number) => {
+            const nextLesson = LINUX_CORE_LESSONS[(nextIndex + LINUX_CORE_LESSONS.length) % LINUX_CORE_LESSONS.length];
+            chooseLesson(nextLesson.id);
+            document.getElementById(`linux-core-tab-${nextLesson.id}`)?.focus();
+          };
           return (
             <button
               key={item.id}
+              id={`linux-core-tab-${item.id}`}
               type="button"
               role="tab"
               aria-selected={lesson.id === item.id}
+              aria-controls="linux-core-panel"
+              tabIndex={lesson.id === item.id ? 0 : -1}
               className={`linux-core__lesson-tab${lesson.id === item.id ? ' is-active' : ''}`}
               onClick={() => chooseLesson(item.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowRight') {
+                  event.preventDefault();
+                  focusLesson(index + 1);
+                } else if (event.key === 'ArrowLeft') {
+                  event.preventDefault();
+                  focusLesson(index - 1);
+                } else if (event.key === 'Home') {
+                  event.preventDefault();
+                  focusLesson(0);
+                } else if (event.key === 'End') {
+                  event.preventDefault();
+                  focusLesson(LINUX_CORE_LESSONS.length - 1);
+                }
+              }}
             >
               <Icon size={16} aria-hidden="true" />
               <span>{item.title}</span>
@@ -76,7 +99,7 @@ export const LinuxCoreLessons: React.FC<LinuxCoreLessonsProps> = ({ onStepChange
         })}
       </div>
 
-      <article className="linux-core__lesson" key={lesson.id}>
+      <article id="linux-core-panel" className="linux-core__lesson" key={lesson.id} role="tabpanel" aria-labelledby={`linux-core-tab-${lesson.id}`} tabIndex={0}>
         <header className="linux-core__lesson-header">
           <div>
             <p className="linux-core__eyebrow">Core idea</p>

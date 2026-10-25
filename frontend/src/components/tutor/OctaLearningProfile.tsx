@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check, LoaderCircle, RotateCcw, X } from 'lucide-react';
 import {
   clearTutorFeedbackProfile,
@@ -8,6 +8,7 @@ import {
   type OctaTutorLearningProfile as LearningProfile,
 } from '../../api/octaTutorApi';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 const STYLE_OPTIONS: Array<{ id: OctaResponseStyle; title: string; detail: string }> = [
   { id: 'balanced', title: 'Balanced', detail: 'Intuition, reasoning, and an example when useful' },
@@ -32,6 +33,8 @@ export const OctaLearningProfile: React.FC<Props> = ({ onClose, onProfileChange 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(true, onClose, dialogRef);
 
   useEffect(() => {
     let alive = true;
@@ -41,14 +44,6 @@ export const OctaLearningProfile: React.FC<Props> = ({ onClose, onProfileChange 
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []);
-
-  useEffect(() => {
-    const dismissOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', dismissOnEscape);
-    return () => window.removeEventListener('keydown', dismissOnEscape);
-  }, [onClose]);
 
   const save = async (style: OctaResponseStyle) => {
     setSaving(true);
@@ -80,7 +75,7 @@ export const OctaLearningProfile: React.FC<Props> = ({ onClose, onProfileChange 
 
   return (
     <div className="tutor-profile-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="tutor-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="tutor-profile-title">
+      <section ref={dialogRef} className="tutor-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="tutor-profile-title" tabIndex={-1}>
         <header className="tutor-profile-header">
           <div>
             <p className="tutor-eyebrow">PERSONALIZATION</p>
