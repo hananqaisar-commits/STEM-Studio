@@ -70,10 +70,12 @@
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
-.dashboard-subject-card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
-  box-shadow: var(--shadow-md);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-subject-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .dashboard-subject-icon,
@@ -128,9 +130,11 @@
   transition: transform 160ms ease;
 }
 
-.dashboard-subject-card:hover .dashboard-subject-arrow,
-.dashboard-topic-card:hover .dashboard-topic-arrow {
-  transform: translateX(3px);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-subject-card:hover .dashboard-subject-arrow,
+  .dashboard-topic-card:hover .dashboard-topic-arrow {
+    transform: translateX(3px);
+  }
 }
 
 .dashboard-quick-start {
@@ -188,11 +192,13 @@
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
-.dashboard-topic-card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
-  background: var(--color-surface-elevated);
-  box-shadow: var(--shadow-sm);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-topic-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+    background: var(--color-surface-elevated);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 .dashboard-topic-icon {

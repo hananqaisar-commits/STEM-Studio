@@ -345,7 +345,7 @@ export const FloatingController: React.FC<FloatingControllerProps> = ({
           <Square size={14} />
         </ControlButton>
       </div>
-      {isGuideOwner && visibleGuideStep >= 0 && (
+      {isGuideOwner && guideStep >= 0 && visibleGuideStep >= 0 && (
         <section className="controller-first-use-guide" aria-live="polite" aria-labelledby="controller-guide-title">
           <div className="controller-guide-topline">
             <span>PLAYBACK GUIDE · {visibleGuideStep + 1} / 3</span>

@@ -12,6 +12,7 @@
   --mk-teal: #1f9c9b;
   --mk-shadow: 0 22px 65px rgba(41, 48, 84, 0.1);
   min-height: 100vh;
+  min-height: 100svh;
   color: var(--mk-ink);
   background:
     radial-gradient(ellipse at 80% 10%, rgba(222, 217, 255, 0.42), transparent 31rem),
@@ -70,6 +71,7 @@
 .marketing-header {
   position: relative;
   z-index: 20;
+  padding-top: env(safe-area-inset-top, 0px);
   border-bottom: 1px solid color-mix(in srgb, var(--mk-border) 74%, transparent);
   background: color-mix(in srgb, var(--mk-bg) 88%, transparent);
   backdrop-filter: blur(18px);

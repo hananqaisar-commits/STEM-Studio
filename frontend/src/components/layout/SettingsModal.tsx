@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
@@ -8,6 +8,7 @@ import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './SettingsModal.css';
 import { clearOctaConfig, DEFAULT_OCTA_CONFIG, readOctaConfig, writeOctaConfig } from '../../api/octaConfigStorage';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ const PROVIDER_OPTIONS: { id: LLMProvider; name: string }[] = [
 const DEFAULT_CONFIG: UserLLMConfig = DEFAULT_OCTA_CONFIG;
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, onClose, dialogRef);
   const { theme, setTheme } = useTheme();
   const { isAuthenticated, deleteAccount } = useAuth();
   const navigate = useNavigate();
@@ -155,12 +158,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="settings-modal-backdrop" onClick={onClose}>
-      <div className="settings-modal-card" onClick={(e) => e.stopPropagation()}>
+    <div className="settings-modal-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={dialogRef} className="settings-modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" tabIndex={-1}>
         {/* Header */}
         <div className="settings-modal-header">
           <div className="settings-header-title">
-            <h3>Settings</h3>
+            <h3 id="settings-modal-title">Settings</h3>
             <p>Configure model API keys and preferences</p>
           </div>
           <button className="settings-close-btn" onClick={onClose} aria-label="Close">
@@ -197,8 +200,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           {activeTab === 'ai' && (
             <>
               <div className="settings-field">
-                <label className="settings-label">Provider</label>
+                <label className="settings-label" htmlFor="settings-provider">Provider</label>
                 <select
+                  id="settings-provider"
                   className="settings-select"
                   value={provider}
                   onChange={(e) => handleProviderSelect(e.target.value as LLMProvider)}
@@ -213,9 +217,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
               {provider !== 'custom' && (
                 <div className="settings-field">
-                  <label className="settings-label">API Key</label>
+                  <label className="settings-label" htmlFor="settings-api-key">API Key</label>
                   <div className="settings-input-wrapper">
                     <input
+                      id="settings-api-key"
                       type={showKey ? 'text' : 'password'}
                       className="settings-input"
                       value={apiKey}
@@ -226,6 +231,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       type="button"
                       className="settings-eye-btn"
                       onClick={() => setShowKey(!showKey)}
+                      aria-label={showKey ? 'Hide API key' : 'Show API key'}
                     >
                       {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
@@ -235,8 +241,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <p className="settings-key-note">Provider keys stay in this browser tab only and are cleared when its session ends. They are sent to the STEM Studio backend when Octa uses them; avoid configuring a key on a shared device.</p>
 
               <div className="settings-field">
-                <label className="settings-label">Model Name</label>
+                <label className="settings-label" htmlFor="settings-model-name">Model Name</label>
                 <input
+                  id="settings-model-name"
                   type="text"
                   className="settings-input"
                   value={modelName}
@@ -246,8 +253,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
 
               <div className="settings-field">
-                <label className="settings-label">Base Endpoint URL</label>
+                <label className="settings-label" htmlFor="settings-base-url">Base Endpoint URL</label>
                 <input
+                  id="settings-base-url"
                   type="text"
                   className="settings-input"
                   value={baseUrl}
@@ -256,7 +264,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
 
               {testResult && (
-                <div className={`settings-status-banner ${testResult.success ? 'success' : 'error'}`}>
+                <div className={`settings-status-banner ${testResult.success ? 'success' : 'error'}`} role={testResult.success ? 'status' : 'alert'}>
                   {testResult.success ? <Check size={14} /> : <AlertCircle size={14} />}
                   <span>{testResult.message}</span>
                 </div>
@@ -266,8 +274,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
           {activeTab === 'appearance' && (
             <div className="settings-field">
-              <label className="settings-label">Interface Theme</label>
+              <label className="settings-label" htmlFor="settings-theme">Interface Theme</label>
               <select
+                id="settings-theme"
                 className="settings-select"
                 value={theme}
                 onChange={(e) => setTheme(e.target.value as any)}

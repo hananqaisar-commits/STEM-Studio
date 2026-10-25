@@ -66,14 +66,14 @@ export const ResetPassword: React.FC = () => {
         </div>
 
         {error && (
-          <div className="auth-error animate-fade-in">
+          <div className="auth-error animate-fade-in" role="alert">
             <AlertCircle size={16} />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="auth-success animate-fade-in">
+          <div className="auth-success animate-fade-in" role="status">
             <CheckCircle size={16} />
             <span>{success}</span>
           </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Lock, LogIn, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { getRememberedEmail } from '../api/authPreferences';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import './AuthPrompt.css';
 
 type ProtectedAction = () => void;
@@ -24,12 +25,15 @@ export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dialogRef = useRef<HTMLElement>(null);
 
   const close = useCallback(() => {
     setIsOpen(false);
     setError('');
     pendingActionRef.current = null;
   }, []);
+
+  useDialogFocus(isOpen, close, dialogRef);
 
   const requireAuth = useCallback((action: ProtectedAction, promptMessage?: string) => {
     if (isAuthenticated) {
@@ -67,12 +71,12 @@ export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children
       {children}
       {isOpen && (
         <div className="auth-prompt-backdrop" role="presentation" onMouseDown={close}>
-          <section className="auth-prompt-card" role="dialog" aria-modal="true" aria-labelledby="auth-prompt-title" onMouseDown={(event) => event.stopPropagation()}>
+          <section ref={dialogRef} className="auth-prompt-card" role="dialog" aria-modal="true" aria-labelledby="auth-prompt-title" onMouseDown={(event) => event.stopPropagation()}>
             <button type="button" className="auth-prompt-close" onClick={close} aria-label="Close sign-in prompt"><X size={18} /></button>
             <div className="auth-prompt-icon"><Lock size={20} /></div>
             <h2 id="auth-prompt-title">Continue your learning</h2>
             <p>{message}</p>
-            {error && <div className="auth-prompt-error"><AlertCircle size={16} />{error}</div>}
+            {error && <div className="auth-prompt-error" role="alert"><AlertCircle size={16} />{error}</div>}
             <form onSubmit={handleSubmit} className="auth-prompt-form">
               <label>Email address<input type="email" name="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" required disabled={isSubmitting} /></label>
               <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required disabled={isSubmitting} /></label>

@@ -38,14 +38,17 @@ export function usePlaybackShortcuts({ handlers, disabled = false }: UsePlayback
 
       // Ignore shortcuts when the user is typing in an input, textarea, or contentEditable.
       const target = event.target as HTMLElement | null;
-      if (!target) return;
+      if (!target || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       const tagName = target.tagName.toLowerCase();
       const isEditable =
         tagName === 'input' ||
         tagName === 'textarea' ||
         target.isContentEditable ||
         target.getAttribute('role') === 'textbox';
-      if (isEditable) return;
+      const isInteractive = Boolean(target.closest(
+        'button, a[href], select, summary, [role="button"], [role="link"], [role="menuitem"], [role="tab"], [role="checkbox"], [role="radio"], [role="option"]',
+      ));
+      if (isEditable || isInteractive) return;
 
       const key = event.key;
       let handled = true;

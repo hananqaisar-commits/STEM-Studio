@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, KeyRound, RefreshCw, Search, ShieldCheck, Users, Megaphone, LifeBuoy, ScrollText, Layers, Eye, Clock3, X, CreditCard, Plus } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -6,6 +6,7 @@ import { OwnerAnnouncementPanel } from '../../components/notifications/OwnerAnno
 import { SupportDesk } from '../../components/support/SupportDesk';
 import { OwnerBillingPanel } from './OwnerBillingPanel';
 import './OwnerControlCenter.css';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 type Overview = { registered_users: number; enabled_accounts: number; audit_events: number; current_owner: string };
 type OwnerUser = { user_id: number; username: string; email: string; is_active: boolean; is_verified: boolean; is_owner: boolean; created_at: string; active_sessions: number };
@@ -41,6 +42,7 @@ function featureOverrideStatus(override: OwnerUserDetail['feature_overrides'][nu
 
 export function OwnerControlCenter() {
   const { user, logout } = useAuth();
+  const userDetailDialogRef = useRef<HTMLElement>(null);
   const [section, setSection] = useState<Section>('overview');
   const [overview, setOverview] = useState<Overview | null>(null);
   const [users, setUsers] = useState<UserPage | null>(null);
@@ -61,6 +63,7 @@ export function OwnerControlCenter() {
   const [notice, setNotice] = useState('');
   const [reauthPassword, setReauthPassword] = useState('');
   const [reauthCode, setReauthCode] = useState('');
+  useDialogFocus(Boolean(selectedUser), () => setSelectedUser(null), userDetailDialogRef);
 
   const loadOverview = useCallback(async () => {
     const data = await apiClient<Overview>('/api/owner/overview', { requiresAuth: true });
@@ -198,18 +201,6 @@ export function OwnerControlCenter() {
 
   useEffect(() => { void loadVisibleSection(); }, [loadVisibleSection]);
 
-  useEffect(() => {
-    if (!selectedUser) return;
-    const previousOverflow = document.body.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedUser(null); };
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [selectedUser]);
-
   const updateStatus = async (target: OwnerUser) => {
     const nextActive = !target.is_active;
     if (!window.confirm(`${nextActive ? 'Unblock' : 'Block'} ${target.username}? ${nextActive ? 'They can sign in again.' : 'Their active sessions will be revoked immediately.'}`)) return;
@@ -312,7 +303,7 @@ export function OwnerControlCenter() {
       {section === 'audit' && <section className="owner-section"><div className="owner-section-heading"><div><p className="owner-eyebrow">Administrative history</p><h2>Audit log</h2></div><span className="owner-count">Latest 100</span></div><div className="owner-audit-tools"><label><input type="checkbox" checked={audit.length > 0 && selectedAuditIds.length === audit.length} onChange={(event) => setSelectedAuditIds(event.target.checked ? audit.map((row) => row.event_id) : [])} /> Select latest 100</label><button type="button" disabled={busy || selectedAuditIds.length === 0} onClick={() => void cleanupAudit({ event_ids: selectedAuditIds })}>Delete selected ({selectedAuditIds.length})</button><button type="button" disabled={busy} onClick={() => void cleanupAudit({ older_than_days: 365 })}>Delete older than 1 year</button><button type="button" className="danger" disabled={busy || audit.length === 0} onClick={() => void cleanupAudit({ delete_all: true })}>Delete all audit history</button></div><div className="owner-audit-list">{audit.map((event) => <article key={event.event_id}><label className="owner-audit-select"><input type="checkbox" checked={selectedAuditIds.includes(event.event_id)} onChange={(e) => setSelectedAuditIds((ids) => e.target.checked ? [...ids, event.event_id] : ids.filter((id) => id !== event.event_id))} aria-label={`Select audit event ${event.event_id}`} /></label><div><strong>{event.action.replaceAll('.', ' ')}</strong><span>{event.actor}{event.target ? ` → ${event.target}` : ''}</span></div><time>{new Date(event.created_at).toLocaleString()}</time><small>{event.outcome}{Object.keys(event.details).length ? ` · ${Object.entries(event.details).map(([key, value]) => `${key}: ${String(value)}`).join(' · ')}` : ''}</small></article>)}{audit.length === 0 && <p className="owner-empty">No administrative events have been recorded yet.</p>}</div></section>}
 
       {selectedUser && <div className="owner-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedUser(null); }}>
-        <section className="owner-user-detail" role="dialog" aria-modal="true" aria-labelledby="owner-user-detail-title">
+        <section ref={userDetailDialogRef} className="owner-user-detail" role="dialog" aria-modal="true" aria-labelledby="owner-user-detail-title" tabIndex={-1}>
           <header className="owner-user-detail-header"><div><p className="owner-eyebrow">Account record · #{selectedUser.profile.user_id}</p><h2 id="owner-user-detail-title">{selectedUser.profile.username}</h2><p>{selectedUser.profile.email}</p></div><button type="button" aria-label="Close account details" onClick={() => setSelectedUser(null)}><X size={18} /></button></header>
           <div className="owner-detail-stats"><article><span>Quiz accuracy</span><strong>{selectedUser.learning.quiz_accuracy}%</strong></article><article><span>Quiz attempts</span><strong>{selectedUser.learning.quiz_count}</strong></article><article><span>Current streak</span><strong>{selectedUser.learning.current_streak}</strong></article><article><span>Active sessions</span><strong>{selectedUser.sessions.filter((session) => !session.revoked_at && new Date(session.expires_at).getTime() > Date.now()).length}</strong></article></div>
           <div className="owner-detail-grid">

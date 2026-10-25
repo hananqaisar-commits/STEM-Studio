@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info, Minimize2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTutorContext } from '../../contexts/TutorContext';
 import './FullScreenCanvasModal.css';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 interface FullScreenCanvasModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   const { actualTheme } = useTheme();
   const { isTutorOpen } = useTutorContext();
   const [isExplanationVisible, setIsExplanationVisible] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, onClose, dialogRef);
 
   // Trigger native browser fullscreen
   useEffect(() => {
@@ -61,11 +64,11 @@ export const FullScreenCanvasModal: React.FC<FullScreenCanvasModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className={`fs-modal-overlay theme-${actualTheme} ${isTutorOpen ? 'tutor-open' : ''} animate-fade-in`}>
+    <div ref={dialogRef} className={`fs-modal-overlay theme-${actualTheme} ${isTutorOpen ? 'tutor-open' : ''} animate-fade-in`} role="dialog" aria-modal="true" aria-labelledby="fs-modal-title" tabIndex={-1}>
       {/* Top Floating Glassmorphic Header Toolbar */}
       <header className="fs-modal-header">
         <div className="fs-header-branding">
-          <span className="fs-modal-title">{title}</span>
+          <span id="fs-modal-title" className="fs-modal-title">{title}</span>
           <span className="fs-modal-subtitle">{subtitle}</span>
         </div>
 

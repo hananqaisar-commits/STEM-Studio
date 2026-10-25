@@ -21,6 +21,8 @@
 .settings-modal-card {
   width: 540px;
   max-width: 95vw;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -112,7 +114,7 @@
   color: #64748b;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.15s;
+  transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
 }
 
 .settings-tab-btn:hover {
@@ -135,11 +137,13 @@
 
 /* Body */
 .settings-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 60vh;
+  max-height: none;
   overflow-y: auto;
 }
 
@@ -340,7 +344,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 [data-theme="dark"] .btn-secondary {
@@ -366,7 +370,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
 }
 
 [data-theme="dark"] .btn-primary {

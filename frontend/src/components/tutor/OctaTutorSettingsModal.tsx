@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AlertCircle, Bot, BrainCircuit, Check, Cpu, Eye, EyeOff, Globe, Settings2, ShieldCheck, X, Zap, type LucideIcon } from 'lucide-react';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './OctaTutorSettingsModal.css';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 interface OctaTutorSettingsModalProps {
   isOpen: boolean;
@@ -50,6 +51,8 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   onSaveConfig,
   onResetDefault,
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, onClose, dialogRef);
   const [provider, setProvider] = useState<LLMProvider>(config.provider || 'dashscope');
   const [apiKey, setApiKey] = useState<string>(config.apiKey || '');
   const [baseUrl, setBaseUrl] = useState<string>(config.baseUrl || PRESETS.dashscope.baseUrl);
@@ -106,8 +109,8 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   };
 
   return (
-    <div className="tutor-settings-backdrop" onClick={onClose} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}>
-      <div className="tutor-settings-modal" role="dialog" aria-modal="true" aria-labelledby="tutor-settings-title" onClick={(e) => e.stopPropagation()}>
+    <div className="tutor-settings-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={dialogRef} className="tutor-settings-modal" role="dialog" aria-modal="true" aria-labelledby="tutor-settings-title" tabIndex={-1}>
         {/* Header */}
         <div className="tutor-settings-header">
           <div className="tutor-settings-title">
