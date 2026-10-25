@@ -46,14 +46,14 @@ export const ForgotPassword: React.FC = () => {
         </div>
 
         {error && (
-          <div className="auth-error animate-fade-in">
+          <div className="auth-error animate-fade-in" role="alert">
             <AlertCircle size={16} />
             <span>{error}</span>
           </div>
         )}
 
         {isSubmitted && (
-          <div className="auth-success animate-fade-in">
+          <div className="auth-success animate-fade-in" role="status">
             <CheckCircle size={16} />
             <span>If the email exists, a reset link has been sent.</span>
           </div>

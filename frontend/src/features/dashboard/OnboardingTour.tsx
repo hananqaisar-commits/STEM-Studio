@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import './OnboardingTour.css';
 
 const TOUR_KEY = 'stemstudio-dashboard-tour-v1';
@@ -13,17 +14,19 @@ const steps = [
 export function OnboardingTour() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const dialogRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (localStorage.getItem(TOUR_KEY)) return;
     const timer = window.setTimeout(() => setOpen(true), 650);
     return () => window.clearTimeout(timer);
   }, []);
   const finish = () => { localStorage.setItem(TOUR_KEY, 'done'); setOpen(false); };
+  useDialogFocus(open, finish, dialogRef);
   if (!open) return null;
   const current = steps[step];
   return (
     <div className="onboarding-backdrop" role="presentation" onClick={finish}>
-      <section className="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" onClick={(event) => event.stopPropagation()}>
+      <section ref={dialogRef} className="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" tabIndex={-1} onClick={(event) => event.stopPropagation()}>
         <button type="button" className="onboarding-close" onClick={finish} aria-label="Skip tour"><X size={17} /></button>
         <p className="onboarding-eyebrow">{current.eyebrow}</p>
         <h2 id="onboarding-title">{current.title}</h2>

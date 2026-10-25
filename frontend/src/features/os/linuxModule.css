@@ -166,7 +166,6 @@
 .linux-tree__state.is-traversed { color:#117958; border-color:color-mix(in srgb,#15966c 30%,var(--color-border)); background:color-mix(in srgb,#15966c 8%,var(--color-surface)); }
 .linux-tree__path-hint { display:none; padding:.15rem .4rem 0 3.05rem; color:var(--color-text-muted); font:10px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
 .linux-tree__row-wrap.has-path-hint .linux-tree__path-hint { display:block; }
-.linux-tree__node.is-operation-node { animation:linux-vfs-path-pulse 750ms ease-in-out 2; }
 .linux-vfs__no-results { padding:2rem 1rem; color:var(--color-text-muted); text-align:center; border:1px dashed var(--color-border); border-radius:12px; }
 .linux-vfs__integrity-warning, .linux-tree__integrity-error { padding:.55rem .7rem; color:color-mix(in srgb,#9b5d0b 82%,var(--color-text)); border:1px solid color-mix(in srgb,#c18b31 35%,var(--color-border)); border-radius:9px; background:color-mix(in srgb,#d69e2e 9%,var(--color-surface)); font-size:11px; }
 .linux-tree__integrity-error { list-style:none; margin:.25rem 0; }
@@ -179,7 +178,6 @@
 .linux-vfs__inspector-meta { margin-top:.25rem; color:var(--color-text-muted); font-size:10px; }
 .linux-vfs__preview { max-width:320px; overflow:hidden; padding:.45rem .6rem; color:var(--color-text-secondary); border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface); font:10px ui-monospace,SFMono-Regular,Menlo,monospace; text-overflow:ellipsis; white-space:nowrap; }
 .linux-vfs__empty { padding:2rem; }
-@keyframes linux-vfs-path-pulse { 50% { box-shadow:0 0 0 3px color-mix(in srgb,#15966c 19%,transparent); } }
 
 /* Interactive shell: intentionally dark for familiar terminal contrast, with the app accent. */
 .linux-terminal {
@@ -229,7 +227,7 @@
 
 /* Editor shell follows the same theme while keeping a readable writing surface. */
 .linux-editor { background:rgba(13,18,29,.64); backdrop-filter:blur(8px); }
-.linux-editor__dialog { width:min(100%, 900px); height:min(680px, calc(100dvh - 2rem)); min-height:360px; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--color-border); border-radius:18px; background:var(--color-surface); color:var(--color-text); box-shadow:0 24px 70px rgba(0,0,0,.28); font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; animation:linux-editor-in 150ms ease-out both; }
+.linux-editor__dialog { width:min(100%, 900px); height:min(680px, calc(100dvh - 2rem)); min-height:min(360px, calc(100dvh - 2rem)); display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--color-border); border-radius:18px; background:var(--color-surface); color:var(--color-text); box-shadow:0 24px 70px rgba(0,0,0,.28); font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; animation:linux-editor-in 150ms ease-out both; }
 .linux-editor__header { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.8rem 1.1rem; color:var(--color-text); background:var(--color-surface-elevated); border-bottom:1px solid var(--color-border); }
 .linux-editor__body { flex:1; min-height:0; padding:1rem; background:var(--color-surface); }
 .linux-editor__textarea { width:100%; height:100%; resize:none; color:var(--color-text); background:transparent; font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; }

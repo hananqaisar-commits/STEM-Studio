@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LazyMotion, domAnimation, m, AnimatePresence } from 'motion/react';
+import { LazyMotion, domAnimation, m, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ArrowUp } from 'lucide-react';
 import './ScrollToTop.css';
 
 export const ScrollToTop: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,20 +23,20 @@ export const ScrollToTop: React.FC = () => {
   const scrollToTop = useCallback(() => {
     window.scrollTo({
       top: 0,
-      behavior: 'smooth',
+      behavior: prefersReducedMotion ? 'instant' : 'smooth',
     });
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <LazyMotion features={domAnimation}>
       <AnimatePresence>
         {isVisible && (
           <m.button
-            initial={{ scale: 0.7, opacity: 0, y: 10 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0, y: 6 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.7, opacity: 0, y: 10 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0, y: 6 }}
+            whileHover={prefersReducedMotion ? undefined : { scale: 1.04 }}
+            whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
             onClick={scrollToTop}
             className="scroll-to-top-fab"
             title="Scroll to Top"

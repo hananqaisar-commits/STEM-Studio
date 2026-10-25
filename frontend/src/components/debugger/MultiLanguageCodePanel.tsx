@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Play, Layers, RotateCcw,
-  AlertTriangle, ChevronDown, Check, Copy, CopyCheck, Bug, FileCode2,
+  AlertTriangle, ChevronDown, Copy, CopyCheck, Bug, FileCode2,
   Pencil, Eye, Loader2, CheckCircle2,
 } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
@@ -494,6 +494,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             </div>
             <textarea
               className="custom-editor-textarea"
+              aria-label={`Custom ${(stubEntry ? stubLang : customLang).toUpperCase()} code editor`}
               value={customCode}
               onChange={(e) => { setCustomCode(e.target.value); setExecutionError(null); setRunSuccess(null); setExecutionResult(null); }}
               spellCheck={false}

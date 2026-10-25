@@ -1,4 +1,4 @@
-.plans-page { min-height:100vh; padding:0 24px 56px; color:var(--color-text); background:var(--color-app-bg); }
+.plans-page { min-height:100vh; min-height:100dvh; padding:0 24px 56px; color:var(--color-text); background:var(--color-app-bg); }
 .plans-header { display:flex; align-items:center; justify-content:space-between; gap:16px; max-width:1180px; margin:auto; padding:18px 0; border-bottom:1px solid var(--color-border); }
 .plans-back,.plans-login { display:inline-flex; align-items:center; gap:7px; color:var(--color-text-secondary); text-decoration:none; font-size:12px; font-weight:700; }
 .plans-brand { display:flex; align-items:center; gap:9px; color:var(--color-text); font-size:13px; font-weight:800; }
@@ -69,3 +69,53 @@
 .plans-footer svg { flex:0 0 auto; margin-top:1px; color:var(--color-primary); }
 .plans-footer a { color:var(--color-primary); }
 @media(max-width:600px) { .plans-page { padding:0 14px 38px; }.plans-header { padding:13px 0; }.plans-intro { margin-top:40px; }.plans-grid { grid-template-columns:1fr; }.transfer-grid { grid-template-columns:1fr; }.plans-active-banner { align-items:flex-start; flex-wrap:wrap; }.plans-active-banner a { margin-left:28px; }.transfer-panel,.billing-claims { padding:15px; } }
+
+/* Keep billing copy readable at the app's standard 100% zoom. */
+.plans-back,
+.plans-login { font-size:14px; }
+.plans-brand { font-size:15px; }
+.plans-brand-mark { font-size:12px; }
+.plans-kicker { font-size:12px; }
+.plans-current-plan { font-size:13px !important; }
+.plans-interval button { font-size:14px; }
+.plans-interval span { font-size:11px; }
+.plan-interval-label { font-size:12px; }
+.plan-description { min-height:0; font-size:14px; }
+.plan-price span { font-size:13px; }
+.plan-discount { font-size:12px; }
+.plan-discount small { font-size:12px; }
+.plan-card li { font-size:14px; }
+.plan-cta { font-size:14px; }
+.plans-loading,
+.plans-empty,
+.plans-feedback { font-size:14px; }
+.plans-active-banner div { font-size:13px; }
+.plans-active-banner a { font-size:13px; }
+.plan-cancel-renewal { font-size:12px; }
+.transfer-panel>div:first-child>p:last-child { font-size:14px; }
+.transfer-grid label,
+.transfer-reference { font-size:13px; }
+.transfer-grid select,
+.transfer-reference input { font-size:16px; }
+.transfer-details { font-size:13px; }
+.transfer-details span { font-size:12px; }
+.billing-claims article {
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) auto;
+  align-items:start;
+  gap:8px;
+  font-size:13px;
+}
+.billing-claims article span {
+  min-width:0;
+  overflow-wrap:anywhere;
+  font-size:13px;
+}
+.billing-claims article strong { font-size:12px; }
+.billing-claims article small {
+  grid-column:1 / -1;
+  min-width:0;
+  overflow-wrap:anywhere;
+  font-size:12px;
+}
+.plans-footer { font-size:12px; }

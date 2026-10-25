@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { BookOpenCheck, Printer } from 'lucide-react';
 import { DSA_CATEGORIES } from '../../data/categories';
 import { THEORY_CONTENT } from '../../data/theoryContent';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import './CheatSheetPrinter.css';
 
 export function CheatSheetPrinter() {
   const [categoryId, setCategoryId] = useState('sorting');
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocus(open, () => setOpen(false), dialogRef);
   const category = useMemo(() => DSA_CATEGORIES.find((item) => item.id === categoryId), [categoryId]);
   const theory = THEORY_CONTENT[categoryId];
   const topics = CATEGORY_TOPICS.find((item) => item.categoryId === categoryId)?.topics ?? [];
@@ -20,7 +23,7 @@ export function CheatSheetPrinter() {
     <>
       <button type="button" className="cheat-sheet-trigger" onClick={() => setOpen(true)}><BookOpenCheck size={16} />Print a cheat sheet</button>
       {open && <div className="cheat-sheet-dialog-backdrop" onClick={() => setOpen(false)}>
-        <section className="cheat-sheet-dialog" role="dialog" aria-modal="true" aria-labelledby="cheat-sheet-heading" onClick={(event) => event.stopPropagation()}>
+        <section ref={dialogRef} className="cheat-sheet-dialog" role="dialog" aria-modal="true" aria-labelledby="cheat-sheet-heading" tabIndex={-1} onClick={(event) => event.stopPropagation()}>
           <div className="cheat-sheet-dialog-actions"><label htmlFor="cheat-sheet-category">Category<select id="cheat-sheet-category" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{DSA_CATEGORIES.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button type="button" onClick={() => window.print()}><Printer size={15} />Print / Save as PDF</button><button type="button" className="cheat-sheet-close" onClick={() => setOpen(false)}>Close</button></div>
           <article className="cheat-sheet-print">
             <p className="cheat-sheet-brand">STEM STUDIO · QUICK REFERENCE</p>

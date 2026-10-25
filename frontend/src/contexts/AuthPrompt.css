@@ -34,3 +34,38 @@
   opacity: .65;
   cursor: wait;
 }
+
+/* Keep the full sign-in flow reachable above the mobile keyboard and browser chrome. */
+.auth-prompt-backdrop {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding:
+    max(1rem, env(safe-area-inset-top, 0px))
+    max(1rem, env(safe-area-inset-right, 0px))
+    max(1rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-left, 0px));
+}
+
+.auth-prompt-card {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.auth-prompt-close {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  touch-action: manipulation;
+}
+
+@media (max-height: 600px) {
+  .auth-prompt-card { padding: 1.25rem; }
+  .auth-prompt-card h2 { margin-top: .75rem; }
+  .auth-prompt-card > p { margin-bottom: .8rem; }
+  .auth-prompt-form { gap: .65rem; }
+}

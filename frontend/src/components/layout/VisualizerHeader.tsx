@@ -5,6 +5,7 @@ import type { CategoryTopics } from '../../data/categoryTopics';
 import { hasCustomStub } from '../../data/customCode';
 import { apiClient } from '../../api/apiClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
 import './VisualizerHeader.css';
 
 export interface VisualizerSearchItem { id: string; name: string; description?: string; group?: string; }
@@ -26,6 +27,7 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title,
   const [accessStatus, setAccessStatus] = useState<'idle' | 'loading' | 'allowed' | 'premium' | 'disabled' | 'missing' | 'error'>('idle');
   const [topicMenuOpen, setTopicMenuOpen] = useState(false);
   const topicMenuRef = useRef<HTMLDivElement>(null);
+  const accessDialogRef = useRef<HTMLElement>(null);
   const categoryByTitle: Record<string, string> = {
     'Sorting Algorithms Studio': 'sorting',
     'Linked List Visualizer': 'linkedList',
@@ -99,6 +101,7 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title,
 
   const showAccessBlock = Boolean(featureKey) && isAuthenticated && !user?.is_owner_session && accessStatus !== 'allowed';
   const activeLabel = items?.find((item) => item.id === activeId)?.name || activeEntitlement?.label || activeId || '';
+  useDialogFocus(showAccessBlock, () => {}, accessDialogRef);
   return (
     <>
     <header className="viz-header animate-fade-in">
@@ -144,8 +147,8 @@ export const VisualizerHeader: React.FC<VisualizerHeaderProps> = ({ icon, title,
       </div> : null}
       {actions}
     </header>
-    {showAccessBlock && <div className="algorithm-access-backdrop" role="dialog" aria-modal="true" aria-labelledby="algorithm-access-title">
-      <section className="algorithm-access-card">
+    {showAccessBlock && <div className="algorithm-access-backdrop">
+      <section ref={accessDialogRef} className="algorithm-access-card" role="dialog" aria-modal="true" aria-labelledby="algorithm-access-title" tabIndex={-1}>
         <span className="algorithm-access-lock"><LockKeyhole size={21} /></span>
         <p className="algorithm-access-eyebrow">{accessStatus === 'loading' ? 'Checking access' : accessStatus === 'disabled' ? 'Temporarily unavailable' : 'Premium topic'}</p>
         <h2 id="algorithm-access-title">{accessStatus === 'loading' ? 'Confirming your plan…' : accessStatus === 'error' ? 'Access could not be checked' : accessStatus === 'disabled' ? `${activeLabel} is temporarily disabled` : `${activeLabel} requires premium access`}</h2>

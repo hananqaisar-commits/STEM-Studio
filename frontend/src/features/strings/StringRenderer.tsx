@@ -16,7 +16,7 @@ export const StringRenderer: React.FC<StringRendererProps> = ({ currentStep, ori
   if (!currentStep) return <div className="sorting-canvas-empty"><span>No string data</span></div>;
 
   const { array, comparingIndices = [], swappingIndices = [], sortedIndices = [] } = currentStep;
-  const chars = array.map(code => String.fromCharCode(code));
+  const chars = array.map((codePoint) => String.fromCodePoint(codePoint));
 
   const getState = (i: number): ElementState => {
     if (swappingIndices.includes(i)) return 'swapping';

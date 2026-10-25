@@ -163,7 +163,7 @@ export const SignUp: React.FC = () => {
         )}
 
         {error && (
-          <div className="auth-error animate-fade-in">
+          <div className="auth-error animate-fade-in" role="alert">
             <AlertCircle size={16} />
             <span>{error}</span>
           </div>

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'motion/react';
 import { Search, X, Sparkles, ArrowRight } from 'lucide-react';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
 
@@ -40,11 +39,9 @@ export const NavbarGlobalSearch: React.FC = () => {
   const [resultsPosition, setResultsPosition] = useState<React.CSSProperties>({});
   const navigate = useNavigate();
 
-  // Auto focus input when expanding
-  useEffect(() => {
-    if (isExpanded) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
+  // Focus before paint so the keyboard shortcut is ready for immediate typing.
+  useLayoutEffect(() => {
+    if (isExpanded) inputRef.current?.focus();
   }, [isExpanded]);
 
   const positionResults = useCallback(() => {
@@ -94,8 +91,6 @@ export const NavbarGlobalSearch: React.FC = () => {
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
   }, [isExpanded]);
-
-  useEffect(() => setActiveIndex(0), [query]);
 
   // Search across ALL category topics
   const searchResults = useMemo<SearchResultItem[]>(() => {
@@ -149,9 +144,7 @@ export const NavbarGlobalSearch: React.FC = () => {
 
   return (
     <div ref={searchRef} className="relative flex items-center">
-      <motion.div
-        layout
-        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+      <div
         onClick={() => {
           if (!isExpanded) setIsExpanded(true);
         }}
@@ -167,7 +160,7 @@ export const NavbarGlobalSearch: React.FC = () => {
             setIsExpanded(true);
           }
         }}
-        className={`flex items-center cursor-pointer transition-colors duration-200 rounded-full border ${
+        className={`flex items-center cursor-pointer rounded-full border ${isExpanded ? 'absolute right-0 z-[1700] max-w-[calc(100vw-24px)]' : ''} ${
           isExpanded
             ? 'w-60 sm:w-72 md:w-80 h-9 px-3 bg-white text-slate-900 border-purple-500/60 dark:bg-neutral-950 dark:text-neutral-100 shadow-lg dark:shadow-[0_0_20px_rgba(147,51,234,0.25)] backdrop-blur-xl ring-2 ring-purple-500/20'
             : 'w-[38px] h-[38px] justify-center bg-white dark:bg-neutral-900 border-slate-300 dark:border-neutral-700/60 text-slate-700 dark:text-neutral-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-white dark:hover:bg-neutral-900 shadow-sm'
@@ -175,20 +168,16 @@ export const NavbarGlobalSearch: React.FC = () => {
       >
         <Search size={18} className={`shrink-0 transition-colors ${isExpanded ? 'text-purple-600 dark:text-purple-400' : ''}`} />
 
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: '100%' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="flex items-center flex-1 min-w-0 ml-2 overflow-hidden"
-            >
+        {isExpanded && (
+            <div className="flex items-center flex-1 min-w-0 ml-2">
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActiveIndex(0);
+                }}
                 onKeyDown={handleInputKeyDown}
                 role="combobox"
                 aria-autocomplete="list"
@@ -207,10 +196,9 @@ export const NavbarGlobalSearch: React.FC = () => {
               >
                 <X size={14} />
               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+            </div>
+        )}
+      </div>
 
       {/* Global Search Results Dropdown */}
       {isExpanded && query.trim().length > 0 && createPortal(

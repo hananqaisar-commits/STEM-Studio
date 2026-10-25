@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, FileText, HelpCircle, Search, AlertCircle, Check } from 'lucide-react';
+import { useDialogFocus } from '../../../hooks/useDialogFocus';
 
 interface VimNanoModalProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const commandInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, onCancel, dialogRef, { closeOnEscape: false });
 
   useEffect(() => {
     setContent(initialContent);
@@ -361,13 +364,16 @@ export const VimNanoModal: React.FC<VimNanoModalProps> = ({
   return (
     <div className="linux-editor fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
+        ref={dialogRef}
         className="linux-editor__dialog"
         role="dialog"
         aria-modal="true"
         aria-label={`${type} editor for ${filePath}`}
+        aria-describedby="linux-editor-dialog-description"
         onKeyDown={handleKeyDown}
         tabIndex={0}
       >
+        <span id="linux-editor-dialog-description" className="sr-only">Code editor. Use the keyboard commands shown in the editor footer to save or close.</span>
         {/* Editor Light Header Bar */}
         <div className="linux-editor__header text-xs">
           <div className="flex items-center gap-3">
