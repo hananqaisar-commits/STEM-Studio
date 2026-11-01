@@ -111,6 +111,15 @@ export const NavbarGlobalSearch: React.FC<{ compact?: boolean }> = ({ compact = 
     };
   }, [isExpanded, positionResults, query]);
 
+  useLayoutEffect(() => {
+    resultsRef.current?.scrollTo({ top: 0 });
+  }, [settledQuery]);
+
+  useEffect(() => {
+    if (!isExpanded || !settledQuery) return;
+    resultsRef.current?.querySelector(`#topic-search-option-${activeIndex}`)?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, isExpanded, settledQuery]);
+
   useLayoutEffect(() => { if (isExpanded) inputRef.current?.focus(); }, [isExpanded]);
 
   useEffect(() => {
@@ -164,7 +173,7 @@ export const NavbarGlobalSearch: React.FC<{ compact?: boolean }> = ({ compact = 
           <Search size={18} aria-hidden="true" />
           <input
             ref={inputRef}
-            type="search"
+            type="text"
             value={query}
             onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
             onKeyDown={handleKeyDown}
@@ -175,6 +184,8 @@ export const NavbarGlobalSearch: React.FC<{ compact?: boolean }> = ({ compact = 
             aria-controls="global-topic-search-results"
             aria-activedescendant={results[activeIndex] ? `topic-search-option-${activeIndex}` : undefined}
             placeholder="Search topics, algorithms, concepts…"
+            autoComplete="off"
+            spellCheck={false}
           />
           <button type="button" onClick={closeSearch} className="global-search-close" aria-label="Close search"><X size={16} /></button>
         </div>

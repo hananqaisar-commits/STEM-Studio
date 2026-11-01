@@ -210,7 +210,7 @@ const DashboardLayout = () => {
       <header className="mobile-screen-controls">
         <div className="mobile-controls-left">
           {pathSegment && <button type="button" className="mobile-control-button" onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate('/dashboard'); }} aria-label="Go back"><ArrowLeft size={20} /></button>}
-          {!pathSegment && <span className="mobile-brand-mark" aria-hidden="true">O</span>}
+          {!pathSegment && <img className="mobile-brand-mark" src="/icon-192.png" alt="" aria-hidden="true" />}
         </div>
         <div className="mobile-screen-title" title={screenTitle}>{screenTitle}</div>
         <div className="mobile-controls-right">

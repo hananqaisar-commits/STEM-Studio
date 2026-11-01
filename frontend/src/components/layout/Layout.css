@@ -85,7 +85,7 @@
 .global-search-results-heading > span { display: flex; align-items: center; gap: 8px; color: var(--color-primary-text, var(--color-primary)); }
 .global-search-results-heading kbd { padding: 3px 6px; border: 1px solid var(--color-border); border-radius: 6px; color: var(--color-text-muted); font: 500 0.65rem ui-monospace, monospace; text-transform: none; }
 .global-search-result-list { display: grid; gap: 5px; padding-top: 7px; }
-.global-search-result { display: flex; width: 100%; min-height: 76px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid transparent; border-radius: 13px; background: transparent; color: var(--color-text-muted); text-align: left; cursor: pointer; transition: border-color 140ms ease, background 140ms ease, color 140ms ease; }
+.global-search-result { display: flex; width: 100%; min-height: 76px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 13px; background: var(--color-surface-elevated); color: var(--color-text-muted); text-align: left; cursor: pointer; transition: border-color 140ms ease, background 140ms ease, color 140ms ease; }
 .global-search-result > svg { flex: 0 0 auto; color: var(--color-text-muted); }
 .global-search-result:hover,
 .global-search-result.is-active { border-color: color-mix(in srgb, var(--color-primary) 25%, var(--color-border)); background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)); color: var(--color-text); }
@@ -106,6 +106,7 @@
 
 @media (max-width: 768px) {
   .expandable-navbar-wrapper { display: none !important; }
+  .octa-tutor-fab { display: none !important; }
   .mobile-screen-controls {
     position: sticky; top: 0; z-index: 810; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto;
     min-height: calc(60px + env(safe-area-inset-top, 0px)); align-items: center; gap: 8px;
@@ -117,7 +118,7 @@
   .mobile-controls-right { justify-self: end; }
   .mobile-screen-title { overflow: hidden; color: var(--color-text); font-size: 0.94rem; font-weight: 720; letter-spacing: -0.02em; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
   .mobile-control-button { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; background: var(--color-surface-elevated); color: var(--color-text); cursor: pointer; }
-  .mobile-brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 12px; background: var(--color-primary); color: #fff; font-size: 1.15rem; font-weight: 850; }
+  .mobile-brand-mark { display: block; width: 36px; height: 36px; border: 1px solid var(--color-border); border-radius: 50%; object-fit: cover; }
   .mobile-search-control .global-search-trigger { width: 42px; height: 42px; }
   .mobile-search-control .global-topic-search.is-expanded { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 8px); right: 58px; left: max(12px, env(safe-area-inset-left, 0px)); z-index: 1700; }
   .mobile-search-control .global-search-input-shell { width: 100%; }
