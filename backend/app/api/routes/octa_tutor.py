@@ -23,7 +23,7 @@ try:
     from backend.app.core.feature_access import FEATURE_LABELS, require_feature_access
     from backend.app.core.rate_limit import RateLimiter
     from backend.infrastructure.database.database import get_db
-    from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User
+    from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference
 except ModuleNotFoundError:
     from app.api.dependencies import get_current_user
     from app.api.schemas import (
@@ -39,7 +39,7 @@ except ModuleNotFoundError:
     from app.core.feature_access import FEATURE_LABELS, require_feature_access
     from app.core.rate_limit import RateLimiter
     from infrastructure.database.database import get_db
-    from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User
+    from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference
 
 router = APIRouter(prefix="/api/octa-tutor", tags=["Octa AI Tutor"])
 logger = logging.getLogger("octa_tutor")
@@ -98,7 +98,7 @@ def _learning_snapshot(db: Session, user_id: int, profile: Optional[TutorLearnin
     }
 
 
-def _learning_context(snapshot: dict) -> str:
+def _learning_context(snapshot: dict, preferences: Optional[UserPreference] = None) -> str:
     style = RESPONSE_STYLE_LABELS.get(snapshot.get("response_style", "balanced"), RESPONSE_STYLE_LABELS["balanced"])
     strengths = snapshot.get("strengths", [])
     practice = snapshot.get("practice_areas", [])
@@ -107,6 +107,14 @@ def _learning_context(snapshot: dict) -> str:
         "Use this preference naturally; do not mention or label the learner unless they ask.",
         "Quiz trends are weak learning signals, not proof of ability. Never shame the learner or assume their mood, personality, or attitude.",
     ]
+    preferred_language = (preferences.preferred_language if preferences else None) or "English"
+    lines.append(f"Preferred response language: {preferred_language}. Reply in this language unless the learner requests another language.")
+    learning_prompt = (preferences.learning_prompt if preferences else None) or ""
+    if learning_prompt:
+        lines.append(
+            "Learner's custom teaching preference (follow when relevant and compatible with accuracy, safety, and the active task): "
+            + learning_prompt[:1200]
+        )
     if strengths:
         lines.append("Recent quiz strengths (at least 3 attempts and 80% accuracy): " + ", ".join(f"{item['category']}/{item['algorithm_id']} ({item['accuracy_percent']}%)" for item in strengths))
     if practice:
@@ -1894,6 +1902,7 @@ async def handle_octa_tutor(
         current_user.user_id,
         db.get(TutorLearningProfile, current_user.user_id),
     )
+    learner_preferences = db.query(UserPreference).filter(UserPreference.user_id == current_user.user_id).first()
     site_catalog = req_data.site_catalog.strip()[:12000] or (
         "STEM Studio provides a dashboard, DSA learning modules with algorithm visualizers, "
         "and an Operating Systems module with Linux command lessons and a simulated file system."
@@ -1910,7 +1919,7 @@ async def handle_octa_tutor(
         step_data=(req_data.step_data or "No step data")[0:6000],
         site_catalog=site_catalog,
         topic_knowledge=(req_data.topic_knowledge or "No matching theory excerpt is available.")[:12000],
-        learning_context=_learning_context(learner_snapshot),
+        learning_context=_learning_context(learner_snapshot, learner_preferences),
     )
 
     # Build message list

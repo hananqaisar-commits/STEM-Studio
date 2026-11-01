@@ -273,6 +273,8 @@ export const OctaTutor: React.FC = () => {
     stopListening,
     clearHistory,
     llmConfig,
+    aiExplanationsEnabled,
+    setAIExplanationsEnabled,
     providerStatus,
     isSettingsOpen,
     setIsSettingsOpen,
@@ -590,6 +592,8 @@ export const OctaTutor: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         config={llmConfig}
+        aiExplanationsEnabled={aiExplanationsEnabled}
+        onToggleAIExplanations={setAIExplanationsEnabled}
         onSaveConfig={saveLLMConfig}
         onResetDefault={resetLLMConfig}
       />

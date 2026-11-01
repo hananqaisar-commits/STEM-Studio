@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Bot, BrainCircuit, Check, Cpu, Eye, EyeOff, Globe, Settings2, ShieldCheck, X, Zap, type LucideIcon } from 'lucide-react';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
@@ -9,6 +9,8 @@ interface OctaTutorSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   config: UserLLMConfig;
+  aiExplanationsEnabled: boolean;
+  onToggleAIExplanations: (enabled: boolean) => void;
   onSaveConfig: (newConfig: UserLLMConfig) => void;
   onResetDefault: () => void;
 }
@@ -48,6 +50,8 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   isOpen,
   onClose,
   config,
+  aiExplanationsEnabled,
+  onToggleAIExplanations,
   onSaveConfig,
   onResetDefault,
 }) => {
@@ -61,6 +65,15 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   const [showKey, setShowKey] = useState<boolean>(false);
   const [testing, setTesting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setProvider(config.provider || 'dashscope');
+    setApiKey(config.apiKey || '');
+    setBaseUrl(config.baseUrl || PRESETS.dashscope.baseUrl);
+    setModelName(config.modelName || PRESETS.dashscope.models[0]);
+    setTestResult(null);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -185,6 +198,24 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
             </div>
           )}
           <p className="tutor-key-note">Your key stays in this browser tab only and is cleared when its session ends. It is sent to the STEM Studio backend when Octa uses it; avoid configuring a key on a shared device.</p>
+
+          <section className="tutor-ai-explanation-setting" aria-labelledby="tutor-ai-explanation-title">
+            <div>
+              <h4 id="tutor-ai-explanation-title">AI-generated step explanations</h4>
+              <p>Use your connected model to explain the active execution step. Built-in explanations remain available when this is off or no model is connected.</p>
+            </div>
+            <label className="tutor-ai-explanation-toggle">
+              <span className="sr-only">Use AI-generated step explanations</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={aiExplanationsEnabled}
+                aria-checked={aiExplanationsEnabled}
+                onChange={(event) => onToggleAIExplanations(event.target.checked)}
+                aria-label="Use AI-generated step explanations"
+              />
+            </label>
+          </section>
 
           {/* Model Name */}
           <div className="tutor-field-group">

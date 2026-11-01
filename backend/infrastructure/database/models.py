@@ -336,6 +336,10 @@ class UserPreference(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
     theme: Mapped[Optional[str]] = mapped_column(String(10))
     marketing_email_opt_in: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    preferred_language: Mapped[Optional[str]] = mapped_column(String(80))
+    display_name: Mapped[Optional[str]] = mapped_column(String(80))
+    avatar_data_url: Mapped[Optional[str]] = mapped_column(Text)
+    learning_prompt: Mapped[Optional[str]] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

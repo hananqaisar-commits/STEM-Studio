@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { ArrowRight, Check, Clock, Code, HardDrive, List, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowRight, Check, Clock, Code, HardDrive, List, AlertTriangle, Sparkles } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { getTutorProviderStatus, sendTutorMessage } from '../../api/octaTutorApi';
+import { OCTA_SETTINGS_CHANGE_EVENT, readAIExplanationsEnabled, readOctaConfig } from '../../api/octaConfigStorage';
+import { useTutorContext } from '../../contexts/TutorContext';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
 import './Layout.css';
@@ -38,6 +42,8 @@ export interface ExplanationPanelProps {
 }
 
 type TraceTab = 'flow' | 'pseudocode' | 'explanation';
+
+let lastAIExplanationRequestAt = 0;
 
 const DETAIL_KEYS = [
   'variables', 'distances', 'queueOrStack', 'visitedNodeIds', 'currentNodeId', 'currentEdgeId',
@@ -83,11 +89,13 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
   onStepSelect,
   isCustomCodeRunning = false,
 }) => {
+  const { contextState } = useTutorContext();
+  const location = useLocation();
   const hasHistory = Array.isArray(steps) && steps.length > 0;
   const maxIndex = hasHistory ? steps.length - 1 : 0;
   const activeIndex = Math.min(Math.max(currentStepIndex ?? 0, 0), maxIndex);
   const activeStep = hasHistory ? steps[activeIndex] : undefined;
-  const fallbackText = explanation || description || 'Select an algorithm and click Play to start visualization.';
+  const fallbackText = explanation || description || contextState.currentStepDescription || 'Select an algorithm and click Play to start visualization.';
   const activeStepText = activeStep ? getStepText(activeStep, activeIndex) : fallbackText;
   const stepTitle = activeStep?.phase?.trim() || activeStep?.description?.trim() || activeStep?.explanation?.trim() || `Step ${activeIndex + 1}`;
   const details = activeStep
@@ -99,6 +107,149 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
     : [];
   const [tab, setTab] = useState<TraceTab>('flow');
   const activeTab = tab === 'pseudocode' && pseudocode.length === 0 ? 'flow' : tab;
+  const [aiExplanationsEnabled, setAIExplanationsEnabled] = useState(readAIExplanationsEnabled);
+  const [llmConfig, setLLMConfig] = useState(readOctaConfig);
+  const [aiExplanation, setAIExplanation] = useState<{ key: string; text: string; source: 'model' | 'grounded' } | null>(null);
+  const [isGeneratingAIExplanation, setIsGeneratingAIExplanation] = useState(false);
+  const explanationCacheRef = useRef(new Map<string, { text: string; source: 'model' | 'grounded' }>());
+  const requestStep = activeStep || contextState.currentStep;
+  let requestStepData = '';
+  try {
+    requestStepData = requestStep ? JSON.stringify(requestStep) : '';
+  } catch {
+    requestStepData = '';
+  }
+  const requestStepDescription = activeStep
+    ? getStepText(activeStep, activeIndex)
+    : contextState.currentStepDescription || activeStepText;
+  const explanationKey = [
+    location.pathname,
+    contextState.algorithmId,
+    contextState.algorithmName,
+    activeIndex,
+    requestStepDescription,
+    requestStepData,
+    timeComplexity?.best,
+    timeComplexity?.average,
+    timeComplexity?.worst,
+    spaceComplexity,
+  ].join('|');
+
+  useEffect(() => {
+    const syncSettings = () => {
+      setAIExplanationsEnabled(readAIExplanationsEnabled());
+      setLLMConfig(readOctaConfig());
+    };
+    window.addEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncSettings);
+    window.addEventListener('storage', syncSettings);
+    return () => {
+      window.removeEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncSettings);
+      window.removeEventListener('storage', syncSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    setAIExplanation(null);
+    setIsGeneratingAIExplanation(false);
+
+    if (!aiExplanationsEnabled || !requestStep || !requestStepData || !requestStepDescription) {
+      return () => { cancelled = true; controller.abort(); };
+    }
+
+    const cached = explanationCacheRef.current.get(explanationKey);
+    if (cached) {
+      setAIExplanation({ key: explanationKey, ...cached });
+      return () => { cancelled = true; controller.abort(); };
+    }
+
+    const waitForSettledStep = 900;
+    const minimumRequestInterval = 5000;
+    const throttleWait = Math.max(0, minimumRequestInterval - (Date.now() - lastAIExplanationRequestAt));
+    const timer = window.setTimeout(async () => {
+      let providerConfigured = Boolean(llmConfig.apiKey.trim()) || llmConfig.provider === 'custom';
+      if (!providerConfigured && llmConfig.provider === 'dashscope') {
+        try {
+          const status = await getTutorProviderStatus();
+          providerConfigured = status.configured;
+        } catch {
+          providerConfigured = false;
+        }
+      }
+      if (cancelled || !providerConfigured) return;
+
+      lastAIExplanationRequestAt = Date.now();
+      setIsGeneratingAIExplanation(true);
+      try {
+        const response = await sendTutorMessage({
+          message: `Explain the active execution step for ${contextState.algorithmName || 'this algorithm'}. Keep the answer concise, technically precise, and grounded only in the supplied live state. Explain what changed, why this operation is correct, and the consequence for the next step. Use plain prose with no Markdown. Do not propose actions or repeat the full algorithm.`,
+          algorithm_name: contextState.algorithmName,
+          algorithm_id: contextState.algorithmId,
+          category: contextState.category,
+          current_step_description: requestStepDescription,
+          current_step_index: activeIndex,
+          total_steps: hasHistory ? steps!.length : totalSteps || contextState.totalSteps,
+          step_data: requestStepData,
+          current_page: location.pathname,
+          site_catalog: 'STEM Studio live Execution Trace. The current step data supplied with this request is the source of truth.',
+          topic_knowledge: JSON.stringify({
+            source: 'Live visualizer execution record',
+            instruction: 'Explain the current operation using the exact values in step_data. Preserve technical terms, clarify state changes, and do not invent values or claim that code was executed outside this visualizer.',
+            time_complexity: timeComplexity,
+            space_complexity: spaceComplexity,
+          }),
+          conversation_history: [],
+          mode: 'natural',
+          provider: llmConfig.provider,
+          api_key: llmConfig.apiKey,
+          base_url: llmConfig.baseUrl,
+          model_name: llmConfig.modelName,
+        }, controller.signal);
+
+        if (cancelled || !response.reply?.trim()) return;
+        if (response.answer_source !== 'model' && response.answer_source !== 'grounded') return;
+        const generated = { text: response.reply.trim(), source: response.answer_source } as const;
+        explanationCacheRef.current.set(explanationKey, generated);
+        setAIExplanation({ key: explanationKey, ...generated });
+      } catch {
+        // Keep the deterministic lesson explanation visible if the model is unavailable.
+      } finally {
+        if (!cancelled) setIsGeneratingAIExplanation(false);
+      }
+    }, Math.max(waitForSettledStep, throttleWait));
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    activeIndex,
+    aiExplanationsEnabled,
+    contextState.algorithmId,
+    contextState.algorithmName,
+    contextState.category,
+    contextState.totalSteps,
+    explanationKey,
+    hasHistory,
+    llmConfig,
+    location.pathname,
+    requestStepData,
+    requestStepDescription,
+    spaceComplexity,
+    timeComplexity?.average,
+    timeComplexity?.best,
+    timeComplexity?.worst,
+    totalSteps,
+  ]);
+
+  const displayedStepText = aiExplanationsEnabled && aiExplanation?.key === explanationKey
+    ? aiExplanation.text
+    : activeStepText;
+  const explanationLabel = aiExplanationsEnabled && aiExplanation?.key === explanationKey
+    ? aiExplanation.source === 'model' ? 'AI explanation' : 'Verified explanation'
+    : 'Current focus';
   const currentLine = activeStep?.codeLine ?? codeLine;
   const headerText = isCustomCodeRunning
     ? 'Pasted code trace'
@@ -177,11 +328,12 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
               </div>
 
               <article className="trace-step-detail">
-                <div className="trace-detail-heading">
-                  <span className="trace-detail-kicker">Current focus</span>
+                <div className="trace-detail-heading" aria-busy={isGeneratingAIExplanation}>
+                  <span className="trace-detail-kicker">{explanationLabel}</span>
                   <h3>Step {activeIndex + 1}: {stepTitle}</h3>
                 </div>
-                <p className="trace-detail-explanation">{activeStepText}</p>
+                {isGeneratingAIExplanation && <span className="trace-ai-status" role="status"><Sparkles size={13} aria-hidden="true" /> Generating an AI explanation…</span>}
+                <p className="trace-detail-explanation">{displayedStepText}</p>
                 {details.length > 0 && (
                   <dl className="trace-detail-grid">
                     {details.map(({ key, value }) => (
@@ -209,9 +361,12 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
 
           {activeTab === 'explanation' && (
             <article className="trace-explanation-panel" role="tabpanel">
-              <span className="trace-detail-kicker">Why this step matters</span>
+              <span className="trace-detail-kicker">
+                {aiExplanationsEnabled && aiExplanation?.key === explanationKey ? explanationLabel : 'Why this step matters'}
+              </span>
               <h3>{stepTitle}</h3>
-              <p>{activeStepText}</p>
+              {isGeneratingAIExplanation && <span className="trace-ai-status" role="status"><Sparkles size={13} aria-hidden="true" /> Generating an AI explanation…</span>}
+              <p>{displayedStepText}</p>
               {details.length > 0 && <p className="trace-explanation-context">State at this point: {details.map(({ key, value }) => `${key} = ${value}`).join(' · ')}</p>}
             </article>
           )}
@@ -219,7 +374,7 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
       ) : (
         <div className="explanation-current-action">
           <span className="explanation-current-label">Now executing</span>
-          <p className="explanation-text">{activeStepText}</p>
+          <p className="explanation-text">{displayedStepText}</p>
         </div>
       )}
 

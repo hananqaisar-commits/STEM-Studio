@@ -155,12 +155,14 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
   const isExpanded = isHovered || isOpen;
 
   const getUserInitial = () => {
+    if (user?.display_name) return user.display_name[0].toUpperCase();
     if (user?.first_name) return user.first_name[0].toUpperCase();
     if (user?.username) return user.username[0].toUpperCase();
     return 'M';
   };
 
   const getUserDisplayName = () => {
+    if (user?.display_name) return user.display_name;
     if (user?.first_name) return `${user.first_name} ${user.last_name || ''}`.trim();
     if (user?.username) return user.username;
     return 'Manu Arora';
@@ -405,7 +407,7 @@ export const TopicMenu: React.FC<TopicMenuProps> = ({
         {/* User Profile Footer */}
         <div className="sidebar-bottom-profile">
           <div className="sidebar-user-avatar">
-            {getUserInitial()}
+            {user?.avatar_data_url ? <img src={user.avatar_data_url} alt="" /> : getUserInitial()}
           </div>
           {isExpanded && (
             <div className="sidebar-user-details">

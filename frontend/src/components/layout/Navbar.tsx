@@ -273,7 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               className={`expandable-tab-btn ${activeTab === 'user' || showUserDropdown ? 'active' : ''}`}
               aria-label="Account menu"
             >
-              <User size={18} className="tab-icon" />
+              {user?.avatar_data_url ? <img src={user.avatar_data_url} className="navbar-user-avatar" alt="" /> : <User size={18} className="tab-icon" />}
               <AnimatePresence initial={false}>
                 {(activeTab === 'user' || showUserDropdown) && (
                   <m.span
@@ -283,7 +283,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                     transition={{ duration: 0.2 }}
                     className="tab-label-text"
                   >
-                    {user?.username || 'Account'}
+                    {user?.display_name || user?.username || 'Account'}
                   </m.span>
                 )}
               </AnimatePresence>
@@ -292,7 +292,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             {showUserDropdown && (
               <div className="user-dropdown-menu animate-fade-in">
                 <div className="dropdown-user-info">
-                  <span className="dropdown-username">{user?.username}</span>
+                  <span className="dropdown-username">{user?.display_name || user?.username}</span>
                   <span className="dropdown-email">{user?.email}</span>
                 </div>
                 <div className="dropdown-divider" />

@@ -10,6 +10,8 @@ interface UserData {
   email: string;
   first_name: string | null;
   last_name: string | null;
+  display_name?: string | null;
+  avatar_data_url?: string | null;
   is_active: boolean;
   is_verified: boolean;
   email_verification_required?: boolean;
@@ -33,6 +35,7 @@ interface AuthContextType {
     marketingEmailOptIn?: boolean
   ) => Promise<UserData & { email_verification_required: boolean }>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<UserData>;
   deleteAccount: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resendVerificationEmail: (email: string) => Promise<string>;
@@ -85,6 +88,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    setUser(userData);
+    return userData;
   }, []);
 
   useEffect(() => {
@@ -247,6 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         signup,
         logout,
+        refreshUser,
         deleteAccount,
         forgotPassword,
         resendVerificationEmail,
