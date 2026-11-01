@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Eye, EyeOff, Check, AlertCircle, Camera, LogOut, Save, UserRound } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, type AppStyle } from '../../contexts/ThemeContext';
 import { ApiError, useAuth } from '../../contexts/AuthContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
@@ -44,6 +44,13 @@ const LANGUAGE_OPTIONS = [
 ];
 const OTHER_LANGUAGE = 'Other — enter any language';
 
+const UI_STYLE_OPTIONS: { id: AppStyle; title: string; description: string }[] = [
+  { id: 'material', title: 'Material You', description: 'Clean, adaptive and modern · Best foundation' },
+  { id: 'glass', title: 'Glassmorphism', description: 'Transparent glass and blur · Great for overlays' },
+  { id: 'neumorphic', title: 'Neumorphism', description: 'Soft raised and inset surfaces · Use selectively' },
+  { id: 'outline', title: 'Outline style', description: 'Minimal borders and subtle surfaces · Professional tools' },
+];
+
 interface SavedPreferences {
   theme: 'light' | 'dark' | null;
   marketing_email_opt_in: boolean;
@@ -78,7 +85,7 @@ async function optimizeAvatar(file: File): Promise<string> {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(isOpen, onClose, dialogRef);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, uiStyle, setUiStyle } = useTheme();
   const { isAuthenticated, user, logout, refreshUser, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'ai' | 'preferences' | 'account'>('ai');
@@ -483,6 +490,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <option value="dark">Dark</option>
                 </select>
               </div>
+
+              <section className="settings-style-section" aria-labelledby="settings-style-title">
+                <div className="settings-style-heading">
+                  <h4 id="settings-style-title">Interface style</h4>
+                  <p>Choose a surface style for the whole app. Your choice is saved on this device.</p>
+                </div>
+                <div className="settings-style-grid" role="group" aria-label="Interface style">
+                  {UI_STYLE_OPTIONS.map((option) => (
+                    <button
+                      type="button"
+                      key={option.id}
+                      className={`settings-style-option ${uiStyle === option.id ? 'active' : ''}`}
+                      aria-pressed={uiStyle === option.id}
+                      onClick={() => setUiStyle(option.id)}
+                    >
+                      <span className={`settings-style-preview ${option.id}`} aria-hidden="true">
+                        <span className="settings-style-preview-header"><i /><i /><i /></span>
+                        <span className="settings-style-preview-search"><i /> Search…</span>
+                        <span className="settings-style-preview-card" />
+                      </span>
+                      <span className="settings-style-copy">
+                        <strong>{option.title}</strong>
+                        <span>{option.description}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
 
               <div className="settings-field">
                 <label className="settings-label" htmlFor="settings-language">Preferred language for Octa</label>

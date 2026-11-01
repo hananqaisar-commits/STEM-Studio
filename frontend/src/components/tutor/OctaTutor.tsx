@@ -1,16 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
+  ArrowLeft,
   BrainCircuit,
   Check,
   Copy,
+  Menu,
   Mic,
   Maximize2,
-  MoreHorizontal,
   MessageSquare,
   Minimize2,
+  Paperclip,
   RefreshCw,
   RotateCcw,
+  Search,
   Send,
   Settings,
   Sparkles,
@@ -299,7 +302,11 @@ export const OctaTutor: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [messageSearchOpen, setMessageSearchOpen] = useState(false);
+  const [messageSearch, setMessageSearch] = useState('');
+  const [attachmentName, setAttachmentName] = useState('');
   const composerRef = React.useRef<HTMLTextAreaElement>(null);
+  const attachmentInputRef = React.useRef<HTMLInputElement>(null);
   const messageListRef = React.useRef<HTMLDivElement>(null);
   const followMessagesRef = React.useRef(true);
   const previousOpenRef = React.useRef(false);
@@ -311,6 +318,11 @@ export const OctaTutor: React.FC = () => {
     missing: 'No AI provider is connected. Built-in lesson explanations may still be available.',
     unavailable: 'The AI service is temporarily unavailable. You can retry or use built-in lesson notes.',
   };
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.octaChatOpen = isTutorOpen ? 'true' : 'false';
+    return () => { document.documentElement.dataset.octaChatOpen = 'false'; };
+  }, [isTutorOpen]);
 
   // Follow new content only when the learner was already at the end of the chat.
   useEffect(() => {
@@ -378,6 +390,8 @@ export const OctaTutor: React.FC = () => {
       if (inputText.trim() && !isLoading) {
         followMessagesRef.current = true;
         sendMessage();
+        setInputText('');
+        setAttachmentName('');
       }
     },
     [inputText, isLoading, sendMessage]
@@ -409,6 +423,29 @@ export const OctaTutor: React.FC = () => {
   }, []);
   const hasWelcomeOnly = messages.length === 1 && messages[0].id.startsWith('welcome');
   const hasServiceIssue = providerStatus === 'missing' || providerStatus === 'limit' || providerStatus === 'unavailable';
+  const visibleMessages = messages
+    .filter((message) => !(hasWelcomeOnly && message.id.startsWith('welcome')))
+    .filter((message) => !messageSearch.trim() || message.content.toLocaleLowerCase().includes(messageSearch.trim().toLocaleLowerCase()));
+  const handleAttachment = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 100_000) {
+      setAttachmentName('File too large (100 KB max)');
+      return;
+    }
+    if (!/\.(txt|md|csv|json)$/i.test(file.name)) {
+      setAttachmentName('Choose a .txt, .md, .csv, or .json file');
+      return;
+    }
+    try {
+      const contents = await file.text();
+      const excerpt = contents.slice(0, 3600);
+      setInputText((current) => `${current}${current.trim() ? '\n\n' : ''}[Attached file: ${file.name}]\n${excerpt}`.slice(0, 5000));
+      setAttachmentName(file.name);
+      composerRef.current?.focus();
+    } catch {
+      setAttachmentName('Could not read this file');
+    }
+  };
 
   return (
     <LazyMotion features={domAnimation}>
@@ -424,6 +461,7 @@ export const OctaTutor: React.FC = () => {
         aria-label="Octa AI Tutor"
       >
         <div className="tutor-header">
+          <button type="button" className="tutor-mobile-back" onClick={toggleTutor} aria-label="Back to learning dashboard"><ArrowLeft size={20} /></button>
           <div className="tutor-header-left">
             <div className="tutor-avatar-glow">
               <Octa expression={mascotExpression} size={28} interactive={false} />
@@ -431,16 +469,16 @@ export const OctaTutor: React.FC = () => {
             <div className="tutor-header-title">
               <span className="tutor-header-name">Octa</span>
               <span className="tutor-header-subtitle">
-                AI learning tutor
-                {providerStatus === 'connected' && <span className="tutor-status tutor-status-connected" title={providerStatusCopy[providerStatus]} aria-label={providerStatusCopy[providerStatus]}><i className="tutor-status-dot" aria-hidden="true" /><span>Ready</span></span>}
+                <span className={`tutor-status tutor-status-${providerStatus}`} title={providerStatusCopy[providerStatus]} aria-label={providerStatusCopy[providerStatus]}><i className="tutor-status-dot" aria-hidden="true" /><span>{providerStatus === 'connected' ? 'Online' : providerStatus === 'checking' ? 'Connecting' : providerStatus === 'missing' ? 'Offline answers' : 'Service issue'}</span></span>
               </span>
             </div>
           </div>
 
           <div className="tutor-header-actions">
+            <button type="button" className={`tutor-icon-btn tutor-search-toggle${messageSearchOpen ? ' is-active' : ''}`} onClick={() => { setMessageSearchOpen((open) => !open); setMessageSearch(''); }} title="Search conversation" aria-label="Search conversation" aria-pressed={messageSearchOpen}><Search size={18} aria-hidden="true" /></button>
             <div className="tutor-menu-anchor">
               <button type="button" className="tutor-icon-btn" onClick={() => setActionsMenuOpen((open) => !open)} title="More tutor options" aria-label="More tutor options" aria-expanded={actionsMenuOpen}>
-                <MoreHorizontal size={19} aria-hidden="true" />
+                <Menu size={19} aria-hidden="true" />
               </button>
               {actionsMenuOpen && <div className="tutor-actions-menu" role="menu">
                 <button type="button" role="menuitem" onClick={() => { closeMenu(); setLearningProfileOpen(true); }}><UserRound size={16} /> Learning profile</button>
@@ -448,13 +486,15 @@ export const OctaTutor: React.FC = () => {
                 <button type="button" role="menuitem" onClick={() => { closeMenu(); clearHistory(); }}><Trash2 size={16} /> New conversation</button>
               </div>}
             </div>
-            {!isMinimized && <button type="button" className="tutor-icon-btn" onClick={() => setIsExpanded((value) => !value)} title={isExpanded ? 'Restore panel size' : 'Expand tutor'} aria-label={isExpanded ? 'Restore panel size' : 'Expand tutor'} aria-pressed={isExpanded}>
+            {!isMinimized && <button type="button" className="tutor-icon-btn tutor-desktop-window-action" onClick={() => setIsExpanded((value) => !value)} title={isExpanded ? 'Restore panel size' : 'Expand tutor'} aria-label={isExpanded ? 'Restore panel size' : 'Expand tutor'} aria-pressed={isExpanded}>
               {isExpanded ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}
             </button>}
-            {!isMinimized && <button type="button" className="tutor-icon-btn" onClick={() => setIsMinimized(true)} title="Minimize tutor" aria-label="Minimize tutor"><Minimize2 size={18} aria-hidden="true" /></button>}
+            {!isMinimized && <button type="button" className="tutor-icon-btn tutor-desktop-window-action" onClick={() => setIsMinimized(true)} title="Minimize tutor" aria-label="Minimize tutor"><Minimize2 size={18} aria-hidden="true" /></button>}
             <button type="button" className="tutor-icon-btn" onClick={toggleTutor} title="Close tutor" aria-label="Close tutor"><X size={18} aria-hidden="true" /></button>
           </div>
         </div>
+
+        {messageSearchOpen && <div className="tutor-conversation-search"><Search size={16} aria-hidden="true" /><input type="search" value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder="Search this conversation" aria-label="Search this conversation" /><button type="button" onClick={() => { setMessageSearch(''); setMessageSearchOpen(false); }} aria-label="Close conversation search"><X size={16} /></button></div>}
 
         {isMinimized ? (
           <div className="tutor-minimized-body">
@@ -501,7 +541,8 @@ export const OctaTutor: React.FC = () => {
             </div>}
           </section>}
 
-          {messages.filter((message) => !(hasWelcomeOnly && message.id.startsWith('welcome'))).map((msg, messageIndex, visibleMessages) => {
+          {messageSearch.trim() && visibleMessages.length === 0 && <div className="tutor-search-empty" role="status">No messages match “{messageSearch}”.</div>}
+          {visibleMessages.map((msg, messageIndex, visibleMessages) => {
             const isAssis = msg.role === 'assistant';
             const isTyping = isAssis && msg.id === revealedMessage?.id && revealedMessage.count < Array.from(msg.content).length;
             const visibleContent = isAssis && msg.id === revealedMessage?.id ? Array.from(msg.content).slice(0, revealedMessage.count).join('') : msg.content;
@@ -538,6 +579,7 @@ export const OctaTutor: React.FC = () => {
 
         <div className="tutor-input-container">
           <form className="tutor-input-form" onSubmit={handleInputSubmit}>
+            <input ref={attachmentInputRef} type="file" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" className="tutor-hidden-file-input" onChange={(event) => { void handleAttachment(event.target.files?.[0]); event.currentTarget.value = ''; }} aria-label="Attach a text file" />
             <label className="sr-only" htmlFor="octa-tutor-message">Message Octa</label>
             <textarea
               ref={composerRef}
@@ -552,13 +594,14 @@ export const OctaTutor: React.FC = () => {
             />
             <div className="tutor-input-footer">
               <div className="tutor-input-hint" id="octa-tutor-keyboard-hint">
-                {isListening ? (
+                {attachmentName ? <span className="tutor-attachment-indicator">{attachmentName}</span> : isListening ? (
                   <select aria-label="Voice input language" value={speechLang} onChange={(event) => setSpeechLang(event.target.value as typeof speechLang)}>
                     <option value="en-US">English</option><option value="ur-PK">Urdu</option><option value="zh-CN">Chinese</option>
                   </select>
                 ) : <span>Enter to send · Shift + Enter for a new line</span>}
               </div>
               <div className="tutor-input-actions">
+                <button type="button" className="tutor-input-icon-btn tutor-attach-btn" onClick={() => attachmentInputRef.current?.click()} aria-label="Attach a text file" title="Attach .txt, .md, .csv, or .json"><Paperclip size={17} /></button>
                 {isSpeechSupported && <button type="button" className={`tutor-input-icon-btn ${isListening ? 'listening' : ''}`} onClick={isListening ? stopListening : startListening} aria-label={isListening ? 'Stop voice input' : 'Start voice input'} title={isListening ? 'Stop voice input' : 'Voice input'} disabled={isLoading}><Mic size={17} /></button>}
                 {isLoading
                   ? <button type="button" className="tutor-stop-btn" onClick={stopGeneration} aria-label="Stop generating" title="Stop generating"><Square size={14} fill="currentColor" /> <span>Stop</span></button>

@@ -1,0 +1,97 @@
+/* Shared presentation modes. Material You is the token-driven default. */
+[data-ui-style="glass"] .dashboard-subject-card,
+[data-ui-style="glass"] .dashboard-topic-card,
+[data-ui-style="glass"] .dashboard-personalized-card,
+[data-ui-style="glass"] .continue-learning-card,
+[data-ui-style="glass"] .expandable-navbar-pill,
+[data-ui-style="glass"] .mobile-screen-controls,
+[data-ui-style="glass"] .mobile-bottom-navigation,
+[data-ui-style="glass"] .octa-tutor-window,
+[data-ui-style="glass"] .settings-modal-card,
+[data-ui-style="glass"] .global-topic-search-results {
+  border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+}
+[data-theme="dark"][data-ui-style="glass"] .dashboard-subject-card,
+[data-theme="dark"][data-ui-style="glass"] .dashboard-topic-card,
+[data-theme="dark"][data-ui-style="glass"] .dashboard-personalized-card,
+[data-theme="dark"][data-ui-style="glass"] .continue-learning-card,
+[data-theme="dark"][data-ui-style="glass"] .octa-tutor-window,
+[data-theme="dark"][data-ui-style="glass"] .settings-modal-card,
+[data-theme="dark"][data-ui-style="glass"] .global-topic-search-results {
+  background: color-mix(in srgb, #141418 88%, transparent);
+}
+
+[data-ui-style="neumorphic"] .dashboard-subject-card,
+[data-ui-style="neumorphic"] .dashboard-topic-card,
+[data-ui-style="neumorphic"] .dashboard-personalized-card,
+[data-ui-style="neumorphic"] .continue-learning-card,
+[data-ui-style="neumorphic"] .tutor-input-form,
+[data-ui-style="neumorphic"] .mobile-control-button,
+[data-ui-style="neumorphic"] .global-search-trigger {
+  border-color: color-mix(in srgb, var(--color-surface) 78%, var(--color-border));
+  box-shadow: 5px 5px 14px color-mix(in srgb, var(--color-text) 9%, transparent), -5px -5px 14px color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+[data-theme="dark"][data-ui-style="neumorphic"] .dashboard-subject-card,
+[data-theme="dark"][data-ui-style="neumorphic"] .dashboard-topic-card,
+[data-theme="dark"][data-ui-style="neumorphic"] .dashboard-personalized-card,
+[data-theme="dark"][data-ui-style="neumorphic"] .continue-learning-card,
+[data-theme="dark"][data-ui-style="neumorphic"] .tutor-input-form,
+[data-theme="dark"][data-ui-style="neumorphic"] .mobile-control-button,
+[data-theme="dark"][data-ui-style="neumorphic"] .global-search-trigger {
+  box-shadow: 5px 5px 14px rgb(0 0 0 / 42%), -4px -4px 12px rgb(255 255 255 / 3%);
+}
+
+[data-ui-style="outline"] .dashboard-subject-card,
+[data-ui-style="outline"] .dashboard-topic-card,
+[data-ui-style="outline"] .dashboard-personalized-card,
+[data-ui-style="outline"] .continue-learning-card,
+[data-ui-style="outline"] .settings-modal-card,
+[data-ui-style="outline"] .octa-tutor-window {
+  border-radius: 10px;
+  box-shadow: none;
+  background: var(--color-app-bg);
+}
+[data-ui-style="outline"] .dashboard-subject-card,
+[data-ui-style="outline"] .dashboard-topic-card,
+[data-ui-style="outline"] .dashboard-personalized-card,
+[data-ui-style="outline"] .continue-learning-card { border-color: color-mix(in srgb, var(--color-text) 24%, var(--color-border)); }
+
+/* Align legacy settings styles with the current light/dark token palettes. */
+html[data-theme="dark"] .settings-modal-card,
+html[data-theme="dark"] .tutor-settings-modal { background: var(--color-surface); border-color: var(--color-border); color: var(--color-text); }
+html[data-theme="dark"] .settings-modal-header,
+html[data-theme="dark"] .settings-tabs-bar { border-color: var(--color-border); }
+html[data-theme="dark"] .settings-header-title h3,
+html[data-theme="dark"] .settings-tab-btn.active { color: var(--color-text); }
+html[data-theme="dark"] .settings-header-title p,
+html[data-theme="dark"] .settings-label,
+html[data-theme="dark"] .settings-tab-btn,
+html[data-theme="dark"] .tutor-settings-description,
+html[data-theme="dark"] .tutor-settings-label { color: var(--color-text-muted); }
+html[data-theme="dark"] .settings-select,
+html[data-theme="dark"] .settings-input { background: var(--color-surface-elevated); border-color: var(--color-border); color: var(--color-text); }
+html[data-theme="dark"] .settings-tab-btn.active { border-bottom-color: var(--color-primary); }
+html[data-theme="dark"] .settings-close-btn:hover { background: var(--color-surface-muted); color: var(--color-text); }
+html[data-theme="dark"] .tutor-settings-header { border-color: var(--color-border); background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 14%, var(--color-surface)), var(--color-surface)); }
+html[data-theme="dark"] .tutor-settings-title h3,
+html[data-theme="dark"] .tutor-settings-section h4 { color: var(--color-text); }
+
+html[data-theme="dark"] .tutor-profile-dialog,
+html[data-theme="dark"] .tutor-actions-menu,
+html[data-theme="dark"] .notification-center-panel,
+html[data-theme="dark"] .owner-announcement-panel,
+html[data-theme="dark"] .sidebar-panel,
+html[data-theme="dark"] .account-dropdown,
+html[data-theme="dark"] .navbar-user-dropdown,
+html[data-theme="dark"] .notification-popover {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-style] *, [data-ui-style] *::before, [data-ui-style] *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
