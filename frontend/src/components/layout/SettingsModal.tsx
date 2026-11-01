@@ -13,6 +13,7 @@ import { useDialogFocus } from '../../hooks/useDialogFocus';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'ai' | 'preferences' | 'account';
 }
 
 const PROVIDER_OPTIONS: { id: LLMProvider; name: string }[] = [
@@ -82,13 +83,17 @@ async function optimizeAvatar(file: File): Promise<string> {
   return dataUrl;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'ai' }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(isOpen, onClose, dialogRef);
   const { theme, setTheme, uiStyle, setUiStyle } = useTheme();
   const { isAuthenticated, user, logout, refreshUser, deleteAccount } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'ai' | 'preferences' | 'account'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'preferences' | 'account'>(initialTab);
+
+  useEffect(() => {
+    if (isOpen) setActiveTab(initialTab);
+  }, [initialTab, isOpen]);
 
   const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(readOctaConfig);
   const [aiExplanationsEnabled, setAIExplanationsEnabled] = useState(readAIExplanationsEnabled);

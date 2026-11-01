@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, House, Menu, MessageCircle, Monitor } from 'lucide-react';
+import { ArrowLeft, BookOpen, House, Menu, MessageCircle, Monitor, Settings } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthPromptProvider, useAuthPrompt } from './contexts/AuthPromptContext';
@@ -21,6 +21,7 @@ import { apiClient } from './api/apiClient';
 import { resetVisualizerControls, trackVisualizerIntent } from './hooks/visualizerControls';
 import { useTutorContext } from './contexts/TutorContext';
 import { NavbarGlobalSearch } from './components/layout/NavbarGlobalSearch';
+import { SettingsModal } from './components/layout/SettingsModal';
 
 // Lazy-loaded page components for code-splitting
 const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
@@ -155,6 +156,7 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(340);
   const { requireAuth } = useAuthPrompt();
   const { toggleTutor } = useTutorContext();
@@ -215,6 +217,7 @@ const DashboardLayout = () => {
         <div className="mobile-screen-title" title={screenTitle}>{screenTitle}</div>
         <div className="mobile-controls-right">
           <div className="mobile-search-control"><NavbarGlobalSearch compact /></div>
+          <button type="button" className="mobile-control-button" onClick={() => setIsMobileSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings size={19} /></button>
           <button type="button" className="mobile-control-button" onClick={openSidebar} aria-label="Open dashboard menu"><Menu size={20} /></button>
         </div>
       </header>
@@ -271,6 +274,7 @@ const DashboardLayout = () => {
       </nav>
       <ScrollToTop />
       <OctaTutor />
+      <SettingsModal isOpen={isMobileSettingsOpen} initialTab="preferences" onClose={() => setIsMobileSettingsOpen(false)} />
     </div>
   );
 
