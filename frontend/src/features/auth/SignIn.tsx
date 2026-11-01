@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2, ShieldCheck, User } from 'lucide-react';
@@ -13,6 +14,11 @@ declare global {
     google?: any;
   }
 }
+
+const KEEP_SIGNED_IN_LABEL = Capacitor.isNativePlatform()
+  ? 'Stay signed in on this device (up to 30 days of inactivity)'
+  : 'Keep me signed in (up to 30 days)';
+const IS_NATIVE_APP = Capacitor.isNativePlatform();
 
 export const SignIn: React.FC = () => {
   const [email, setEmail] = useState(getRememberedEmail);
@@ -39,7 +45,7 @@ export const SignIn: React.FC = () => {
 
   useEffect(() => {
     // Initialize Google Sign-In only if a valid client ID is configured
-    if (GOOGLE_CLIENT_ID && window.google?.accounts?.id) {
+    if (!IS_NATIVE_APP && GOOGLE_CLIENT_ID && window.google?.accounts?.id) {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
@@ -125,13 +131,13 @@ export const SignIn: React.FC = () => {
           <p className="auth-subtitle">{ownerMode ? 'Owner access requires your password and authenticator code.' : 'Sign in to your STEM Studio account'}</p>
         </div>
 
-        {GOOGLE_CLIENT_ID && !ownerMode && (
+        {GOOGLE_CLIENT_ID && !IS_NATIVE_APP && !ownerMode && (
           <div className="google-btn-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
             <div id="google-signin-btn"></div>
           </div>
         )}
 
-        {GOOGLE_CLIENT_ID && !ownerMode && (
+        {GOOGLE_CLIENT_ID && !IS_NATIVE_APP && !ownerMode && (
           <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
             <span>or sign in with email</span>
           </div>
@@ -230,7 +236,7 @@ export const SignIn: React.FC = () => {
             <div className="auth-options">
               {!ownerMode && <label className="remember-me">
                 <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
-                <span>Keep me signed in (up to 30 days)</span>
+                <span>{KEEP_SIGNED_IN_LABEL}</span>
               </label>}
               <Link to="/forgot-password" className="auth-link">Forgot password?</Link>
             </div>

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Lock, LogIn, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
@@ -7,6 +8,10 @@ import { useDialogFocus } from '../hooks/useDialogFocus';
 import './AuthPrompt.css';
 
 type ProtectedAction = () => void;
+
+const KEEP_SIGNED_IN_LABEL = Capacitor.isNativePlatform()
+  ? 'Stay signed in on this device (up to 30 days of inactivity)'
+  : 'Keep me signed in (up to 30 days)';
 
 interface AuthPromptContextValue {
   requireAuth: (action: ProtectedAction, message?: string) => boolean;
@@ -80,7 +85,7 @@ export const AuthPromptProvider: React.FC<React.PropsWithChildren> = ({ children
             <form onSubmit={handleSubmit} className="auth-prompt-form">
               <label>Email address<input type="email" name="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} inputMode="email" required disabled={isSubmitting} /></label>
               <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required disabled={isSubmitting} /></label>
-              <label className="auth-prompt-remember"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Keep me signed in (up to 30 days)</label>
+              <label className="auth-prompt-remember"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> {KEEP_SIGNED_IN_LABEL}</label>
               <button type="submit" disabled={isSubmitting}><LogIn size={17} />{isSubmitting ? 'Signing in…' : 'Sign in and continue'}</button>
               <button
                 type="button"

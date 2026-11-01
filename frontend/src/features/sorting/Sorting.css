@@ -701,7 +701,13 @@
 
   .sorting-canvas-container,
   .sorting-canvas-empty {
-    height: clamp(270px, 72vw, 360px);
+    height: clamp(430px, 64dvh, 620px);
+    min-height: 430px;
+  }
+
+  .tree-canvas-container {
+    height: clamp(430px, 64dvh, 620px);
+    min-height: 430px;
   }
 
   .sorting-canvas-container {

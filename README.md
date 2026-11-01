@@ -129,6 +129,10 @@ npm run build
 
 The frontend build is written to `frontend/dist`.
 
+### Android app
+
+The web app can be packaged for Android with Capacitor. Follow the [portability and scalability roadmap](docs/roadmaps/ANDROID_PORTABILITY_SCALABILITY_PLAN.md), copy `frontend/.env.android.example` to `frontend/.env.production.local`, and set `VITE_API_BASE_URL` to the deployed FastAPI HTTPS origin. Then run `npm ci`, `npm run android:sync`, and `npm run android:open` from `frontend/`. Android Studio and the Android SDK are required to run an emulator or build a release. Never commit the local env file or Android signing key.
+
 ### Hosted code execution
 
 The Vercel site sends authenticated requests to the FastAPI API, and the API sends code to a separately hosted Judge0 service. Configure `JUDGE0_URL`, `JUDGE0_API_KEY`, and `JUDGE0_AUTH_HEADER` on the backend deployment. The Judge0 key must never be placed in a `VITE_*` variable. See [`deploy/judge0/README.md`](deploy/judge0/README.md) for the recommended network and sandbox setup.

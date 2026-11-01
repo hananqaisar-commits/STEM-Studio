@@ -504,9 +504,9 @@
 }
 
 @media (max-width: 640px) {
-  .graph-canvas-container { height: auto; min-height: 410px; padding: 0.9rem; }
+  .graph-canvas-container { height: auto; min-height: clamp(430px, 60dvh, 620px); padding: 0.9rem; }
   .graph-canvas-body { min-height: 0; padding: 0.5rem 0; }
-  .graph-svg-canvas { height: auto; min-height: 240px; }
+  .graph-svg-canvas { height: auto; min-height: clamp(280px, 42dvh, 420px); }
   .graph-legend { justify-content: flex-start; gap: 0.65rem 0.9rem; padding-inline: 0.15rem; }
   .graph-hud-row { margin-top: 0.75rem; }
 }

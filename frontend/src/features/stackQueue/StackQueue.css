@@ -770,8 +770,8 @@
   .queue-container,
   .circular-queue-container,
   .problem-container {
-    height: min(480px, 68vh);
-    min-height: 340px;
+    height: min(620px, max(440px, 64dvh));
+    min-height: 440px;
     padding: 0.85rem;
   }
 

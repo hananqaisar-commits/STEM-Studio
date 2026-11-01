@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError, refreshOwnerCsrfToken, setOwnerCsrfToken } from '../api/apiClient';
-import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
+import { getAccessToken, getRefreshToken, initializeTokenStorage, storeTokens, clearTokens } from '../api/tokenStorage';
 import { rememberEmail } from '../api/authPreferences';
 import { clearOctaConfig } from '../api/octaConfigStorage';
 
@@ -52,6 +52,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     let attempt = 0;
     try {
+      try {
+        await initializeTokenStorage();
+      } catch {
+        // Keep the app usable as signed out if the native secure store is
+        // unavailable; never fall back to plaintext token storage on device.
+        setUser(null);
+        return;
+      }
       // Owner authentication uses HttpOnly cookies and deliberately stores no
       // owner tokens in local/session storage. This request also restores that
       // session after a page reload.
@@ -67,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const credentialsRejected = error instanceof ApiError &&
             (error.status === 401 || error.status === 403);
           if (credentialsRejected) {
-            clearTokens();
+            await clearTokens();
             setUser(null);
             return;
           }
@@ -122,9 +130,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Remember me → localStorage (survives browser restarts); otherwise
-    // sessionStorage (cleared when the browser closes).
-    storeTokens(data.access_token, data.refresh_token, rememberMe);
+    // Remembered web sessions use localStorage; native sessions use secure
+    // platform storage. Short-lived sessions use tab/session storage.
+    await storeTokens(data.access_token, data.refresh_token, rememberMe);
     rememberEmail(cleanEmail);
 
     // Fetch user profile after login
@@ -134,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginAsOwner = async (email: string, password: string, mfaCode: string) => {
     // Do not let an existing learner bearer token override the isolated owner cookie.
-    clearTokens();
+    await clearTokens();
     const data = await apiClient<{ owner_session: boolean; csrf_token: string }>(
       '/api/auth/login',
       {
@@ -190,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Even if server logout fails, clear local state
     }
 
-    clearTokens();
+    await clearTokens();
     setOwnerCsrfToken(null);
     clearOctaConfig();
     setUser(null);
@@ -202,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: { confirmation: 'DELETE' },
       requiresAuth: true,
     });
-    clearTokens();
+    await clearTokens();
     clearOctaConfig();
     setUser(null);
   };
@@ -239,7 +247,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: { credential, client_id: clientId, remember_me: rememberMe },
       }
     );
-    storeTokens(data.access_token, data.refresh_token, rememberMe);
+    await storeTokens(data.access_token, data.refresh_token, rememberMe);
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
     rememberEmail(userData.email);
     setUser(userData);
