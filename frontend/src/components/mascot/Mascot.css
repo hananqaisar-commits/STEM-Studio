@@ -150,6 +150,18 @@
    Lifecycle is controlled by real app state; no fake timers/progress.
    ══════════════════════════════════════════════════════════════════ */
 
+:root {
+  --mascot-studio-fill-start: #6b21a8;
+  --mascot-studio-fill-middle: #312e81;
+  --mascot-studio-fill-end: #581c87;
+}
+
+[data-theme='dark'] {
+  --mascot-studio-fill-start: #d8b4fe;
+  --mascot-studio-fill-middle: #c7d2fe;
+  --mascot-studio-fill-end: #f3e8ff;
+}
+
 .mascot-loading {
   position: fixed;
   inset: 0;
@@ -200,6 +212,53 @@
   text-align: center;
   flex: 1;
   min-width: 0;
+}
+
+/*
+ * Splash-only progress cue for STUDIO. The original letter spans keep their
+ * DancingLetters motion and layout; clipped duplicate glyphs paint diagonally
+ * from their upper-left corners, one letter after another. The cue stops short
+ * until the real app initialization state reports ready.
+ */
+.mascot-loading .loading-fill-letter {
+  position: relative;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  background: none !important;
+}
+
+.mascot-loading .loading-fill-letter::after {
+  content: attr(data-loading-letter);
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  background: linear-gradient(
+    to right,
+    var(--mascot-studio-fill-start),
+    var(--mascot-studio-fill-middle),
+    var(--mascot-studio-fill-end)
+  );
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  clip-path: polygon(0 0, 0 0, 0 0, 0 0);
+  transition: clip-path 380ms cubic-bezier(0.23, 1, 0.32, 1);
+  animation: splash-studio-letter-fill 1800ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: calc(900ms + var(--loading-letter-index) * 1800ms);
+}
+
+.mascot-loading--complete .loading-fill-letter::after {
+  animation: none;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+
+@keyframes splash-studio-letter-fill {
+  to { clip-path: polygon(0 0, 82% 0, 82% 82%, 0 82%); }
 }
 
 @media (max-width: 768px) {
@@ -479,6 +538,11 @@
   .paper-plane-fly {
     animation: none !important;
     opacity: 0;
+  }
+
+  .mascot-loading .loading-fill-letter::after {
+    animation: none;
+    transition: none;
   }
 }
 

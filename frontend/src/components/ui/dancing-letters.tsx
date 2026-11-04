@@ -2,12 +2,15 @@
 
 import { LazyMotion, domAnimation, m } from "motion/react";
 import { useState, useCallback, useEffect } from "react";
+import type { CSSProperties } from "react";
 import { cn } from "../../lib/utils";
 
 interface DancingLettersProps {
   text?: string;
   className?: string;
   letterClassName?: string;
+  /** Adds an optional loading-color overlay without changing letter motion. */
+  loadingFill?: boolean;
   autoPlay?: boolean;
   autoPlayInterval?: number;
 }
@@ -102,6 +105,7 @@ const DancingLetters = ({
   text = "ANIMATE",
   className = "",
   letterClassName = "",
+  loadingFill = false,
 }: DancingLettersProps) => {
   const [activeIndices, setActiveIndices] = useState<Set<number>>(new Set());
   const letters = text.split("");
@@ -144,6 +148,7 @@ const DancingLetters = ({
       <m.div
         className={cn(
           "flex items-center justify-center select-none",
+          loadingFill ? "loading-fill-word" : "",
           className,
         )}
         style={{ perspective: "1000px" }}
@@ -200,12 +205,17 @@ const DancingLetters = ({
               }}
               className={cn(
                 "relative inline-block text-5xl md:text-7xl lg:text-8xl font-bold text-neutral-900 dark:text-neutral-100 cursor-pointer",
+                loadingFill ? "loading-fill-letter" : "",
                 letterClassName,
                 isActive ? "z-10" : "z-0",
               )}
+              data-loading-letter={loadingFill ? letter : undefined}
               style={{
                 transformOrigin: anim.transformOrigin,
                 transformStyle: "preserve-3d",
+                ...(loadingFill
+                  ? ({ "--loading-letter-index": id } as CSSProperties)
+                  : {}),
               }}
             >
               {letter}

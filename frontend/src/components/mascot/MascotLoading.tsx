@@ -55,7 +55,7 @@ export const MascotLoading: React.FC<MascotLoadingProps> = ({
 
         {/* STEM STUDIO Dancing Letters on RIGHT */}
         <div className="mascot-loading-text-right">
-          <StemWordmark settled={done} />
+          <StemWordmark settled={done} loadingFill />
         </div>
       </div>
     </div>
