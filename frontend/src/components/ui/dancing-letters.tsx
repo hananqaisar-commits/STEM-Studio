@@ -9,8 +9,8 @@ interface DancingLettersProps {
   text?: string;
   className?: string;
   letterClassName?: string;
-  /** Adds an optional loading-color overlay without changing letter motion. */
-  loadingFill?: boolean;
+  /** Optional real startup progress, 0–100, used only by the splash wordmark. */
+  loadingProgress?: number;
   autoPlay?: boolean;
   autoPlayInterval?: number;
 }
@@ -105,7 +105,7 @@ const DancingLetters = ({
   text = "ANIMATE",
   className = "",
   letterClassName = "",
-  loadingFill = false,
+  loadingProgress,
 }: DancingLettersProps) => {
   const [activeIndices, setActiveIndices] = useState<Set<number>>(new Set());
   const letters = text.split("");
@@ -148,7 +148,7 @@ const DancingLetters = ({
       <m.div
         className={cn(
           "flex items-center justify-center select-none",
-          loadingFill ? "loading-fill-word" : "",
+          loadingProgress !== undefined ? "loading-fill-word" : "",
           className,
         )}
         style={{ perspective: "1000px" }}
@@ -169,6 +169,8 @@ const DancingLetters = ({
           const animIndex = id % letterAnimations.length;
           const anim = letterAnimations[animIndex];
           const isActive = activeIndices.has(id);
+          const boundedProgress = Math.max(0, Math.min(100, loadingProgress ?? 100));
+          const letterProgress = Math.max(0, Math.min(1, (boundedProgress / 100) * letters.length - id));
 
           return (
             <m.span
@@ -205,16 +207,16 @@ const DancingLetters = ({
               }}
               className={cn(
                 "relative inline-block text-5xl md:text-7xl lg:text-8xl font-bold text-neutral-900 dark:text-neutral-100 cursor-pointer",
-                loadingFill ? "loading-fill-letter" : "",
+                loadingProgress !== undefined ? "loading-fill-letter" : "",
                 letterClassName,
                 isActive ? "z-10" : "z-0",
               )}
-              data-loading-letter={loadingFill ? letter : undefined}
+              data-loading-letter={loadingProgress !== undefined ? letter : undefined}
               style={{
                 transformOrigin: anim.transformOrigin,
                 transformStyle: "preserve-3d",
-                ...(loadingFill
-                  ? ({ "--loading-letter-index": id } as CSSProperties)
+                ...(loadingProgress !== undefined
+                  ? ({ "--letter-fill-percent": `${Math.round(letterProgress * 100)}%` } as CSSProperties)
                   : {}),
               }}
             >

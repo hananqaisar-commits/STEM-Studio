@@ -281,7 +281,7 @@ const DashboardLayout = () => {
 };
 
 const AppContent = () => {
-  const { isLoading } = useAuth();
+  const { isLoading, loadingProgress } = useAuth();
   const location = useLocation();
   const [splashExited, setSplashExited] = useState(false);
   const handleSplashExited = useCallback(() => setSplashExited(true), []);
@@ -307,7 +307,7 @@ const AppContent = () => {
         </Routes>
       </Suspense>
       {!splashExited && location.pathname !== '/' && (
-        <BootSplash loading={isLoading} onExited={handleSplashExited} />
+        <BootSplash loading={isLoading} progress={loadingProgress} onExited={handleSplashExited} />
       )}
     </>
   );

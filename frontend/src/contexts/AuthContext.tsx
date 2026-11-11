@@ -23,6 +23,7 @@ interface AuthContextType {
   user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  loadingProgress: number;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   loginAsOwner: (email: string, password: string, mfaCode: string) => Promise<void>;
   loginWithGoogle: (credential: string, clientId: string, rememberMe?: boolean) => Promise<void>;
@@ -47,13 +48,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   const fetchUser = useCallback(async () => {
     setIsLoading(true);
+    setLoadingProgress(5);
     let attempt = 0;
     try {
       try {
         await initializeTokenStorage();
+        setLoadingProgress(25);
       } catch {
         // Keep the app usable as signed out if the native secure store is
         // unavailable; never fall back to plaintext token storage on device.
@@ -64,12 +68,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // owner tokens in local/session storage. This request also restores that
       // session after a page reload.
       if (!getAccessToken()) {
+        setLoadingProgress(35);
         try { await refreshOwnerCsrfToken(); } catch { /* no existing owner cookie or API unavailable */ }
       }
+      setLoadingProgress(52);
       while (true) {
         try {
+          setLoadingProgress(62);
           const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
           setUser(userData);
+          setLoadingProgress(94);
           return;
         } catch (error) {
           const credentialsRejected = error instanceof ApiError &&
@@ -77,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (credentialsRejected) {
             await clearTokens();
             setUser(null);
+            setLoadingProgress(94);
             return;
           }
 
@@ -85,15 +94,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // short retry before showing the signed-out routes.
           if (attempt === 0) {
             attempt += 1;
+            setLoadingProgress(78);
             await new Promise((resolve) => window.setTimeout(resolve, 800));
             continue;
           }
 
           setUser(null);
+          setLoadingProgress(94);
           return;
         }
       }
     } finally {
+      setLoadingProgress(100);
       setIsLoading(false);
     }
   }, []);
@@ -259,6 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated: !!user,
         isLoading,
+        loadingProgress,
         login,
         loginAsOwner,
         loginWithGoogle,

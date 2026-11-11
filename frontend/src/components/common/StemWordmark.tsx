@@ -5,8 +5,8 @@ import './StemWordmark.css';
 interface StemWordmarkProps {
   /** Plays a one-shot settle beat once loading has completed. */
   settled?: boolean;
-  /** Fills the splash-only STUDIO letters as the app finishes starting. */
-  loadingFill?: boolean;
+  /** Real app startup progress for the splash-only STUDIO letters. */
+  loadingProgress?: number;
   /** Smaller static variant for page headers (auth screens). */
   compact?: boolean;
 }
@@ -17,7 +17,7 @@ interface StemWordmarkProps {
  */
 export const StemWordmark: React.FC<StemWordmarkProps> = ({
   settled = false,
-  loadingFill = false,
+  loadingProgress,
   compact = false,
 }) => (
   <div
@@ -45,7 +45,7 @@ export const StemWordmark: React.FC<StemWordmarkProps> = ({
     {/* Bottom Row: STUDIO — Elegant vertical separation */}
     <DancingLetters
       text="STUDIO"
-      loadingFill={loadingFill && !compact}
+      loadingProgress={!compact ? loadingProgress : undefined}
       className="gap-2 sm:gap-3 md:gap-4 justify-center sm:justify-start flex-nowrap mt-4 sm:mt-6 md:mt-8"
       letterClassName={
         compact
