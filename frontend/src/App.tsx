@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { ArrowLeft, BookOpen, House, Menu, MessageCircle, Monitor, Settings } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -15,6 +16,7 @@ import { TutorProvider } from './contexts/TutorContext';
 import { OctaTutor } from './components/tutor/OctaTutor';
 import { NotFoundPage } from './features/NotFoundPage';
 import { MarketingHome } from './features/marketing/MarketingHome';
+import { MobileAppLanding } from './features/marketing/MobileAppLanding';
 import { MarketingFooter } from './features/marketing/MarketingFooter';
 import { OwnerControlCenter } from './features/owner/OwnerControlCenter';
 import { apiClient } from './api/apiClient';
@@ -144,7 +146,8 @@ const GatedRoute: React.FC<{ children: React.ReactNode; featureKey?: string }> =
 const RootRoute: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen message="Checking session..." />;
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <MarketingHome />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return Capacitor.isNativePlatform() ? <MobileAppLanding /> : <MarketingHome />;
 };
 
 
