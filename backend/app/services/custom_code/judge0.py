@@ -58,6 +58,7 @@ async def submit(
     api_key: str = "",
     auth_header: str = "X-Auth-Token",
     timeout_seconds: int = 20,
+    stdin: str = "",
 ) -> Dict[str, Any]:
     """
     Submit code to Judge0 and wait for the result.
@@ -75,7 +76,7 @@ async def submit(
     payload = {
         "source_code": base64.b64encode(source_code.encode("utf-8")).decode("ascii"),
         "language_id": LANGUAGE_IDS[language],
-        "stdin": "",
+        "stdin": base64.b64encode(stdin.encode("utf-8")).decode("ascii"),
     }
     headers: Dict[str, str] = {}
     if api_key:

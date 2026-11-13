@@ -1,0 +1,135 @@
+"""Full-program execution endpoint for the Live Code workspace."""
+
+from __future__ import annotations
+
+import secrets
+from typing import Any, Literal, Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+try:
+    from backend.app.api.routes.execute import _enforce_submission_limits
+    from backend.app.core.config import get_settings
+    from backend.app.core.feature_access import require_algorithm_access, require_feature_access
+    from backend.app.services.custom_code import judge0, live_trace
+    from backend.infrastructure.database.database import get_db
+    from backend.infrastructure.database.models import User
+except ModuleNotFoundError:
+    from app.api.routes.execute import _enforce_submission_limits
+    from app.core.config import get_settings
+    from app.core.feature_access import require_algorithm_access, require_feature_access
+    from app.services.custom_code import judge0, live_trace
+    from infrastructure.database.database import get_db
+    from infrastructure.database.models import User
+
+
+router = APIRouter(prefix="/api/execute", tags=["Live Code"])
+
+
+class LiveCodeExecutionRequest(BaseModel):
+    category_id: str = Field(..., min_length=1, max_length=40, pattern=r"^[A-Za-z][A-Za-z0-9_-]*$")
+    topic_id: Optional[str] = Field(default=None, max_length=60, pattern=r"^[A-Za-z0-9_-]+$")
+    language: str = Field(..., pattern=r"^(python|cpp|c|java|go|csharp)$")
+    code: str = Field(..., min_length=1, max_length=30_000)
+    stdin: str = Field(default="", max_length=8_000)
+    revision: str = Field(..., min_length=1, max_length=80)
+
+
+class LiveCodeExecutionResponse(BaseModel):
+    status: Literal["ok", "compile_error", "runtime_error", "timeout"]
+    revision: str
+    stdout: str = ""
+    stderr: str = ""
+    error: Optional[str] = None
+    trace_steps: list[dict[str, Any]] = Field(default_factory=list)
+    trace_support: Literal["automatic", "not_available"]
+    trace_truncated: bool = False
+    trace_error: Optional[dict[str, Any]] = None
+
+
+@router.post("/live-code", response_model=LiveCodeExecutionResponse)
+async def execute_live_code(
+    req: LiveCodeExecutionRequest,
+    _user: User = Depends(_enforce_submission_limits),
+    db: Session = Depends(get_db),
+) -> LiveCodeExecutionResponse:
+    """Execute the learner's complete program in Judge0.
+
+    Python programs use a bounded runtime probe. Other languages run as complete
+    programs and return their real stdout/errors until their runtime adapters
+    are available; they never receive a fabricated source trace.
+    """
+    require_feature_access(db, _user, req.category_id)
+    if req.topic_id:
+        require_algorithm_access(db, _user, req.category_id, req.topic_id)
+    if len(req.code.encode("utf-8")) > 30_000 or len(req.stdin.encode("utf-8")) > 8_000:
+        raise HTTPException(status_code=413, detail="Program or input is larger than the live runner limit.")
+
+    settings = get_settings()
+    if not settings.JUDGE0_URL:
+        raise HTTPException(
+            status_code=503,
+            detail="Code execution is not configured on the API host. Set JUDGE0_URL and the Judge0 authentication secret in the backend deployment settings.",
+        )
+    if not settings.JUDGE0_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Code execution is not securely configured. Set the Judge0 authentication token as the backend secret JUDGE0_API_KEY.",
+        )
+
+    nonce = secrets.token_hex(12)
+    trace_support: Literal["automatic", "not_available"] = "automatic" if req.language == "python" else "not_available"
+    source = live_trace.build_python_trace_program(req.code, nonce) if req.language == "python" else req.code
+    try:
+        raw = await judge0.submit(
+            source,
+            req.language,
+            settings.JUDGE0_URL,
+            settings.JUDGE0_API_KEY,
+            auth_header=getattr(settings, "JUDGE0_AUTH_HEADER", "X-Auth-Token"),
+            timeout_seconds=min(settings.JUDGE0_TIMEOUT_SECONDS, 20),
+            stdin=req.stdin,
+        )
+    except judge0.Judge0Error as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    stdout = raw.get("stdout", "") or ""
+    trace_steps: list[dict[str, Any]] = []
+    trace_truncated = False
+    trace_error: Optional[dict[str, Any]] = None
+    if req.language == "python":
+        trace_steps, stdout, trace_truncated, trace_error = live_trace.parse_python_trace_output(stdout, nonce)
+
+    status = raw["status"]
+    stderr = raw.get("stderr", "") or ""
+    error: Optional[str] = None
+    if trace_error and trace_error.get("kind") == "syntax_error":
+        status = "compile_error"
+        line = trace_error.get("line")
+        error = f"Syntax error on line {line}: {trace_error.get('message', 'invalid syntax')}" if line else str(trace_error.get("message", "Syntax error."))
+    elif trace_error and trace_error.get("kind") == "runtime_error":
+        line = trace_error.get("line")
+        location = f" on line {line}" if line else ""
+        exception_type = trace_error.get("exception_type") or "Runtime error"
+        message = trace_error.get("message") or ""
+        error = f"{exception_type}{location}: {message}" if message else f"{exception_type}{location}."
+    elif status == "compile_error":
+        error = raw.get("compile_output") or stderr or "Compilation failed."
+    elif status == "timeout":
+        error = "Execution timed out. Check for infinite loops."
+    elif status == "runtime_error":
+        error = stderr or raw.get("message") or "Runtime error."
+
+    return LiveCodeExecutionResponse(
+        status=status,
+        revision=req.revision,
+        stdout=stdout[:20_000],
+        stderr=stderr[:12_000],
+        error=error[:12_000] if error else None,
+        trace_steps=trace_steps,
+        trace_support=trace_support,
+        trace_truncated=trace_truncated,
+        trace_error=trace_error,
+    )
