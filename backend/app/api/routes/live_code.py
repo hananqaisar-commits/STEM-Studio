@@ -13,14 +13,14 @@ try:
     from backend.app.api.routes.execute import _enforce_submission_limits
     from backend.app.core.config import get_settings
     from backend.app.core.feature_access import require_algorithm_access, require_feature_access
-    from backend.app.services.custom_code import cpp_trace, judge0, live_trace
+    from backend.app.services.custom_code import cpp_trace, judge0, live_trace, local_runner
     from backend.infrastructure.database.database import get_db
     from backend.infrastructure.database.models import User
 except ModuleNotFoundError:
     from app.api.routes.execute import _enforce_submission_limits
     from app.core.config import get_settings
     from app.core.feature_access import require_algorithm_access, require_feature_access
-    from app.services.custom_code import cpp_trace, judge0, live_trace
+    from app.services.custom_code import cpp_trace, judge0, live_trace, local_runner
     from infrastructure.database.database import get_db
     from infrastructure.database.models import User
 
@@ -55,7 +55,12 @@ async def execute_live_code(
     _user: User = Depends(_enforce_submission_limits),
     db: Session = Depends(get_db),
 ) -> LiveCodeExecutionResponse:
-    """Execute the learner's complete program in Judge0.
+    """Execute the learner's complete program.
+
+    When Judge0 is configured the request is forwarded to the external sandbox.
+    When Judge0 is **not** configured, Python programs are executed in a local
+    subprocess on the API host so the Live Code feature works on every
+    deployment (including Render Free) without an external service.
 
     Python programs use a bounded runtime probe. C++ programs use bounded
     source instrumentation for line, scope, and supported public-struct snapshots.
@@ -68,15 +73,15 @@ async def execute_live_code(
         raise HTTPException(status_code=413, detail="Program or input is larger than the live runner limit.")
 
     settings = get_settings()
-    if not settings.JUDGE0_URL:
+    use_judge0 = bool(settings.JUDGE0_URL and settings.JUDGE0_API_KEY)
+
+    # When Judge0 is unavailable, only Python is supported through the local
+    # subprocess runner.  Other compiled languages need Judge0.
+    if not use_judge0 and req.language != "python":
         raise HTTPException(
             status_code=503,
-            detail="Code execution is not configured on the API host. Set JUDGE0_URL and the Judge0 authentication secret in the backend deployment settings.",
-        )
-    if not settings.JUDGE0_API_KEY:
-        raise HTTPException(
-            status_code=503,
-            detail="Code execution is not securely configured. Set the Judge0 authentication token as the backend secret JUDGE0_API_KEY.",
+            detail=f"Live execution for {req.language} requires the Judge0 sandbox service. "
+                   f"Python is available now — switch to Python or configure Judge0 on the API host.",
         )
 
     nonce = secrets.token_hex(12)
@@ -91,26 +96,12 @@ async def execute_live_code(
     else:
         trace_support = "not_available"
         source = req.code
-    try:
-        raw = await judge0.submit(
-            source,
-            req.language,
-            settings.JUDGE0_URL,
-            settings.JUDGE0_API_KEY,
-            auth_header=getattr(settings, "JUDGE0_AUTH_HEADER", "X-Auth-Token"),
-            timeout_seconds=min(settings.JUDGE0_TIMEOUT_SECONDS, 20),
-            stdin=req.stdin,
-        )
-    except judge0.Judge0Error as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    # A source adapter must never turn a valid learner program into an adapter
-    # compilation failure. If our generated C++ probe fails to compile, rerun
-    # the original code and report the real compiler result without snapshots.
-    if req.language == "cpp" and cpp_instrumented is not None and raw["status"] == "compile_error":
+    # ── Execute via Judge0 or local subprocess ───────────────────────
+    if use_judge0:
         try:
             raw = await judge0.submit(
-                req.code,
+                source,
                 req.language,
                 settings.JUDGE0_URL,
                 settings.JUDGE0_API_KEY,
@@ -118,9 +109,36 @@ async def execute_live_code(
                 timeout_seconds=min(settings.JUDGE0_TIMEOUT_SECONDS, 20),
                 stdin=req.stdin,
             )
-            cpp_instrumented = None
-            trace_support = "not_available"
         except judge0.Judge0Error as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        # A source adapter must never turn a valid learner program into an adapter
+        # compilation failure. If our generated C++ probe fails to compile, rerun
+        # the original code and report the real compiler result without snapshots.
+        if req.language == "cpp" and cpp_instrumented is not None and raw["status"] == "compile_error":
+            try:
+                raw = await judge0.submit(
+                    req.code,
+                    req.language,
+                    settings.JUDGE0_URL,
+                    settings.JUDGE0_API_KEY,
+                    auth_header=getattr(settings, "JUDGE0_AUTH_HEADER", "X-Auth-Token"),
+                    timeout_seconds=min(settings.JUDGE0_TIMEOUT_SECONDS, 20),
+                    stdin=req.stdin,
+                )
+                cpp_instrumented = None
+                trace_support = "not_available"
+            except judge0.Judge0Error as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+    else:
+        # Local subprocess fallback — Python only
+        try:
+            raw = await local_runner.run_python(
+                source,
+                stdin=req.stdin,
+                timeout_seconds=min(getattr(settings, "JUDGE0_TIMEOUT_SECONDS", 15), 20),
+            )
+        except local_runner.LocalRunnerError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     stdout = raw.get("stdout", "") or ""
