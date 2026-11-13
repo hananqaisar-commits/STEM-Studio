@@ -6,6 +6,8 @@ from functools import lru_cache
 import json
 from urllib.parse import urlsplit
 
+ANDROID_WEBVIEW_ORIGIN = "https://localhost"
+
 
 class Settings(BaseSettings):
     """STEM Studio Central Application settings loaded from environment variables."""
@@ -55,7 +57,8 @@ class Settings(BaseSettings):
 
 
     # JWT Configuration
-    # In production JWT_SECRET_KEY MUST be set via environment variables.
+    # In production JWT_SECRET_KEY MUST be stable: a domain-separated key
+    # derived from it also encrypts account-owned Octa provider credentials.
     # A random default is used here so that local development does not run
     # with a well-known secret, but tokens will not survive a server restart.
     JWT_SECRET_KEY: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
@@ -132,6 +135,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_owner_boundary(self) -> "Settings":
+        if ANDROID_WEBVIEW_ORIGIN not in self.CORS_ORIGINS:
+            self.CORS_ORIGINS = [*self.CORS_ORIGINS, ANDROID_WEBVIEW_ORIGIN]
         if not self.DEBUG:
             if "DATABASE_URL" not in self.model_fields_set:
                 raise ValueError("Set DATABASE_URL to a managed, persistent production database")

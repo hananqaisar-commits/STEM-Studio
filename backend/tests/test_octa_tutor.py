@@ -9,18 +9,27 @@ from sqlalchemy.pool import StaticPool
 
 from backend.app.api.routes import octa_tutor as octa_tutor_module
 from backend.app.api.routes.octa_tutor import classify_intent, resolve_algorithm_name
-from backend.app.api.schemas import OctaTutorRequest, OctaTutorTestRequest, OctaTutorFeedbackRequest, OctaTutorPreferenceRequest
+from backend.app.api.schemas import (
+    OctaTutorRequest,
+    OctaTutorTestRequest,
+    OctaTutorConfigRequest,
+    OctaTutorFeedbackRequest,
+    OctaTutorPreferenceRequest,
+)
+from backend.app.core.user_llm_credentials import decrypt_user_api_key, validate_provider_endpoint
 from backend.infrastructure.database.database import Base
-from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User
+from backend.infrastructure.database.models import FeaturePolicy, QuizAttempt, TutorLearningProfile, User, UserLLMConfig
 
 test_engine = create_engine(
     "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
 )
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 Base.metadata.create_all(bind=test_engine)
-test_user = SimpleNamespace(user_id=9001)
+test_user = SimpleNamespace(user_id=9001, roles=[])
 test_db = TestSessionLocal()
 test_db.add(User(user_id=9001, username="octa-test-user", email="octa-test@example.invalid", password_hash="test-only"))
+test_db.add(FeaturePolicy(feature_key="sorting", label="Sorting Algorithms", is_premium=False, is_enabled=True))
+test_db.add(FeaturePolicy(feature_key="strings", label="Strings", is_premium=False, is_enabled=True))
 test_db.commit()
 test_db.close()
 
@@ -59,6 +68,7 @@ def clean_learning_state():
     db = TestSessionLocal()
     db.query(TutorLearningProfile).filter(TutorLearningProfile.user_id == test_user.user_id).delete()
     db.query(QuizAttempt).filter(QuizAttempt.user_id == test_user.user_id).delete()
+    db.query(UserLLMConfig).filter(UserLLMConfig.user_id == test_user.user_id).delete()
     db.commit()
     db.close()
 
@@ -121,9 +131,90 @@ def test_tutor_connection_test_endpoint():
         "base_url": "https://api.openai.com/v1",
         "model_name": "gpt-4o-mini"
     }
-    data = asyncio.run(octa_tutor_module.test_octa_tutor_connection(OctaTutorTestRequest(**payload), _request(), test_user))
+    db = TestSessionLocal()
+    data = asyncio.run(octa_tutor_module.test_octa_tutor_connection(
+        OctaTutorTestRequest(**payload), _request(), test_user, db
+    ))
+    db.close()
     assert data.success is False
     assert "missing" in data.message.lower()
+
+
+def test_saved_octa_key_is_encrypted_and_isolated_per_account(monkeypatch):
+    monkeypatch.setattr(
+        octa_tutor_module,
+        "resolve_llm_config",
+        lambda provider, key, base_url, model: (base_url, key, model or "test-model", provider),
+    )
+    db = TestSessionLocal()
+    second_user = User(
+        user_id=9002,
+        username="octa-test-other-user",
+        email="octa-test-other@example.invalid",
+        password_hash="test-only",
+    )
+    db.add(second_user)
+    db.commit()
+
+    saved = octa_tutor_module.save_octa_tutor_config(
+        OctaTutorConfigRequest(
+            provider="openai",
+            api_key="sk-test-account-secret",
+            base_url="https://api.openai.com/v1/chat/completions",
+            model_name="gpt-4o-mini",
+        ),
+        test_user,
+        db,
+    )
+    row = db.get(UserLLMConfig, test_user.user_id)
+    assert saved.api_key_configured is True
+    assert "sk-test-account-secret" not in str(saved.model_dump())
+    assert row is not None
+    assert row.encrypted_api_key != "sk-test-account-secret"
+    assert decrypt_user_api_key(row.encrypted_api_key) == "sk-test-account-secret"
+
+    other_user_config = octa_tutor_module.get_octa_tutor_config(second_user, db)
+    assert other_user_config.api_key_configured is False
+    assert other_user_config.provider == "dashscope"
+
+    changed_provider = octa_tutor_module.save_octa_tutor_config(
+        OctaTutorConfigRequest(
+            provider="openrouter",
+            base_url="https://openrouter.ai/api/v1/chat/completions",
+            model_name="openai/gpt-4o-mini",
+        ),
+        test_user,
+        db,
+    )
+    assert changed_provider.api_key_configured is False
+    assert db.get(UserLLMConfig, test_user.user_id).encrypted_api_key is None
+
+    reset = octa_tutor_module.reset_octa_tutor_config(test_user, db)
+    assert reset.provider == "dashscope"
+    assert db.get(UserLLMConfig, test_user.user_id) is None
+    db.delete(second_user)
+    db.commit()
+    db.close()
+
+
+def test_provider_endpoint_rejects_plain_http_and_spoofed_provider_hosts():
+    with pytest.raises(ValueError, match="HTTPS"):
+        validate_provider_endpoint("openai", "http://api.openai.com/v1/chat/completions", debug=False)
+    with pytest.raises(ValueError, match="official"):
+        validate_provider_endpoint("openai", "https://attacker.example/v1/chat/completions", debug=False)
+    with pytest.raises(ValueError, match="Private and local"):
+        validate_provider_endpoint("custom", "https://127.0.0.1:11434/v1/chat/completions", debug=False)
+
+
+def test_custom_provider_rejects_private_dns_results(monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.core.user_llm_credentials.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [
+            (2, 1, 6, "", ("10.0.0.12", 443)),
+        ],
+    )
+    with pytest.raises(ValueError, match="public IP"):
+        validate_provider_endpoint("custom", "https://api.example.com/v1/chat/completions", debug=False)
 
 def test_tutor_specific_algorithm_quiz_intent():
     payload = {
