@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity, Play, Layers, RotateCcw,
   AlertTriangle, ChevronDown, Copy, CopyCheck, Bug, FileCode2,
-  Pencil, Eye, Loader2, CheckCircle2,
+  Pencil, Eye, Loader2, CheckCircle2, Minimize2,
 } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
 import { FALLBACK_SNIPPETS } from '../../features/debugger/data/fallbackSnippets';
@@ -24,6 +24,28 @@ import { LiveRuntimeInspector, type LiveExecutionStatus } from './LiveRuntimeIns
 import './Debugger.css';
 
 type CodeMode = 'default' | 'custom' | 'live';
+
+const LIVE_COMPLETIONS: Record<DebuggerLanguage, string[]> = {
+  python: ['class ', 'def ', 'for ', 'if ', 'elif ', 'else:', 'while ', 'return ', 'print(', 'range(', 'len(', 'enumerate(', 'None', 'True', 'False', 'self'],
+  cpp: ['#include <iostream>', '#include <vector>', '#include <string>', 'using namespace std;', 'class ', 'struct ', 'int main()', 'for ', 'if ', 'else ', 'while ', 'return ', 'cout << ', 'cin >> ', 'nullptr', 'new ', 'delete '],
+  c: ['#include <stdio.h>', '#include <stdlib.h>', 'int main()', 'struct ', 'for ', 'if ', 'else ', 'while ', 'return ', 'printf(', 'scanf(', 'NULL'],
+  java: ['class ', 'public static void main(String[] args)', 'new ', 'for ', 'if ', 'else ', 'while ', 'return ', 'System.out.println(', 'null', 'this'],
+  csharp: ['class ', 'static void Main(string[] args)', 'new ', 'for ', 'if ', 'else ', 'while ', 'return ', 'Console.WriteLine(', 'null', 'this'],
+  go: ['package main', 'import "fmt"', 'func main() {', 'func ', 'for ', 'if ', 'else ', 'return ', 'fmt.Println(', 'var ', 'type '],
+};
+
+function getLiveCompletions(language: DebuggerLanguage, code: string, caret: number): { prefix: string; start: number; items: string[] } {
+  const before = code.slice(0, caret);
+  const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+  if (!match) return { prefix: '', start: caret, items: [] };
+  const prefix = match[0];
+  if (prefix.length < 2) return { prefix, start: caret - prefix.length, items: [] };
+  const identifiers = Array.from(code.matchAll(/[A-Za-z_][A-Za-z0-9_]*/g), (item) => item[0]);
+  const items = [...new Set([...identifiers, ...LIVE_COMPLETIONS[language]])]
+    .filter((item) => item.toLowerCase().startsWith(prefix.toLowerCase()) && item !== prefix)
+    .slice(0, 8);
+  return { prefix, start: caret - prefix.length, items };
+}
 
 /** A language-keyed set of code lines. Accepts any subset of languages so
  *  per-feature snippet files (which add e.g. javascript) drop in cleanly. */
@@ -389,6 +411,8 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [stackOpen, setStackOpen] = useState(true);
   const [liveLanguage, setLiveLanguage] = useState<DebuggerLanguage>('python');
   const [liveCodeByLanguage, setLiveCodeByLanguage] = useState<Partial<Record<DebuggerLanguage, string>>>({});
+  const [liveCaret, setLiveCaret] = useState(0);
+  const [liveSuggestionIndex, setLiveSuggestionIndex] = useState(0);
   const [liveStdin, setLiveStdin] = useState('');
   const [liveEnabled, setLiveEnabled] = useState(true);
   const [liveStatus, setLiveStatus] = useState<LiveExecutionStatus>('idle');
@@ -633,8 +657,14 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     } catch (error: unknown) {
       if (controller.signal.aborted || sequence !== liveRequestSequence.current) return;
       setLiveStatus('error');
-      setLiveError(error instanceof Error ? error.message : 'The live execution service is unavailable.');
-      setLiveStatusMessage('The latest revision could not run. The last successful trace remains available.');
+      const detail = error instanceof Error ? error.message : 'The live execution service is unavailable.';
+      const statusCode = typeof error === 'object' && error != null && 'status' in error
+        ? Number((error as { status?: unknown }).status)
+        : 0;
+      setLiveError(detail);
+      setLiveStatusMessage(statusCode
+        ? `Run failed (API ${statusCode}): ${detail}`
+        : `Run failed: ${detail}`);
     } finally {
       if (sequence === liveRequestSequence.current) liveAbortController.current = null;
     }
@@ -690,6 +720,30 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     const textarea = event.currentTarget;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
+    if (event.key === 'Escape') {
+      setLiveCaret(0);
+      return;
+    }
+    const completion = getLiveCompletions(liveLanguage, liveCode, start);
+    if (event.key === 'ArrowDown' && completion.items.length) {
+      event.preventDefault();
+      setLiveSuggestionIndex((index) => (index + 1) % completion.items.length);
+      return;
+    }
+    if (event.key === 'ArrowUp' && completion.items.length) {
+      event.preventDefault();
+      setLiveSuggestionIndex((index) => (index + completion.items.length - 1) % completion.items.length);
+      return;
+    }
+    if (event.key === 'Tab' && completion.items.length) {
+      event.preventDefault();
+      const suggestion = completion.items[liveSuggestionIndex % completion.items.length];
+      handleLiveCodeChange(`${liveCode.slice(0, completion.start)}${suggestion}${liveCode.slice(end)}`);
+      const nextPosition = completion.start + suggestion.length;
+      setLiveCaret(nextPosition);
+      window.requestAnimationFrame(() => textarea.setSelectionRange(nextPosition, nextPosition));
+      return;
+    }
     let insertion: string | null = null;
     if (event.key === 'Tab') {
       insertion = '    ';
@@ -887,8 +941,10 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     setExecutionResult(null);
   };
 
+  const liveCompletion = getLiveCompletions(liveLanguage, liveCode, liveCaret);
+
   return (
-    <div className="multi-lang-code-panel">
+    <div className={`multi-lang-code-panel${codeMode === 'live' && !liveOnly ? ' live-code-fullscreen' : ''}`}>
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="code-panel-header">
         <div className="header-title-group">
@@ -989,6 +1045,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           />
           <span className="live-program-label">Complete program</span>
           <span className="live-debounce-label">Runs after a short pause</span>
+          {!liveOnly && <button type="button" className="live-exit-button" onClick={() => setCodeMode('default')}><Minimize2 size={14} /> Exit Live Code</button>}
         </div>
       )}
 
@@ -1120,14 +1177,37 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               className="custom-editor-textarea"
               aria-label={`Live ${liveLanguage.toUpperCase()} program editor`}
               value={liveCode}
-              onChange={(event) => handleLiveCodeChange(event.target.value)}
+              onChange={(event) => { handleLiveCodeChange(event.target.value); setLiveCaret(event.currentTarget.selectionStart); setLiveSuggestionIndex(0); }}
               onKeyDown={handleLiveEditorKeyDown}
+              onKeyUp={(event) => { setLiveCaret(event.currentTarget.selectionStart); setLiveSuggestionIndex(0); }}
+              onClick={(event) => { setLiveCaret(event.currentTarget.selectionStart); setLiveSuggestionIndex(0); }}
               spellCheck={false}
               autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"
               placeholder={`Write a complete ${liveLanguage.toUpperCase()} program. It runs automatically after you pause typing.`}
             />
+            {liveCompletion.items.length > 0 && liveCaret > 0 && (
+              <div className="live-completion-list" role="listbox" aria-label="Code suggestions">
+                {liveCompletion.items.map((item, index) => (
+                  <button type="button" role="option" aria-selected={index === liveSuggestionIndex} key={item}
+                    className={index === liveSuggestionIndex ? 'active' : ''}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      const textarea = document.querySelector<HTMLTextAreaElement>('.live-code-editor textarea');
+                      if (!textarea) return;
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      handleLiveCodeChange(`${liveCode.slice(0, liveCompletion.start)}${item}${liveCode.slice(end)}`);
+                      const nextPosition = liveCompletion.start + item.length;
+                      setLiveCaret(nextPosition);
+                      window.requestAnimationFrame(() => { textarea.focus(); textarea.setSelectionRange(nextPosition, nextPosition); });
+                    }}
+                  >{item}</button>
+                ))}
+                <span>Tab to complete · Esc to dismiss</span>
+              </div>
+            )}
           </div>
 
           <details className="live-input-panel">
