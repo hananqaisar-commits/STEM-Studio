@@ -13,14 +13,14 @@ try:
     from backend.app.api.routes.execute import _enforce_submission_limits
     from backend.app.core.config import get_settings
     from backend.app.core.feature_access import require_algorithm_access, require_feature_access
-    from backend.app.services.custom_code import judge0, live_trace
+    from backend.app.services.custom_code import cpp_trace, judge0, live_trace
     from backend.infrastructure.database.database import get_db
     from backend.infrastructure.database.models import User
 except ModuleNotFoundError:
     from app.api.routes.execute import _enforce_submission_limits
     from app.core.config import get_settings
     from app.core.feature_access import require_algorithm_access, require_feature_access
-    from app.services.custom_code import judge0, live_trace
+    from app.services.custom_code import cpp_trace, judge0, live_trace
     from infrastructure.database.database import get_db
     from infrastructure.database.models import User
 
@@ -57,9 +57,9 @@ async def execute_live_code(
 ) -> LiveCodeExecutionResponse:
     """Execute the learner's complete program in Judge0.
 
-    Python programs use a bounded runtime probe. Other languages run as complete
-    programs and return their real stdout/errors until their runtime adapters
-    are available; they never receive a fabricated source trace.
+    Python programs use a bounded runtime probe. C++ programs use bounded
+    source instrumentation for line, scope, and supported public-struct snapshots.
+    Other languages run as complete programs and return their real stdout/errors.
     """
     require_feature_access(db, _user, req.category_id)
     if req.topic_id:
@@ -80,8 +80,17 @@ async def execute_live_code(
         )
 
     nonce = secrets.token_hex(12)
-    trace_support: Literal["automatic", "not_available"] = "automatic" if req.language == "python" else "not_available"
-    source = live_trace.build_python_trace_program(req.code, nonce) if req.language == "python" else req.code
+    cpp_instrumented: Optional[str] = None
+    if req.language == "python":
+        trace_support: Literal["automatic", "not_available"] = "automatic"
+        source = live_trace.build_python_trace_program(req.code, nonce)
+    elif req.language == "cpp":
+        cpp_instrumented = cpp_trace.build_cpp_trace_program(req.code, nonce)
+        trace_support = "automatic" if cpp_instrumented is not None else "not_available"
+        source = cpp_instrumented or req.code
+    else:
+        trace_support = "not_available"
+        source = req.code
     try:
         raw = await judge0.submit(
             source,
@@ -95,15 +104,39 @@ async def execute_live_code(
     except judge0.Judge0Error as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    # A source adapter must never turn a valid learner program into an adapter
+    # compilation failure. If our generated C++ probe fails to compile, rerun
+    # the original code and report the real compiler result without snapshots.
+    if req.language == "cpp" and cpp_instrumented is not None and raw["status"] == "compile_error":
+        try:
+            raw = await judge0.submit(
+                req.code,
+                req.language,
+                settings.JUDGE0_URL,
+                settings.JUDGE0_API_KEY,
+                auth_header=getattr(settings, "JUDGE0_AUTH_HEADER", "X-Auth-Token"),
+                timeout_seconds=min(settings.JUDGE0_TIMEOUT_SECONDS, 20),
+                stdin=req.stdin,
+            )
+            cpp_instrumented = None
+            trace_support = "not_available"
+        except judge0.Judge0Error as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
     stdout = raw.get("stdout", "") or ""
+    stderr = raw.get("stderr", "") or ""
     trace_steps: list[dict[str, Any]] = []
     trace_truncated = False
     trace_error: Optional[dict[str, Any]] = None
     if req.language == "python":
         trace_steps, stdout, trace_truncated, trace_error = live_trace.parse_python_trace_output(stdout, nonce)
+    elif req.language == "cpp" and cpp_instrumented is not None:
+        trace_steps, stderr, trace_truncated = cpp_trace.parse_cpp_trace_output(stderr, nonce)
+        if not trace_steps and raw["status"] == "ok":
+            trace_support = "not_available"
+            trace_error = {"kind": "capture_unavailable", "message": "The C++ program ran, but this source did not produce automatic snapshots."}
 
     status = raw["status"]
-    stderr = raw.get("stderr", "") or ""
     error: Optional[str] = None
     if trace_error and trace_error.get("kind") == "syntax_error":
         status = "compile_error"

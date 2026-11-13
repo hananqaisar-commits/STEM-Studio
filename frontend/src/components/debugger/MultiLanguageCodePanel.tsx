@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, Play, Layers, RotateCcw,
   AlertTriangle, ChevronDown, Copy, CopyCheck, Bug, FileCode2,
@@ -24,28 +24,7 @@ import { LiveRuntimeInspector, type LiveExecutionStatus } from './LiveRuntimeIns
 import './Debugger.css';
 
 type CodeMode = 'default' | 'custom' | 'live';
-
-const LIVE_COMPLETIONS: Record<DebuggerLanguage, string[]> = {
-  python: ['class ', 'def ', 'for ', 'if ', 'elif ', 'else:', 'while ', 'return ', 'print(', 'range(', 'len(', 'enumerate(', 'None', 'True', 'False', 'self'],
-  cpp: ['#include <iostream>', '#include <vector>', '#include <string>', 'using namespace std;', 'class ', 'struct ', 'int main()', 'for ', 'if ', 'else ', 'while ', 'return ', 'cout << ', 'cin >> ', 'nullptr', 'new ', 'delete '],
-  c: ['#include <stdio.h>', '#include <stdlib.h>', 'int main()', 'struct ', 'for ', 'if ', 'else ', 'while ', 'return ', 'printf(', 'scanf(', 'NULL'],
-  java: ['class ', 'public static void main(String[] args)', 'new ', 'for ', 'if ', 'else ', 'while ', 'return ', 'System.out.println(', 'null', 'this'],
-  csharp: ['class ', 'static void Main(string[] args)', 'new ', 'for ', 'if ', 'else ', 'while ', 'return ', 'Console.WriteLine(', 'null', 'this'],
-  go: ['package main', 'import "fmt"', 'func main() {', 'func ', 'for ', 'if ', 'else ', 'return ', 'fmt.Println(', 'var ', 'type '],
-};
-
-function getLiveCompletions(language: DebuggerLanguage, code: string, caret: number): { prefix: string; start: number; items: string[] } {
-  const before = code.slice(0, caret);
-  const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
-  if (!match) return { prefix: '', start: caret, items: [] };
-  const prefix = match[0];
-  if (prefix.length < 2) return { prefix, start: caret - prefix.length, items: [] };
-  const identifiers = Array.from(code.matchAll(/[A-Za-z_][A-Za-z0-9_]*/g), (item) => item[0]);
-  const items = [...new Set([...identifiers, ...LIVE_COMPLETIONS[language]])]
-    .filter((item) => item.toLowerCase().startsWith(prefix.toLowerCase()) && item !== prefix)
-    .slice(0, 8);
-  return { prefix, start: caret - prefix.length, items };
-}
+const LiveCodeEditor = lazy(() => import('./LiveCodeEditor'));
 
 /** A language-keyed set of code lines. Accepts any subset of languages so
  *  per-feature snippet files (which add e.g. javascript) drop in cleanly. */
@@ -258,20 +237,22 @@ function readTutorPreference(categoryId?: string): boolean {
 function findLinkedListHint(events: RuntimeTraceEvent[]): string | null {
   const lastEvent = events[events.length - 1];
   if (!lastEvent) return null;
+  const field = (object: RuntimeTraceEvent['heap'][string] | undefined, names: string[]) =>
+    object?.entries.find((entry) => names.includes(entry.key))?.value;
   for (const [objectId, object] of Object.entries(lastEvent.heap ?? {})) {
-    const next = object.entries.find((entry) => entry.key === 'next')?.value;
-    const previous = object.entries.find((entry) => entry.key === 'prev')?.value;
+    const next = field(object, ['next', 'nextNode', 'next_node']);
+    const previous = field(object, ['prev', 'previous', 'previousNode', 'previous_node']);
     if (!next || !previous) continue;
     if (next.kind === 'ref') {
       const nextNode = lastEvent.heap[next.object_id];
-      const nextPrevious = nextNode?.entries.find((entry) => entry.key === 'prev')?.value;
+      const nextPrevious = field(nextNode, ['prev', 'previous', 'previousNode', 'previous_node']);
       if (nextPrevious && (nextPrevious.kind !== 'ref' || nextPrevious.object_id !== objectId)) {
         return `The final trace has a forward link from @${objectId} to @${next.object_id}, but the target node's prev link does not point back. Check the insertion or deletion steps around line ${lastEvent.line}; a doubly linked list needs both links to agree.`;
       }
     }
     if (previous.kind === 'ref') {
       const previousNode = lastEvent.heap[previous.object_id];
-      const previousNext = previousNode?.entries.find((entry) => entry.key === 'next')?.value;
+      const previousNext = field(previousNode, ['next', 'nextNode', 'next_node']);
       if (previousNext && (previousNext.kind !== 'ref' || previousNext.object_id !== objectId)) {
         return `The final trace has a backward link from @${objectId} to @${previous.object_id}, but that node's next link does not point forward to this node. Check the pointer updates around line ${lastEvent.line}.`;
       }
@@ -411,8 +392,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [stackOpen, setStackOpen] = useState(true);
   const [liveLanguage, setLiveLanguage] = useState<DebuggerLanguage>('python');
   const [liveCodeByLanguage, setLiveCodeByLanguage] = useState<Partial<Record<DebuggerLanguage, string>>>({});
-  const [liveCaret, setLiveCaret] = useState(0);
-  const [liveSuggestionIndex, setLiveSuggestionIndex] = useState(0);
   const [liveStdin, setLiveStdin] = useState('');
   const [liveEnabled, setLiveEnabled] = useState(true);
   const [liveStatus, setLiveStatus] = useState<LiveExecutionStatus>('idle');
@@ -716,60 +695,12 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     setLiveTutorHint(null);
   };
 
-  const handleLiveEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const textarea = event.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    if (event.key === 'Escape') {
-      setLiveCaret(0);
-      return;
-    }
-    const completion = getLiveCompletions(liveLanguage, liveCode, start);
-    if (event.key === 'ArrowDown' && completion.items.length) {
-      event.preventDefault();
-      setLiveSuggestionIndex((index) => (index + 1) % completion.items.length);
-      return;
-    }
-    if (event.key === 'ArrowUp' && completion.items.length) {
-      event.preventDefault();
-      setLiveSuggestionIndex((index) => (index + completion.items.length - 1) % completion.items.length);
-      return;
-    }
-    if (event.key === 'Tab' && completion.items.length) {
-      event.preventDefault();
-      const suggestion = completion.items[liveSuggestionIndex % completion.items.length];
-      handleLiveCodeChange(`${liveCode.slice(0, completion.start)}${suggestion}${liveCode.slice(end)}`);
-      const nextPosition = completion.start + suggestion.length;
-      setLiveCaret(nextPosition);
-      window.requestAnimationFrame(() => textarea.setSelectionRange(nextPosition, nextPosition));
-      return;
-    }
-    let insertion: string | null = null;
-    if (event.key === 'Tab') {
-      insertion = '    ';
-    } else if (event.key === 'Enter') {
-      const beforeCaret = liveCode.slice(0, start);
-      const currentLine = beforeCaret.slice(beforeCaret.lastIndexOf('\n') + 1);
-      const indentation = currentLine.match(/^\s*/)?.[0] ?? '';
-      const trimmedLine = currentLine.trimEnd();
-      const opensBlock = liveLanguage === 'python'
-        ? trimmedLine.endsWith(':')
-        : trimmedLine.endsWith('{');
-      insertion = `\n${indentation}${opensBlock ? '    ' : ''}`;
-    }
-    if (insertion == null) return;
-    event.preventDefault();
-    handleLiveCodeChange(`${liveCode.slice(0, start)}${insertion}${liveCode.slice(end)}`);
-    const nextPosition = start + insertion.length;
-    window.requestAnimationFrame(() => textarea.setSelectionRange(nextPosition, nextPosition));
-  };
-
   const handleLiveLanguageChange = (language: DebuggerLanguage) => {
     liveRequestSequence.current += 1;
     liveAbortController.current?.abort();
     liveTutorAbortController.current?.abort();
     setLiveLastResult(null);
-    setLiveRunTraceSupport(language === 'python' ? 'automatic' : 'not_available');
+    setLiveRunTraceSupport(language === 'python' || language === 'cpp' ? 'automatic' : 'not_available');
     if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
     setLiveTutorReviewing(false);
     setLiveLanguage(language);
@@ -940,8 +871,6 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     setRunSuccess(null);
     setExecutionResult(null);
   };
-
-  const liveCompletion = getLiveCompletions(liveLanguage, liveCode, liveCaret);
 
   return (
     <div className={`multi-lang-code-panel${codeMode === 'live' && !liveOnly ? ' live-code-fullscreen' : ''}`}>
@@ -1164,50 +1093,16 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       {codeMode === 'live' && canUseLiveCode && (
         <div className="live-code-workspace">
           <div className="live-code-editor custom-code-editor">
-            <div className="custom-editor-gutter" aria-hidden="true">
-              {liveCode.split('\n').map((_, idx) => {
-                const lineNumber = idx + 1;
-                const isActive = liveTraceSource === liveCode
-                  && liveTraceLanguage === liveLanguage
-                  && liveActiveLine === lineNumber;
-                return <div key={idx} className={`gutter-line-number${isActive ? ' active' : ''}`}>{lineNumber}</div>;
-              })}
-            </div>
-            <textarea
-              className="custom-editor-textarea"
-              aria-label={`Live ${liveLanguage.toUpperCase()} program editor`}
-              value={liveCode}
-              onChange={(event) => { handleLiveCodeChange(event.target.value); setLiveCaret(event.currentTarget.selectionStart); setLiveSuggestionIndex(0); }}
-              onKeyDown={handleLiveEditorKeyDown}
-              onKeyUp={(event) => { setLiveCaret(event.currentTarget.selectionStart); setLiveSuggestionIndex(0); }}
-              onClick={(event) => { setLiveCaret(event.currentTarget.selectionStart); setLiveSuggestionIndex(0); }}
-              spellCheck={false}
-              autoComplete="off"
-              autoCapitalize="off"
-              autoCorrect="off"
-              placeholder={`Write a complete ${liveLanguage.toUpperCase()} program. It runs automatically after you pause typing.`}
-            />
-            {liveCompletion.items.length > 0 && liveCaret > 0 && (
-              <div className="live-completion-list" role="listbox" aria-label="Code suggestions">
-                {liveCompletion.items.map((item, index) => (
-                  <button type="button" role="option" aria-selected={index === liveSuggestionIndex} key={item}
-                    className={index === liveSuggestionIndex ? 'active' : ''}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => {
-                      const textarea = document.querySelector<HTMLTextAreaElement>('.live-code-editor textarea');
-                      if (!textarea) return;
-                      const start = textarea.selectionStart;
-                      const end = textarea.selectionEnd;
-                      handleLiveCodeChange(`${liveCode.slice(0, liveCompletion.start)}${item}${liveCode.slice(end)}`);
-                      const nextPosition = liveCompletion.start + item.length;
-                      setLiveCaret(nextPosition);
-                      window.requestAnimationFrame(() => { textarea.focus(); textarea.setSelectionRange(nextPosition, nextPosition); });
-                    }}
-                  >{item}</button>
-                ))}
-                <span>Tab to complete · Esc to dismiss</span>
-              </div>
-            )}
+            <Suspense fallback={<div className="live-editor-loading" role="status">Preparing editor…</div>}>
+              <LiveCodeEditor
+                language={liveLanguage}
+                value={liveCode}
+                activeLine={liveActiveLine}
+                traceIsCurrent={liveTraceSource === liveCode && liveTraceLanguage === liveLanguage}
+                onChange={handleLiveCodeChange}
+                onRunNow={handleLiveRunNow}
+              />
+            </Suspense>
           </div>
 
           <details className="live-input-panel">
