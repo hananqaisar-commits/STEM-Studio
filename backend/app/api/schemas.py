@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_validator
 
 
 # ─── Auth Request Schemas ────────────────────────────────────────────
@@ -439,10 +439,10 @@ class OctaTutorRequest(BaseModel):
     conversation_history: List[OctaTutorMessage] = Field(default_factory=list)
     mode: str = Field(default="natural", description="natural | interactive")
     # Custom LLM provider configuration (Bring Your Own Key / BYOK)
-    provider: str = Field(default="dashscope", description="dashscope | openai | openrouter | custom | anthropic")
-    api_key: str = Field(default="")
-    base_url: str = Field(default="")
-    model_name: str = Field(default="")
+    provider: Literal["dashscope", "openai", "openrouter", "anthropic", "custom"] = Field(default="dashscope")
+    api_key: SecretStr = Field(default_factory=lambda: SecretStr(""), max_length=4096, repr=False)
+    base_url: str = Field(default="", max_length=1000)
+    model_name: str = Field(default="", max_length=160)
 
 
 class OctaTutorFeedbackRequest(BaseModel):
@@ -455,10 +455,24 @@ class OctaTutorPreferenceRequest(BaseModel):
 
 
 class OctaTutorTestRequest(BaseModel):
-    provider: str = Field(default="dashscope")
-    api_key: str = Field(default="")
-    base_url: str = Field(default="")
-    model_name: str = Field(default="")
+    provider: Literal["dashscope", "openai", "openrouter", "anthropic", "custom"] = Field(default="dashscope")
+    api_key: SecretStr = Field(default_factory=lambda: SecretStr(""), max_length=4096, repr=False)
+    base_url: str = Field(default="", max_length=1000)
+    model_name: str = Field(default="", max_length=160)
+
+
+class OctaTutorConfigRequest(BaseModel):
+    provider: Literal["dashscope", "openai", "openrouter", "anthropic", "custom"]
+    api_key: SecretStr = Field(default_factory=lambda: SecretStr(""), max_length=4096, repr=False)
+    base_url: str = Field(default="", max_length=1000)
+    model_name: str = Field(default="", max_length=160)
+
+
+class OctaTutorConfigResponse(BaseModel):
+    provider: Literal["dashscope", "openai", "openrouter", "anthropic", "custom"]
+    api_key_configured: bool
+    base_url: str
+    model_name: str
 
 
 class OctaTutorTestResponse(BaseModel):

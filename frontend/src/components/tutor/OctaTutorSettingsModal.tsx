@@ -11,8 +11,8 @@ interface OctaTutorSettingsModalProps {
   config: UserLLMConfig;
   aiExplanationsEnabled: boolean;
   onToggleAIExplanations: (enabled: boolean) => void;
-  onSaveConfig: (newConfig: UserLLMConfig) => void;
-  onResetDefault: () => void;
+  onSaveConfig: (newConfig: UserLLMConfig) => Promise<UserLLMConfig>;
+  onResetDefault: () => Promise<UserLLMConfig>;
 }
 
 const PROVIDERS: { id: LLMProvider; name: string; icon: LucideIcon; desc: string }[] = [
@@ -20,7 +20,7 @@ const PROVIDERS: { id: LLMProvider; name: string; icon: LucideIcon; desc: string
   { id: 'openai', name: 'OpenAI', icon: Bot, desc: 'GPT models' },
   { id: 'openrouter', name: 'OpenRouter', icon: Globe, desc: 'Multiple providers' },
   { id: 'anthropic', name: 'Claude', icon: BrainCircuit, desc: 'Claude models' },
-  { id: 'custom', name: 'Custom / Local', icon: Settings2, desc: 'Ollama and compatible APIs' },
+  { id: 'custom', name: 'Custom API', icon: Settings2, desc: 'Compatible HTTPS endpoint' },
 ];
 
 const PRESETS: Record<LLMProvider, { models: string[]; baseUrl: string }> = {
@@ -42,7 +42,7 @@ const PRESETS: Record<LLMProvider, { models: string[]; baseUrl: string }> = {
   },
   custom: {
     models: ['llama3', 'mistral', 'deepseek-r1'],
-    baseUrl: 'http://localhost:11434/v1/chat/completions',
+    baseUrl: '',
   },
 };
 
@@ -64,22 +64,27 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
 
   const [showKey, setShowKey] = useState<boolean>(false);
   const [testing, setTesting] = useState<boolean>(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setProvider(config.provider || 'dashscope');
-    setApiKey(config.apiKey || '');
+    setApiKey('');
     setBaseUrl(config.baseUrl || PRESETS.dashscope.baseUrl);
     setModelName(config.modelName || PRESETS.dashscope.models[0]);
+    setSaveMessage('');
     setTestResult(null);
-  }, [isOpen]);
+  }, [config.apiKeyConfigured, config.baseUrl, config.modelName, config.provider, isOpen]);
 
   if (!isOpen) return null;
 
   const handleProviderSelect = (p: LLMProvider) => {
     setProvider(p);
+    setApiKey('');
     setTestResult(null);
+    setSaveMessage('');
     const preset = PRESETS[p];
     if (preset) {
       setBaseUrl(preset.baseUrl);
@@ -111,14 +116,45 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
     }
   };
 
-  const handleSave = () => {
-    onSaveConfig({
-      provider,
-      apiKey,
-      baseUrl,
-      modelName,
-    });
-    onClose();
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      const saved = await onSaveConfig({
+        provider,
+        apiKey,
+        apiKeyConfigured: config.apiKeyConfigured,
+        baseUrl,
+        modelName,
+      });
+      setApiKey('');
+      setSaveMessage(saved.apiKeyConfigured
+        ? 'Saved securely to your account. Octa and step explanations share this provider on web and mobile.'
+        : 'Provider settings saved. Octa will use the system provider when available.');
+      setTestResult(null);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : 'Settings could not be saved. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      const reset = await onResetDefault();
+      setProvider(reset.provider);
+      setApiKey('');
+      setBaseUrl(reset.baseUrl);
+      setModelName(reset.modelName);
+      setTestResult(null);
+      setSaveMessage('Saved provider and API key removed from your account.');
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : 'Saved settings could not be reset. Try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -166,38 +202,43 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
           </div>
 
           {/* API Key */}
-          {provider !== 'custom' && (
-            <div className="tutor-field-group">
-              <label className="tutor-field-label">
-                <span>API Key</span>
-                {provider === 'dashscope' && (
-                  <span className="tutor-key-optional">
-                    <ShieldCheck size={13} aria-hidden="true" />
-                    Optional (System Key Active)
-                  </span>
-                )}
-              </label>
-              <div className="tutor-input-with-icon">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  className="tutor-setting-input"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={provider === 'dashscope' ? 'Enter API Key or leave blank for system key' : `Enter ${provider.toUpperCase()} API Key`}
-                />
-                <button
-                  type="button"
-                  className="tutor-eye-btn"
-                  onClick={() => setShowKey(!showKey)}
-                  title={showKey ? 'Hide key' : 'Show key'}
-                  aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                >
-                  {showKey ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
-                </button>
-              </div>
+          <div className="tutor-field-group">
+            <label className="tutor-field-label" htmlFor="octa-provider-api-key">
+              <span>API Key</span>
+              {provider === 'dashscope' && (
+                <span className="tutor-key-optional">
+                  <ShieldCheck size={13} aria-hidden="true" />
+                  Optional (System Key Active)
+                </span>
+              )}
+            </label>
+            <div className="tutor-input-with-icon">
+              <input
+                id="octa-provider-api-key"
+                type={showKey ? 'text' : 'password'}
+                className="tutor-setting-input"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                autoComplete="new-password"
+                placeholder={config.apiKeyConfigured && config.provider === provider
+                  ? 'Saved for your account — enter a new key to replace it'
+                  : provider === 'dashscope' ? 'Enter API key or leave blank for system key' : 'Enter provider API key'}
+                disabled={saving}
+              />
+              <button
+                type="button"
+                className="tutor-eye-btn"
+                onClick={() => setShowKey(!showKey)}
+                title={showKey ? 'Hide key' : 'Show key'}
+                aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                disabled={saving}
+              >
+                {showKey ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+              </button>
             </div>
-          )}
-          <p className="tutor-key-note">Your key stays in this browser tab only and is cleared when its session ends. It is sent to the STEM Studio backend when Octa uses it; avoid configuring a key on a shared device.</p>
+          </div>
+          <p className="tutor-key-note">This account setting is shared with the website, mobile app, Octa, and step explanations. The server encrypts the key and never returns it to the app. Leave it blank to keep a saved key.</p>
+          {saveMessage && <div className="tutor-status-banner" role="status"><span>{saveMessage}</span></div>}
 
           <section className="tutor-ai-explanation-setting" aria-labelledby="tutor-ai-explanation-title">
             <div>
@@ -274,14 +315,8 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
           <button
             type="button"
             className="tutor-btn-secondary"
-            onClick={() => {
-              onResetDefault();
-              setProvider('dashscope');
-              setApiKey('');
-              setBaseUrl(PRESETS.dashscope.baseUrl);
-              setModelName(PRESETS.dashscope.models[0]);
-              setTestResult(null);
-            }}
+            onClick={() => void handleReset()}
+            disabled={saving}
           >
             Reset System Default
           </button>
@@ -291,12 +326,12 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
               type="button"
               className="tutor-btn-secondary"
               onClick={handleTestConnection}
-              disabled={testing}
+              disabled={testing || saving}
             >
               {testing ? 'Testing...' : 'Test Connection'}
             </button>
-            <button type="button" className="tutor-btn-primary" onClick={handleSave}>
-              <Check size={16} /> Save & Apply
+            <button type="button" className="tutor-btn-primary" onClick={() => void handleSave()} disabled={saving}>
+              <Check size={16} /> {saving ? 'Saving…' : 'Save & Apply'}
             </button>
           </div>
         </div>

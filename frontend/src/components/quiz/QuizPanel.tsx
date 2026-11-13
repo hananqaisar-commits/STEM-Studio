@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, Lightbulb, XCircle, Zap } from 'lucide-react';
 import type { QuizQuestion, QuizCadence } from '../../engine/types/Quiz';
 import { sendTutorMessage } from '../../api/octaTutorApi';
-import { readOctaConfig } from '../../api/octaConfigStorage';
 import { Octa } from '../mascot';
 import '../mascot/Mascot.css';
 
@@ -102,17 +101,12 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({
     setGradingReasoning(true);
     setReasoningFeedback('');
     try {
-      const config = readOctaConfig();
       const result = await sendTutorMessage({
         message: `Grade the learner's short explanation for this checkpoint. Give a score from 0 to 2, name one correct idea, and one concrete correction or next thought. Do not penalize grammar. Keep the feedback under 80 words.\n\nCheckpoint: ${question.prompt}\nExpected reasoning: ${question.explanation}\nLearner explanation: ${reasoning.trim()}`,
         mode: 'natural',
         algorithm_name: question.concept,
         category: 'quiz reasoning',
         topic_knowledge: `The checkpoint's accepted reasoning is: ${question.explanation}`,
-        provider: config.provider,
-        api_key: config.apiKey,
-        base_url: config.baseUrl,
-        model_name: config.modelName,
       });
       setReasoningFeedback(result.answer_source === 'model' && result.reply
         ? result.reply

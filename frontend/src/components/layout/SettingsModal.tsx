@@ -7,7 +7,7 @@ import { ApiError, useAuth } from '../../contexts/AuthContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './SettingsModal.css';
-import { clearOctaConfig, DEFAULT_OCTA_CONFIG, readAIExplanationsEnabled, readOctaConfig, writeAIExplanationsEnabled, writeOctaConfig } from '../../api/octaConfigStorage';
+import { activateOctaConfigUser, DEFAULT_OCTA_CONFIG, loadOctaConfig, persistOctaConfig, readAIExplanationsEnabled, readOctaConfig, resetPersistedOctaConfig, writeAIExplanationsEnabled } from '../../api/octaConfigStorage';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 interface SettingsModalProps {
@@ -104,6 +104,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   const [modelName, setModelName] = useState<string>(llmConfig.modelName || 'qwen-plus');
   const [showKey, setShowKey] = useState<boolean>(false);
   const [testing, setTesting] = useState<boolean>(false);
+  const [aiConfigBusy, setAiConfigBusy] = useState(false);
+  const [aiConfigMessage, setAiConfigMessage] = useState('');
+  const [aiConfigError, setAiConfigError] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -124,14 +127,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
 
   useEffect(() => {
     if (!isOpen) return;
-    const saved = readOctaConfig();
-    setLlmConfig(saved);
-    setProvider(saved.provider);
-    setApiKey(saved.apiKey);
-    setBaseUrl(saved.baseUrl);
-    setModelName(saved.modelName);
+    setApiKey('');
+    setAiConfigMessage('');
     setAIExplanationsEnabled(readAIExplanationsEnabled());
-  }, [isOpen]);
+    if (!isAuthenticated || !user) {
+      activateOctaConfigUser(null);
+      const defaults = { ...DEFAULT_CONFIG };
+      setLlmConfig(defaults);
+      setProvider(defaults.provider);
+      setBaseUrl(defaults.baseUrl);
+      setModelName(defaults.modelName);
+      return;
+    }
+    let active = true;
+    activateOctaConfigUser(user.user_id);
+    setAiConfigBusy(true);
+    loadOctaConfig(user.user_id)
+      .then((saved) => {
+        if (!active) return;
+        setLlmConfig(saved);
+        setProvider(saved.provider);
+        setBaseUrl(saved.baseUrl);
+        setModelName(saved.modelName);
+      })
+      .catch(() => {
+        if (active) {
+          setAiConfigError(true);
+          setAiConfigMessage('Saved Octa settings could not be loaded. Check your connection and retry.');
+        }
+      })
+      .finally(() => { if (active) setAiConfigBusy(false); });
+    return () => { active = false; };
+  }, [isAuthenticated, isOpen, user?.user_id]);
 
   useEffect(() => {
     if (!isAuthenticated && activeTab === 'account') {
@@ -270,7 +297,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
 
   const handleProviderSelect = (p: LLMProvider) => {
     setProvider(p);
+    setApiKey('');
     setTestResult(null);
+    setAiConfigMessage('');
     if (p === 'openai') {
       setBaseUrl('https://api.openai.com/v1/chat/completions');
       setModelName('gpt-4o-mini');
@@ -281,7 +310,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
       setBaseUrl('https://api.anthropic.com/v1/messages');
       setModelName('claude-3-5-sonnet-20241022');
     } else if (p === 'custom') {
-      setBaseUrl('http://localhost:11434/v1/chat/completions');
+      setBaseUrl('');
       setModelName('llama3');
     } else {
       setBaseUrl('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions');
@@ -290,6 +319,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   };
 
   const handleTestConnection = async () => {
+    if (!isAuthenticated) {
+      setTestResult({ success: false, message: 'Sign in to test an account-scoped provider connection.' });
+      return;
+    }
     setTesting(true);
     setTestResult(null);
     try {
@@ -302,24 +335,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     }
   };
 
-  const handleSave = () => {
-    const updated: UserLLMConfig = { provider, apiKey, baseUrl, modelName };
-    setLlmConfig(updated);
+  const handleSave = async () => {
+    if (!isAuthenticated || !user) {
+      setAiConfigError(true);
+      setAiConfigMessage('Sign in to save your API key securely to your account.');
+      return;
+    }
+    setAiConfigBusy(true);
+    setAiConfigError(false);
+    setAiConfigMessage('');
     try {
-      writeOctaConfig(updated);
-    } catch {}
-    onClose();
+      const updated: UserLLMConfig = { provider, apiKey, apiKeyConfigured: llmConfig.apiKeyConfigured, baseUrl, modelName };
+      const saved = await persistOctaConfig(user.user_id, updated);
+      setLlmConfig(saved);
+      setApiKey('');
+      setAiConfigMessage(saved.apiKeyConfigured
+        ? 'Saved securely to your account. Octa and step explanations now use this same provider on web and mobile.'
+        : 'Provider settings saved. Octa will use the system provider when available.');
+    } catch (error) {
+      setAiConfigError(true);
+      setAiConfigMessage(error instanceof Error ? error.message : 'Octa settings could not be saved. Try again.');
+    } finally {
+      setAiConfigBusy(false);
+    }
   };
 
-  const handleReset = () => {
-    setProvider('dashscope');
-    setApiKey('');
-    setBaseUrl(DEFAULT_CONFIG.baseUrl);
-    setModelName('qwen-plus');
+  const handleReset = async () => {
     setTestResult(null);
+    setApiKey('');
+    setAiConfigBusy(true);
+    setAiConfigError(false);
+    setAiConfigMessage('');
     try {
-      clearOctaConfig();
-    } catch {}
+      const reset = isAuthenticated && user
+        ? await resetPersistedOctaConfig(user.user_id)
+        : { ...DEFAULT_CONFIG };
+      setLlmConfig(reset);
+      setProvider(reset.provider);
+      setBaseUrl(reset.baseUrl);
+      setModelName(reset.modelName);
+      setAiConfigMessage(isAuthenticated ? 'Saved provider and API key removed from your account.' : 'Defaults restored for this session. Sign in to save account settings.');
+    } catch (error) {
+      setAiConfigError(true);
+      setAiConfigMessage(error instanceof Error ? error.message : 'Saved Octa settings could not be reset. Try again.');
+    } finally {
+      setAiConfigBusy(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -403,30 +464,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 </select>
               </div>
 
-              {provider !== 'custom' && (
-                <div className="settings-field">
-                  <label className="settings-label" htmlFor="settings-api-key">API Key</label>
-                  <div className="settings-input-wrapper">
-                    <input
-                      id="settings-api-key"
-                      type={showKey ? 'text' : 'password'}
-                      className="settings-input"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={provider === 'dashscope' ? 'Optional (system key active)' : `Enter ${provider.toUpperCase()} API Key`}
-                    />
-                    <button
-                      type="button"
-                      className="settings-eye-btn"
-                      onClick={() => setShowKey(!showKey)}
-                      aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                    >
-                      {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
+              <div className="settings-field">
+                <label className="settings-label" htmlFor="settings-api-key">API Key</label>
+                <div className="settings-input-wrapper">
+                  <input
+                    id="settings-api-key"
+                    type={showKey ? 'text' : 'password'}
+                    className="settings-input"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder={llmConfig.apiKeyConfigured && llmConfig.provider === provider
+                      ? 'Saved for your account — enter a new key to replace it'
+                      : provider === 'dashscope' ? 'Optional (system key may be active)' : 'Enter provider API key'}
+                    disabled={!isAuthenticated || aiConfigBusy}
+                  />
+                  <button
+                    type="button"
+                    className="settings-eye-btn"
+                    onClick={() => setShowKey(!showKey)}
+                    aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                    disabled={!isAuthenticated || aiConfigBusy}
+                  >
+                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
                 </div>
-              )}
-              <p className="settings-key-note">Provider keys stay in this browser tab only and are cleared when its session ends. They are sent to the STEM Studio backend when Octa uses them; avoid configuring a key on a shared device.</p>
+              </div>
+              <p className="settings-key-note">
+                {isAuthenticated
+                  ? 'One account setting powers Octa, execution-step explanations, and quiz feedback on website and mobile. The key is encrypted on the server and never sent back to the app. Leave the field blank to keep a saved key.'
+                  : 'Sign in to save a provider key securely to your account and use it on both website and mobile.'}
+              </p>
+              {aiConfigMessage && <div className={`settings-status-banner${aiConfigError ? ' error' : ''}`} role={aiConfigError ? 'alert' : 'status'}><span>{aiConfigMessage}</span></div>}
 
               <section className="settings-ai-explanation-setting" aria-labelledby="settings-ai-explanation-title">
                 <div>
@@ -686,7 +755,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             </>
           ) : (
             <>
-              <button type="button" className="btn-secondary" onClick={handleReset}>
+              <button type="button" className="btn-secondary" onClick={() => void handleReset()} disabled={aiConfigBusy}>
                 Reset Defaults
               </button>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -695,13 +764,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                     type="button"
                     className="btn-secondary"
                     onClick={handleTestConnection}
-                    disabled={testing}
+                    disabled={testing || aiConfigBusy || !isAuthenticated}
                   >
                     {testing ? 'Testing...' : 'Test Connection'}
                   </button>
                 )}
-                <button type="button" className="btn-primary" onClick={handleSave}>
-                  Save Changes
+                <button type="button" className="btn-primary" onClick={() => void handleSave()} disabled={aiConfigBusy || !isAuthenticated}>
+                  {aiConfigBusy ? 'Saving…' : 'Save & Apply'}
                 </button>
               </div>
             </>

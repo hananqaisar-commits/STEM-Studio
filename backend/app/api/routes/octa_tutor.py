@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import logging
@@ -18,12 +19,19 @@ try:
         OctaTutorTestResponse,
         OctaTutorFeedbackRequest,
         OctaTutorPreferenceRequest,
+        OctaTutorConfigRequest,
+        OctaTutorConfigResponse,
     )
     from backend.app.core.config import get_settings
     from backend.app.core.feature_access import FEATURE_LABELS, require_feature_access
     from backend.app.core.rate_limit import RateLimiter
+    from backend.app.core.user_llm_credentials import (
+        decrypt_user_api_key,
+        encrypt_user_api_key,
+        validate_provider_endpoint,
+    )
     from backend.infrastructure.database.database import get_db
-    from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference
+    from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference, UserLLMConfig
 except ModuleNotFoundError:
     from app.api.dependencies import get_current_user
     from app.api.schemas import (
@@ -34,12 +42,19 @@ except ModuleNotFoundError:
         OctaTutorTestResponse,
         OctaTutorFeedbackRequest,
         OctaTutorPreferenceRequest,
+        OctaTutorConfigRequest,
+        OctaTutorConfigResponse,
     )
     from app.core.config import get_settings
     from app.core.feature_access import FEATURE_LABELS, require_feature_access
     from app.core.rate_limit import RateLimiter
+    from app.core.user_llm_credentials import (
+        decrypt_user_api_key,
+        encrypt_user_api_key,
+        validate_provider_endpoint,
+    )
     from infrastructure.database.database import get_db
-    from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference
+    from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference, UserLLMConfig
 
 router = APIRouter(prefix="/api/octa-tutor", tags=["Octa AI Tutor"])
 logger = logging.getLogger("octa_tutor")
@@ -1698,11 +1713,108 @@ def resolve_llm_config(
     return base_url, api_key, model_name, provider_clean
 
 
+def _config_response(config: Optional[UserLLMConfig]) -> OctaTutorConfigResponse:
+    if config is None:
+        base_url, _, model_name, _ = resolve_llm_config("dashscope", "", "", "")
+        return OctaTutorConfigResponse(
+            provider="dashscope",
+            api_key_configured=False,
+            base_url=base_url,
+            model_name=model_name,
+        )
+    return OctaTutorConfigResponse(
+        provider=config.provider,
+        api_key_configured=bool(config.encrypted_api_key),
+        base_url=config.base_url,
+        model_name=config.model_name,
+    )
+
+
+def _saved_user_api_key(config: UserLLMConfig) -> str:
+    if not config.encrypted_api_key:
+        return ""
+    try:
+        return decrypt_user_api_key(config.encrypted_api_key)
+    except RuntimeError as exc:
+        logger.error("Unable to decrypt Octa credential for account %s", config.user_id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The saved Octa provider credential is unavailable. Reset it and save the key again.",
+        ) from exc
+
+
+@router.get("/config", response_model=OctaTutorConfigResponse)
+def get_octa_tutor_config(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the signed-in account's provider settings, never its API key."""
+    return _config_response(db.get(UserLLMConfig, current_user.user_id))
+
+
+@router.put("/config", response_model=OctaTutorConfigResponse)
+def save_octa_tutor_config(
+    req_data: OctaTutorConfigRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save provider settings to the caller's account and encrypt a supplied key."""
+    if not tutor_rate_limiter.is_allowed(f"tutor-config:{current_user.user_id}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many Octa settings updates. Please wait and try again.",
+        )
+
+    endpoint, _, model_name, provider = resolve_llm_config(
+        req_data.provider, "", req_data.base_url, req_data.model_name
+    )
+    try:
+        endpoint = validate_provider_endpoint(provider, endpoint, debug=get_settings().DEBUG)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    config = db.get(UserLLMConfig, current_user.user_id)
+    if config is None:
+        config = UserLLMConfig(user_id=current_user.user_id)
+        db.add(config)
+
+    supplied_key = req_data.api_key.get_secret_value().strip()
+    if supplied_key:
+        encrypted_key = encrypt_user_api_key(supplied_key)
+    elif config.provider == provider:
+        encrypted_key = config.encrypted_api_key
+    else:
+        # Never carry a provider's credential over to a different provider.
+        encrypted_key = None
+
+    config.provider = provider
+    config.encrypted_api_key = encrypted_key
+    config.base_url = endpoint
+    config.model_name = model_name
+    db.commit()
+    db.refresh(config)
+    return _config_response(config)
+
+
+@router.delete("/config", response_model=OctaTutorConfigResponse)
+def reset_octa_tutor_config(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Explicitly delete the caller's saved provider settings and API key."""
+    config = db.get(UserLLMConfig, current_user.user_id)
+    if config is not None:
+        db.delete(config)
+        db.commit()
+    return _config_response(None)
+
+
 @router.post("/test", response_model=OctaTutorTestResponse)
 async def test_octa_tutor_connection(
     req_data: OctaTutorTestRequest,
     request: Request,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Test connection to user's configured LLM provider & API key.
@@ -1713,19 +1825,32 @@ async def test_octa_tutor_connection(
             detail="Too many provider connection checks. Please wait and try again.",
         )
 
+    user_config = db.get(UserLLMConfig, current_user.user_id)
+    supplied_key = req_data.api_key.get_secret_value().strip()
+    use_saved_config = bool(user_config and user_config.provider == req_data.provider)
+    if use_saved_config:
+        saved_key = supplied_key or _saved_user_api_key(user_config)
+        base_url = req_data.base_url.strip() or user_config.base_url
+        model_name_input = req_data.model_name.strip() or user_config.model_name
+    else:
+        saved_key = supplied_key
+        base_url = req_data.base_url
+        model_name_input = req_data.model_name
     endpoint_url, api_key, model_name, provider_type = resolve_llm_config(
-        req_data.provider,
-        req_data.api_key,
-        req_data.base_url,
-        req_data.model_name
+        req_data.provider, saved_key, base_url, model_name_input
     )
-
     if not api_key and provider_type != "custom":
         return OctaTutorTestResponse(
             success=False,
             message=f"API key is missing for provider '{provider_type}'. Please enter your API key.",
             model_used=model_name
         )
+    try:
+        endpoint_url = await asyncio.to_thread(
+            validate_provider_endpoint, provider_type, endpoint_url, debug=get_settings().DEBUG
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
     if provider_type == "anthropic":
         headers = {
@@ -1760,16 +1885,15 @@ async def test_octa_tutor_connection(
                 model_used=model_name
             )
         else:
-            err_msg = resp.text[:200]
             return OctaTutorTestResponse(
                 success=False,
-                message=f"Provider returned HTTP {resp.status_code}: {err_msg}",
+                message=f"Provider rejected the connection (HTTP {resp.status_code}). Check the API key, model, and provider settings.",
                 model_used=model_name
             )
-    except Exception as e:
+    except Exception:
         return OctaTutorTestResponse(
             success=False,
-            message=f"Connection failed: {str(e)}",
+            message="Connection failed. Check the endpoint, network access, and provider settings.",
             model_used=model_name
         )
 
@@ -1878,18 +2002,35 @@ async def handle_octa_tutor(
             answer_source="grounded",
         )
 
-    endpoint_url, api_key, model_name, provider_type = resolve_llm_config(
-        req_data.provider,
-        req_data.api_key,
-        req_data.base_url,
-        req_data.model_name
-    )
-
+    saved_config = db.get(UserLLMConfig, current_user.user_id)
+    if saved_config is not None:
+        endpoint_url, api_key, model_name, provider_type = resolve_llm_config(
+            saved_config.provider,
+            _saved_user_api_key(saved_config),
+            saved_config.base_url,
+            saved_config.model_name,
+        )
+    else:
+        # Compatibility for older installed clients while they update. New
+        # clients never send provider credentials with chat requests.
+        endpoint_url, api_key, model_name, provider_type = resolve_llm_config(
+            req_data.provider,
+            req_data.api_key.get_secret_value(),
+            req_data.base_url,
+            req_data.model_name
+        )
     if not api_key and provider_type != "custom":
         logger.info(f"API key not configured for '{provider_type}'. Returning smart fallback response.")
         fallback = generate_fallback_response(req_data)
         fallback.provider_status = "missing"
         return fallback
+
+    try:
+        endpoint_url = await asyncio.to_thread(
+            validate_provider_endpoint, provider_type, endpoint_url, debug=settings.DEBUG
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
     # One grounded prompt serves both modes; the mode instructions keep their
     # behavior distinct while sharing the same accurate app and topic catalog.

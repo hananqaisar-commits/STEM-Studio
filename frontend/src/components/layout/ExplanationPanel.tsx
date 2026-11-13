@@ -168,7 +168,7 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
     const minimumRequestInterval = 5000;
     const throttleWait = Math.max(0, minimumRequestInterval - (Date.now() - lastAIExplanationRequestAt));
     const timer = window.setTimeout(async () => {
-      let providerConfigured = Boolean(llmConfig.apiKey.trim()) || llmConfig.provider === 'custom';
+      let providerConfigured = llmConfig.apiKeyConfigured || Boolean(llmConfig.apiKey.trim()) || llmConfig.provider === 'custom';
       if (!providerConfigured && llmConfig.provider === 'dashscope') {
         try {
           const status = await getTutorProviderStatus();
@@ -201,10 +201,6 @@ export const ExplanationPanel: React.FC<ExplanationPanelProps> = ({
           }),
           conversation_history: [],
           mode: 'natural',
-          provider: llmConfig.provider,
-          api_key: llmConfig.apiKey,
-          base_url: llmConfig.baseUrl,
-          model_name: llmConfig.modelName,
         }, controller.signal);
 
         if (cancelled || !response.reply?.trim()) return;

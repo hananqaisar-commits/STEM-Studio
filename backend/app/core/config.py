@@ -57,7 +57,8 @@ class Settings(BaseSettings):
 
 
     # JWT Configuration
-    # In production JWT_SECRET_KEY MUST be set via environment variables.
+    # In production JWT_SECRET_KEY MUST be stable: a domain-separated key
+    # derived from it also encrypts account-owned Octa provider credentials.
     # A random default is used here so that local development does not run
     # with a well-known secret, but tokens will not survive a server restart.
     JWT_SECRET_KEY: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
