@@ -31,7 +31,7 @@ try:
         validate_provider_endpoint,
     )
     from backend.infrastructure.database.database import get_db
-    from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference, UserLLMConfig
+    from backend.infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserLLMConfig
 except ModuleNotFoundError:
     from app.api.dependencies import get_current_user
     from app.api.schemas import (
@@ -54,7 +54,7 @@ except ModuleNotFoundError:
         validate_provider_endpoint,
     )
     from infrastructure.database.database import get_db
-    from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserPreference, UserLLMConfig
+    from infrastructure.database.models import QuizAttempt, TutorLearningProfile, User, UserLLMConfig
 
 router = APIRouter(prefix="/api/octa-tutor", tags=["Octa AI Tutor"])
 logger = logging.getLogger("octa_tutor")

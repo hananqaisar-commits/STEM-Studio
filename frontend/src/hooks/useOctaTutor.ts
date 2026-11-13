@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTutorProviderStatus, sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type OctaTutorFunctionCall, type UserLLMConfig } from '../api/octaTutorApi';
-import { activateOctaConfigUser, DEFAULT_OCTA_CONFIG, loadOctaConfig, OCTA_SETTINGS_CHANGE_EVENT, persistOctaConfig, readAIExplanationsEnabled, readOctaConfig, resetPersistedOctaConfig, writeAIExplanationsEnabled } from '../api/octaConfigStorage';
+import { activateOctaConfigUser, DEFAULT_OCTA_CONFIG, loadOctaConfig, OCTA_SETTINGS_CHANGE_EVENT, persistOctaConfig, readOctaConfig, resetPersistedOctaConfig } from '../api/octaConfigStorage';
 import { useTutorContext, type TutorAlgorithmContext } from '../contexts/TutorContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -155,6 +155,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
   const { setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
   const activeDsaCategory = DSA_CATEGORIES.find((category) =>
     location.pathname === `/dashboard/${category.id}` || location.pathname.startsWith(`/dashboard/${category.id}/`),
   );
@@ -374,6 +375,12 @@ export function useOctaTutor(): UseOctaTutorReturn {
   );
 
   useEffect(() => {
+    const syncAccountConfig = () => setLlmConfig(readOctaConfig());
+    window.addEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncAccountConfig);
+    return () => window.removeEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncAccountConfig);
+  }, []);
+
+  useEffect(() => {
     const userId = isAuthenticated ? user?.user_id ?? null : null;
     activateOctaConfigUser(userId);
     if (userId === null) {
@@ -419,10 +426,12 @@ export function useOctaTutor(): UseOctaTutorReturn {
     return saved;
   }, [isAuthenticated, user]);
 
-  const setAIExplanationsEnabled = useCallback((enabled: boolean) => {
-    setAIExplanationsEnabledState(enabled);
-    writeAIExplanationsEnabled(enabled);
-  }, []);
+  const resetLLMConfig = useCallback(async () => {
+    if (!isAuthenticated || !user) throw new Error('Sign in to manage saved Octa settings.');
+    const reset = await resetPersistedOctaConfig(user.user_id);
+    setLlmConfig(reset);
+    return reset;
+  }, [isAuthenticated, user]);
 
   const resetLLMConfig = useCallback(async () => {
     if (!isAuthenticated || !user) throw new Error('Sign in to manage saved Octa settings.');
@@ -885,7 +894,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         setIsLoading(false);
       }
     },
-    [inputText, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, tutorMode, llmConfig]
+    [inputText, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, tutorMode]
   );
 
   const stopGeneration = useCallback(() => {

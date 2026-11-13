@@ -135,13 +135,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_owner_boundary(self) -> "Settings":
-        # Capacitor's Android WebView serves the bundled app from this exact
-        # origin. Keep it explicit (never a wildcard) so signup and other
-        # credentialed API requests work in the installed Android app.
-        cors_origins = list(self.CORS_ORIGINS)
-        if ANDROID_WEBVIEW_ORIGIN not in cors_origins:
-            self.CORS_ORIGINS = [*cors_origins, ANDROID_WEBVIEW_ORIGIN]
-
+        if ANDROID_WEBVIEW_ORIGIN not in self.CORS_ORIGINS:
+            self.CORS_ORIGINS = [*self.CORS_ORIGINS, ANDROID_WEBVIEW_ORIGIN]
         if not self.DEBUG:
             if "DATABASE_URL" not in self.model_fields_set:
                 raise ValueError("Set DATABASE_URL to a managed, persistent production database")
