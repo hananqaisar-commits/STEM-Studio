@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, Play, Layers, RotateCcw,
   AlertTriangle, ChevronDown, Copy, CopyCheck, Bug, FileCode2,
-  Pencil, Eye, Loader2, CheckCircle2,
+  Pencil, Eye, Loader2, CheckCircle2, Minimize2,
 } from 'lucide-react';
 import { SORTING_CODE_SNIPPETS } from '../../features/sorting/data/codeSnippets';
 import { FALLBACK_SNIPPETS } from '../../features/debugger/data/fallbackSnippets';
@@ -24,6 +24,7 @@ import { LiveRuntimeInspector, type LiveExecutionStatus } from './LiveRuntimeIns
 import './Debugger.css';
 
 type CodeMode = 'default' | 'custom' | 'live';
+const LiveCodeEditor = lazy(() => import('./LiveCodeEditor'));
 
 /** A language-keyed set of code lines. Accepts any subset of languages so
  *  per-feature snippet files (which add e.g. javascript) drop in cleanly. */
@@ -236,20 +237,22 @@ function readTutorPreference(categoryId?: string): boolean {
 function findLinkedListHint(events: RuntimeTraceEvent[]): string | null {
   const lastEvent = events[events.length - 1];
   if (!lastEvent) return null;
+  const field = (object: RuntimeTraceEvent['heap'][string] | undefined, names: string[]) =>
+    object?.entries.find((entry) => names.includes(entry.key))?.value;
   for (const [objectId, object] of Object.entries(lastEvent.heap ?? {})) {
-    const next = object.entries.find((entry) => entry.key === 'next')?.value;
-    const previous = object.entries.find((entry) => entry.key === 'prev')?.value;
+    const next = field(object, ['next', 'nextNode', 'next_node']);
+    const previous = field(object, ['prev', 'previous', 'previousNode', 'previous_node']);
     if (!next || !previous) continue;
     if (next.kind === 'ref') {
       const nextNode = lastEvent.heap[next.object_id];
-      const nextPrevious = nextNode?.entries.find((entry) => entry.key === 'prev')?.value;
+      const nextPrevious = field(nextNode, ['prev', 'previous', 'previousNode', 'previous_node']);
       if (nextPrevious && (nextPrevious.kind !== 'ref' || nextPrevious.object_id !== objectId)) {
         return `The final trace has a forward link from @${objectId} to @${next.object_id}, but the target node's prev link does not point back. Check the insertion or deletion steps around line ${lastEvent.line}; a doubly linked list needs both links to agree.`;
       }
     }
     if (previous.kind === 'ref') {
       const previousNode = lastEvent.heap[previous.object_id];
-      const previousNext = previousNode?.entries.find((entry) => entry.key === 'next')?.value;
+      const previousNext = field(previousNode, ['next', 'nextNode', 'next_node']);
       if (previousNext && (previousNext.kind !== 'ref' || previousNext.object_id !== objectId)) {
         return `The final trace has a backward link from @${objectId} to @${previous.object_id}, but that node's next link does not point forward to this node. Check the pointer updates around line ${lastEvent.line}.`;
       }
@@ -633,8 +636,14 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     } catch (error: unknown) {
       if (controller.signal.aborted || sequence !== liveRequestSequence.current) return;
       setLiveStatus('error');
-      setLiveError(error instanceof Error ? error.message : 'The live execution service is unavailable.');
-      setLiveStatusMessage('The latest revision could not run. The last successful trace remains available.');
+      const detail = error instanceof Error ? error.message : 'The live execution service is unavailable.';
+      const statusCode = typeof error === 'object' && error != null && 'status' in error
+        ? Number((error as { status?: unknown }).status)
+        : 0;
+      setLiveError(detail);
+      setLiveStatusMessage(statusCode
+        ? `Run failed (API ${statusCode}): ${detail}`
+        : `Run failed: ${detail}`);
     } finally {
       if (sequence === liveRequestSequence.current) liveAbortController.current = null;
     }
@@ -686,36 +695,12 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
     setLiveTutorHint(null);
   };
 
-  const handleLiveEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const textarea = event.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    let insertion: string | null = null;
-    if (event.key === 'Tab') {
-      insertion = '    ';
-    } else if (event.key === 'Enter') {
-      const beforeCaret = liveCode.slice(0, start);
-      const currentLine = beforeCaret.slice(beforeCaret.lastIndexOf('\n') + 1);
-      const indentation = currentLine.match(/^\s*/)?.[0] ?? '';
-      const trimmedLine = currentLine.trimEnd();
-      const opensBlock = liveLanguage === 'python'
-        ? trimmedLine.endsWith(':')
-        : trimmedLine.endsWith('{');
-      insertion = `\n${indentation}${opensBlock ? '    ' : ''}`;
-    }
-    if (insertion == null) return;
-    event.preventDefault();
-    handleLiveCodeChange(`${liveCode.slice(0, start)}${insertion}${liveCode.slice(end)}`);
-    const nextPosition = start + insertion.length;
-    window.requestAnimationFrame(() => textarea.setSelectionRange(nextPosition, nextPosition));
-  };
-
   const handleLiveLanguageChange = (language: DebuggerLanguage) => {
     liveRequestSequence.current += 1;
     liveAbortController.current?.abort();
     liveTutorAbortController.current?.abort();
     setLiveLastResult(null);
-    setLiveRunTraceSupport(language === 'python' ? 'automatic' : 'not_available');
+    setLiveRunTraceSupport(language === 'python' || language === 'cpp' ? 'automatic' : 'not_available');
     if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
     setLiveTutorReviewing(false);
     setLiveLanguage(language);
@@ -888,7 +873,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   };
 
   return (
-    <div className="multi-lang-code-panel">
+    <div className={`multi-lang-code-panel${codeMode === 'live' && !liveOnly ? ' live-code-fullscreen' : ''}`}>
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="code-panel-header">
         <div className="header-title-group">
@@ -989,6 +974,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           />
           <span className="live-program-label">Complete program</span>
           <span className="live-debounce-label">Runs after a short pause</span>
+          {!liveOnly && <button type="button" className="live-exit-button" onClick={() => setCodeMode('default')}><Minimize2 size={14} /> Exit Live Code</button>}
         </div>
       )}
 
@@ -1107,27 +1093,16 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       {codeMode === 'live' && canUseLiveCode && (
         <div className="live-code-workspace">
           <div className="live-code-editor custom-code-editor">
-            <div className="custom-editor-gutter" aria-hidden="true">
-              {liveCode.split('\n').map((_, idx) => {
-                const lineNumber = idx + 1;
-                const isActive = liveTraceSource === liveCode
-                  && liveTraceLanguage === liveLanguage
-                  && liveActiveLine === lineNumber;
-                return <div key={idx} className={`gutter-line-number${isActive ? ' active' : ''}`}>{lineNumber}</div>;
-              })}
-            </div>
-            <textarea
-              className="custom-editor-textarea"
-              aria-label={`Live ${liveLanguage.toUpperCase()} program editor`}
-              value={liveCode}
-              onChange={(event) => handleLiveCodeChange(event.target.value)}
-              onKeyDown={handleLiveEditorKeyDown}
-              spellCheck={false}
-              autoComplete="off"
-              autoCapitalize="off"
-              autoCorrect="off"
-              placeholder={`Write a complete ${liveLanguage.toUpperCase()} program. It runs automatically after you pause typing.`}
-            />
+            <Suspense fallback={<div className="live-editor-loading" role="status">Preparing editor…</div>}>
+              <LiveCodeEditor
+                language={liveLanguage}
+                value={liveCode}
+                activeLine={liveActiveLine}
+                traceIsCurrent={liveTraceSource === liveCode && liveTraceLanguage === liveLanguage}
+                onChange={handleLiveCodeChange}
+                onRunNow={handleLiveRunNow}
+              />
+            </Suspense>
           </div>
 
           <details className="live-input-panel">
