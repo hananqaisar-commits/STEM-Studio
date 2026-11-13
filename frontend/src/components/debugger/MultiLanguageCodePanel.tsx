@@ -641,8 +641,10 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         ? Number((error as { status?: unknown }).status)
         : 0;
       setLiveError(detail);
-      setLiveStatusMessage(statusCode
-        ? `Run failed (API ${statusCode}): ${detail}`
+      setLiveStatusMessage(statusCode === 404
+        ? 'The connected API does not have the Live Code route yet. Deploy the backend version that includes /api/execute/live-code, then run again.'
+        : statusCode
+          ? `Run failed (API ${statusCode}): ${detail}`
         : `Run failed: ${detail}`);
     } finally {
       if (sequence === liveRequestSequence.current) liveAbortController.current = null;

@@ -4,6 +4,7 @@ import {
   SkipBack, SkipForward, Sparkles,
 } from 'lucide-react';
 import type { RuntimeObject, RuntimeTraceEvent, RuntimeValue } from '../../api/liveCode';
+import { LiveHeapVisualizer } from './LiveHeapVisualizer';
 
 export type LiveExecutionStatus = 'idle' | 'draft' | 'waiting' | 'running' | 'ok' | 'error';
 
@@ -161,6 +162,15 @@ export const LiveRuntimeInspector: React.FC<LiveRuntimeInspectorProps> = ({
             />
             <span>Auto trace</span>
           </label>
+          <button
+            type="button"
+            className={`live-octa-toggle${tutorEnabled ? ' enabled' : ''}`}
+            aria-pressed={tutorEnabled}
+            onClick={() => onTutorEnabledChange(!tutorEnabled)}
+          >
+            <Sparkles size={14} />
+            Tutor {tutorEnabled ? 'on' : 'off'}
+          </button>
           <button type="button" className="live-run-button" onClick={onRunNow} disabled={busy}>
             {busy ? <span className="live-status-dot" /> : <RotateCcw size={13} />}
             {busy ? 'Running' : 'Run now'}
@@ -236,6 +246,17 @@ export const LiveRuntimeInspector: React.FC<LiveRuntimeInspectorProps> = ({
         </div>
       )}
 
+      <LiveHeapVisualizer event={activeEvent} />
+
+      {(tutorHint || tutorReviewing) && (
+        <div className="live-octa-feedback" role="status">
+          <Sparkles size={14} />
+          {tutorReviewing ? <span>OctaTutor is reviewing this run…</span> : <span>{tutorHint}</span>}
+        </div>
+      )}
+
+      <details className="live-supporting-details">
+        <summary><ChevronDown size={13} /> Variables, heap details, and run information</summary>
       <div className="live-inspector-grid">
         <section className="live-inspector-section">
           <button type="button" className="live-section-heading" onClick={() => setScopeOpen((value) => !value)} aria-expanded={scopeOpen}>
@@ -301,20 +322,10 @@ export const LiveRuntimeInspector: React.FC<LiveRuntimeInspectorProps> = ({
       )}
 
       <div className="live-octa-row">
-        <button
-          type="button"
-          className={`live-octa-toggle${tutorEnabled ? ' enabled' : ''}`}
-          aria-pressed={tutorEnabled}
-          onClick={() => onTutorEnabledChange(!tutorEnabled)}
-        >
-          <Sparkles size={14} />
-          OctaTutor {tutorEnabled ? 'on' : 'off'}
-        </button>
-        {tutorEnabled && tutorHint && <p className="live-octa-hint" role="status">{tutorHint}</p>}
-        {tutorEnabled && tutorReviewing && <span className="live-octa-off-note" role="status">OctaTutor is checking the executed trace…</span>}
         {tutorEnabled && <span className="live-octa-note">OctaTutor sends this program and available run output or trace to your configured tutor service. It labels source-based suggestions when runtime snapshots are unavailable.</span>}
         {!tutorEnabled && <span className="live-octa-off-note">Proactive trace hints are paused for this category.</span>}
       </div>
+      </details>
     </section>
   );
 };
