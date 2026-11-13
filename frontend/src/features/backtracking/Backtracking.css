@@ -507,9 +507,9 @@
     overflow: auto;
   }
   .bt-tree-region {
-    min-height: 340px;
+    min-height: clamp(420px, 60dvh, 600px);
     flex: none;
-    height: 340px;
+    height: clamp(420px, 60dvh, 600px);
   }
   .bt-context-pane {
     width: 100%;

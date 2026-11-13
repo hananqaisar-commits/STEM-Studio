@@ -412,3 +412,18 @@
   .tutor-btn-secondary { animation: none !important; transition: none !important; }
 }
 .tutor-key-note { margin: -4px 0 12px; color: var(--color-text-secondary); font-size: 11px; line-height: 1.5; }
+.tutor-ai-explanation-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-elevated);
+}
+.tutor-ai-explanation-setting h4 { margin: 0; color: var(--color-text); font-size: 0.84rem; font-weight: 700; }
+.tutor-ai-explanation-setting p { margin: 5px 0 0; color: var(--color-text-secondary); font-size: 0.73rem; line-height: 1.5; }
+.tutor-ai-explanation-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 4px; }
+.tutor-ai-explanation-toggle input { width: 20px; height: 20px; margin: 0; accent-color: var(--color-primary); cursor: pointer; }
+.tutor-ai-explanation-toggle input:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }

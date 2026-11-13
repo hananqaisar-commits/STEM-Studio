@@ -6,7 +6,7 @@ const MIN_W_PX = 320;
 const MIN_H = 220;
 const MAX_H = 760;
 const DEFAULT_H = 380;
-const STACKED_MAX_W = MIN_W_PX * 2 + 60;
+const STACKED_MAX_W = 900;
 
 interface Sizes {
   lh: number;
@@ -50,7 +50,10 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
   const [containerW, setContainerW] = useState(0);
   const [sizes, setSizes] = useState<Sizes>({ lh: DEFAULT_H, rh: DEFAULT_H, layout: { left: 50, right: 50 } });
   const hasDebugger = debuggerPanel !== null && debuggerPanel !== undefined && debuggerPanel !== false;
-  const stacked = containerW > 0 && containerW < STACKED_MAX_W;
+  // Keep phone and narrow tablet layouts in a predictable vertical reading
+  // order. Waiting for the first measurement also avoids a horizontal-layout
+  // flash before the ResizeObserver reports the mobile width.
+  const stacked = containerW === 0 || containerW < STACKED_MAX_W;
   const twoUp = hasDebugger && !stacked;
 
   useLayoutEffect(() => {
@@ -154,32 +157,30 @@ export const ResizablePanelRow: React.FC<ResizablePanelRowProps> = ({
       {twoUp ? (
         <PanelGroup orientation="horizontal" onLayoutChanged={onLayout} id={storageKey}>
           <Panel id="left" defaultSize={sizes.layout.left ?? 50} minSize={minPercent} className="rp-panel-wrapper">
-            <div className="rp-slot" style={{ height: sizes.lh }}>
+            <div className="rp-slot" style={{ height: stacked ? undefined : sizes.lh }}>
               {debuggerPanel}
-              {heightHandle('left', sizes.lh, 'Debugger')}
+              {!stacked && heightHandle('left', sizes.lh, 'Debugger')}
             </div>
           </Panel>
           <PanelResizeHandle className="rp-shared-divider" aria-label="Resize debugger and execution trace panels">
             <div className="rp-shared-divider-grip" />
           </PanelResizeHandle>
           <Panel id="right" defaultSize={sizes.layout.right ?? 50} minSize={minPercent} className="rp-panel-wrapper">
-            <div className="rp-slot" style={{ height: sizes.rh }}>
+            <div className="rp-slot" style={{ height: stacked ? undefined : sizes.rh }}>
               {explanationPanel}
-              {heightHandle('right', sizes.rh, 'Execution trace')}
+              {!stacked && heightHandle('right', sizes.rh, 'Execution trace')}
             </div>
           </Panel>
         </PanelGroup>
       ) : (
         <>
           {hasDebugger && (
-            <div className="rp-slot" style={{ height: sizes.lh, width: '100%' }}>
+            <div className="rp-slot" style={{ width: '100%' }}>
               {debuggerPanel}
-              {heightHandle('left', sizes.lh, 'Debugger')}
             </div>
           )}
-          <div className="rp-slot" style={{ height: sizes.rh, width: '100%' }}>
+          <div className="rp-slot" style={{ width: '100%' }}>
             {explanationPanel}
-            {heightHandle('right', sizes.rh, 'Execution trace')}
           </div>
         </>
       )}

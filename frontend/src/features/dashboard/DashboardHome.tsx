@@ -1,13 +1,15 @@
-import type { FC } from 'react';
+import { useEffect, useState, type FC } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Activity,
   ArrowRight,
   BarChart2,
   BookOpen,
+  Clock3,
   Grid3x3,
   Monitor,
   Share2,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { SEOHead } from '../../components/common/SEOHead';
@@ -18,6 +20,7 @@ import { SupportDesk } from '../../components/support/SupportDesk';
 import { OnboardingTour } from './OnboardingTour';
 import { CheatSheetPrinter } from './CheatSheetPrinter';
 import { AdSensePlacement } from '../../components/common/AdSensePlacement';
+import { CATEGORY_TOPICS } from '../../data/categoryTopics';
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Activity,
@@ -27,11 +30,14 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 };
 
 const QUICK_START_IDS = ['complexity', 'sorting', 'graph', 'dp'];
+const RECOMMENDED_IDS = ['sorting', 'arrays', 'graph', 'complexity'];
+type RecentSimulation = { path: string; title: string; openedAt: number };
 
 const countTopics = (categories: typeof DSA_CATEGORIES) =>
   categories.reduce((total, category) => total + category.topicCount, 0);
 
 export const DashboardHome: FC = () => {
+  const [recentSimulations, setRecentSimulations] = useState<RecentSimulation[]>([]);
   const dsaCategories = DSA_CATEGORIES.filter((category) => category.available);
   const osCategories = OS_CATEGORIES.filter((category) => category.available);
   const dsaModule = MODULES.find((module) => module.id === 'dsa');
@@ -39,6 +45,18 @@ export const DashboardHome: FC = () => {
   const quickStartTopics = QUICK_START_IDS
     .map((id) => DSA_CATEGORIES.find((category) => category.id === id))
     .filter((category) => category?.available);
+  const recommendedTopics = RECOMMENDED_IDS.flatMap((categoryId) => {
+    const category = CATEGORY_TOPICS.find((item) => item.categoryId === categoryId);
+    const topic = category?.topics[0];
+    return category && topic ? [{ category, topic }] : [];
+  });
+
+  useEffect(() => {
+    try {
+      const value = JSON.parse(localStorage.getItem('stem.recent-simulations') || '[]') as RecentSimulation[];
+      setRecentSimulations(value.filter((item) => typeof item.path === 'string' && typeof item.title === 'string').slice(0, 4));
+    } catch { setRecentSimulations([]); }
+  }, []);
 
   return (
     <div className="dashboard-home">
@@ -80,6 +98,17 @@ export const DashboardHome: FC = () => {
             <ArrowRight className="dashboard-subject-arrow" size={20} aria-hidden="true" />
           </Link>
         )}
+      </section>
+
+      <section className="dashboard-personalized-grid" aria-label="Personalized learning shortcuts">
+        <article className="dashboard-personalized-card dashboard-recent-card">
+          <div className="dashboard-personalized-heading"><span className="dashboard-personalized-icon"><Clock3 size={17} /></span><div><p className="dashboard-home-eyebrow">Pick up again</p><h2>Recently opened</h2></div></div>
+          {recentSimulations.length ? <div className="dashboard-recent-list">{recentSimulations.map((item) => <Link key={item.path} to={item.path}><span>{item.title}</span><ArrowRight size={15} aria-hidden="true" /></Link>)}</div> : <p className="dashboard-personalized-empty">Your opened simulations will appear here. Start a lesson to build your recent list.</p>}
+        </article>
+        <article className="dashboard-personalized-card dashboard-recommended-card">
+          <div className="dashboard-personalized-heading"><span className="dashboard-personalized-icon"><Sparkles size={17} /></span><div><p className="dashboard-home-eyebrow">Recommended experiments</p><h2>Try a short interactive lesson</h2></div></div>
+          <div className="dashboard-recommendation-list">{recommendedTopics.map(({ category, topic }) => <Link key={`${category.categoryId}-${topic.id}`} to={`/dashboard/${category.categoryId}?topic=${encodeURIComponent(topic.id)}`}><span><strong>{topic.name}</strong><small>{category.categoryName} · {topic.estimatedMinutes ?? 10} min</small></span><ArrowRight size={15} aria-hidden="true" /></Link>)}</div>
+        </article>
       </section>
 
       <ContinueLearning />

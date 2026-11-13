@@ -227,6 +227,22 @@
   transition: transform 160ms ease, color 160ms ease;
 }
 
+.dashboard-personalized-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 26px 0 10px; }
+.dashboard-personalized-card { min-width: 0; padding: 18px; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface); color: var(--color-text); }
+.dashboard-personalized-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+.dashboard-personalized-heading .dashboard-home-eyebrow { margin: 0 0 2px; font-size: 0.64rem; }
+.dashboard-personalized-heading h2 { color: var(--color-text); font-size: 1rem; line-height: 1.3; }
+.dashboard-personalized-icon { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border-radius: 11px; background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)); color: var(--color-primary-text, var(--color-primary)); }
+.dashboard-recent-list, .dashboard-recommendation-list { display: grid; gap: 6px; }
+.dashboard-recent-list a, .dashboard-recommendation-list a { display: flex; min-width: 0; min-height: 44px; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid transparent; border-radius: 11px; color: var(--color-text-secondary); font-size: 0.78rem; text-decoration: none; }
+.dashboard-recent-list a:hover, .dashboard-recommendation-list a:hover { border-color: var(--color-border); background: var(--color-surface-elevated); color: var(--color-text); }
+.dashboard-recent-list a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-recommendation-list a > span { display: grid; min-width: 0; gap: 2px; }
+.dashboard-recommendation-list strong { overflow: hidden; color: var(--color-text); font-size: 0.77rem; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-recommendation-list small { color: var(--color-text-muted); font-size: 0.67rem; }
+.dashboard-personalized-card svg { flex: 0 0 auto; color: var(--color-primary-text, var(--color-primary)); }
+.dashboard-personalized-empty { color: var(--color-text-muted); font-size: 0.77rem; line-height: 1.55; }
+
 .dashboard-topic-card:hover .dashboard-topic-arrow {
   color: var(--color-primary-text, var(--color-primary));
 }
@@ -243,6 +259,8 @@
   .dashboard-subject-card {
     min-height: 158px;
   }
+
+  .dashboard-personalized-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {

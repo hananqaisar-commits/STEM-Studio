@@ -2,6 +2,8 @@ import type { UserLLMConfig } from './octaTutorApi';
 import { deleteTutorConfig, getSavedTutorConfig, saveTutorConfig } from './octaTutorApi';
 
 const LEGACY_STORAGE_KEY = 'octa_llm_config';
+const AI_EXPLANATIONS_KEY = 'octa_ai_step_explanations_enabled';
+
 export const OCTA_SETTINGS_CHANGE_EVENT = 'octa-settings-change';
 
 function notifySettingsChanged(): void {
@@ -24,7 +26,11 @@ function removeLegacyBrowserCredential(): void {
   try { sessionStorage.removeItem(LEGACY_STORAGE_KEY); } catch { /* storage may be unavailable */ }
 }
 
-/** API keys live only in the account database; browser storage keeps no secret. */
+/**
+ * API credentials are never persisted in Web Storage. The server owns the
+ * encrypted, account-scoped copy; this module only keeps a secret in memory
+ * while the user is actively editing the form.
+ */
 export function readOctaConfig(): UserLLMConfig {
   removeLegacyBrowserCredential();
   return { ...activeConfig };
@@ -68,10 +74,27 @@ export async function resetPersistedOctaConfig(userId: number): Promise<UserLLMC
   return { ...reset, apiKey: '' };
 }
 
-/** Forget only the current device's in-memory provider selection on logout. */
+/** Forget only this device's in-memory state on logout/account switch. */
 export function clearOctaConfig(): void {
   activeUserId = null;
   activeConfig = { ...DEFAULT_OCTA_CONFIG };
   removeLegacyBrowserCredential();
+  notifySettingsChanged();
+}
+
+/** This is a non-secret user preference, so it persists across browser sessions. */
+export function readAIExplanationsEnabled(): boolean {
+  try {
+    const saved = localStorage.getItem(AI_EXPLANATIONS_KEY);
+    return saved === null ? true : saved === 'true';
+  } catch {
+    return true;
+  }
+}
+
+export function writeAIExplanationsEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(AI_EXPLANATIONS_KEY, String(enabled));
+  } catch { /* keep the current session usable if storage is blocked */ }
   notifySettingsChanged();
 }

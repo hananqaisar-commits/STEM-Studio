@@ -21,6 +21,11 @@
   margin-top: 1.25rem;
 }
 
+.bottom-row.rp-row.rp-stacked .rp-slot {
+  height: auto;
+  min-height: 0;
+}
+
 /* React Resizable Panels wrapper */
 .rp-panel-wrapper {
   display: flex;
@@ -99,4 +104,27 @@
 
 .bottom-row.rp-row.rp-stacked .rp-shared-divider {
   display: none;
+}
+
+@media (max-width: 900px) {
+  .bottom-row.rp-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bottom-row.rp-row .rp-handle--bottom,
+  .bottom-row.rp-row .rp-shared-divider {
+    display: none;
+  }
+
+  .bottom-row.rp-row .rp-slot {
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .bottom-row.rp-row .rp-panel-wrapper {
+    flex: none;
+    width: 100%;
+  }
 }

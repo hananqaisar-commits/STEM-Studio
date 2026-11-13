@@ -4,6 +4,7 @@ import { Activity } from 'lucide-react';
 import { SEOHead } from '../../components/common/SEOHead';
 import { getSEOForRoute } from '../../data/seoMetadata';
 import { VisualizerHeader } from '../../components/layout/VisualizerHeader';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import { CATEGORY_TOPICS } from '../../data/categoryTopics';
 import './Complexity.css';
 
@@ -66,6 +67,20 @@ export const ComplexityPage: React.FC = () => {
         activeCategoryId={activeCategoryId}
         onSelectCategory={handleSelectCategory}
       />
+
+      <section id="live-code" className="complexity-section complexity-live-code-section">
+        <h2>Live Code Practice</h2>
+        <p className="section-intro">
+          Write and revise a complete program in your preferred language. The latest ready revision runs automatically, and supported runtimes show the variables and objects created by your code.
+        </p>
+        <MultiLanguageCodePanel
+          algorithmKey="complexity"
+          title="Complexity Analysis Practice"
+          categoryId="complexity"
+          topicId="loops"
+          liveOnly
+        />
+      </section>
 
       {/* Section: Why Complexity Analysis? */}
       <section id="why" className="complexity-section">

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { ArrowLeft, BookOpen, House, Menu, MessageCircle, Monitor, Settings } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthPromptProvider, useAuthPrompt } from './contexts/AuthPromptContext';
@@ -14,10 +16,14 @@ import { TutorProvider } from './contexts/TutorContext';
 import { OctaTutor } from './components/tutor/OctaTutor';
 import { NotFoundPage } from './features/NotFoundPage';
 import { MarketingHome } from './features/marketing/MarketingHome';
+import { MobileAppLanding } from './features/marketing/MobileAppLanding';
 import { MarketingFooter } from './features/marketing/MarketingFooter';
 import { OwnerControlCenter } from './features/owner/OwnerControlCenter';
 import { apiClient } from './api/apiClient';
 import { resetVisualizerControls, trackVisualizerIntent } from './hooks/visualizerControls';
+import { useTutorContext } from './contexts/TutorContext';
+import { NavbarGlobalSearch } from './components/layout/NavbarGlobalSearch';
+import { SettingsModal } from './components/layout/SettingsModal';
 
 // Lazy-loaded page components for code-splitting
 const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
@@ -140,7 +146,8 @@ const GatedRoute: React.FC<{ children: React.ReactNode; featureKey?: string }> =
 const RootRoute: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen message="Checking session..." />;
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <MarketingHome />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return Capacitor.isNativePlatform() ? <MobileAppLanding /> : <MarketingHome />;
 };
 
 
@@ -152,7 +159,10 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(340);
+  const { requireAuth } = useAuthPrompt();
+  const { toggleTutor } = useTutorContext();
 
   useEffect(() => trackVisualizerIntent(), []);
   useEffect(() => {
@@ -160,6 +170,20 @@ const DashboardLayout = () => {
   }, [location.pathname]);
 
   const pathSegment = location.pathname.split('/')[2] || '';
+
+  useEffect(() => {
+    if (!pathSegment || pathSegment === 'owner' || pathSegment === 'billing') return;
+    const routeKey = location.pathname.replace(/\/$/, '');
+    const title = MODULES.find((module) => module.id === pathSegment)?.name
+      || DSA_CATEGORIES.find((category) => category.id === pathSegment)?.name
+      || OS_CATEGORIES.find((category) => category.id === pathSegment)?.name
+      || pathSegment.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase());
+    try {
+      const previous = JSON.parse(localStorage.getItem('stem.recent-simulations') || '[]') as Array<{ path: string; title: string; openedAt: number }>;
+      const recent = [{ path: routeKey, title, openedAt: Date.now() }, ...previous.filter((item) => item.path !== routeKey)].slice(0, 5);
+      localStorage.setItem('stem.recent-simulations', JSON.stringify(recent));
+    } catch { /* Recent links are an optional convenience when storage is unavailable. */ }
+  }, [location.pathname, pathSegment]);
 
   const handleSelectModule = (moduleId: string) => {
     navigate(`/dashboard/${moduleId}`);
@@ -177,10 +201,29 @@ const DashboardLayout = () => {
 
   const activeModuleId = isModulePage ? pathSegment : (isOSPage ? 'os' : (isDsaCategory ? 'dsa' : ''));
   const activeCategoryId = isDsaCategory || isOsCategory ? pathSegment : '';
+  const screenTitle = pathSegment
+    ? MODULES.find((module) => module.id === pathSegment)?.name
+      || DSA_CATEGORIES.find((category) => category.id === pathSegment)?.name
+      || OS_CATEGORIES.find((category) => category.id === pathSegment)?.name
+      || pathSegment.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase())
+    : 'Learning dashboard';
+  const openOcta = () => requireAuth(() => toggleTutor(), 'Sign in to chat with Octa and keep your learning context.');
 
   return (
     <div className="dashboard-shell">
       <Navbar onToggleSidebar={toggleSidebar} />
+      <header className="mobile-screen-controls">
+        <div className="mobile-controls-left">
+          {pathSegment && <button type="button" className="mobile-control-button" onClick={() => { if (window.history.state?.idx > 0) navigate(-1); else navigate('/dashboard'); }} aria-label="Go back"><ArrowLeft size={20} /></button>}
+          {!pathSegment && <img className="mobile-brand-mark" src="/icon-192.png" alt="" aria-hidden="true" />}
+        </div>
+        <div className="mobile-screen-title" title={screenTitle}>{screenTitle}</div>
+        <div className="mobile-controls-right">
+          <div className="mobile-search-control"><NavbarGlobalSearch compact /></div>
+          <button type="button" className="mobile-control-button" onClick={() => setIsMobileSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings size={19} /></button>
+          <button type="button" className="mobile-control-button" onClick={openSidebar} aria-label="Open dashboard menu"><Menu size={20} /></button>
+        </div>
+      </header>
       <div className="dashboard-body">
         <TopicMenu
           activeModule={activeModuleId}
@@ -226,15 +269,22 @@ const DashboardLayout = () => {
           </Suspense>
         </main>
       </div>
+      <nav className="mobile-bottom-navigation" aria-label="Main navigation">
+        <Link to="/dashboard" className={!pathSegment ? 'active' : ''}><House size={19} aria-hidden="true" /><span>Home</span></Link>
+        <Link to="/dashboard/dsa" className={pathSegment === 'dsa' || isDsaCategory ? 'active' : ''}><BookOpen size={19} aria-hidden="true" /><span>Learn</span></Link>
+        <Link to="/dashboard/os" className={isOSPage ? 'active' : ''}><Monitor size={19} aria-hidden="true" /><span>Systems</span></Link>
+        <button type="button" onClick={openOcta}><MessageCircle size={19} aria-hidden="true" /><span>Octa</span></button>
+      </nav>
       <ScrollToTop />
       <OctaTutor />
+      <SettingsModal isOpen={isMobileSettingsOpen} initialTab="preferences" onClose={() => setIsMobileSettingsOpen(false)} />
     </div>
   );
 
 };
 
 const AppContent = () => {
-  const { isLoading } = useAuth();
+  const { isLoading, loadingProgress } = useAuth();
   const location = useLocation();
   const [splashExited, setSplashExited] = useState(false);
   const handleSplashExited = useCallback(() => setSplashExited(true), []);
@@ -260,7 +310,7 @@ const AppContent = () => {
         </Routes>
       </Suspense>
       {!splashExited && location.pathname !== '/' && (
-        <BootSplash loading={isLoading} onExited={handleSplashExited} />
+        <BootSplash loading={isLoading} progress={loadingProgress} onExited={handleSplashExited} />
       )}
     </>
   );

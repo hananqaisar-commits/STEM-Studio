@@ -220,6 +220,8 @@ class UserResponse(BaseModel):
     email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    display_name: Optional[str] = None
+    avatar_data_url: Optional[str] = None
     phone: Optional[str] = None
     is_active: bool
     is_verified: bool

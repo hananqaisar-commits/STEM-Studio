@@ -150,6 +150,18 @@
    Lifecycle is controlled by real app state; no fake timers/progress.
    ══════════════════════════════════════════════════════════════════ */
 
+:root {
+  --mascot-studio-fill-start: #d8b4fe;
+  --mascot-studio-fill-middle: #c084fc;
+  --mascot-studio-fill-end: #a855f7;
+}
+
+[data-theme='dark'] {
+  --mascot-studio-fill-start: #e9d5ff;
+  --mascot-studio-fill-middle: #d8b4fe;
+  --mascot-studio-fill-end: #c084fc;
+}
+
 .mascot-loading {
   position: fixed;
   inset: 0;
@@ -200,6 +212,46 @@
   text-align: center;
   flex: 1;
   min-width: 0;
+}
+
+/*
+ * Splash-only progress cue for STUDIO. The original letter spans keep their
+ * DancingLetters motion and layout. Each duplicate glyph is clipped from its
+ * upper-left corner according to real app startup milestones, not a timer.
+ */
+.mascot-loading .loading-fill-letter {
+  position: relative;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  background: none !important;
+}
+
+.mascot-loading .loading-fill-letter::after {
+  content: attr(data-loading-letter);
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  background: linear-gradient(
+    to right,
+    var(--mascot-studio-fill-start),
+    var(--mascot-studio-fill-middle),
+    var(--mascot-studio-fill-end)
+  );
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  clip-path: polygon(
+    0 0,
+    var(--letter-fill-percent, 0%) 0,
+    var(--letter-fill-percent, 0%) var(--letter-fill-percent, 0%),
+    0 var(--letter-fill-percent, 0%)
+  );
+  transition: clip-path 180ms linear;
 }
 
 @media (max-width: 768px) {
@@ -479,6 +531,10 @@
   .paper-plane-fly {
     animation: none !important;
     opacity: 0;
+  }
+
+  .mascot-loading .loading-fill-letter::after {
+    transition: none;
   }
 }
 

@@ -1130,7 +1130,10 @@ def get_me(
 ):
     """Return the current authenticated user's profile."""
     data = UserResponse.model_validate(current_user)
+    preference = db.query(UserPreference).filter(UserPreference.user_id == current_user.user_id).first()
     return data.model_copy(update={
         "is_owner": is_provisioned_owner(db, current_user),
         "is_owner_session": has_owner_session(current_user, request, db),
+        "display_name": preference.display_name if preference else None,
+        "avatar_data_url": preference.avatar_data_url if preference else None,
     })

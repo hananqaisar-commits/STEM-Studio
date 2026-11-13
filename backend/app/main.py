@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 try:
     from backend.app.api.routes.auth import router as auth_router
     from backend.app.api.routes.execute import router as execute_router
+    from backend.app.api.routes.live_code import router as live_code_router
     from backend.app.api.routes.progress import router as progress_router
     from backend.app.api.routes.stats import router as stats_router
     from backend.app.api.routes.octa_tutor import router as octa_tutor_router
@@ -30,6 +31,7 @@ try:
 except ModuleNotFoundError:
     from app.api.routes.auth import router as auth_router
     from app.api.routes.execute import router as execute_router
+    from app.api.routes.live_code import router as live_code_router
     from app.api.routes.progress import router as progress_router
     from app.api.routes.stats import router as stats_router
     from app.api.routes.octa_tutor import router as octa_tutor_router
@@ -212,6 +214,7 @@ app.include_router(auth_router)
 app.include_router(progress_router)
 app.include_router(stats_router)
 app.include_router(execute_router)
+app.include_router(live_code_router)
 app.include_router(octa_tutor_router)
 app.include_router(support_router)
 app.include_router(preferences_router)
