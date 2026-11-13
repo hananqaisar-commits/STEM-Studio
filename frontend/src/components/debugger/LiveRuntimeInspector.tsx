@@ -17,6 +17,8 @@ interface LiveRuntimeInspectorProps {
   outputRevision: string | null;
   error: string | null;
   language: string;
+  categoryId?: string;
+  topicId?: string;
   traceLanguage: string;
   traceSupport: 'automatic' | 'not_available';
   traceTruncated: boolean;
@@ -73,6 +75,8 @@ export const LiveRuntimeInspector: React.FC<LiveRuntimeInspectorProps> = ({
   outputRevision,
   error,
   language,
+  categoryId,
+  topicId,
   traceLanguage,
   traceSupport,
   traceTruncated,
@@ -246,7 +250,7 @@ export const LiveRuntimeInspector: React.FC<LiveRuntimeInspectorProps> = ({
         </div>
       )}
 
-      <LiveHeapVisualizer event={activeEvent} />
+      <LiveHeapVisualizer event={activeEvent} categoryId={categoryId} topicId={topicId} />
 
       {(tutorHint || tutorReviewing) && (
         <div className="live-octa-feedback" role="status">
