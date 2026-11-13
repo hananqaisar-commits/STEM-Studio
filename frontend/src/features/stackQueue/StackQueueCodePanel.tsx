@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Code, Play, RotateCcw, AlertTriangle, Eye, Pencil, Loader2, Check } from 'lucide-react';
+import { Activity, Code, Play, RotateCcw, AlertTriangle, Eye, Pencil, Loader2, Check } from 'lucide-react';
 import { getStackQueueSnippets, STACKQUEUE_GO_SNIPPETS, STACK_LINKED_CPP_SNIPPET, type LanguageKey } from './stackQueueSnippets';
 import type { StackQueueCategory } from './stackQueueEngine';
 import {
@@ -8,9 +8,10 @@ import {
 } from '../../data/customCode';
 import { type DebuggerLanguage } from '../../data/languages';
 import { LanguageDropdown } from '../../components/debugger/LanguageDropdown';
+import { MultiLanguageCodePanel } from '../../components/debugger/MultiLanguageCodePanel';
 import '../../components/debugger/Debugger.css';
 
-type CodeMode = 'default' | 'custom';
+type CodeMode = 'default' | 'custom' | 'live';
 
 export interface StackQueueCustomState {
   active: boolean;
@@ -99,6 +100,8 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
   };
 
   return (
+    <>
+      <div className="stackqueue-code-mode-shell" style={{ display: codeMode === 'live' ? 'none' : undefined }}>
     <div className="multi-lang-code-panel">
       {/* Header */}
       <div className="code-panel-header">
@@ -122,6 +125,14 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
           >
             <Pencil size={12} />
             <span>Paste code</span>
+          </button>
+          <button
+            className={`mode-btn ${codeMode === 'live' ? 'active' : ''}`}
+            onClick={() => setCodeMode('live')}
+            aria-pressed={codeMode === 'live'}
+          >
+            <Activity size={12} />
+            <span>Live code</span>
           </button>
         </div>
 
@@ -240,5 +251,16 @@ export const StackQueueCodePanel: React.FC<StackQueueCodePanelProps> = ({
         </>
       )}
     </div>
+      </div>
+      <div className="stackqueue-live-code-shell" style={{ display: codeMode === 'live' ? 'flex' : 'none' }}>
+        <MultiLanguageCodePanel
+          algorithmKey={category}
+          title="Stack & Queue"
+          categoryId="stackQueue"
+          topicId={category}
+          liveOnly
+        />
+      </div>
+    </>
   );
 };

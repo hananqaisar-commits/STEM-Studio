@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { SEOHead } from '../../components/common/SEOHead';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, UserPlus, User, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
@@ -13,6 +14,8 @@ declare global {
     google?: any;
   }
 }
+
+const IS_NATIVE_APP = Capacitor.isNativePlatform();
 
 export const SignUp: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -44,7 +47,7 @@ export const SignUp: React.FC = () => {
   useEffect(() => {
     setContext('signup');
     // Initialize Google Sign-In only if a valid client ID is configured
-    if (GOOGLE_CLIENT_ID && window.google?.accounts?.id) {
+    if (!IS_NATIVE_APP && GOOGLE_CLIENT_ID && window.google?.accounts?.id) {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
@@ -156,13 +159,13 @@ export const SignUp: React.FC = () => {
           <p className="auth-subtitle">Join STEM Studio to start your journey</p>
         </div>
 
-        {GOOGLE_CLIENT_ID && (
+        {GOOGLE_CLIENT_ID && !IS_NATIVE_APP && (
           <div className="google-btn-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
             <div id="google-signup-btn"></div>
           </div>
         )}
 
-        {GOOGLE_CLIENT_ID && (
+        {GOOGLE_CLIENT_ID && !IS_NATIVE_APP && (
           <div className="auth-divider" style={{ textAlign: 'center', margin: '0 0 1.5rem 0', color: 'var(--color-text-muted)' }}>
             <span>or create an account with email</span>
           </div>

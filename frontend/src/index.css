@@ -98,46 +98,47 @@
 }
 
 [data-theme="dark"] {
-  /* High-Contrast Dark Palette */
-  --dark-950: #020617;
-  --dark-900: #0f172a;
-  --dark-800: #1e293b;
-  --dark-700: #334155;
-  --dark-600: #475569;
-  --dark-500: #64748b;
-  --dark-400: #94a3b8;
-  --dark-300: #cbd5e1;
+  /* Quiet near-black palette based on the supplied dark-theme reference. */
+  --dark-950: #08080a;
+  --dark-900: #101013;
+  --dark-800: #18181c;
+  --dark-700: #24242a;
+  --dark-600: #36363e;
+  --dark-500: #686873;
+  --dark-400: #a0a0aa;
+  --dark-300: #d0d0d7;
 
-  --purple-400: #c084fc;
-  --purple-500: #a855f7;
-  --purple-600: #9333ea;
+  --purple-400: #d0bcff;
+  --purple-500: #b69afa;
+  --purple-600: #9a78eb;
 
-  --color-app-bg: #0c1019;
-  --color-surface: #121826;
-  --color-surface-elevated: #182131;
-  --color-surface-muted: #151d2c;
-  --color-border: #283244;
-  --color-border-strong: #3a465b;
+  --color-app-bg: #09090b;
+  --color-surface: #111114;
+  --color-surface-elevated: #17171b;
+  --color-surface-muted: #1d1d22;
+  --color-border: #2b2b31;
+  --color-border-strong: #3b3b43;
 
-  --color-text: #f8fafc;
-  --color-text-secondary: var(--dark-300);
-  --color-text-muted: var(--dark-400);
+  --color-text: #f5f5f7;
+  --color-text-secondary: #d0d0d7;
+  --color-text-muted: #a0a0aa;
   --color-text-on-primary: #ffffff;
 
-  --color-primary: var(--purple-500);
-  --color-primary-hover: var(--purple-400);
-  --color-primary-active: #7e22ce;
+  --color-primary: #8b5cf6;
+  --color-primary-text: #c4b5fd;
+  --color-primary-hover: #b69afa;
+  --color-primary-active: #7042d2;
 
-  --color-nav-active: var(--purple-400);
-  --color-control-bg: var(--dark-800);
-  --color-control-hover: var(--dark-700);
-  --color-control-selected: var(--dark-600);
-  --color-focus: var(--purple-500);
+  --color-nav-active: #c4b5fd;
+  --color-control-bg: #18181c;
+  --color-control-hover: #24242a;
+  --color-control-selected: #36363e;
+  --color-focus: #b69afa;
 
-  --color-shadow: rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.55);
+  --color-shadow: rgba(0, 0, 0, 0.42);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 8px 24px -10px rgba(0, 0, 0, 0.56);
+  --shadow-lg: 0 18px 48px -20px rgba(0, 0, 0, 0.72);
 }
 
 * {

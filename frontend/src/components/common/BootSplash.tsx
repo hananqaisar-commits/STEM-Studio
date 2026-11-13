@@ -25,6 +25,8 @@ interface BootSplashProps {
    * The splash never decides completion on its own — it only reacts to this.
    */
   loading: boolean;
+  /** Real startup milestones; the splash never invents a time-based percent. */
+  progress: number;
   /** Invoked once the exit transition has finished; unmount after this. */
   onExited: () => void;
 }
@@ -41,7 +43,7 @@ interface BootSplashProps {
  *  3. hold beat     → the happy state reads for a moment.
  *  4. exit          → overlay fades out, then `onExited` fires.
  */
-export const BootSplash: React.FC<BootSplashProps> = ({ loading, onExited }) => {
+export const BootSplash: React.FC<BootSplashProps> = ({ loading, progress, onExited }) => {
   const reduced = usePrefersReducedMotion();
   const [entranceLanded, setEntranceLanded] = useState(false);
   const [holdDone, setHoldDone] = useState(false);
@@ -80,6 +82,7 @@ export const BootSplash: React.FC<BootSplashProps> = ({ loading, onExited }) => 
     <MascotLoading
       message="Preparing your studio"
       phase={complete ? 'complete' : 'loading'}
+      progress={progress}
       exiting={exiting}
     />
   );

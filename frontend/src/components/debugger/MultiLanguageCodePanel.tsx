@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Play, Layers, RotateCcw,
+  Activity, Play, Layers, RotateCcw,
   AlertTriangle, ChevronDown, Copy, CopyCheck, Bug, FileCode2,
   Pencil, Eye, Loader2, CheckCircle2,
 } from 'lucide-react';
@@ -17,10 +17,13 @@ import {
 import { DEBUGGER_LANGUAGE_IDS, type DebuggerLanguage } from '../../data/languages';
 import { LanguageDropdown } from './LanguageDropdown';
 import { executeCustomCode } from '../../api/customCode';
+import { executeLiveCode, type LiveCodeExecutionResponse, type RuntimeTraceEvent, type RuntimeValue } from '../../api/liveCode';
+import { sendTutorMessage } from '../../api/octaTutorApi';
 import type { LinkedListStep } from '../../features/linkedList/linkedListEngine';
+import { LiveRuntimeInspector, type LiveExecutionStatus } from './LiveRuntimeInspector';
 import './Debugger.css';
 
-type CodeMode = 'default' | 'custom';
+type CodeMode = 'default' | 'custom' | 'live';
 
 /** A language-keyed set of code lines. Accepts any subset of languages so
  *  per-feature snippet files (which add e.g. javascript) drop in cleanly. */
@@ -57,6 +60,8 @@ interface MultiLanguageCodePanelProps {
   customMessage?: string | null;
   /** Local source-aware linked-list trace; the callback must state its supported source pattern honestly. */
   onLinkedListCodeRun?: (code: string, language: CustomLanguage) => { steps: LinkedListStep[]; error?: string; result?: string };
+  /** Render only the full-program live workspace when embedded by a specialized category panel. */
+  liveOnly?: boolean;
 }
 
 /** Only allow a single function body; reject top-level variables or statements. */
@@ -160,6 +165,180 @@ function buildSampleState(entry: AlgorithmStubEntry, currentArray?: number[]): R
   };
 }
 
+function isLiveDraftReady(code: string, language: DebuggerLanguage): boolean {
+  const stack: string[] = [];
+  let quote = '';
+  let tripleQuote = false;
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  const pairs: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+  const python = language === 'python';
+
+  for (let index = 0; index < code.length; index += 1) {
+    const char = code[index];
+    const next = code[index + 1];
+    const nextNext = code[index + 2];
+
+    if (lineComment) {
+      if (char === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (char === '*' && next === '/') { blockComment = false; index += 1; }
+      continue;
+    }
+    if (quote) {
+      if (escaped) { escaped = false; continue; }
+      if (char === '\\') { escaped = true; continue; }
+      if (tripleQuote && char === quote && next === quote && nextNext === quote) {
+        quote = '';
+        tripleQuote = false;
+        index += 2;
+      } else if (!tripleQuote && char === quote) {
+        quote = '';
+      }
+      continue;
+    }
+
+    if (python && char === '#') { lineComment = true; continue; }
+    if (!python && char === '/' && next === '/') { lineComment = true; index += 1; continue; }
+    if (!python && char === '/' && next === '*') { blockComment = true; index += 1; continue; }
+    if (char === '"' || char === "'" || (language === 'go' && char === '`')) {
+      quote = char;
+      tripleQuote = python && char !== '`' && next === char && nextNext === char;
+      if (tripleQuote) index += 2;
+      continue;
+    }
+    if (char === '(' || char === '[' || char === '{') stack.push(char);
+    else if (pairs[char]) {
+      if (stack.pop() !== pairs[char]) return false;
+    }
+  }
+
+  if (stack.length || quote || blockComment) return false;
+  const codeLines = code.split('\n').map((line) => line.trim()).filter((line) => line && !line.startsWith('#') && !line.startsWith('//'));
+  const finalLine = codeLines[codeLines.length - 1] ?? '';
+  if (python && (finalLine.endsWith(':') || finalLine.endsWith('\\'))) return false;
+  return true;
+}
+
+function readTutorPreference(categoryId?: string): boolean {
+  if (!categoryId || typeof window === 'undefined') return true;
+  try {
+    const saved = window.localStorage.getItem(`stem-live-octa:${categoryId}`);
+    return saved == null ? true : saved === 'on';
+  } catch {
+    return true;
+  }
+}
+
+function findLinkedListHint(events: RuntimeTraceEvent[]): string | null {
+  const lastEvent = events[events.length - 1];
+  if (!lastEvent) return null;
+  for (const [objectId, object] of Object.entries(lastEvent.heap ?? {})) {
+    const next = object.entries.find((entry) => entry.key === 'next')?.value;
+    const previous = object.entries.find((entry) => entry.key === 'prev')?.value;
+    if (!next || !previous) continue;
+    if (next.kind === 'ref') {
+      const nextNode = lastEvent.heap[next.object_id];
+      const nextPrevious = nextNode?.entries.find((entry) => entry.key === 'prev')?.value;
+      if (nextPrevious && (nextPrevious.kind !== 'ref' || nextPrevious.object_id !== objectId)) {
+        return `The final trace has a forward link from @${objectId} to @${next.object_id}, but the target node's prev link does not point back. Check the insertion or deletion steps around line ${lastEvent.line}; a doubly linked list needs both links to agree.`;
+      }
+    }
+    if (previous.kind === 'ref') {
+      const previousNode = lastEvent.heap[previous.object_id];
+      const previousNext = previousNode?.entries.find((entry) => entry.key === 'next')?.value;
+      if (previousNext && (previousNext.kind !== 'ref' || previousNext.object_id !== objectId)) {
+        return `The final trace has a backward link from @${objectId} to @${previous.object_id}, but that node's next link does not point forward to this node. Check the pointer updates around line ${lastEvent.line}.`;
+      }
+    }
+  }
+  return null;
+}
+
+function compactTutorValue(value: RuntimeValue): Record<string, unknown> {
+  if (value.kind === 'ref') return { kind: 'ref', type: value.type, object_id: value.object_id };
+  if (value.kind === 'opaque') return { kind: 'opaque', type: value.type, preview: value.preview?.slice(0, 48) };
+  const scalar = value.value;
+  return {
+    kind: 'scalar',
+    type: value.type,
+    value: typeof scalar === 'string' ? scalar.slice(0, 48) : scalar,
+  };
+}
+
+function tutorSourceExcerpt(source: string, response: { trace_steps: RuntimeTraceEvent[]; error?: string | null }) {
+  const lines = source.split(/\r?\n/);
+  const traceLine = response.trace_steps[response.trace_steps.length - 1]?.line;
+  const errorLine = response.error?.match(/\bline\s+(\d+)\b/i)?.[1];
+  const targetLine = traceLine ?? (errorLine ? Number(errorLine) : null);
+  let start = 0;
+  let selected: Array<{ number: number; text: string }>;
+  if (targetLine && targetLine > 0) {
+    start = Math.max(0, targetLine - 9);
+    selected = lines.slice(start, start + 18).map((text, index) => ({ number: start + index + 1, text }));
+  } else if (lines.length > 26) {
+    selected = [
+      ...lines.slice(0, 10).map((text, index) => ({ number: index + 1, text })),
+      { number: -1, text: '…' },
+      ...lines.slice(-16).map((text, index) => ({ number: lines.length - 15 + index, text })),
+    ];
+  } else {
+    selected = lines.map((text, index) => ({ number: index + 1, text }));
+  }
+  const excerpt = selected.map(({ number, text }) => number < 0 ? text : `${number}: ${text}`).join('\n');
+  return {
+    source_excerpt: excerpt.slice(0, 2_100),
+    source_truncated: lines.length > selected.filter(({ number }) => number > 0).length || excerpt.length > 2_100,
+  };
+}
+
+function buildTutorEvidence(
+  source: string,
+  language: DebuggerLanguage,
+  response: {
+    status: string;
+    trace_support: 'automatic' | 'not_available';
+    trace_steps: RuntimeTraceEvent[];
+    stdout: string;
+    error?: string | null;
+  },
+): string {
+  const sourceExcerpt = tutorSourceExcerpt(source, response);
+  const trace = response.trace_steps.slice(-1).map((event) => {
+    const frames = event.frames ?? [];
+    const active = frames[frames.length - 1];
+    return {
+      seq: event.seq,
+      kind: event.kind,
+      line: event.line,
+      function: event.function,
+      call_stack: frames.slice(-4).map(({ function: name, line }) => ({ function: name, line })),
+      scope: Object.fromEntries(Object.entries(active?.scope ?? {}).slice(0, 6)
+        .map(([name, value]) => [name.slice(0, 30), compactTutorValue(value)])),
+      heap: Object.entries(event.heap ?? {}).slice(0, 2).map(([objectId, object]) => ({
+        object_id: objectId,
+        type: object.type,
+        entries: object.entries.slice(0, 3).map((entry) => ({
+          key: entry.key.slice(0, 30),
+          value: compactTutorValue(entry.value),
+        })),
+      })),
+    };
+  });
+  return JSON.stringify({
+    language,
+    status: response.status,
+    trace_support: response.trace_support,
+    ...sourceExcerpt,
+    stdout: response.stdout.slice(0, 250),
+    error: response.error?.slice(0, 350) ?? null,
+    trace,
+  });
+}
+
 export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   algorithmKey,
   activeLine,
@@ -178,6 +357,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   customBusy = false,
   customMessage = null,
   onLinkedListCodeRun,
+  liveOnly = false,
 }) => {
   // Resolve which snippet set to show: explicit prop → sorting table → fallback map.
   const resolvedSnippets: SnippetSet | undefined = useMemo(
@@ -197,7 +377,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   );
 
   const [selectedLang, setSelectedLang] = useState<DebuggerLanguage>('python');
-  const [codeMode, setCodeMode] = useState<CodeMode>('default');
+  const [codeMode, setCodeMode] = useState<CodeMode>(liveOnly ? 'live' : 'default');
   const [customLang, setCustomLang] = useState<DebuggerLanguage>('python');
   const [stubLang, setStubLang] = useState<CustomStubLanguage>('python');
   const [customCode, setCustomCode] = useState<string>(() => onLinkedListCodeRun ? '' : getStarterTemplate(algorithmKey, 'python'));
@@ -207,8 +387,45 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
   const [executionResult, setExecutionResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
+  const [liveLanguage, setLiveLanguage] = useState<DebuggerLanguage>('python');
+  const [liveCodeByLanguage, setLiveCodeByLanguage] = useState<Partial<Record<DebuggerLanguage, string>>>({});
+  const [liveStdin, setLiveStdin] = useState('');
+  const [liveEnabled, setLiveEnabled] = useState(true);
+  const [liveStatus, setLiveStatus] = useState<LiveExecutionStatus>('idle');
+  const [liveStatusMessage, setLiveStatusMessage] = useState('Write a complete program. Changes run automatically after a short pause.');
+  const [liveEvents, setLiveEvents] = useState<RuntimeTraceEvent[]>([]);
+  const [liveTraceSource, setLiveTraceSource] = useState('');
+  const [liveTraceRevision, setLiveTraceRevision] = useState<string | null>(null);
+  const [liveTraceLanguage, setLiveTraceLanguage] = useState<DebuggerLanguage>('python');
+  const [liveOutputRevision, setLiveOutputRevision] = useState<string | null>(null);
+  const [liveStdout, setLiveStdout] = useState('');
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [liveRunTraceSupport, setLiveRunTraceSupport] = useState<'automatic' | 'not_available'>('automatic');
+  const [liveActiveLine, setLiveActiveLine] = useState<number | null>(null);
+  const [liveTraceTruncated, setLiveTraceTruncated] = useState(false);
+  const [liveLastResult, setLiveLastResult] = useState<{
+    source: string;
+    language: DebuggerLanguage;
+    response: LiveCodeExecutionResponse;
+  } | null>(null);
+  const [liveTutorEnabled, setLiveTutorEnabled] = useState(() => readTutorPreference(categoryId));
+  const [liveTutorHint, setLiveTutorHint] = useState<string | null>(null);
+  const [liveTutorReviewing, setLiveTutorReviewing] = useState(false);
+  const liveRequestSequence = useRef(0);
+  const liveAbortController = useRef<AbortController | null>(null);
+  const liveDebounceTimer = useRef<number | undefined>(undefined);
+  const liveLastRunAt = useRef(0);
+  const liveTutorTimeout = useRef<number | undefined>(undefined);
+  const liveTutorAbortController = useRef<AbortController | null>(null);
+  const liveLastTutorAt = useRef(0);
+  const liveTutorEnabledRef = useRef(liveTutorEnabled);
+  const liveCode = liveCodeByLanguage[liveLanguage] ?? '';
+  const handleLiveActiveLineChange = useCallback((line: number | null) => {
+    setLiveActiveLine(line);
+  }, []);
 
   const canRunCustom = Boolean(stubEntry || onLinkedListCodeRun || (onCustomCodeRun && currentArray?.length));
+  const canUseLiveCode = Boolean(categoryId && topicId);
   // Keep the selected language valid as the available set changes per algorithm.
   useEffect(() => {
     if (availableReferenceLangs.length === 0) return;
@@ -216,6 +433,35 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
       setSelectedLang(availableReferenceLangs.includes('python') ? 'python' : availableReferenceLangs[0]);
     }
   }, [availableReferenceLangs, selectedLang]);
+
+  useEffect(() => {
+    if (liveOnly) setCodeMode('live');
+  }, [liveOnly]);
+
+  useEffect(() => {
+    setLiveTutorEnabled(readTutorPreference(categoryId));
+    setLiveLastResult(null);
+    liveTutorAbortController.current?.abort();
+    if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+    setLiveTutorReviewing(false);
+    setLiveTutorHint(null);
+  }, [categoryId]);
+
+  useEffect(() => {
+    liveTutorEnabledRef.current = liveTutorEnabled;
+    if (!categoryId || typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(`stem-live-octa:${categoryId}`, liveTutorEnabled ? 'on' : 'off');
+    } catch { /* Private browsing may block local storage. */ }
+  }, [categoryId, liveTutorEnabled]);
+
+  useEffect(() => () => {
+    liveRequestSequence.current += 1;
+    liveAbortController.current?.abort();
+    liveTutorAbortController.current?.abort();
+    if (liveDebounceTimer.current) window.clearTimeout(liveDebounceTimer.current);
+    if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+  }, []);
 
   // Sync custom-code template when algorithm or custom language changes.
   useEffect(() => {
@@ -232,6 +478,292 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
 
   const currentCodeLines = resolvedSnippets?.[selectedLang] ?? [];
   const hasCode = currentCodeLines.length > 0;
+
+  const requestOctaTutorHint = useCallback(async (
+    source: string,
+    language: DebuggerLanguage,
+    responseEvidence: {
+      status: string;
+      trace_support: 'automatic' | 'not_available';
+      trace_steps: RuntimeTraceEvent[];
+      stdout: string;
+      error?: string | null;
+    },
+  ): Promise<string | null> => {
+    if (!categoryId || !topicId || !liveTutorEnabledRef.current) return null;
+    if (Date.now() - liveLastTutorAt.current < 12_000) return null;
+    liveLastTutorAt.current = Date.now();
+    liveTutorAbortController.current?.abort();
+    const controller = new AbortController();
+    liveTutorAbortController.current = controller;
+    const events = responseEvidence.trace_steps;
+    const stepData = buildTutorEvidence(source, language, responseEvidence);
+    const finalEvent = events[events.length - 1];
+    const evidenceDescription = finalEvent
+      ? `Actual ${language.toUpperCase()} runtime snapshot at line ${finalEvent.line}`
+      : `${language.toUpperCase()} program ${responseEvidence.status.replace('_', ' ')}; internal runtime snapshots ${responseEvidence.trace_support === 'automatic' ? 'were not captured' : 'are unavailable for this runtime'}`;
+    try {
+      const response = await sendTutorMessage({
+        message: 'Review this learner-authored program and the run evidence for one concrete correctness problem. Use captured state when a runtime trace is present. When snapshots are unavailable, distinguish a code-based suspicion from something observed at runtime; use compiler/runtime errors and output when present. Never claim an unseen state or invent the intended algorithm. Give one delayed coaching hint that points to a relevant line and asks the learner to check a value or relationship. Do not provide a full solution or edit the program. If no clear issue is supported, reply with exactly NO_HINT.',
+        algorithm_name: title,
+        algorithm_id: topicId,
+        category: categoryId,
+        current_step_description: evidenceDescription,
+        current_step_index: Math.max(0, events.length - 1),
+        total_steps: events.length,
+        step_data: stepData,
+        current_page: title,
+        mode: 'natural',
+      }, controller.signal);
+      if (controller.signal.aborted || !liveTutorEnabledRef.current) return null;
+      if (response.answer_source !== 'model') return null;
+      const hint = response.reply?.trim() ?? '';
+      if (!hint || /^\s*(?:<)?(?:NO[_ -]?HINT|NO\s+CLEAR\s+ISSUE)(?:>)?[.!]?\s*$/i.test(hint)
+        || /^(?:no clear issue|no concrete issue|nothing suspicious)\b/i.test(hint)) return null;
+      return hint.slice(0, 900);
+    } catch {
+      return null;
+    } finally {
+      if (liveTutorAbortController.current === controller) liveTutorAbortController.current = null;
+    }
+  }, [categoryId, topicId, title]);
+
+  const executeLiveRevision = useCallback(async (manual = false) => {
+    if (!categoryId || !topicId || !liveCode.trim()) {
+      setLiveStatus('idle');
+      setLiveStatusMessage('Write a complete program to start a live trace.');
+      return;
+    }
+    if (!manual && !isLiveDraftReady(liveCode, liveLanguage)) {
+      setLiveStatus('draft');
+      setLiveStatusMessage('This draft is still open or incomplete. The last successful trace is kept until the program is ready.');
+      return;
+    }
+
+    const minimumIntervalMs = 3_100;
+    const remaining = minimumIntervalMs - (Date.now() - liveLastRunAt.current);
+    if (remaining > 0) {
+      setLiveStatus('waiting');
+      setLiveStatusMessage(`Queued to respect the runner rate limit (${Math.ceil(remaining / 1_000)}s).`);
+      if (liveDebounceTimer.current) window.clearTimeout(liveDebounceTimer.current);
+      liveDebounceTimer.current = window.setTimeout(() => {
+        liveDebounceTimer.current = undefined;
+        void executeLiveRevision(manual);
+      }, remaining);
+      return;
+    }
+
+    liveAbortController.current?.abort();
+    liveTutorAbortController.current?.abort();
+    setLiveLastResult(null);
+    if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+    setLiveTutorReviewing(false);
+    setLiveTutorHint(null);
+    const controller = new AbortController();
+    liveAbortController.current = controller;
+    const sequence = ++liveRequestSequence.current;
+    const revision = `r${sequence}`;
+    liveLastRunAt.current = Date.now();
+    setLiveStatus('running');
+    setLiveStatusMessage(`Running revision ${revision} in the isolated sandbox…`);
+    setLiveOutputRevision(revision);
+    setLiveStdout('');
+    setLiveError(null);
+
+    try {
+      const response = await executeLiveCode({
+        category_id: categoryId,
+        topic_id: topicId,
+        language: liveLanguage,
+        code: liveCode,
+        stdin: liveStdin,
+        revision,
+      }, controller.signal);
+      if (sequence !== liveRequestSequence.current) return;
+
+      setLiveLastResult({ source: liveCode, language: liveLanguage, response });
+      setLiveRunTraceSupport(response.trace_support);
+      setLiveOutputRevision(response.revision);
+      setLiveStdout(response.stdout ?? '');
+      setLiveError(response.error ?? null);
+      if (response.trace_support === 'automatic' && (response.status === 'ok' || response.trace_steps.length > 0)) {
+        setLiveEvents(response.trace_steps);
+        setLiveTraceSource(liveCode);
+        setLiveTraceRevision(response.revision);
+        setLiveTraceLanguage(liveLanguage);
+        setLiveTraceTruncated(response.trace_truncated);
+      }
+
+      if (response.status === 'ok') {
+        setLiveStatus('ok');
+        setLiveStatusMessage(response.trace_support === 'automatic'
+          ? `Revision ${revision} executed. ${response.trace_steps.length} real runtime event${response.trace_steps.length === 1 ? '' : 's'} captured.`
+          : `Revision ${revision} executed successfully. The program output is shown below.`);
+      } else {
+        setLiveStatus('error');
+        setLiveStatusMessage(response.trace_steps.length
+          ? `Revision ${revision} stopped with ${response.status.replace('_', ' ')} after ${response.trace_steps.length} captured event${response.trace_steps.length === 1 ? '' : 's'}.`
+          : `This revision has a ${response.status.replace('_', ' ')}. The previous successful trace is kept.`);
+      }
+
+      if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+      liveTutorAbortController.current?.abort();
+      setLiveTutorReviewing(false);
+      const mayTutor = liveTutorEnabledRef.current;
+      if (mayTutor) {
+        const deterministicHint = response.status === 'ok' && response.trace_support === 'automatic'
+          && categoryId === 'linkedList' ? findLinkedListHint(response.trace_steps) : null;
+        if (deterministicHint) {
+          setLiveTutorReviewing(false);
+          liveTutorTimeout.current = window.setTimeout(() => setLiveTutorHint(deterministicHint), 1_400);
+        } else {
+          setLiveTutorHint(null);
+          liveTutorTimeout.current = window.setTimeout(() => {
+            liveTutorTimeout.current = undefined;
+            setLiveTutorReviewing(true);
+            void requestOctaTutorHint(liveCode, liveLanguage, response).then((hint) => {
+              if (liveTutorEnabledRef.current) setLiveTutorHint(hint);
+            }).finally(() => setLiveTutorReviewing(false));
+          }, 1_400);
+        }
+      } else {
+        setLiveTutorReviewing(false);
+        setLiveTutorHint(null);
+      }
+    } catch (error: unknown) {
+      if (controller.signal.aborted || sequence !== liveRequestSequence.current) return;
+      setLiveStatus('error');
+      setLiveError(error instanceof Error ? error.message : 'The live execution service is unavailable.');
+      setLiveStatusMessage('The latest revision could not run. The last successful trace remains available.');
+    } finally {
+      if (sequence === liveRequestSequence.current) liveAbortController.current = null;
+    }
+  }, [categoryId, topicId, liveCode, liveLanguage, liveStdin, requestOctaTutorHint]);
+
+  useEffect(() => {
+    liveRequestSequence.current += 1;
+    liveAbortController.current?.abort();
+    if (codeMode !== 'live') return undefined;
+    if (!liveCode.trim()) {
+      setLiveStatus('idle');
+      setLiveStatusMessage('Write a complete program. Changes run automatically after a short pause.');
+      return undefined;
+    }
+    if (!liveEnabled) {
+      setLiveStatus('draft');
+      setLiveStatusMessage('Auto trace is off. Run now to execute this draft.');
+      return undefined;
+    }
+    if (!isLiveDraftReady(liveCode, liveLanguage)) {
+      setLiveStatus('draft');
+      setLiveStatusMessage('This draft is still open or incomplete. The last successful trace is kept.');
+      return undefined;
+    }
+
+    setLiveStatus('waiting');
+    setLiveStatusMessage('Waiting for you to pause typing before the latest revision runs…');
+    const debounceMs = 850;
+    const minimumIntervalMs = 3_100;
+    const remaining = Math.max(0, minimumIntervalMs - (Date.now() - liveLastRunAt.current));
+    liveDebounceTimer.current = window.setTimeout(() => {
+      liveDebounceTimer.current = undefined;
+      void executeLiveRevision();
+    }, Math.max(debounceMs, remaining));
+    return () => {
+      if (liveDebounceTimer.current) window.clearTimeout(liveDebounceTimer.current);
+      liveDebounceTimer.current = undefined;
+    };
+  }, [codeMode, liveCode, liveLanguage, liveStdin, liveEnabled, categoryId, topicId, executeLiveRevision]);
+
+  const handleLiveCodeChange = (value: string) => {
+    liveRequestSequence.current += 1;
+    liveAbortController.current?.abort();
+    liveTutorAbortController.current?.abort();
+    setLiveLastResult(null);
+    setLiveCodeByLanguage((current) => ({ ...current, [liveLanguage]: value }));
+    if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+    setLiveTutorReviewing(false);
+    setLiveTutorHint(null);
+  };
+
+  const handleLiveEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = event.currentTarget;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    let insertion: string | null = null;
+    if (event.key === 'Tab') {
+      insertion = '    ';
+    } else if (event.key === 'Enter') {
+      const beforeCaret = liveCode.slice(0, start);
+      const currentLine = beforeCaret.slice(beforeCaret.lastIndexOf('\n') + 1);
+      const indentation = currentLine.match(/^\s*/)?.[0] ?? '';
+      const trimmedLine = currentLine.trimEnd();
+      const opensBlock = liveLanguage === 'python'
+        ? trimmedLine.endsWith(':')
+        : trimmedLine.endsWith('{');
+      insertion = `\n${indentation}${opensBlock ? '    ' : ''}`;
+    }
+    if (insertion == null) return;
+    event.preventDefault();
+    handleLiveCodeChange(`${liveCode.slice(0, start)}${insertion}${liveCode.slice(end)}`);
+    const nextPosition = start + insertion.length;
+    window.requestAnimationFrame(() => textarea.setSelectionRange(nextPosition, nextPosition));
+  };
+
+  const handleLiveLanguageChange = (language: DebuggerLanguage) => {
+    liveRequestSequence.current += 1;
+    liveAbortController.current?.abort();
+    liveTutorAbortController.current?.abort();
+    setLiveLastResult(null);
+    setLiveRunTraceSupport(language === 'python' ? 'automatic' : 'not_available');
+    if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+    setLiveTutorReviewing(false);
+    setLiveLanguage(language);
+  };
+
+  const handleLiveStdinChange = (value: string) => {
+    liveRequestSequence.current += 1;
+    liveAbortController.current?.abort();
+    liveTutorAbortController.current?.abort();
+    setLiveLastResult(null);
+    if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+    setLiveTutorReviewing(false);
+    setLiveTutorHint(null);
+    setLiveStdin(value);
+  };
+
+  const handleLiveTutorToggle = (enabled: boolean) => {
+    liveTutorEnabledRef.current = enabled;
+    setLiveTutorEnabled(enabled);
+    if (!enabled) {
+      liveTutorAbortController.current?.abort();
+      if (liveTutorTimeout.current) window.clearTimeout(liveTutorTimeout.current);
+      setLiveTutorReviewing(false);
+      setLiveTutorHint(null);
+      return;
+    }
+    if (liveLastResult && liveLastResult.source === liveCode && liveLastResult.language === liveLanguage) {
+      const { source, language, response } = liveLastResult;
+      const deterministicHint = response.status === 'ok' && response.trace_support === 'automatic'
+        && categoryId === 'linkedList' ? findLinkedListHint(response.trace_steps) : null;
+      if (deterministicHint) {
+        liveTutorTimeout.current = window.setTimeout(() => setLiveTutorHint(deterministicHint), 1_400);
+      } else {
+        liveTutorTimeout.current = window.setTimeout(() => {
+          setLiveTutorReviewing(true);
+          void requestOctaTutorHint(source, language, response).then((hint) => {
+            if (liveTutorEnabledRef.current) setLiveTutorHint(hint);
+          }).finally(() => setLiveTutorReviewing(false));
+        }, 1_400);
+      }
+    }
+  };
+
+  const handleLiveRunNow = () => {
+    if (liveDebounceTimer.current) window.clearTimeout(liveDebounceTimer.current);
+    liveDebounceTimer.current = undefined;
+    void executeLiveRevision(true);
+  };
 
 
   const handleCopy = async () => {
@@ -365,7 +897,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
           <span className="debugger-tag">Debugger</span>
         </div>
 
-        {canRunCustom && (
+        {!liveOnly && (canRunCustom || canUseLiveCode) && (
           <div className="code-mode-toggle" role="tablist" aria-label="Code source">
             <button
               role="tab"
@@ -376,15 +908,28 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               <Eye size={12} />
               <span>Reference</span>
             </button>
-            <button
-              role="tab"
-              aria-selected={codeMode === 'custom'}
-              className={`mode-btn ${codeMode === 'custom' ? 'active' : ''}`}
-              onClick={() => { setCodeMode('custom'); setExecutionError(null); setRunSuccess(null); setExecutionResult(null); }}
-            >
-              <Pencil size={12} />
-              <span>Paste code</span>
-            </button>
+            {canRunCustom && (
+              <button
+                role="tab"
+                aria-selected={codeMode === 'custom'}
+                className={`mode-btn ${codeMode === 'custom' ? 'active' : ''}`}
+                onClick={() => { setCodeMode('custom'); setExecutionError(null); setRunSuccess(null); setExecutionResult(null); }}
+              >
+                <Pencil size={12} />
+                <span>Paste code</span>
+              </button>
+            )}
+            {canUseLiveCode && (
+              <button
+                role="tab"
+                aria-selected={codeMode === 'live'}
+                className={`mode-btn ${codeMode === 'live' ? 'active' : ''}`}
+                onClick={() => setCodeMode('live')}
+              >
+                <Activity size={12} />
+                <span>Live code</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -432,6 +977,18 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
               <Play size={10} /> trace line {activeLine}
             </span>
           )}
+        </div>
+      )}
+
+      {codeMode === 'live' && canUseLiveCode && (
+        <div className="code-toolbar live-code-toolbar">
+          <LanguageDropdown
+            value={liveLanguage}
+            ariaLabel="Live program language"
+            onChange={handleLiveLanguageChange}
+          />
+          <span className="live-program-label">Complete program</span>
+          <span className="live-debounce-label">Runs after a short pause</span>
         </div>
       )}
 
@@ -547,8 +1104,72 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
         </>
       )}
 
+      {codeMode === 'live' && canUseLiveCode && (
+        <div className="live-code-workspace">
+          <div className="live-code-editor custom-code-editor">
+            <div className="custom-editor-gutter" aria-hidden="true">
+              {liveCode.split('\n').map((_, idx) => {
+                const lineNumber = idx + 1;
+                const isActive = liveTraceSource === liveCode
+                  && liveTraceLanguage === liveLanguage
+                  && liveActiveLine === lineNumber;
+                return <div key={idx} className={`gutter-line-number${isActive ? ' active' : ''}`}>{lineNumber}</div>;
+              })}
+            </div>
+            <textarea
+              className="custom-editor-textarea"
+              aria-label={`Live ${liveLanguage.toUpperCase()} program editor`}
+              value={liveCode}
+              onChange={(event) => handleLiveCodeChange(event.target.value)}
+              onKeyDown={handleLiveEditorKeyDown}
+              spellCheck={false}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              placeholder={`Write a complete ${liveLanguage.toUpperCase()} program. It runs automatically after you pause typing.`}
+            />
+          </div>
+
+          <details className="live-input-panel">
+            <summary>Program input <span>(optional stdin)</span></summary>
+            <textarea
+              aria-label="Program standard input"
+              value={liveStdin}
+              onChange={(event) => handleLiveStdinChange(event.target.value)}
+              rows={3}
+              spellCheck={false}
+              placeholder="Values read by input(), scanf, Scanner, fmt.Scan, and similar functions"
+            />
+          </details>
+
+          <LiveRuntimeInspector
+            status={liveStatus}
+            statusMessage={liveStatusMessage}
+            events={liveEvents}
+            source={liveTraceSource}
+            stdout={liveStdout}
+            outputRevision={liveOutputRevision}
+            error={liveError}
+            language={liveLanguage.toUpperCase()}
+            traceLanguage={liveTraceLanguage.toUpperCase()}
+            traceSupport={liveRunTraceSupport}
+            traceTruncated={liveTraceTruncated}
+            traceRevision={liveTraceRevision}
+            liveEnabled={liveEnabled}
+            onLiveEnabledChange={setLiveEnabled}
+            onRunNow={handleLiveRunNow}
+            busy={liveStatus === 'running'}
+            tutorEnabled={liveTutorEnabled}
+            onTutorEnabledChange={handleLiveTutorToggle}
+            tutorHint={liveTutorHint}
+            tutorReviewing={liveTutorReviewing}
+            onActiveLineChange={handleLiveActiveLineChange}
+          />
+        </div>
+      )}
+
       {/* ── Call Stack ────────────────────────────────────────────── */}
-      <div className="integrated-scope-section">
+      {codeMode !== 'live' && <div className="integrated-scope-section">
 
         {callStack.length > 0 && (
           <div className="stack-box">
@@ -575,7 +1196,7 @@ export const MultiLanguageCodePanel: React.FC<MultiLanguageCodePanelProps> = ({
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 };

@@ -3,11 +3,14 @@ import { apiClient } from '../api/apiClient';
 import { useAuth } from './AuthContext';
 
 export type Theme = 'light' | 'dark';
+export type AppStyle = 'material' | 'glass' | 'neumorphic' | 'outline';
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   actualTheme: Theme;
+  uiStyle: AppStyle;
+  setUiStyle: (style: AppStyle) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -22,6 +25,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [actualTheme, setActualTheme] = useState<Theme>('light');
+  const [uiStyle, setUiStyleState] = useState<AppStyle>(() => {
+    const savedStyle = localStorage.getItem('app-ui-style');
+    return savedStyle === 'glass' || savedStyle === 'neumorphic' || savedStyle === 'outline'
+      ? savedStyle
+      : 'material';
+  });
   const [remoteReady, setRemoteReady] = useState(false);
   const lastSyncedTheme = useRef<Theme | null>(null);
 
@@ -66,6 +75,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   useEffect(() => {
+    localStorage.setItem('app-ui-style', uiStyle);
+    window.document.documentElement.setAttribute('data-ui-style', uiStyle);
+  }, [uiStyle]);
+
+  useEffect(() => {
     if (!remoteReady || !isAuthenticated || !user || lastSyncedTheme.current === theme) return;
     lastSyncedTheme.current = theme;
     void apiClient('/api/preferences', {
@@ -76,9 +90,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [isAuthenticated, remoteReady, theme, user]);
 
   const setTheme = useCallback((nextTheme: Theme) => setThemeState(nextTheme), []);
+  const setUiStyle = useCallback((nextStyle: AppStyle) => setUiStyleState(nextStyle), []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, actualTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, actualTheme, uiStyle, setUiStyle }}>
       {children}
     </ThemeContext.Provider>
   );

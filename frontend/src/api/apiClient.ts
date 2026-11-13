@@ -1,9 +1,12 @@
-import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from './tokenStorage';
+import { getAccessToken, getRefreshToken, initializeTokenStorage, isRememberedSession, storeTokens, clearTokens } from './tokenStorage';
+import { Capacitor } from '@capacitor/core';
 
 // Use the Vite proxy during local development so the browser never has to make
 // a cross-origin request to the loopback API. Production can target a separate
 // API host through VITE_API_BASE_URL.
-const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '');
+const API_BASE_URL = import.meta.env.DEV && !Capacitor.isNativePlatform()
+  ? ''
+  : (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 
 type RefreshResult = 'refreshed' | 'rejected' | 'unavailable';
 let refreshInFlight: Promise<RefreshResult> | null = null;
@@ -14,6 +17,7 @@ export function setOwnerCsrfToken(token: string | null): void {
 }
 
 export async function refreshOwnerCsrfToken(): Promise<string> {
+  ensureNativeApiBaseUrl();
   const response = await fetch(`${API_BASE_URL}/api/auth/csrf-token`, {
     method: 'GET',
     credentials: 'include',
@@ -39,6 +43,8 @@ interface ApiOptions {
  */
 export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, requiresAuth = false, signal } = options;
+  ensureNativeApiBaseUrl();
+  if (requiresAuth) await initializeTokenStorage();
   const upperMethod = method.toUpperCase();
   const isWrite = !['GET', 'HEAD', 'OPTIONS'].includes(upperMethod);
 
@@ -131,15 +137,16 @@ async function tryRefreshToken(): Promise<RefreshResult> {
 }
 
 async function requestTokenRefresh(): Promise<RefreshResult> {
+  await initializeTokenStorage();
   const refreshToken = getRefreshToken();
   if (!ownerCsrfToken) {
     try { await refreshOwnerCsrfToken(); } catch { /* regular refresh-token flow may still succeed */ }
   }
 
-  // Preserve the storage the session was created in: remembered sessions
-  // (localStorage) stay remembered, short-lived ones (sessionStorage)
-  // still vanish when the browser closes.
-  const remembered = localStorage.getItem('refresh_token') === refreshToken;
+  // Preserve the storage mode the session was created in: web sessions stay
+  // in their original browser store, and native remembered sessions remain in
+  // secure storage across app restarts.
+  const remembered = isRememberedSession();
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
@@ -156,7 +163,7 @@ async function requestTokenRefresh(): Promise<RefreshResult> {
       if (response.status === 401 || response.status === 403 || response.status === 400) {
         // These responses mean the stored refresh credential is invalid,
         // expired, or revoked. Do not clear credentials for 429/5xx responses.
-        clearTokens();
+        await clearTokens();
         return 'rejected';
       }
       return 'unavailable';
@@ -170,10 +177,19 @@ async function requestTokenRefresh(): Promise<RefreshResult> {
     if (typeof data?.access_token !== 'string' || typeof data?.refresh_token !== 'string') {
       return 'unavailable';
     }
-    storeTokens(data.access_token, data.refresh_token, remembered);
+    await storeTokens(data.access_token, data.refresh_token, remembered);
     return 'refreshed';
   } catch {
     return 'unavailable';
+  }
+}
+
+function ensureNativeApiBaseUrl(): void {
+  if (Capacitor.isNativePlatform() && !API_BASE_URL) {
+    throw new ApiError(503, 'This Android build needs VITE_API_BASE_URL set to the HTTPS STEM Studio API address.');
+  }
+  if (Capacitor.isNativePlatform() && !API_BASE_URL.startsWith('https://')) {
+    throw new ApiError(503, 'The STEM Studio Android app requires an HTTPS API address.');
   }
 }
 

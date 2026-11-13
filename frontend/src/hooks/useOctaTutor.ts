@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTutorProviderStatus, sendTutorMessage, type OctaTutorMessage, type OctaTutorResponse, type OctaTutorFunctionCall, type UserLLMConfig } from '../api/octaTutorApi';
-import { activateOctaConfigUser, DEFAULT_OCTA_CONFIG, loadOctaConfig, OCTA_SETTINGS_CHANGE_EVENT, persistOctaConfig, readOctaConfig, resetPersistedOctaConfig } from '../api/octaConfigStorage';
+import { activateOctaConfigUser, DEFAULT_OCTA_CONFIG, loadOctaConfig, OCTA_SETTINGS_CHANGE_EVENT, persistOctaConfig, readAIExplanationsEnabled, readOctaConfig, resetPersistedOctaConfig, writeAIExplanationsEnabled } from '../api/octaConfigStorage';
 import { useTutorContext, type TutorAlgorithmContext } from '../contexts/TutorContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +60,8 @@ export interface UseOctaTutorReturn {
   setIsGuidedMode: React.Dispatch<React.SetStateAction<boolean>>;
   // BYOK LLM config state & controls
   llmConfig: UserLLMConfig;
+  aiExplanationsEnabled: boolean;
+  setAIExplanationsEnabled: (enabled: boolean) => void;
   providerStatus: OctaProviderStatus;
   saveLLMConfig: (config: UserLLMConfig) => Promise<UserLLMConfig>;
   resetLLMConfig: () => Promise<UserLLMConfig>;
@@ -148,11 +150,11 @@ function isActionAvailable(call: OctaTutorFunctionCall, context: TutorAlgorithmC
 const DEFAULT_LLM_CONFIG: UserLLMConfig = DEFAULT_OCTA_CONFIG;
 
 export function useOctaTutor(): UseOctaTutorReturn {
+  const { user, isAuthenticated } = useAuth();
   const { contextState } = useTutorContext();
   const { setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
   const activeDsaCategory = DSA_CATEGORIES.find((category) =>
     location.pathname === `/dashboard/${category.id}` || location.pathname.startsWith(`/dashboard/${category.id}/`),
   );
@@ -352,16 +354,24 @@ export function useOctaTutor(): UseOctaTutorReturn {
   }, [activeDsaCategory, contextState.algorithmId, contextState.category, contextState.currentStep, contextState.currentStepDescription, hasRouteTutorContext, isCommandsPage, isFilesystemPage, pageTutorContext]);
 
   const [llmConfig, setLlmConfig] = useState<UserLLMConfig>(readOctaConfig);
+  const [aiExplanationsEnabled, setAIExplanationsEnabledState] = useState(readAIExplanationsEnabled);
+
+  useEffect(() => {
+    const syncSettings = () => {
+      setLlmConfig(readOctaConfig());
+      setAIExplanationsEnabledState(readAIExplanationsEnabled());
+    };
+    window.addEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncSettings);
+    window.addEventListener('storage', syncSettings);
+    return () => {
+      window.removeEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncSettings);
+      window.removeEventListener('storage', syncSettings);
+    };
+  }, []);
 
   const [providerStatus, setProviderStatus] = useState<OctaProviderStatus>(() =>
     llmConfig.apiKeyConfigured || llmConfig.apiKey.trim() || llmConfig.provider === 'custom' ? 'connected' : 'checking',
   );
-
-  useEffect(() => {
-    const syncAccountConfig = () => setLlmConfig(readOctaConfig());
-    window.addEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncAccountConfig);
-    return () => window.removeEventListener(OCTA_SETTINGS_CHANGE_EVENT, syncAccountConfig);
-  }, []);
 
   useEffect(() => {
     const userId = isAuthenticated ? user?.user_id ?? null : null;
@@ -408,6 +418,11 @@ export function useOctaTutor(): UseOctaTutorReturn {
     setLlmConfig(saved);
     return saved;
   }, [isAuthenticated, user]);
+
+  const setAIExplanationsEnabled = useCallback((enabled: boolean) => {
+    setAIExplanationsEnabledState(enabled);
+    writeAIExplanationsEnabled(enabled);
+  }, []);
 
   const resetLLMConfig = useCallback(async () => {
     if (!isAuthenticated || !user) throw new Error('Sign in to manage saved Octa settings.');
@@ -870,7 +885,7 @@ export function useOctaTutor(): UseOctaTutorReturn {
         setIsLoading(false);
       }
     },
-    [inputText, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, tutorMode]
+    [inputText, messages, contextState, hasRouteTutorContext, pageTutorContext, actionContextKey, location.pathname, siteCatalog, topicKnowledgeFor, tutorMode, llmConfig]
   );
 
   const stopGeneration = useCallback(() => {
@@ -912,6 +927,8 @@ export function useOctaTutor(): UseOctaTutorReturn {
     isGuidedMode,
     setIsGuidedMode,
     llmConfig,
+    aiExplanationsEnabled,
+    setAIExplanationsEnabled,
     providerStatus,
     saveLLMConfig,
     resetLLMConfig,

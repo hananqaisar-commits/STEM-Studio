@@ -341,22 +341,47 @@
     gap: 0.25rem;
   }
 
-  .fc-btn {
-    width: 36px;
-    height: 42px;
-    padding-top: 6px;
-    border-radius: 9px;
-  }
-}
-
-@media (max-width: 420px) {
   .floating-controller-buttons {
+    min-width: 0;
     gap: 0.15rem;
   }
 
   .floating-controller-buttons .fc-icon-btn {
-    width: 25px;
-    height: 25px;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 44px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .floating-controller {
+    padding-inline: 0.3rem;
+  }
+
+  /* On narrow phones the controller stays compact and all six actions remain
+     visible. Dragging is unnecessary there because it is auto-positioned. */
+  .floating-controller-grip {
+    display: none;
+  }
+
+  .floating-controller-buttons {
+    gap: 0.08rem;
+  }
+
+  .floating-controller-buttons .fc-icon-btn {
+    flex-basis: 40px;
+    width: 40px;
+    min-width: 40px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 340px) {
+  .floating-controller-buttons .fc-icon-btn {
+    flex-basis: 37px;
+    width: 37px;
+    min-width: 37px;
   }
 }
 

@@ -586,7 +586,8 @@
 @media (max-width: 768px) {
   .shared-canvas-container {
     padding: 1rem;
-    min-height: 320px;
+    height: auto;
+    min-height: clamp(420px, 58dvh, 580px);
   }
 
   .decisiontree-workspace {

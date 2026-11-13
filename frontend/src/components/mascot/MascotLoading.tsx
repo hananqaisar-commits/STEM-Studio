@@ -12,6 +12,8 @@ export interface MascotLoadingProps {
    * check) — never by a fake timer inside this component.
    */
   phase?: MascotLoadingPhase;
+  /** Real application startup progress, when the caller can provide it. */
+  progress?: number;
   /** Plays the exit fade; the parent unmounts once it finishes. */
   exiting?: boolean;
 }
@@ -25,6 +27,7 @@ export interface MascotLoadingProps {
  */
 export const MascotLoading: React.FC<MascotLoadingProps> = ({
   phase = 'loading',
+  progress,
   exiting = false,
 }) => {
   const done = phase === 'complete';
@@ -55,7 +58,7 @@ export const MascotLoading: React.FC<MascotLoadingProps> = ({
 
         {/* STEM STUDIO Dancing Letters on RIGHT */}
         <div className="mascot-loading-text-right">
-          <StemWordmark settled={done} />
+          <StemWordmark settled={done} loadingProgress={done ? 100 : progress} />
         </div>
       </div>
     </div>

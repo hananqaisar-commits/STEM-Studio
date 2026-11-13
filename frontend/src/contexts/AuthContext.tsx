@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError, refreshOwnerCsrfToken, setOwnerCsrfToken } from '../api/apiClient';
-import { getAccessToken, getRefreshToken, storeTokens, clearTokens } from '../api/tokenStorage';
+import { getAccessToken, getRefreshToken, initializeTokenStorage, storeTokens, clearTokens } from '../api/tokenStorage';
 import { rememberEmail } from '../api/authPreferences';
 import { clearOctaConfig } from '../api/octaConfigStorage';
 
@@ -10,6 +10,8 @@ interface UserData {
   email: string;
   first_name: string | null;
   last_name: string | null;
+  display_name?: string | null;
+  avatar_data_url?: string | null;
   is_active: boolean;
   is_verified: boolean;
   email_verification_required?: boolean;
@@ -21,6 +23,7 @@ interface AuthContextType {
   user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  loadingProgress: number;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   loginAsOwner: (email: string, password: string, mfaCode: string) => Promise<void>;
   loginWithGoogle: (credential: string, clientId: string, rememberMe?: boolean) => Promise<void>;
@@ -33,6 +36,7 @@ interface AuthContextType {
     marketingEmailOptIn?: boolean
   ) => Promise<UserData & { email_verification_required: boolean }>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<UserData>;
   deleteAccount: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resendVerificationEmail: (email: string) => Promise<string>;
@@ -44,28 +48,44 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   const fetchUser = useCallback(async () => {
     setIsLoading(true);
+    setLoadingProgress(5);
     let attempt = 0;
     try {
+      try {
+        await initializeTokenStorage();
+        setLoadingProgress(25);
+      } catch {
+        // Keep the app usable as signed out if the native secure store is
+        // unavailable; never fall back to plaintext token storage on device.
+        setUser(null);
+        return;
+      }
       // Owner authentication uses HttpOnly cookies and deliberately stores no
       // owner tokens in local/session storage. This request also restores that
       // session after a page reload.
       if (!getAccessToken()) {
+        setLoadingProgress(35);
         try { await refreshOwnerCsrfToken(); } catch { /* no existing owner cookie or API unavailable */ }
       }
+      setLoadingProgress(52);
       while (true) {
         try {
+          setLoadingProgress(62);
           const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
           setUser(userData);
+          setLoadingProgress(94);
           return;
         } catch (error) {
           const credentialsRejected = error instanceof ApiError &&
             (error.status === 401 || error.status === 403);
           if (credentialsRejected) {
-            clearTokens();
+            await clearTokens();
             setUser(null);
+            setLoadingProgress(94);
             return;
           }
 
@@ -74,17 +94,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // short retry before showing the signed-out routes.
           if (attempt === 0) {
             attempt += 1;
+            setLoadingProgress(78);
             await new Promise((resolve) => window.setTimeout(resolve, 800));
             continue;
           }
 
           setUser(null);
+          setLoadingProgress(94);
           return;
         }
       }
     } finally {
+      setLoadingProgress(100);
       setIsLoading(false);
     }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
+    setUser(userData);
+    return userData;
   }, []);
 
   useEffect(() => {
@@ -113,9 +142,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Remember me → localStorage (survives browser restarts); otherwise
-    // sessionStorage (cleared when the browser closes).
-    storeTokens(data.access_token, data.refresh_token, rememberMe);
+    // Remembered web sessions use localStorage; native sessions use secure
+    // platform storage. Short-lived sessions use tab/session storage.
+    await storeTokens(data.access_token, data.refresh_token, rememberMe);
     rememberEmail(cleanEmail);
 
     // Fetch user profile after login
@@ -125,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginAsOwner = async (email: string, password: string, mfaCode: string) => {
     // Do not let an existing learner bearer token override the isolated owner cookie.
-    clearTokens();
+    await clearTokens();
     const data = await apiClient<{ owner_session: boolean; csrf_token: string }>(
       '/api/auth/login',
       {
@@ -181,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Even if server logout fails, clear local state
     }
 
-    clearTokens();
+    await clearTokens();
     setOwnerCsrfToken(null);
     clearOctaConfig();
     setUser(null);
@@ -193,7 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: { confirmation: 'DELETE' },
       requiresAuth: true,
     });
-    clearTokens();
+    await clearTokens();
     clearOctaConfig();
     setUser(null);
   };
@@ -230,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: { credential, client_id: clientId, remember_me: rememberMe },
       }
     );
-    storeTokens(data.access_token, data.refresh_token, rememberMe);
+    await storeTokens(data.access_token, data.refresh_token, rememberMe);
     const userData = await apiClient<UserData>('/api/auth/me', { requiresAuth: true });
     rememberEmail(userData.email);
     setUser(userData);
@@ -242,11 +271,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated: !!user,
         isLoading,
+        loadingProgress,
         login,
         loginAsOwner,
         loginWithGoogle,
         signup,
         logout,
+        refreshUser,
         deleteAccount,
         forgotPassword,
         resendVerificationEmail,

@@ -1022,16 +1022,18 @@
   }
 
   .bst-canvas-container {
-    height: clamp(360px, 70vw, 460px);
+    height: clamp(430px, 64dvh, 620px);
+    min-height: 430px;
     padding: 0.75rem;
   }
 
   .bst-canvas-empty {
-    height: clamp(360px, 70vw, 460px);
+    height: clamp(430px, 64dvh, 620px);
+    min-height: 430px;
   }
 
   .bst-canvas-workspace {
-    min-height: 240px;
+    min-height: 320px;
   }
 
   .spotlight-search-container {
