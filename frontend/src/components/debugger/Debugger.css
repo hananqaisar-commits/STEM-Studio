@@ -816,7 +816,7 @@
   padding: 0.55rem 0.75rem;
   border: 0;
   outline: 0;
-  resize: vertical;
+  resize: none;
   background: transparent;
   color: var(--color-text);
   font-family: 'Fira Code', 'JetBrains Mono', monospace;
@@ -864,7 +864,7 @@
   min-height: 54px;
   margin: 0 0.75rem 0.65rem;
   padding: 0.55rem 0.65rem;
-  resize: vertical;
+  resize: none;
   border: 1px solid var(--color-border);
   border-radius: 7px;
   outline: none;
@@ -1162,7 +1162,7 @@
   .live-code-toolbar .lang-dropdown-trigger { min-width: 120px; }
   .live-debounce-label { margin-left: 0; }
   .live-code-editor { min-height: 220px; max-height: 42vh; flex-basis: 42vh; }
-  .live-runtime-inspector { max-height: 56vh; padding: 0.55rem; }
+  .live-runtime-inspector { max-height: none; min-height: 0; overflow: visible; padding: 0.55rem; }
   .live-inspector-toolbar { align-items: flex-start; }
   .live-inspector-actions { width: 100%; }
   .live-auto-toggle, .live-run-button, .live-octa-toggle,
@@ -1173,6 +1173,22 @@
   .live-playback-controls { gap: 0.3rem; }
   .live-playback-controls button { width: 44px; }
   .live-event-count { min-width: 45px; text-align: right; }
+}
+
+@media (max-width: 900px) {
+  .live-runtime-inspector {
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .live-inspector-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .live-call-stack-section {
+    grid-column: auto;
+  }
 }
 
 @media (max-width: 350px) {
