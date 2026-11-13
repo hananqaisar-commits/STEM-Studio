@@ -9,6 +9,8 @@ interface OctaTutorSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   config: UserLLMConfig;
+  aiExplanationsEnabled: boolean;
+  onToggleAIExplanations: (enabled: boolean) => void;
   onSaveConfig: (newConfig: UserLLMConfig) => Promise<UserLLMConfig>;
   onResetDefault: () => Promise<UserLLMConfig>;
 }
@@ -64,7 +66,6 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   const [testing, setTesting] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
-  const [saveError, setSaveError] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
@@ -118,7 +119,6 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   const handleSave = async () => {
     setSaving(true);
     setSaveMessage('');
-    setSaveError(false);
     try {
       const saved = await onSaveConfig({
         provider,
@@ -129,11 +129,10 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
       });
       setApiKey('');
       setSaveMessage(saved.apiKeyConfigured
-        ? 'Saved securely to your account. Octa uses this provider on website and mobile.'
+        ? 'Saved securely to your account. Octa and step explanations share this provider on web and mobile.'
         : 'Provider settings saved. Octa will use the system provider when available.');
       setTestResult(null);
     } catch (error) {
-      setSaveError(true);
       setSaveMessage(error instanceof Error ? error.message : 'Settings could not be saved. Try again.');
     } finally {
       setSaving(false);
@@ -143,7 +142,6 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
   const handleReset = async () => {
     setSaving(true);
     setSaveMessage('');
-    setSaveError(false);
     try {
       const reset = await onResetDefault();
       setProvider(reset.provider);
@@ -153,7 +151,6 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
       setTestResult(null);
       setSaveMessage('Saved provider and API key removed from your account.');
     } catch (error) {
-      setSaveError(true);
       setSaveMessage(error instanceof Error ? error.message : 'Saved settings could not be reset. Try again.');
     } finally {
       setSaving(false);
@@ -206,41 +203,60 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
 
           {/* API Key */}
           <div className="tutor-field-group">
-              <label className="tutor-field-label">
-                <span>API Key</span>
-                {provider === 'dashscope' && (
-                  <span className="tutor-key-optional">
-                    <ShieldCheck size={13} aria-hidden="true" />
-                    Optional (System Key Active)
-                  </span>
-                )}
-              </label>
-              <div className="tutor-input-with-icon">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  className="tutor-setting-input"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  autoComplete="new-password"
-                  placeholder={config.apiKeyConfigured && config.provider === provider
-                    ? 'Saved for your account — enter a new key to replace it'
-                    : provider === 'dashscope' ? 'Enter API key or leave blank for system key' : 'Enter provider API key'}
-                  disabled={saving}
-                />
-                <button
-                  type="button"
-                  className="tutor-eye-btn"
-                  onClick={() => setShowKey(!showKey)}
-                  title={showKey ? 'Hide key' : 'Show key'}
-                  aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                  disabled={saving}
-                >
-                  {showKey ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
-                </button>
-              </div>
+            <label className="tutor-field-label" htmlFor="octa-provider-api-key">
+              <span>API Key</span>
+              {provider === 'dashscope' && (
+                <span className="tutor-key-optional">
+                  <ShieldCheck size={13} aria-hidden="true" />
+                  Optional (System Key Active)
+                </span>
+              )}
+            </label>
+            <div className="tutor-input-with-icon">
+              <input
+                id="octa-provider-api-key"
+                type={showKey ? 'text' : 'password'}
+                className="tutor-setting-input"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                autoComplete="new-password"
+                placeholder={config.apiKeyConfigured && config.provider === provider
+                  ? 'Saved for your account — enter a new key to replace it'
+                  : provider === 'dashscope' ? 'Enter API key or leave blank for system key' : 'Enter provider API key'}
+                disabled={saving}
+              />
+              <button
+                type="button"
+                className="tutor-eye-btn"
+                onClick={() => setShowKey(!showKey)}
+                title={showKey ? 'Hide key' : 'Show key'}
+                aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                disabled={saving}
+              >
+                {showKey ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+              </button>
             </div>
-          <p className="tutor-key-note">This account setting is shared with Octa on website and mobile. The server encrypts the key and never returns it to the app. Leave blank to keep a saved key.</p>
-          {saveMessage && <div className={`tutor-status-banner ${saveError ? 'error' : ''}`} role={saveError ? 'alert' : 'status'}><span>{saveMessage}</span></div>}
+          </div>
+          <p className="tutor-key-note">This account setting is shared with the website, mobile app, Octa, and step explanations. The server encrypts the key and never returns it to the app. Leave it blank to keep a saved key.</p>
+          {saveMessage && <div className="tutor-status-banner" role="status"><span>{saveMessage}</span></div>}
+
+          <section className="tutor-ai-explanation-setting" aria-labelledby="tutor-ai-explanation-title">
+            <div>
+              <h4 id="tutor-ai-explanation-title">AI-generated step explanations</h4>
+              <p>Use your connected model to explain the active execution step. Built-in explanations remain available when this is off or no model is connected.</p>
+            </div>
+            <label className="tutor-ai-explanation-toggle">
+              <span className="sr-only">Use AI-generated step explanations</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={aiExplanationsEnabled}
+                aria-checked={aiExplanationsEnabled}
+                onChange={(event) => onToggleAIExplanations(event.target.checked)}
+                aria-label="Use AI-generated step explanations"
+              />
+            </label>
+          </section>
 
           {/* Model Name */}
           <div className="tutor-field-group">
@@ -253,7 +269,6 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
               placeholder="e.g. gpt-4o-mini, qwen-plus, llama3"
-              disabled={saving}
             />
             {PRESETS[provider]?.models && (
               <div className="tutor-preset-chips">
@@ -283,7 +298,6 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://api.openai.com/v1/chat/completions"
-              disabled={saving}
             />
           </div>
 
@@ -301,8 +315,8 @@ export const OctaTutorSettingsModal: React.FC<OctaTutorSettingsModalProps> = ({
           <button
             type="button"
             className="tutor-btn-secondary"
-              onClick={() => void handleReset()}
-              disabled={saving}
+            onClick={() => void handleReset()}
+            disabled={saving}
           >
             Reset System Default
           </button>

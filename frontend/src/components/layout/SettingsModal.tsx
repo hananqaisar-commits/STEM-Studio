@@ -7,7 +7,7 @@ import { ApiError, useAuth } from '../../contexts/AuthContext';
 import type { LLMProvider, UserLLMConfig } from '../../api/octaTutorApi';
 import { testTutorConnection } from '../../api/octaTutorApi';
 import './SettingsModal.css';
-import { activateOctaConfigUser, DEFAULT_OCTA_CONFIG, loadOctaConfig, persistOctaConfig, readOctaConfig, resetPersistedOctaConfig } from '../../api/octaConfigStorage';
+import { activateOctaConfigUser, DEFAULT_OCTA_CONFIG, loadOctaConfig, persistOctaConfig, readAIExplanationsEnabled, readOctaConfig, resetPersistedOctaConfig, writeAIExplanationsEnabled } from '../../api/octaConfigStorage';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 
 interface SettingsModalProps {
@@ -21,7 +21,7 @@ const PROVIDER_OPTIONS: { id: LLMProvider; name: string }[] = [
   { id: 'openai', name: 'OpenAI (GPT-4o / GPT-4o-mini)' },
   { id: 'openrouter', name: 'OpenRouter (Unified API)' },
   { id: 'anthropic', name: 'Anthropic Claude' },
-  { id: 'custom', name: 'Custom OpenAI-Compatible API' },
+  { id: 'custom', name: 'Custom OpenAI-Compatible (Ollama, Local)' },
 ];
 
 const DEFAULT_CONFIG: UserLLMConfig = DEFAULT_OCTA_CONFIG;
@@ -86,8 +86,8 @@ async function optimizeAvatar(file: File): Promise<string> {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'ai' }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(isOpen, onClose, dialogRef);
-  const { theme, setTheme } = useTheme();
-  const { isAuthenticated, user, deleteAccount } = useAuth();
+  const { theme, setTheme, uiStyle, setUiStyle } = useTheme();
+  const { isAuthenticated, user, logout, refreshUser, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'ai' | 'preferences' | 'account'>(initialTab);
 
@@ -137,40 +137,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
       setProvider(defaults.provider);
       setBaseUrl(defaults.baseUrl);
       setModelName(defaults.modelName);
-      return;
-    }
-    let active = true;
-    activateOctaConfigUser(user.user_id);
-    setAiConfigBusy(true);
-    loadOctaConfig(user.user_id)
-      .then((saved) => {
-        if (!active) return;
-        setLlmConfig(saved);
-        setProvider(saved.provider);
-        setBaseUrl(saved.baseUrl);
-        setModelName(saved.modelName);
-      })
-      .catch(() => {
-        if (active) {
-          setAiConfigError(true);
-          setAiConfigMessage('Saved Octa settings could not be loaded. Check your connection and retry.');
-        }
-      })
-      .finally(() => { if (active) setAiConfigBusy(false); });
-    return () => { active = false; };
-  }, [isAuthenticated, isOpen, user?.user_id]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setApiKey('');
-    setAiConfigMessage('');
-    setAiConfigError(false);
-    if (!isAuthenticated || !user) {
-      activateOctaConfigUser(null);
-      setLlmConfig({ ...DEFAULT_CONFIG });
-      setProvider(DEFAULT_CONFIG.provider);
-      setBaseUrl(DEFAULT_CONFIG.baseUrl);
-      setModelName(DEFAULT_CONFIG.modelName);
       return;
     }
     let active = true;
@@ -370,10 +336,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   };
 
   const handleSave = async () => {
-    if (activeTab !== 'ai') {
-      onClose();
-      return;
-    }
     if (!isAuthenticated || !user) {
       setAiConfigError(true);
       setAiConfigMessage('Sign in to save your API key securely to your account.');
@@ -383,17 +345,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     setAiConfigError(false);
     setAiConfigMessage('');
     try {
-      const saved = await persistOctaConfig(user.user_id, {
-        provider,
-        apiKey,
-        apiKeyConfigured: llmConfig.apiKeyConfigured,
-        baseUrl,
-        modelName,
-      });
+      const updated: UserLLMConfig = { provider, apiKey, apiKeyConfigured: llmConfig.apiKeyConfigured, baseUrl, modelName };
+      const saved = await persistOctaConfig(user.user_id, updated);
       setLlmConfig(saved);
       setApiKey('');
       setAiConfigMessage(saved.apiKeyConfigured
-        ? 'Saved securely to your account. Octa uses this provider on website and mobile.'
+        ? 'Saved securely to your account. Octa and step explanations now use this same provider on web and mobile.'
         : 'Provider settings saved. Octa will use the system provider when available.');
     } catch (error) {
       setAiConfigError(true);
@@ -404,12 +361,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   };
 
   const handleReset = async () => {
-    if (activeTab === 'appearance') {
-      setTheme('light');
-      return;
-    }
-    setApiKey('');
     setTestResult(null);
+    setApiKey('');
     setAiConfigBusy(true);
     setAiConfigError(false);
     setAiConfigMessage('');
@@ -539,10 +492,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
               </div>
               <p className="settings-key-note">
                 {isAuthenticated
-                  ? 'One account setting powers Octa and quiz feedback on website and mobile. The key is encrypted on the server and never sent back to the app. Leave blank to keep a saved key.'
+                  ? 'One account setting powers Octa, execution-step explanations, and quiz feedback on website and mobile. The key is encrypted on the server and never sent back to the app. Leave the field blank to keep a saved key.'
                   : 'Sign in to save a provider key securely to your account and use it on both website and mobile.'}
               </p>
               {aiConfigMessage && <div className={`settings-status-banner${aiConfigError ? ' error' : ''}`} role={aiConfigError ? 'alert' : 'status'}><span>{aiConfigMessage}</span></div>}
+
+              <section className="settings-ai-explanation-setting" aria-labelledby="settings-ai-explanation-title">
+                <div>
+                  <h4 id="settings-ai-explanation-title">AI-generated step explanations</h4>
+                  <p>Use your connected model for the current step in Execution Trace. Built-in explanations remain available when this is off or no model is connected.</p>
+                </div>
+                <label>
+                  <span className="sr-only">Use AI-generated step explanations</span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={aiExplanationsEnabled}
+                    aria-checked={aiExplanationsEnabled}
+                    onChange={(event) => {
+                      setAIExplanationsEnabled(event.target.checked);
+                      writeAIExplanationsEnabled(event.target.checked);
+                    }}
+                    aria-label="Use AI-generated step explanations"
+                  />
+                </label>
+              </section>
 
               <div className="settings-field">
                 <label className="settings-label" htmlFor="settings-model-name">Model Name</label>
@@ -781,8 +755,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             </>
           ) : (
             <>
-              <button type="button" className="btn-secondary" onClick={handleReset} disabled={activeTab === 'ai' && aiConfigBusy}>
-                {activeTab === 'appearance' ? 'Reset Theme' : activeTab === 'ai' && aiConfigBusy ? 'Working…' : 'Reset Provider'}
+              <button type="button" className="btn-secondary" onClick={() => void handleReset()} disabled={aiConfigBusy}>
+                Reset Defaults
               </button>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {activeTab === 'ai' && (
@@ -795,8 +769,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                     {testing ? 'Testing...' : 'Test Connection'}
                   </button>
                 )}
-                <button type="button" className="btn-primary" onClick={handleSave} disabled={aiConfigBusy || (activeTab === 'ai' && !isAuthenticated)}>
-                  {activeTab === 'ai' && aiConfigBusy ? 'Saving…' : 'Save Changes'}
+                <button type="button" className="btn-primary" onClick={() => void handleSave()} disabled={aiConfigBusy || !isAuthenticated}>
+                  {aiConfigBusy ? 'Saving…' : 'Save & Apply'}
                 </button>
               </div>
             </>
