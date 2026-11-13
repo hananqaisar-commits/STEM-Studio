@@ -300,6 +300,23 @@ class TutorLearningProfile(Base):
     user: Mapped["User"] = relationship(back_populates="tutor_learning_profile")
 
 
+class UserLLMConfig(Base):
+    """Account-owned Octa provider settings; API keys are encrypted at rest."""
+
+    __tablename__ = "user_llm_configs"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(24), nullable=False, default="dashscope")
+    encrypted_api_key: Mapped[Optional[str]] = mapped_column(Text())
+    base_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship()
+
+
 class Review(Base):
     __tablename__ = "reviews"
 
