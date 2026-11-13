@@ -815,7 +815,8 @@
   border-right: 1px solid var(--color-border);
   border-bottom: 0;
 }
-.live-code-fullscreen .live-code-editor .custom-editor-textarea { height: 100%; min-height: 0; overflow: auto; }
+.live-code-fullscreen .live-code-editor > div,
+.live-code-fullscreen .live-editor-loading { height: 100%; min-height: 0; }
 .live-code-fullscreen .live-input-panel { grid-column: 1; grid-row: 2; }
 .live-code-fullscreen .live-runtime-inspector {
   grid-column: 2;
@@ -891,41 +892,19 @@
 }
 
 .live-code-editor {
+  position: relative;
+  display: block;
+  min-width: 0;
   min-height: 190px;
   max-height: 38vh;
   flex: 0 1 38vh;
-  overflow: auto;
+  overflow: hidden;
   border-bottom: 1px solid var(--color-border);
 }
-
-.live-code-editor .custom-editor-textarea {
-  display: block;
-  flex: 1 1 auto;
-  width: 100%;
-  min-width: 0;
-  min-height: 188px;
-  padding: 0.55rem 0.75rem;
-  border: 0;
-  outline: 0;
-  resize: none;
-  background: transparent;
-  color: var(--color-text);
-  font-family: 'Fira Code', 'JetBrains Mono', monospace;
-  font-size: var(--text-sm);
-  line-height: 1.65;
-  tab-size: 4;
-  white-space: pre;
-}
-
-.live-code-editor .custom-editor-textarea::placeholder {
-  color: var(--color-text-muted);
-  opacity: 0.85;
-}
-
-.live-code-editor .custom-editor-gutter {
-  flex: 0 0 42px;
-  overflow: hidden;
-}
+.live-code-editor > div { width: 100%; height: 100%; min-height: 188px; }
+.live-editor-loading { display: grid; width: 100%; height: 100%; min-height: 188px; place-items: center; color: var(--color-text-muted); font-size: 0.8rem; }
+.live-trace-current-line { background: color-mix(in srgb, var(--color-primary) 13%, transparent); }
+.live-trace-glyph { width: 4px !important; margin-left: 3px; background: var(--color-primary); }
 
 .live-input-panel {
   border-bottom: 1px solid var(--color-border);
