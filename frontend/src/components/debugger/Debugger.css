@@ -1315,6 +1315,17 @@
 .live-visualizer-node dt { color: var(--color-text-muted); }
 .live-visualizer-node dd.is-reference { color: var(--color-primary); font-weight: 750; }
 .live-visualizer-node .live-visualizer-more { display: block; color: var(--color-text-muted); font: 0.6rem/1.5 var(--font-mono, monospace); }
+.live-linked-list-canvas { flex: 0 0 auto; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); box-shadow: 0 4px 14px rgb(0 0 0 / 8%); }
+.live-linked-list-heading { display: flex; min-height: 42px; align-items: center; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+.live-linked-list-heading > div { display: flex; align-items: baseline; gap: 0.55rem; }
+.live-linked-list-heading strong { color: var(--color-text); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.025em; }
+.live-linked-list-heading span { color: var(--color-text-muted); font-size: 0.64rem; }
+.live-linked-list-renderer .ll-canvas-body { width: max-content; max-width: none; height: auto; min-height: 250px; flex: 0 0 auto; overflow: visible !important; padding: 0.2rem 0.5rem 0.55rem; }
+.live-linked-list-renderer .ll-render-track { min-width: 0; padding: 3rem 0.75rem 1.1rem; }
+.live-linked-list-renderer .ll-node-box { max-width: 240px; }
+.live-linked-list-renderer .ll-val-compartment { min-width: 0; max-width: 240px; }
+.live-linked-list-renderer .ll-val-compartment > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-linked-list-renderer .ll-ptr-compartment { min-width: 0; max-width: 240px; }
 .live-visualizer-empty { display: flex; min-height: 340px; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 0.55rem; padding: 1.25rem; color: var(--color-text-secondary); text-align: center; }
 .live-visualizer-empty-icon { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border)); border-radius: 14px; background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)); color: var(--color-primary); }
 .live-visualizer-empty strong { color: var(--color-text); font-size: 0.82rem; }

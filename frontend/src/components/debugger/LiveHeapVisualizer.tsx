@@ -1,11 +1,14 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { Activity, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import type { RuntimeObject, RuntimeTraceEvent, RuntimeValue } from '../../api/liveCode';
+import { LiveLinkedListCanvas } from './LiveLinkedListCanvas';
+import { buildLiveLinkedListModel } from './liveLinkedListModel';
 
 const CARD_WIDTH = 224;
 const CARD_HEIGHT = 154;
 const COLUMN_GAP = 32;
 const ROW_GAP = 48;
+const EMPTY_HEAP: Record<string, RuntimeObject> = {};
 const CATEGORY_LABELS: Record<string, string> = {
   complexity: 'Complexity', sorting: 'Sorting', arrays: 'Arrays', strings: 'Strings',
   linkedList: 'Linked list', stackQueue: 'Stack and queue', binarySearch: 'Binary search',
@@ -176,10 +179,14 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [zoom, setZoom] = useState(1);
   const markerId = useId().replace(/:/g, '');
-  const heap = event?.heap ?? {};
+  const heap = event?.heap ?? EMPTY_HEAP;
   const frame = event?.frames?.[event.frames.length - 1];
   const categoryLabel = categoryId ? CATEGORY_LABELS[categoryId] ?? categoryId : 'Program';
   const topicLabel = topicId?.replace(/([a-z])([A-Z])/g, '$1 $2');
+  const linkedListModel = useMemo(
+    () => categoryId === 'linkedList' ? buildLiveLinkedListModel(event) : null,
+    [categoryId, event],
+  );
 
   const model = useMemo(() => {
     const ids = Object.keys(heap);
@@ -250,16 +257,16 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
     }));
     const callFrames = event?.frames ?? [];
     const scalarValues = Object.entries(frame?.scope ?? {}).filter(([, value]) => value.kind !== 'ref');
-    const hasVisualData = mappings.length > 0 || matrices.length > 0 || flatSequences.length > 0 || stringValues.length > 0 || ordered.length > 0 || scalarValues.length > 0 || callFrames.length > 1;
-    const width = Math.max(740, 60 + columns * CARD_WIDTH + (columns - 1) * COLUMN_GAP);
+    const hasVisualData = Boolean(linkedListModel) || mappings.length > 0 || matrices.length > 0 || flatSequences.length > 0 || stringValues.length > 0 || ordered.length > 0 || scalarValues.length > 0 || callFrames.length > 1;
+    const width = Math.max(740, linkedListModel?.width ?? 0, 60 + columns * CARD_WIDTH + (columns - 1) * COLUMN_GAP);
     const graphHeight = Math.max(420, 94 + rows * CARD_HEIGHT + (rows - 1) * ROW_GAP + 45);
     const collectionsHeight = mappings.reduce((sum, object) => sum + 48 + Math.max(1, object.entries.length) * 30, 0)
       + matrices.reduce((sum, object) => sum + 54 + Math.max(1, object.entries.length) * 66, 0)
       + flatSequences.reduce((sum, object) => sum + 88 + (isStack ? Math.max(1, object.entries.length) : Math.ceil(Math.max(1, object.entries.length) / 12)) * 64, 0)
       + stringValues.reduce((sum, item) => sum + 88 + Math.ceil(Math.max(1, Array.from(item.value).length) / 16) * 64, 0);
-    const height = Math.max(420, 34 + (scalarValues.length ? 88 : 0) + (categoryId === 'recursion' || categoryId === 'backtracking' ? callFrames.length > 1 ? 112 : 0 : 0) + collectionsHeight + (ordered.length ? graphHeight : 0));
-    return { roots, rootNameById, mappings, matrices, flatSequences, nestedRows, stringValues, markers, isQueue, isStack, ordered, positions, edges, width, height, graphHeight, callFrames, scalarValues, hasVisualData };
-  }, [heap, frame, event?.frames, categoryId, topicId]);
+    const height = Math.max(420, linkedListModel ? 350 : 0, 34 + (scalarValues.length ? 88 : 0) + (categoryId === 'recursion' || categoryId === 'backtracking' ? callFrames.length > 1 ? 112 : 0 : 0) + collectionsHeight + (ordered.length ? graphHeight : 0));
+    return { roots, rootNameById, mappings, matrices, flatSequences, nestedRows, stringValues, markers, isQueue, isStack, ordered, positions, edges, width, height, graphHeight, callFrames, scalarValues, hasVisualData, linkedListModel };
+  }, [heap, frame, event?.frames, categoryId, topicId, linkedListModel]);
 
   const resetView = () => {
     setZoom(1);
@@ -267,8 +274,10 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
   };
 
   const structuredCount = model.mappings.length + model.matrices.length + model.flatSequences.length + model.stringValues.length;
-  const visualizationLabel = structuredCount > 0
-    ? model.mappings.length > 0 ? 'key/value table' : model.matrices.length > 0 ? 'matrix grid' : categoryId === 'strings' ? 'character cells' : categoryId === 'stackQueue' ? 'ordered structure' : 'indexed cells'
+  const visualizationLabel = model.linkedListModel
+    ? `${model.linkedListModel.listType} linked nodes`
+    : structuredCount > 0
+      ? model.mappings.length > 0 ? 'key/value table' : model.matrices.length > 0 ? 'matrix grid' : categoryId === 'strings' ? 'character cells' : categoryId === 'stackQueue' ? 'ordered structure' : 'indexed cells'
     : model.ordered.length > 0 ? 'reference graph' : model.callFrames.length > 1 ? 'call stack' : 'runtime variables';
 
   return (
@@ -299,19 +308,21 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
                 </section>
               )}
 
-              {model.scalarValues.length > 0 && (
+              {model.linkedListModel && <LiveLinkedListCanvas model={model.linkedListModel} />}
+
+              {!model.linkedListModel && model.scalarValues.length > 0 && (
                 <section className="live-scope-visual" aria-label="Current local variable values">
                   <strong>Current variables</strong>
                   <div>{model.scalarValues.slice(0, 14).map(([name, value]) => <span key={name}><code>{name}</code><b>{displayValue(value)}</b></span>)}</div>
                 </section>
               )}
 
-              {model.stringValues.map(({ name, value }) => <StringCard key={`string:${name}`} name={name} value={value} />)}
+              {!model.linkedListModel && model.stringValues.map(({ name, value }) => <StringCard key={`string:${name}`} name={name} value={value} />)}
               {model.mappings.map((object) => <CollectionCard key={object.object_id} object={object} rootName={model.rootNameById.get(object.object_id) ?? 'map'} heap={heap} markers={model.markers} layout="mapping" isStack={false} isQueue={false} />)}
               {model.matrices.map((object) => <CollectionCard key={object.object_id} object={object} rootName={model.rootNameById.get(object.object_id) ?? 'matrix'} heap={heap} markers={model.markers} layout="matrix" isStack={false} isQueue={false} />)}
               {model.flatSequences.map((object) => <CollectionCard key={object.object_id} object={object} rootName={model.rootNameById.get(object.object_id) ?? object.type} heap={heap} markers={model.markers} layout="sequence" isStack={model.isStack} isQueue={model.isQueue} />)}
 
-              {model.ordered.length > 0 && (
+              {!model.linkedListModel && model.ordered.length > 0 && (
                 <div className="live-graph-canvas" style={{ width: model.width, height: model.graphHeight }}>
                   {model.roots.some((root) => model.positions.has(root.id)) && <div className="live-visualizer-roots">{model.roots.filter((root) => model.positions.has(root.id)).map((root) => <span key={`${root.name}:${root.id}`}><code>{root.name}</code><b>→</b>{model.positions.get(root.id)?.label}</span>)}</div>}
                   <svg className="live-visualizer-edges" width={model.width} height={model.height} aria-hidden="true">
