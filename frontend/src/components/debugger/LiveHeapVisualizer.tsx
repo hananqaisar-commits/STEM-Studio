@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Activity, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import type { RuntimeObject, RuntimeTraceEvent, RuntimeValue } from '../../api/liveCode';
 import { LiveLinkedListCanvas } from './LiveLinkedListCanvas';
@@ -171,12 +171,16 @@ function StringCard({ name, value }: { name: string; value: string }) {
   );
 }
 
-export function LiveHeapVisualizer({ event, categoryId, topicId }: {
+export function LiveHeapVisualizer({ event, previousEvent, sourceLine, categoryId, topicId }: {
   event: RuntimeTraceEvent | null;
+  previousEvent?: RuntimeTraceEvent | null;
+  sourceLine?: string;
   categoryId?: string;
   topicId?: string;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const graphRef = useRef<HTMLDivElement | null>(null);
+  const previousGraphRects = useRef(new Map<string, DOMRect>());
   const [zoom, setZoom] = useState(1);
   const markerId = useId().replace(/:/g, '');
   const heap = event?.heap ?? EMPTY_HEAP;
@@ -184,13 +188,22 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
   const categoryLabel = categoryId ? CATEGORY_LABELS[categoryId] ?? categoryId : 'Program';
   const topicLabel = topicId?.replace(/([a-z])([A-Z])/g, '$1 $2');
   const linkedListModel = useMemo(
-    () => categoryId === 'linkedList' ? buildLiveLinkedListModel(event) : null,
-    [categoryId, event],
+    () => categoryId === 'linkedList' ? buildLiveLinkedListModel(event, previousEvent ?? null, sourceLine ?? '') : null,
+    [categoryId, event, previousEvent, sourceLine],
   );
 
   const model = useMemo(() => {
     const ids = Object.keys(heap);
     const idSet = new Set(ids);
+    const previousHeap = previousEvent?.heap ?? EMPTY_HEAP;
+    const previousIds = new Set(Object.keys(previousHeap));
+    const newObjectIds = new Set(ids.filter((id) => !previousIds.has(id)));
+    const changedObjectIds = new Set(ids.filter((id) => {
+      const before = previousHeap[id];
+      const after = heap[id];
+      if (!before) return false;
+      return JSON.stringify(before.entries) !== JSON.stringify(after.entries);
+    }));
     const roots = Object.entries(frame?.scope ?? {})
       .map(([name, value]) => ({ name, id: referenceTarget(value) }))
       .filter((root): root is { name: string; id: string } => Boolean(root.id && idSet.has(root.id)))
@@ -244,29 +257,136 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
     };
     roots.forEach((root) => visit(root.id));
     remainingIds.forEach(visit);
+    const isTreeGraph = categoryId === 'bst' && ordered.some((id) => heap[id].entries.some((entry) =>
+      /^(left|right)(?:_?child)?$/i.test(entry.key) && referenceTarget(entry.value),
+    ));
     const columns = Math.min(3, Math.max(1, ordered.length));
     const rows = Math.max(1, Math.ceil(ordered.length / columns));
-    const positions = new Map(ordered.map((id, index) => [id, {
-      x: 30 + (index % columns) * (CARD_WIDTH + COLUMN_GAP),
-      y: 94 + Math.floor(index / columns) * (CARD_HEIGHT + ROW_GAP),
-      label: `N${index + 1}`,
-    }]));
-    const edges = ordered.flatMap((id) => heap[id].entries.flatMap((entry) => {
+    const labels = new Map(ordered.map((id, index) => [id, `N${index + 1}`]));
+    const positions = new Map<string, { x: number; y: number; label: string }>();
+    let graphColumns = columns;
+    let graphRows = rows;
+    if (isTreeGraph) {
+      const treeIncoming = new Set<string>();
+      for (const id of ordered) {
+        for (const entry of heap[id].entries) {
+          if (/^(left|right)(?:_?child)?$/i.test(entry.key)) {
+            const target = referenceTarget(entry.value);
+            if (target && remainingSet.has(target)) treeIncoming.add(target);
+          }
+        }
+      }
+      const rootId = roots.find((root) => /^(root|tree|head)$/i.test(root.name) && ordered.includes(root.id))?.id
+        ?? ordered.find((id) => !treeIncoming.has(id))
+        ?? ordered[0];
+      const placed = new Set<string>();
+      let inOrderIndex = 0;
+      let maxDepth = 0;
+      const placeSubtree = (id: string | null | undefined, depth: number): void => {
+        if (!id || !heap[id] || !remainingSet.has(id) || placed.has(id)) return;
+        placed.add(id);
+        maxDepth = Math.max(maxDepth, depth);
+        const child = (side: 'left' | 'right') => {
+          const entry = heap[id].entries.find((item) => new RegExp(`^${side}(?:_?child)?$`, 'i').test(item.key));
+          return referenceTarget(entry?.value);
+        };
+        placeSubtree(child('left'), depth + 1);
+        const column = inOrderIndex++;
+        positions.set(id, {
+          x: 30 + column * (CARD_WIDTH + COLUMN_GAP),
+          y: 94 + depth * (CARD_HEIGHT + ROW_GAP),
+          label: labels.get(id) ?? `N${column + 1}`,
+        });
+        placeSubtree(child('right'), depth + 1);
+      };
+      placeSubtree(rootId, 0);
+      ordered.forEach((id) => {
+        if (placed.has(id)) return;
+        placeSubtree(id, maxDepth + 1);
+      });
+      graphColumns = Math.max(1, inOrderIndex);
+      graphRows = maxDepth + 1;
+    } else {
+      ordered.forEach((id, index) => positions.set(id, {
+        x: 30 + (index % columns) * (CARD_WIDTH + COLUMN_GAP),
+        y: 94 + Math.floor(index / columns) * (CARD_HEIGHT + ROW_GAP),
+        label: labels.get(id)!,
+      }));
+    }
+    const currentEdges = ordered.flatMap((id) => heap[id].entries.flatMap((entry) => {
       const target = referenceTarget(entry.value);
-      return target && positions.has(target) ? [{ from: id, to: target, label: entry.key }] : [];
+      if (!target || !positions.has(target)) return [];
+      const previousTarget = referenceTarget(previousHeap[id]?.entries.find((oldEntry) => oldEntry.key === entry.key)?.value);
+      return [{ from: id, to: target, label: entry.key, motion: previousTarget === target ? 'steady' as const : 'new' as const }];
     }));
+    const currentEdgeKeys = new Set(currentEdges.map((edge) => `${edge.from}:${edge.label}:${edge.to}`));
+    const fadingEdges = ordered.flatMap((id) => (previousHeap[id]?.entries ?? []).flatMap((entry) => {
+      const target = referenceTarget(entry.value);
+      const key = `${id}:${entry.key}:${target}`;
+      return target && positions.has(id) && positions.has(target) && !currentEdgeKeys.has(key)
+        ? [{ from: id, to: target, label: entry.key, motion: 'removing' as const }]
+        : [];
+    }));
+    const edges = [...currentEdges, ...fadingEdges];
     const callFrames = event?.frames ?? [];
     const scalarValues = Object.entries(frame?.scope ?? {}).filter(([, value]) => value.kind !== 'ref');
+    const comparisonIds = new Set<string>();
+    const compareLine = /\b(if|while|for)\b/.test(sourceLine ?? '') && /(?:===?|!==?|<=?|>=?)/.test(sourceLine ?? '');
+    if (compareLine) {
+      for (const scopeFrame of event?.frames ?? []) {
+        for (const [name, value] of Object.entries(scopeFrame.scope ?? {})) {
+          const id = referenceTarget(value);
+          if (!id || !ordered.includes(id)) continue;
+          const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          if (new RegExp(`(^|[^A-Za-z0-9_])${escaped}([^A-Za-z0-9_]|$)`).test(sourceLine ?? '')) comparisonIds.add(id);
+        }
+      }
+    }
     const hasVisualData = Boolean(linkedListModel) || mappings.length > 0 || matrices.length > 0 || flatSequences.length > 0 || stringValues.length > 0 || ordered.length > 0 || scalarValues.length > 0 || callFrames.length > 1;
-    const width = Math.max(740, linkedListModel?.width ?? 0, 60 + columns * CARD_WIDTH + (columns - 1) * COLUMN_GAP);
-    const graphHeight = Math.max(420, 94 + rows * CARD_HEIGHT + (rows - 1) * ROW_GAP + 45);
+    const width = Math.max(740, linkedListModel?.width ?? 0, 60 + graphColumns * CARD_WIDTH + (graphColumns - 1) * COLUMN_GAP);
+    const graphHeight = Math.max(420, 94 + graphRows * CARD_HEIGHT + (graphRows - 1) * ROW_GAP + 45);
     const collectionsHeight = mappings.reduce((sum, object) => sum + 48 + Math.max(1, object.entries.length) * 30, 0)
       + matrices.reduce((sum, object) => sum + 54 + Math.max(1, object.entries.length) * 66, 0)
       + flatSequences.reduce((sum, object) => sum + 88 + (isStack ? Math.max(1, object.entries.length) : Math.ceil(Math.max(1, object.entries.length) / 12)) * 64, 0)
       + stringValues.reduce((sum, item) => sum + 88 + Math.ceil(Math.max(1, Array.from(item.value).length) / 16) * 64, 0);
     const height = Math.max(420, linkedListModel ? 350 : 0, 34 + (scalarValues.length ? 88 : 0) + (categoryId === 'recursion' || categoryId === 'backtracking' ? callFrames.length > 1 ? 112 : 0 : 0) + collectionsHeight + (ordered.length ? graphHeight : 0));
-    return { roots, rootNameById, mappings, matrices, flatSequences, nestedRows, stringValues, markers, isQueue, isStack, ordered, positions, edges, width, height, graphHeight, callFrames, scalarValues, hasVisualData, linkedListModel };
-  }, [heap, frame, event?.frames, categoryId, topicId, linkedListModel]);
+    let activity: string | null = null;
+    if (compareLine) activity = `Comparing at line ${event?.line ?? ''}.`;
+    else if (newObjectIds.size) activity = `Created ${newObjectIds.size} runtime object${newObjectIds.size === 1 ? '' : 's'}.`;
+    else if (fadingEdges.length) activity = 'Node links changed.';
+    else if (changedObjectIds.size) activity = 'Node data updated.';
+    const removedObjectCount = [...previousIds].filter((id) => !idSet.has(id)).length;
+    if (!activity && removedObjectCount) activity = `${removedObjectCount} object${removedObjectCount === 1 ? '' : 's'} left the visible heap.`;
+    return { roots, rootNameById, mappings, matrices, flatSequences, nestedRows, stringValues, markers, isQueue, isStack, ordered, positions, edges, width, height, graphHeight, callFrames, scalarValues, hasVisualData, linkedListModel, newObjectIds, changedObjectIds, comparisonIds, activity, sequence: event?.seq ?? -1 };
+  }, [heap, frame, event, previousEvent, sourceLine, categoryId, topicId, linkedListModel]);
+
+  useLayoutEffect(() => {
+    const elements = Array.from(graphRef.current?.querySelectorAll<HTMLElement>('.live-visualizer-node[data-live-object-id]') ?? []);
+    const currentRects = new Map<string, DOMRect>();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    for (const element of elements) {
+      const id = element.dataset.liveObjectId;
+      if (!id) continue;
+      const rect = element.getBoundingClientRect();
+      currentRects.set(id, rect);
+      const previous = previousGraphRects.current.get(id);
+      if (previous) {
+        const dx = previous.left - rect.left;
+        const dy = previous.top - rect.top;
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+          const easing = getComputedStyle(document.documentElement)
+            .getPropertyValue(reduceMotion ? '--ease-out' : '--ease-in-out').trim();
+          element.animate(
+            reduceMotion
+              ? [{ opacity: 0.84 }, { opacity: 1 }]
+              : [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+            { duration: reduceMotion ? 120 : 230, easing: easing || (reduceMotion ? 'ease-out' : 'ease-in-out') },
+          );
+        }
+      }
+    }
+    previousGraphRects.current = currentRects;
+  }, [model, event?.seq]);
 
   const resetView = () => {
     setZoom(1);
@@ -291,6 +411,7 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
           <button type="button" aria-label="Reset visualizer view" onClick={resetView}><Maximize2 size={13} /></button>
         </div>
       </div>
+      {!model.linkedListModel && model.activity && <div key={model.sequence} className="live-visualizer-activity" aria-live="polite">{model.activity}</div>}
       <div className="live-visualizer-viewport" ref={viewportRef} tabIndex={0} aria-label="Scrollable live data structure canvas">
         {!model.hasVisualData ? (
           <div className="live-visualizer-empty">
@@ -323,7 +444,7 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
               {model.flatSequences.map((object) => <CollectionCard key={object.object_id} object={object} rootName={model.rootNameById.get(object.object_id) ?? object.type} heap={heap} markers={model.markers} layout="sequence" isStack={model.isStack} isQueue={model.isQueue} />)}
 
               {!model.linkedListModel && model.ordered.length > 0 && (
-                <div className="live-graph-canvas" style={{ width: model.width, height: model.graphHeight }}>
+                <div className="live-graph-canvas" ref={graphRef} style={{ width: model.width, height: model.graphHeight }}>
                   {model.roots.some((root) => model.positions.has(root.id)) && <div className="live-visualizer-roots">{model.roots.filter((root) => model.positions.has(root.id)).map((root) => <span key={`${root.name}:${root.id}`}><code>{root.name}</code><b>→</b>{model.positions.get(root.id)?.label}</span>)}</div>}
                   <svg className="live-visualizer-edges" width={model.width} height={model.height} aria-hidden="true">
                     <defs><marker id={markerId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,4 L0,8 z" fill="currentColor" /></marker></defs>
@@ -339,14 +460,14 @@ export function LiveHeapVisualizer({ event, categoryId, topicId }: {
                       const midX = (x1 + x2) / 2;
                       const curve = /^(prev|previous|previousnode|previous_node)$/i.test(edge.label) ? -32 : 0;
                       const path = `M ${x1} ${y1 + curve} C ${midX} ${y1 + curve}, ${midX} ${y2 + curve}, ${x2} ${y2 + curve}`;
-                      return <g className="live-visualizer-edge" key={`${edge.from}:${edge.label}:${edge.to}:${index}`}><path d={path} markerEnd={`url(#${markerId})`} /><text x={midX} y={(y1 + y2) / 2 + curve - 7}>{edge.label}</text></g>;
+                      return <g className={`live-visualizer-edge${edge.motion === 'new' ? ' is-new' : edge.motion === 'removing' ? ' is-removing' : ''}`} key={`${edge.from}:${edge.label}:${edge.to}:${index}`}><path pathLength="1" d={path} markerEnd={`url(#${markerId})`} /><text x={midX} y={(y1 + y2) / 2 + curve - 7}>{edge.label}</text></g>;
                     })}
                   </svg>
                   {model.ordered.map((id) => {
                     const object: RuntimeObject = heap[id];
                     const position = model.positions.get(id)!;
                     return (
-                      <article className="live-visualizer-node" key={id} style={{ left: position.x, top: position.y, width: CARD_WIDTH, minHeight: CARD_HEIGHT }}>
+                      <article className={`live-visualizer-node${model.newObjectIds.has(id) ? ' is-new' : ''}${model.comparisonIds.has(id) ? ' is-comparing' : ''}${model.changedObjectIds.has(id) ? ' is-changed' : ''}`} data-live-object-id={id} key={id} style={{ left: position.x, top: position.y, width: CARD_WIDTH, minHeight: CARD_HEIGHT }}>
                         <header><span>{position.label}</span><strong>{object.type}</strong><small>@{id.replace(/^(py|cpp)-/, '').slice(-7)}</small></header>
                         <dl>
                           {object.entries.slice(0, 5).map((entry) => {

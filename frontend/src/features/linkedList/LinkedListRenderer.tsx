@@ -179,7 +179,7 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
           const cycleTargetIndex = cycleTargetId ? displayNodes.findIndex((candidate) => candidate.id === cycleTargetId) : -1;
 
           return (
-            <div key={node.id} className="ll-node-wrapper">
+            <div key={node.id} data-live-node-id={node.id} className="ll-node-wrapper">
               {/* Educational Node Label: N1, N2, N3... */}
               <span className="ll-node-label">{nodeLabel(node, index)}</span>
 
@@ -296,7 +296,7 @@ export const LinkedListRenderer: React.FC<LinkedListRendererProps> = ({ step, no
         })}
       </div>
       {pointerUpdates.length > 0 && (
-        <section className="ll-link-change-strip" aria-live="polite" aria-label="Pointer updates in this step">
+        <section key={step?.auxiliaryData?.liveSequence} className="ll-link-change-strip" aria-live="polite" aria-label="Pointer updates in this step">
           <span className="ll-link-change-title">POINTER UPDATE</span>
           {pointerUpdates.map((update, index) => {
             const sourceIndex = displayNodes.findIndex((node) => node.id === update.fromId);

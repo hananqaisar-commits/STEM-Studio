@@ -1,5 +1,5 @@
 import type { RuntimeObject, RuntimeTraceEvent, RuntimeValue } from '../../api/liveCode';
-import type { LinkedListStructureType, ListNodeItem } from '../../features/linkedList/linkedListEngine';
+import type { BrokenConnection, LinkedListStructureType, ListNodeItem, NewConnection } from '../../features/linkedList/linkedListEngine';
 
 const NODE_WIDTH = 112;
 const CONNECTOR_WIDTH = 48;
@@ -17,6 +17,11 @@ export interface LiveLinkedListModel {
   tailId: string | null;
   listType: LinkedListStructureType;
   width: number;
+  brokenConnections: BrokenConnection[];
+  newConnections: NewConnection[];
+  removedNodes: Array<{ id: string; value: string }>;
+  activity: string | null;
+  sequence: number;
 }
 
 function refId(value: RuntimeValue | undefined): string | null {
@@ -49,13 +54,67 @@ function valueText(value: RuntimeValue | undefined, labels: Map<string, string>)
   return String(value.value);
 }
 
-export function buildLiveLinkedListModel(event: RuntimeTraceEvent | null): LiveLinkedListModel | null {
+export function buildLiveLinkedListModel(
+  event: RuntimeTraceEvent | null,
+  previousEvent: RuntimeTraceEvent | null = null,
+  sourceLine = '',
+): LiveLinkedListModel | null {
   if (!event) return null;
 
   const heap = event.heap ?? {};
   const objects = Object.values(heap);
   const nodeObjects = objects.filter((object) => Boolean(pointerEntry(object, 'next') || pointerEntry(object, 'prev')));
-  if (nodeObjects.length === 0) return null;
+  const previousObjects = Object.values(previousEvent?.heap ?? {});
+  const previousNodeObjects = previousObjects.filter((object) => Boolean(pointerEntry(object, 'next') || pointerEntry(object, 'prev')));
+  if (nodeObjects.length === 0 && previousNodeObjects.length === 0) return null;
+  const previousById = new Map(previousNodeObjects.map((object) => [object.object_id, object]));
+  const currentById = new Map(nodeObjects.map((object) => [object.object_id, object]));
+  const newIds = new Set(nodeObjects.filter((object) => !previousById.has(object.object_id)).map((object) => object.object_id));
+  const removedNodes = previousNodeObjects
+    .filter((object) => !currentById.has(object.object_id))
+    .map((object) => {
+      const payload = object.entries.find((entry) => PAYLOAD_FIELDS.test(entry.key));
+      const labelMap = new Map<string, string>();
+      return { id: object.object_id, value: payload ? valueText(payload.value, labelMap) : object.type };
+    });
+
+  const brokenConnections: BrokenConnection[] = [];
+  const newConnections: NewConnection[] = [];
+  const changedLinkIds = new Set<string>();
+  const changedDataIds = new Set<string>();
+  for (const object of nodeObjects) {
+    const previous = previousById.get(object.object_id);
+    if (!previous) continue;
+    for (const direction of ['next', 'prev'] as const) {
+      const oldTarget = refId(pointerEntry(previous, direction)?.value);
+      const newTarget = refId(pointerEntry(object, direction)?.value);
+      if (oldTarget === newTarget) continue;
+      changedLinkIds.add(object.object_id);
+      if (oldTarget) brokenConnections.push({ fromId: object.object_id, toId: oldTarget, type: direction });
+      if (newTarget) newConnections.push({ fromId: object.object_id, toId: newTarget, type: direction });
+    }
+    const oldPayload = previous.entries.find((entry) => PAYLOAD_FIELDS.test(entry.key));
+    const newPayload = object.entries.find((entry) => PAYLOAD_FIELDS.test(entry.key));
+    if (oldPayload && newPayload && JSON.stringify(oldPayload.value) !== JSON.stringify(newPayload.value)) {
+      changedDataIds.add(object.object_id);
+    }
+  }
+
+  const compareLine = /\b(if|while|for)\b/.test(sourceLine)
+    && /(?:===?|!==?|<=?|>=?)/.test(sourceLine);
+  const comparisonIds = new Set<string>();
+  if (compareLine) {
+    for (const frame of event.frames ?? []) {
+      for (const [name, value] of Object.entries(frame.scope ?? {})) {
+        if (!POINTER_VARIABLES.test(name)) continue;
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (new RegExp(`(^|[^A-Za-z0-9_])${escaped}([^A-Za-z0-9_]|$)`).test(sourceLine)) {
+          const id = refId(value);
+          if (id) comparisonIds.add(id);
+        }
+      }
+    }
+  }
 
   const nodeIds = new Set(nodeObjects.map((object) => object.object_id));
   const pointerRoots = new Map<string, Set<string>>();
@@ -131,25 +190,51 @@ export function buildLiveLinkedListModel(event: RuntimeTraceEvent | null): LiveL
     if (id === headId && !tags.includes('HEAD')) tags.push('HEAD');
     if (id === tailId && !tags.includes('TAIL')) tags.push('TAIL');
 
+    const status: ListNodeItem['status'] = comparisonIds.has(id)
+      ? 'comparing'
+      : newIds.has(id)
+        ? 'new'
+        : changedLinkIds.has(id) || [...changedLinkIds].some((changedId) => nextTarget.get(changedId) === id || prevTarget.get(changedId) === id)
+          ? 'active'
+          : changedDataIds.has(id)
+            ? 'success'
+            : 'default';
+
     return {
       id,
       nextId,
       prevId,
       value: payload ? valueText(payload.value, labels) : `<${object.type}>`,
-      status: 'default' as const,
+      status,
       pointerLabels: tags.slice(0, 3),
     };
   });
 
   const listType: LinkedListStructureType = nodeObjects.some((object) => Boolean(pointerEntry(object, 'prev')))
+    || (nodeObjects.length === 0 && previousNodeObjects.some((object) => Boolean(pointerEntry(object, 'prev'))))
     ? 'doubly'
     : 'singly';
+
+  const newNode = nodes.find((node) => newIds.has(node.id));
+  let activity: string | null = null;
+  if (compareLine) activity = `Comparing values at line ${event.line}.`;
+  else if (newNode) activity = `Node created · ${String(newNode.value)}.`;
+  else if (removedNodes.length) {
+    const explicitlyDeleted = /\bdelete\b|\bdel\b/.test(sourceLine);
+    activity = `${explicitlyDeleted ? 'Node deleted' : 'Node detached'} · ${removedNodes.map((node) => node.value).join(', ')}.`;
+  } else if (brokenConnections.length || newConnections.length) activity = 'Pointer links updated.';
+  else if (changedDataIds.size) activity = 'Node data updated.';
 
   return {
     nodes,
     headId,
     tailId,
     listType,
+    brokenConnections,
+    newConnections,
+    removedNodes,
+    activity,
+    sequence: event.seq,
     width: Math.max(
       700,
       48

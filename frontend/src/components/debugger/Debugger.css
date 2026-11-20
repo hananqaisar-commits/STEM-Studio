@@ -1303,8 +1303,20 @@
 .live-visualizer-roots code { color: var(--color-text); }
 .live-visualizer-edges { position: absolute; z-index: 0; inset: 0; overflow: visible; color: var(--color-primary); }
 .live-visualizer-edge path { fill: none; stroke: var(--color-primary); stroke-width: 2; opacity: 0.78; }
+.live-visualizer-edge.is-new path { stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 230ms var(--ease-out); }
+.live-visualizer-edge.is-removing path,.live-visualizer-edge.is-removing text { opacity: 0; transition: opacity 180ms var(--ease-out); }
 .live-visualizer-edge text { fill: var(--color-text-secondary); stroke: var(--color-app-bg); stroke-width: 4px; paint-order: stroke; text-anchor: middle; font: 600 11px var(--font-mono, monospace); }
-.live-visualizer-node { position: absolute; z-index: 1; overflow: hidden; border: 1px solid color-mix(in srgb, var(--color-primary) 42%, var(--color-border)); border-radius: 10px; background: var(--color-surface); box-shadow: 0 5px 16px rgb(0 0 0 / 14%); }
+.live-visualizer-node { position: absolute; z-index: 1; overflow: hidden; border: 1px solid color-mix(in srgb, var(--color-primary) 42%, var(--color-border)); border-radius: 10px; background: var(--color-surface); box-shadow: 0 5px 16px rgb(0 0 0 / 14%); transition: border-color 200ms var(--ease-out), background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.live-visualizer-node.is-new { transition: opacity 250ms var(--ease-out), transform 250ms var(--ease-out), border-color 200ms var(--ease-out), background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.live-visualizer-node.is-comparing { border-color: color-mix(in srgb, #d29b45 64%, var(--color-border)); background: color-mix(in srgb, #d29b45 4%, var(--color-surface)); box-shadow: 0 3px 9px rgb(0 0 0 / 9%); }
+.live-visualizer-node.is-changed { border-color: color-mix(in srgb, #38a77a 58%, var(--color-border)); box-shadow: 0 3px 9px rgb(0 0 0 / 8%); }
+.live-visualizer-activity { margin: 0 0.55rem 0.35rem; padding: 0.36rem 0.52rem; border-left: 2px solid color-mix(in srgb, var(--color-primary) 62%, var(--color-border)); border-radius: 0 6px 6px 0; background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)); color: var(--color-text-secondary); font: 600 0.64rem/1.4 var(--font-sans, sans-serif); transition: opacity 190ms var(--ease-out), transform 190ms var(--ease-out); }
+@starting-style {
+  .live-visualizer-edge.is-new path { stroke-dashoffset: 1; }
+  .live-visualizer-edge.is-removing path,.live-visualizer-edge.is-removing text { opacity: 0.78; }
+  .live-visualizer-node.is-new { opacity: 0.76; transform: translateY(4px) scale(0.99); }
+  .live-visualizer-activity { opacity: 0.78; transform: translateY(3px); }
+}
 .live-visualizer-node > header { display: flex; align-items: center; gap: 0.4rem; min-height: 34px; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--color-border); background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface)); }
 .live-visualizer-node > header > span { display: grid; width: 23px; height: 23px; flex: 0 0 23px; place-items: center; border-radius: 6px; background: color-mix(in srgb, var(--color-primary) 17%, transparent); color: var(--color-primary); font: 750 0.61rem var(--font-mono, monospace); }
 .live-visualizer-node > header strong { overflow: hidden; color: var(--color-text); font: 700 0.7rem var(--font-mono, monospace); text-overflow: ellipsis; white-space: nowrap; }
@@ -1323,6 +1335,21 @@
 .live-linked-list-renderer .ll-canvas-body { width: max-content; max-width: none; height: auto; min-height: 250px; flex: 0 0 auto; overflow: visible !important; padding: 0.2rem 0.5rem 0.55rem; }
 .live-linked-list-renderer .ll-render-track { min-width: 0; padding: 3rem 0.75rem 1.1rem; }
 .live-linked-list-renderer .ll-node-box { max-width: 240px; }
+.live-linked-list-renderer .ll-node-box { transition: border-color 220ms var(--ease-out), background-color 220ms var(--ease-out), box-shadow 220ms var(--ease-out); }
+.live-linked-list-renderer .ll-node-box.status-active { border-color: color-mix(in srgb, var(--color-primary) 72%, var(--color-border)); background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface)); box-shadow: 0 2px 7px rgb(0 0 0 / 9%); }
+.live-linked-list-renderer .ll-node-box.status-comparing { border-color: color-mix(in srgb, #d29b45 64%, var(--color-border)); background: color-mix(in srgb, #d29b45 6%, var(--color-surface)); box-shadow: 0 2px 7px rgb(0 0 0 / 8%); }
+.live-linked-list-renderer .ll-node-box.status-new { border-color: color-mix(in srgb, #38a77a 62%, var(--color-border)); background: color-mix(in srgb, #38a77a 4%, var(--color-surface)); box-shadow: 0 2px 7px rgb(0 0 0 / 8%); transition: opacity 250ms var(--ease-out), transform 250ms var(--ease-out), border-color 220ms var(--ease-out), background-color 220ms var(--ease-out), box-shadow 220ms var(--ease-out); }
+.live-linked-list-renderer .ll-node-box.status-success { border-color: color-mix(in srgb, #38a77a 58%, var(--color-border)); box-shadow: 0 2px 7px rgb(0 0 0 / 7%); }
+.live-linked-list-renderer .ll-node-box.status-danger { border-color: color-mix(in srgb, #db6868 58%, var(--color-border)); box-shadow: 0 2px 7px rgb(0 0 0 / 7%); }
+.live-linked-list-renderer .ll-node-label { transition: color 180ms ease; }
+.live-linked-list-renderer .ll-pointer-badge { box-shadow: 0 1px 3px rgb(0 0 0 / 12%); animation: none; transition: opacity 170ms var(--ease-out), transform 170ms var(--ease-out); }
+.live-linked-list-activity { margin: 0.45rem 0.65rem; padding: 0.4rem 0.55rem; border-left: 2px solid color-mix(in srgb, var(--color-primary) 62%, var(--color-border)); border-radius: 0 6px 6px 0; background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)); color: var(--color-text-secondary); font: 600 0.65rem/1.4 var(--font-sans, sans-serif); transition: opacity 190ms var(--ease-out), transform 190ms var(--ease-out); }
+.live-linked-list-renderer .ll-link-change-strip { transition: opacity 190ms var(--ease-out), transform 190ms var(--ease-out); }
+@starting-style {
+  .live-linked-list-renderer .ll-node-box.status-new { opacity: 0.76; transform: translateY(4px) scale(0.99); }
+  .live-linked-list-renderer .ll-pointer-badge { opacity: 0.76; transform: translateY(2px); }
+  .live-linked-list-activity,.live-linked-list-renderer .ll-link-change-strip { opacity: 0.78; transform: translateY(3px); }
+}
 .live-linked-list-renderer .ll-val-compartment { min-width: 0; max-width: 240px; }
 .live-linked-list-renderer .ll-val-compartment > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .live-linked-list-renderer .ll-ptr-compartment { min-width: 0; max-width: 240px; }
@@ -1361,6 +1388,36 @@
   .live-playback-controls { gap: 0.3rem; }
   .live-playback-controls button { width: 44px; }
   .live-event-count { min-width: 45px; text-align: right; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-visualizer-node,
+  .live-visualizer-edge.is-new path,
+  .live-visualizer-edge.is-removing path,
+  .live-visualizer-edge.is-removing text,
+  .live-visualizer-activity,
+  .live-linked-list-renderer .ll-node-box,
+  .live-linked-list-renderer .ll-pointer-badge,
+  .live-linked-list-renderer .ll-link-change-strip,
+  .live-linked-list-activity { animation: none !important; transition-duration: 120ms !important; transition-timing-function: var(--ease-out) !important; }
+  .live-visualizer-node.is-new,
+  .live-linked-list-renderer .ll-node-box.status-new { transform: none !important; }
+  .live-visualizer-node.is-new,
+  .live-linked-list-renderer .ll-node-box.status-new,
+  .live-linked-list-renderer .ll-pointer-badge,
+  .live-linked-list-renderer .ll-link-change-strip,
+  .live-linked-list-activity,
+  .live-visualizer-activity { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  @starting-style {
+    .live-visualizer-node.is-new,
+    .live-linked-list-renderer .ll-node-box.status-new,
+    .live-linked-list-renderer .ll-pointer-badge,
+    .live-linked-list-renderer .ll-link-change-strip,
+    .live-linked-list-activity,
+    .live-visualizer-activity { opacity: 0.88; transform: none; }
+  }
 }
 
 @media (max-width: 900px) {

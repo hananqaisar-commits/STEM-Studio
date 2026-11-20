@@ -250,7 +250,13 @@ export const LiveRuntimeInspector: React.FC<LiveRuntimeInspectorProps> = ({
         </div>
       )}
 
-      <LiveHeapVisualizer event={activeEvent} categoryId={categoryId} topicId={topicId} />
+      <LiveHeapVisualizer
+        event={activeEvent}
+        previousEvent={eventIndex > 0 ? events[eventIndex - 1] : null}
+        sourceLine={sourceLine}
+        categoryId={categoryId}
+        topicId={topicId}
+      />
 
       {(tutorHint || tutorReviewing) && (
         <div className="live-octa-feedback" role="status">
