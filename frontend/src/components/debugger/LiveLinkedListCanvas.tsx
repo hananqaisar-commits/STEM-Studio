@@ -59,6 +59,20 @@ export function LiveLinkedListCanvas({ model }: { model: LiveLinkedListModel }) 
       <div className="live-linked-list-renderer" ref={canvasRef}>
         <LinkedListRenderer step={step} nodes={model.nodes} listType={model.listType} />
       </div>
+      {model.removedNodes.length > 0 && (
+        <aside className="live-removed-nodes" aria-label="Nodes removed from the chain in this step">
+          <strong>{model.activity?.startsWith('Node deleted') ? 'DELETED THIS STEP' : 'DETACHED THIS STEP'}</strong>
+          <span className="live-removed-nodes-note">No longer reachable from the current list pointers</span>
+          <div>
+            {model.removedNodes.map((node) => (
+              <span className="live-removed-node" key={node.id}>
+                <code>NODE</code>
+                <b>{node.value}</b>
+              </span>
+            ))}
+          </div>
+        </aside>
+      )}
     </section>
   );
 }

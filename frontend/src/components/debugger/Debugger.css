@@ -1345,10 +1345,18 @@
 .live-linked-list-renderer .ll-pointer-badge { box-shadow: 0 1px 3px rgb(0 0 0 / 12%); animation: none; transition: opacity 170ms var(--ease-out), transform 170ms var(--ease-out); }
 .live-linked-list-activity { margin: 0.45rem 0.65rem; padding: 0.4rem 0.55rem; border-left: 2px solid color-mix(in srgb, var(--color-primary) 62%, var(--color-border)); border-radius: 0 6px 6px 0; background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)); color: var(--color-text-secondary); font: 600 0.65rem/1.4 var(--font-sans, sans-serif); transition: opacity 190ms var(--ease-out), transform 190ms var(--ease-out); }
 .live-linked-list-renderer .ll-link-change-strip { transition: opacity 190ms var(--ease-out), transform 190ms var(--ease-out); }
+.live-removed-nodes { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 0.25rem 0.5rem; margin: 0.45rem 0.65rem 0.65rem; padding: 0.5rem 0.6rem; border: 1px dashed color-mix(in srgb, #d27c65 48%, var(--color-border)); border-radius: 8px; background: color-mix(in srgb, #d27c65 4%, var(--color-surface)); }
+.live-removed-nodes > strong { color: color-mix(in srgb, #d27c65 78%, var(--color-text)); font: 750 0.58rem var(--font-sans, sans-serif); letter-spacing: 0.055em; }
+.live-removed-nodes-note { overflow: hidden; color: var(--color-text-muted); font: 0.61rem/1.35 var(--font-sans, sans-serif); text-overflow: ellipsis; white-space: nowrap; }
+.live-removed-nodes > div { display: flex; grid-column: 1 / -1; flex-wrap: wrap; gap: 0.35rem; }
+.live-removed-node { display: inline-flex; min-width: 4.2rem; flex-direction: column; gap: 0.12rem; padding: 0.28rem 0.42rem; border: 1px solid color-mix(in srgb, #d27c65 34%, var(--color-border)); border-radius: 6px; background: var(--color-surface); color: var(--color-text-secondary); transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
+.live-removed-node > code { color: var(--color-text-muted); font: 0.52rem var(--font-mono, monospace); letter-spacing: 0.04em; }
+.live-removed-node > b { overflow: hidden; font: 650 0.66rem var(--font-mono, monospace); text-overflow: ellipsis; white-space: nowrap; }
 @starting-style {
   .live-linked-list-renderer .ll-node-box.status-new { opacity: 0.76; transform: translateY(4px) scale(0.99); }
   .live-linked-list-renderer .ll-pointer-badge { opacity: 0.76; transform: translateY(2px); }
   .live-linked-list-activity,.live-linked-list-renderer .ll-link-change-strip { opacity: 0.78; transform: translateY(3px); }
+  .live-removed-node { opacity: 0.68; transform: translateY(3px) scale(0.99); }
 }
 .live-linked-list-renderer .ll-val-compartment { min-width: 0; max-width: 240px; }
 .live-linked-list-renderer .ll-val-compartment > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1399,13 +1407,16 @@
   .live-linked-list-renderer .ll-node-box,
   .live-linked-list-renderer .ll-pointer-badge,
   .live-linked-list-renderer .ll-link-change-strip,
+  .live-removed-node,
   .live-linked-list-activity { animation: none !important; transition-duration: 120ms !important; transition-timing-function: var(--ease-out) !important; }
   .live-visualizer-node.is-new,
-  .live-linked-list-renderer .ll-node-box.status-new { transform: none !important; }
+  .live-linked-list-renderer .ll-node-box.status-new,
+  .live-removed-node { transform: none !important; }
   .live-visualizer-node.is-new,
   .live-linked-list-renderer .ll-node-box.status-new,
   .live-linked-list-renderer .ll-pointer-badge,
   .live-linked-list-renderer .ll-link-change-strip,
+  .live-removed-node,
   .live-linked-list-activity,
   .live-visualizer-activity { opacity: 1; }
 }
