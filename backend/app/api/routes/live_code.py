@@ -58,9 +58,9 @@ async def execute_live_code(
     """Execute the learner's complete program.
 
     When Judge0 is configured the request is forwarded to the external sandbox.
-    When Judge0 is **not** configured, Python programs are executed in a local
-    subprocess on the API host so the Live Code feature works on every
-    deployment (including Render Free) without an external service.
+    Without Judge0, Python uses the local development runner. C++ may use the
+    restricted bubblewrap runner only when DEBUG is enabled; production must
+    configure Judge0.
 
     Python programs use a bounded runtime probe. C++ programs use bounded
     source instrumentation for line, scope, and supported public-struct snapshots.
@@ -75,13 +75,21 @@ async def execute_live_code(
     settings = get_settings()
     use_judge0 = bool(settings.JUDGE0_URL and settings.JUDGE0_API_KEY)
 
-    # When Judge0 is unavailable, only Python is supported through the local
-    # subprocess runner.  Other compiled languages need Judge0.
-    if not use_judge0 and req.language != "python":
+    use_local_cpp = not use_judge0 and req.language == "cpp" and settings.DEBUG
+
+    # Other compiled languages still require Judge0. Local C++ is restricted
+    # to DEBUG environments so production never executes learner code directly.
+    if not use_judge0 and req.language not in {"python", "cpp"}:
         raise HTTPException(
             status_code=503,
             detail=f"Live execution for {req.language} requires the Judge0 sandbox service. "
                    f"Python is available now — switch to Python or configure Judge0 on the API host.",
+        )
+    if not use_judge0 and req.language == "cpp" and not use_local_cpp:
+        raise HTTPException(
+            status_code=503,
+            detail="C++ Live Code is not configured on this server. Set JUDGE0_URL and "
+                   "JUDGE0_API_KEY for the production sandbox service.",
         )
 
     nonce = secrets.token_hex(12)
@@ -131,13 +139,23 @@ async def execute_live_code(
             except judge0.Judge0Error as exc:
                 raise HTTPException(status_code=502, detail=str(exc)) from exc
     else:
-        # Local subprocess fallback — Python only
+        # Local development fallbacks. C++ uses a separate restricted sandbox.
         try:
-            raw = await local_runner.run_python(
-                source,
-                stdin=req.stdin,
-                timeout_seconds=min(getattr(settings, "JUDGE0_TIMEOUT_SECONDS", 15), 20),
-            )
+            timeout_seconds = min(getattr(settings, "JUDGE0_TIMEOUT_SECONDS", 15), 20)
+            if req.language == "cpp":
+                raw = await local_runner.run_cpp(source, stdin=req.stdin, timeout_seconds=timeout_seconds)
+                # If generated instrumentation fails to compile, rerun the
+                # learner's source and return its real compiler/runtime result.
+                if cpp_instrumented is not None and raw["status"] == "compile_error":
+                    raw = await local_runner.run_cpp(req.code, stdin=req.stdin, timeout_seconds=timeout_seconds)
+                    cpp_instrumented = None
+                    trace_support = "not_available"
+            else:
+                raw = await local_runner.run_python(
+                    source,
+                    stdin=req.stdin,
+                    timeout_seconds=timeout_seconds,
+                )
         except local_runner.LocalRunnerError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
